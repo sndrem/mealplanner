@@ -1,46 +1,108 @@
-# Welcome to React Router!
+# Mealplanner
 
-A modern, production-ready template for building full-stack React applications using React Router.
+Mealplanner is a React Router 7 app that currently contains a validated planning prototype and the first production backend foundation for PostgreSQL + Prisma.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## Requirements
 
-## Features
+- Node.js `20.19+` (React Router 7 and Vite 8 require Node 20+)
+- Docker Desktop or another Docker-compatible runtime
+- npm
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+## Local Setup
 
-## Getting Started
-
-### Installation
-
-Install the dependencies:
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-### Development
+2. Copy the example environment file:
 
-Start the development server with HMR:
+```bash
+cp .env.example .env
+```
+
+3. Start the local PostgreSQL service:
+
+```bash
+docker compose up -d
+```
+
+4. Validate the Prisma setup and generate the client:
+
+```bash
+npm run prisma:validate
+npm run prisma:generate
+```
+
+5. Start the development server:
 
 ```bash
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+The app will be available at `http://localhost:5173`.
 
-## Building for Production
+## Database Foundation
 
-Create a production build:
+- Local PostgreSQL is defined in `docker-compose.yml`
+- Prisma is configured in `prisma/schema.prisma`
+- `DATABASE_URL` is validated at server startup in `app/lib/env.server.ts`
+- The shared Prisma client lives in `app/lib/db.server.ts`
+
+The current foundation intentionally stops before defining application models. Schema design and migrations belong to the next issue.
+
+## Environment Variables
+
+Only one environment variable is required right now:
 
 ```bash
-npm run build
+DATABASE_URL="postgresql://mealplanner:mealplanner@localhost:5466/mealplanner?schema=public"
 ```
+
+If `DATABASE_URL` is missing or invalid, the server fails fast during startup instead of waiting until the first database access.
+
+## Useful Commands
+
+```bash
+npm run dev
+npm run build
+npm run typecheck
+npm run prisma:validate
+npm run prisma:generate
+docker compose up -d
+docker compose down
+```
+
+## Backlog Issue Generation
+
+Use the local `gh`-based backlog generator to preview or create GitHub issues from a reviewed issue spec.
+
+Preview the generated issue bodies:
+
+```bash
+npm run backlog:issues -- --issues ideas/prototype-1-issues.json
+```
+
+Create the issues in GitHub after previewing them:
+
+```bash
+npm run backlog:issues -- --issues ideas/prototype-1-issues.json --create
+```
+
+Optional flags:
+
+- `--brief <path>` overrides the markdown brief path.
+- `--repo <owner/name>` overrides the target repository.
+- `--output <path>` writes a JSON summary of the run.
+
+Before using `--create`, make sure `gh` is installed and authenticated:
+
+```bash
+gh auth login
+```
+
+When creating issues, the script auto-creates any missing labels in the target repository before opening issues. Label colors are chosen deterministically so reruns stay predictable.
 
 ## Deployment
 
@@ -54,15 +116,6 @@ docker build -t my-app .
 # Run the container
 docker run -p 3000:3000 my-app
 ```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
 
 ### DIY Deployment
 
@@ -80,8 +133,4 @@ Make sure to deploy the output of `npm run build`
 
 ## Styling
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+[Tailwind CSS](https://tailwindcss.com/) is already configured for the app and prototype UI.
