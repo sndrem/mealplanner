@@ -1,13 +1,11 @@
-import { Link } from "react-router";
+import { Link, type MetaFunction } from "react-router";
 
-import type { Route } from "./+types/home";
-
-export function meta({}: Route.MetaArgs) {
+export const meta: MetaFunction = () => {
   return [
     { title: "Mealplanner" },
     { name: "description", content: "Prototype og videre arbeid for Mealplanner." },
   ];
-}
+};
 
 export default function Home() {
   return (

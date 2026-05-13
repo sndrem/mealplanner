@@ -233,7 +233,7 @@ function readJson(filePath) {
 
   try {
     return JSON.parse(rawContent);
-  } catch (error) {
+  } catch {
     throw new Error(`Invalid JSON in ${relative(process.cwd(), filePath)}.`);
   }
 }

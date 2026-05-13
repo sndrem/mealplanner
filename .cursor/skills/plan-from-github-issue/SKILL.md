@@ -21,7 +21,7 @@ Use this skill when:
 
 Follow this sequence:
 
-1. Resolve the repository context.
+1. Resolve the repository context from git@github.com:sndrem/mealplanner.git
 2. Fetch the GitHub issue.
 3. Summarize the issue in your own words.
 4. Inspect the codebase areas likely affected.
@@ -91,26 +91,33 @@ Use this structure:
 
 ```markdown
 ## Issue Summary
+
 [Short restatement of the issue]
 
 ## Assumptions
+
 - [Assumption]
 
 ## Open Questions
+
 - [Question that may need confirmation]
 
 ## Implementation Plan
+
 1. [First implementation step]
 2. [Second implementation step]
 3. [Continue as needed]
 
 ## Risks
+
 - [Risk or edge case]
 
 ## Test Strategy
+
 - [Unit/integration/manual test approach]
 
 ## Ready To Implement
+
 [State whether implementation can start now or what is still needed]
 ```
 

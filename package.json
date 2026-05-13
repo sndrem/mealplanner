@@ -6,12 +6,16 @@
     "backlog:issues": "node ./scripts/create-github-issues-from-brief.mjs",
     "build": "react-router build",
     "dev": "react-router dev",
+    "lint": "eslint .",
+    "pretest": "react-router typegen",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:status": "prisma migrate status",
     "prisma:validate": "prisma validate",
     "start": "react-router-serve ./build/server/index.js",
+    "test": "vitest",
+    "test:run": "vitest run",
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
@@ -25,14 +29,23 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@react-router/dev": "7.15.0",
     "@tailwindcss/vite": "^4.2.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^22",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.6.0",
+    "jsdom": "^26.1.0",
     "prisma": "^6.19.3",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
-    "vite": "^8.0.3"
+    "typescript-eslint": "^8.59.3",
+    "vite": "^8.0.3",
+    "vitest": "^3.2.4"
   }
 }

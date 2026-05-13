@@ -47,7 +47,16 @@ npm run prisma:validate
 npm run prisma:generate
 ```
 
-6. Start the development server:
+6. Run the same baseline validation checks used in pull requests:
+
+```bash
+npm run lint
+npm run test -- --run
+npm run typecheck
+npm run build
+```
+
+7. Start the development server:
 
 ```bash
 npm run dev
@@ -79,6 +88,8 @@ If `DATABASE_URL` is missing or invalid, the server fails fast during startup in
 
 ```bash
 npm run dev
+npm run lint
+npm run test -- --run
 npm run build
 npm run typecheck
 npm run prisma:migrate:dev -- --name <migration_name>
@@ -89,6 +100,23 @@ npm run prisma:generate
 docker compose up -d
 docker compose down
 ```
+
+## Pull Request Validation
+
+Pull requests now run [`.github/workflows/pr-validation.yml`](.github/workflows/pr-validation.yml) automatically when they are opened, updated, or reopened.
+
+The workflow uses Node.js `20.19.0` and runs the same baseline validation commands used locally:
+
+```bash
+npm ci
+npm run prisma:generate
+npm run lint
+npm run test -- --run
+npm run typecheck
+npm run build
+```
+
+CI sets a placeholder `DATABASE_URL` so server-side environment validation can complete without requiring a live database connection.
 
 ## Backlog Issue Generation
 
