@@ -176,6 +176,12 @@ export default function FamilyRoute({ actionData, loaderData }: Route.ComponentP
 
             <div className="flex flex-wrap gap-3">
               <Link
+                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+                to={`/families/${loaderData.family.id}/meal-plans`}
+              >
+                Apne ukeplaner
+              </Link>
+              <Link
                 className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
                 to="/app"
               >
@@ -218,6 +224,25 @@ export default function FamilyRoute({ actionData, loaderData }: Route.ComponentP
               {loaderData.family.joinCode ?? "Skjult"}
             </p>
           </article>
+        </section>
+
+        <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Ukeplaner</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+                Gå videre til familiens serverlagrede ukeplaner for å opprette, velge og oppdatere planer
+                med start- og sluttdato.
+              </p>
+            </div>
+
+            <Link
+              className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+              to={`/families/${loaderData.family.id}/meal-plans`}
+            >
+              Administrer ukeplaner
+            </Link>
+          </div>
         </section>
 
         {isAdmin ? (
