@@ -1,0 +1,392 @@
+{
+  "version": 1,
+  "brief": {
+    "path": "ideas/prototype-1-summary.md",
+    "title": "Prototype 1 production backlog",
+    "repository": "sndrem/mealplanner"
+  },
+  "defaults": {
+    "labels": ["backlog", "prototype-1"]
+  },
+  "issues": [
+    {
+      "id": "foundation-env-prisma",
+      "title": "Bootstrap PostgreSQL, Prisma, and environment validation",
+      "summary": "Set up the production data foundation for the server-backed app, including database connectivity, Prisma wiring, and validated environment configuration.",
+      "labels": ["foundation", "backend"],
+      "dependencies": [],
+      "sourceSections": [
+        "Product Requirements To Carry Forward",
+        "Implementation Phases > Phase 1: Foundation",
+        "Immediate Next Step For The Next Agent"
+      ],
+      "scope": [
+        "Add Prisma and PostgreSQL project dependencies.",
+        "Establish environment variable loading and validation for database configuration.",
+        "Document the local setup needed to run database-backed development."
+      ],
+      "acceptanceCriteria": [
+        "The project has a documented PostgreSQL and Prisma setup path for local development.",
+        "Environment variables required for database access are validated before app startup.",
+        "The repository is ready for follow-up schema and migration work."
+      ],
+      "openQuestions": [
+        "Choose the environment validation approach that best matches the app's future server runtime."
+      ]
+    },
+    {
+      "id": "schema-core-models",
+      "title": "Define the initial Prisma schema and baseline migrations",
+      "summary": "Model the first production-ready database schema around users, families, recipes, meal plans, shopping items, and stores.",
+      "labels": ["foundation", "backend", "database"],
+      "dependencies": ["foundation-env-prisma"],
+      "sourceSections": [
+        "Production Domain Model",
+        "Implementation Phases > Phase 1: Foundation",
+        "Immediate Next Step For The Next Agent"
+      ],
+      "scope": [
+        "Define the first Prisma models for the core entities called out in the summary.",
+        "Add baseline migrations for the initial schema.",
+        "Keep the schema extensible for future meal types and collaboration metadata."
+      ],
+      "acceptanceCriteria": [
+        "Core entities from the summary exist in the Prisma schema with appropriate relations.",
+        "The first migration can be applied to a clean database.",
+        "The schema design preserves server-backed ownership of meal planning and shopping state."
+      ],
+      "openQuestions": [
+        "Confirm whether stores should be global, family-scoped, or both before finalizing nullability rules."
+      ]
+    },
+    {
+      "id": "seed-reference-data",
+      "title": "Seed starter recipes, ingredient categories, and store sections",
+      "summary": "Add seed data that supports early development and provides realistic fixtures for planning and shopping flows.",
+      "labels": ["foundation", "backend", "data"],
+      "dependencies": ["schema-core-models"],
+      "sourceSections": [
+        "What Prototype 1 Validated",
+        "Implementation Phases > Phase 1: Foundation"
+      ],
+      "scope": [
+        "Seed a useful starter set of recipes and ingredient categories.",
+        "Seed store section defaults that support shopping list ordering.",
+        "Keep the seeded data easy to extend as the production model evolves."
+      ],
+      "acceptanceCriteria": [
+        "A fresh development database can be seeded with meaningful starter data.",
+        "Seeded recipes and categories are sufficient to exercise meal planning and shopping flows.",
+        "Store section data can be reused by later shopping and store-mode work."
+      ]
+    },
+    {
+      "id": "auth-session-shell",
+      "title": "Add authentication, session handling, and protected routes",
+      "summary": "Introduce the first login/session flow and route protection so production features can move off the prototype safely.",
+      "labels": ["foundation", "auth", "backend"],
+      "dependencies": ["foundation-env-prisma"],
+      "sourceSections": [
+        "Product Requirements To Carry Forward",
+        "Core Workflows To Implement > 1. Authentication and family onboarding",
+        "Implementation Phases > Phase 1: Foundation",
+        "Immediate Next Step For The Next Agent"
+      ],
+      "scope": [
+        "Choose and implement the initial auth/session strategy.",
+        "Protect production routes behind authenticated access.",
+        "Keep user-facing text Norwegian while wiring the first auth UI."
+      ],
+      "acceptanceCriteria": [
+        "A user can register or sign in using the chosen initial auth flow.",
+        "Server routes can determine the current user from session state.",
+        "Protected routes redirect or reject unauthenticated access."
+      ],
+      "openQuestions": [
+        "The summary allows either password-based or external auth fields, so the initial auth strategy needs a concrete choice."
+      ]
+    },
+    {
+      "id": "family-onboarding",
+      "title": "Build family onboarding with create-family and join-code flows",
+      "summary": "Implement the first family collaboration entry point so authenticated users can create or join a family before planning meals.",
+      "labels": ["family", "auth", "frontend", "backend"],
+      "dependencies": ["auth-session-shell", "schema-core-models"],
+      "sourceSections": [
+        "Product Requirements To Carry Forward",
+        "Core Workflows To Implement > 1. Authentication and family onboarding",
+        "Implementation Phases > Phase 1: Foundation"
+      ],
+      "scope": [
+        "Let a signed-in user create a family and become its first admin.",
+        "Let a signed-in user join an existing family by unique code.",
+        "Add the first protected family dashboard or landing state."
+      ],
+      "acceptanceCriteria": [
+        "Users can create a family and are persisted as admin members.",
+        "Users can join a family by code through a protected flow.",
+        "The app has a family-scoped landing route ready for meal plan work."
+      ],
+      "openQuestions": [
+        "Clarify whether a user can belong to multiple families before broadening the membership UX."
+      ]
+    },
+    {
+      "id": "family-admin-authorization",
+      "title": "Add family membership management and authorization boundaries",
+      "summary": "Define who can do what inside a family and implement the first admin-only member management capabilities.",
+      "labels": ["family", "auth", "backend"],
+      "dependencies": ["family-onboarding"],
+      "sourceSections": [
+        "Product Requirements To Carry Forward",
+        "Core Workflows To Implement > 1. Authentication and family onboarding",
+        "Testing Strategy"
+      ],
+      "scope": [
+        "Add role-aware authorization for family member versus family admin actions.",
+        "Implement the first admin-facing member management behavior needed after onboarding.",
+        "Cover authorization boundaries with focused automated tests."
+      ],
+      "acceptanceCriteria": [
+        "Family-scoped actions enforce admin versus member permissions.",
+        "Admins can perform the initial member-management actions defined for the first release.",
+        "Authorization boundaries are covered by targeted tests."
+      ],
+      "openQuestions": [
+        "The summary mentions administrator permissions, but the exact permission matrix still needs product clarification."
+      ]
+    },
+    {
+      "id": "meal-plan-crud",
+      "title": "Implement meal plan CRUD with date-range validation",
+      "summary": "Create the first real meal plan workflow with persisted start and end dates, family ownership, and the initial 7-day cap.",
+      "labels": ["meal-plan", "frontend", "backend"],
+      "dependencies": ["family-onboarding", "schema-core-models"],
+      "sourceSections": [
+        "What Prototype 1 Validated",
+        "Core Workflows To Implement > 2. Meal plan lifecycle",
+        "Implementation Phases > Phase 2: Meal planning",
+        "Testing Strategy",
+        "Immediate Next Step For The Next Agent"
+      ],
+      "scope": [
+        "Allow families to create, list, select, update, and delete meal plans.",
+        "Enforce explicit startDate and endDate handling with a maximum initial span of 7 days.",
+        "Preserve support for partial active weeks such as Thursday through Sunday."
+      ],
+      "acceptanceCriteria": [
+        "Families can manage meal plans with persisted start and end dates.",
+        "Date-range validation rejects invalid or overlong ranges and is covered by tests.",
+        "The first production meal plan routes are backed by server data rather than local storage."
+      ]
+    },
+    {
+      "id": "meal-plan-entry-editing",
+      "title": "Implement daily meal plan entry editing for dinner-first planning",
+      "summary": "Add the core day-by-day planning workflow so a family can attach recipes or notes to dates inside a meal plan.",
+      "labels": ["meal-plan", "frontend", "backend"],
+      "dependencies": ["meal-plan-crud", "seed-reference-data"],
+      "sourceSections": [
+        "What Prototype 1 Validated",
+        "Core Workflows To Implement > 2. Meal plan lifecycle",
+        "Implementation Phases > Phase 2: Meal planning",
+        "Guardrails"
+      ],
+      "scope": [
+        "Support editing meal plan entries per active date.",
+        "Start with dinner as the main meal type while keeping the schema extensible.",
+        "Allow recipe selection and entry notes in the first production flow."
+      ],
+      "acceptanceCriteria": [
+        "Users can assign dinners to dates within the active meal plan.",
+        "The entry model is ready for future meal-type expansion without rework.",
+        "The production flow mirrors the validated prototype behavior for the initial planning journey."
+      ]
+    },
+    {
+      "id": "meal-plan-copy-reuse",
+      "title": "Implement meal plan copy and reuse into a new date range",
+      "summary": "Support reusing a previous meal plan as a starting point while respecting the selected target date range.",
+      "labels": ["meal-plan", "backend", "frontend"],
+      "dependencies": ["meal-plan-entry-editing"],
+      "sourceSections": [
+        "What Prototype 1 Validated",
+        "Core Workflows To Implement > 2. Meal plan lifecycle",
+        "Implementation Phases > Phase 2: Meal planning",
+        "Testing Strategy"
+      ],
+      "scope": [
+        "Add a copy or reuse action from an existing meal plan.",
+        "Map entries into a newly selected target date range.",
+        "Define what data is copied now versus intentionally left behind."
+      ],
+      "acceptanceCriteria": [
+        "Users can create a new meal plan from an existing one.",
+        "Copied plans respect the new date range and preserve expected entries.",
+        "Copy behavior is covered by focused automated tests."
+      ],
+      "openQuestions": [
+        "Clarify whether manual shopping items, notes, and approval state are copied or reset."
+      ]
+    },
+    {
+      "id": "meal-plan-approval",
+      "title": "Add meal plan approval state and guarded transitions",
+      "summary": "Introduce an explicit approval step so families can confirm a plan before shopping and calendar workflows depend on it.",
+      "labels": ["meal-plan", "backend"],
+      "dependencies": ["meal-plan-crud"],
+      "sourceSections": [
+        "Production Domain Model > Meal planning",
+        "Core Workflows To Implement > 2. Meal plan lifecycle",
+        "Implementation Phases > Phase 2: Meal planning"
+      ],
+      "scope": [
+        "Persist draft versus approved state on meal plans.",
+        "Define who can approve a plan and what transitions are allowed.",
+        "Guard downstream actions as needed based on approval state."
+      ],
+      "acceptanceCriteria": [
+        "Meal plans can move between the supported workflow states.",
+        "Approval actions enforce the chosen authorization and transition rules.",
+        "The implementation leaves room for stricter locking rules later."
+      ],
+      "openQuestions": [
+        "The summary does not yet define whether approval locks further edits or just marks the plan as confirmed."
+      ]
+    },
+    {
+      "id": "shopping-projection",
+      "title": "Build deterministic shopping list projection from meal plan recipes",
+      "summary": "Generate shopping list items from planned recipes on the server so the list stays reproducible and auditable.",
+      "labels": ["shopping", "backend"],
+      "dependencies": ["meal-plan-entry-editing", "seed-reference-data"],
+      "sourceSections": [
+        "Production Domain Model > Shopping",
+        "Core Workflows To Implement > 3. Shopping list generation",
+        "Implementation Phases > Phase 3: Shopping list",
+        "Testing Strategy",
+        "Guardrails"
+      ],
+      "scope": [
+        "Derive generated shopping items from meal plan entries and recipe ingredients.",
+        "Keep the generation logic deterministic and server-side.",
+        "Cover merge and projection behavior with focused tests."
+      ],
+      "acceptanceCriteria": [
+        "The app can project generated shopping items from the current meal plan.",
+        "Projection logic is deterministic and does not depend on client-side local storage.",
+        "Shopping generation behavior is covered by automated tests."
+      ],
+      "openQuestions": [
+        "Ingredient merge rules still need product clarification for differing units, names, and store preferences."
+      ]
+    },
+    {
+      "id": "shopping-manual-overrides",
+      "title": "Add manual shopping items and persisted override state",
+      "summary": "Layer user-controlled shopping behavior on top of generated items without losing deterministic regeneration.",
+      "labels": ["shopping", "backend", "frontend"],
+      "dependencies": ["shopping-projection"],
+      "sourceSections": [
+        "Production Domain Model > Shopping",
+        "Core Workflows To Implement > 3. Shopping list generation",
+        "Implementation Phases > Phase 3: Shopping list",
+        "Testing Strategy"
+      ],
+      "scope": [
+        "Persist manual shopping items alongside generated projections.",
+        "Persist checked state, postponement, notes, and preferred store overrides.",
+        "Merge manual and generated items into the user-facing shopping list."
+      ],
+      "acceptanceCriteria": [
+        "Users can add manual items to a meal plan shopping list.",
+        "User override state survives regeneration of generated shopping items.",
+        "Postponement and checked-state behavior are covered by targeted tests."
+      ],
+      "openQuestions": [
+        "The exact identity strategy for generated items and `sourceKey` should be nailed down before implementation."
+      ]
+    },
+    {
+      "id": "store-configuration-mode",
+      "title": "Implement store configuration, section ordering, and mobile store mode",
+      "summary": "Make the shopping list practical in the store by supporting store-specific ordering and a compact mobile-first shopping experience.",
+      "labels": ["shopping", "stores", "frontend"],
+      "dependencies": ["shopping-manual-overrides", "seed-reference-data"],
+      "sourceSections": [
+        "What Prototype 1 Validated",
+        "Core Workflows To Implement > 4. Store mode",
+        "Implementation Phases > Phase 3: Shopping list",
+        "Testing Strategy"
+      ],
+      "scope": [
+        "Support store definitions and section ordering per store.",
+        "Filter the shopping experience by active shopping date and selected store.",
+        "Build the first compact mobile-first store mode UI."
+      ],
+      "acceptanceCriteria": [
+        "Users can choose an active store and see items grouped in store order.",
+        "Store mode shows only the items relevant for the selected shopping date.",
+        "Store ordering behavior is covered by focused automated tests."
+      ],
+      "openQuestions": [
+        "The summary leaves open whether store definitions are family-specific, global, or mixed."
+      ]
+    },
+    {
+      "id": "calendar-export",
+      "title": "Add server-side day and meal-plan calendar exports",
+      "summary": "Expose `.ics` endpoints and UI actions so families can export one day or an entire meal plan to their calendars.",
+      "labels": ["calendar", "backend", "frontend"],
+      "dependencies": ["meal-plan-entry-editing"],
+      "sourceSections": [
+        "Calendar sync",
+        "Core Workflows To Implement > 5. Calendar export",
+        "Implementation Phases > Phase 4: Calendar",
+        "Testing Strategy"
+      ],
+      "scope": [
+        "Add the initial server-generated `.ics` endpoints for a whole meal plan and a single day.",
+        "Add UI entry points for the supported export actions.",
+        "Include the planned title, date, and recipe description in the exported events."
+      ],
+      "acceptanceCriteria": [
+        "Families can export a whole meal plan or a single day as `.ics`.",
+        "Calendar export logic stays server-side.",
+        "Export output is covered by correctness tests."
+      ],
+      "openQuestions": [
+        "Clarify whether draft plans should be exportable or whether exports should depend on approval."
+      ]
+    },
+    {
+      "id": "collaboration-audit-hardening",
+      "title": "Add collaboration hardening, audit metadata, and conflict safeguards",
+      "summary": "Strengthen multi-user behavior so shared family planning remains trustworthy as concurrent edits become more common.",
+      "labels": ["collaboration", "backend", "quality"],
+      "dependencies": [
+        "family-admin-authorization",
+        "meal-plan-entry-editing",
+        "shopping-manual-overrides"
+      ],
+      "sourceSections": [
+        "Implementation Phases > Phase 5: Multi-user collaboration",
+        "Non-Functional Requirements",
+        "Testing Strategy"
+      ],
+      "scope": [
+        "Add actor-aware timestamps or equivalent audit-friendly metadata to key write flows.",
+        "Handle or surface conflicting edits to shared planning and shopping state.",
+        "Improve observability around important writes and failures."
+      ],
+      "acceptanceCriteria": [
+        "Key collaborative writes record enough metadata to support audits.",
+        "Concurrent edit risks are handled or surfaced intentionally in core workflows.",
+        "The implementation improves confidence in shared family usage."
+      ],
+      "openQuestions": [
+        "The summary asks for conflict handling and audit support, but the exact strategy still needs to be chosen."
+      ]
+    }
+  ]
+}

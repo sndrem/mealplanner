@@ -28,14 +28,35 @@ cp .env.example .env
 docker compose up -d
 ```
 
-4. Validate the Prisma setup and generate the client:
+4. Create or apply the database schema:
+
+```bash
+npm run prisma:migrate:dev -- --name init
+```
+
+For applying existing migrations to another database without creating a new one:
+
+```bash
+npm run prisma:migrate:deploy
+```
+
+5. Validate the Prisma setup and generate the client:
 
 ```bash
 npm run prisma:validate
 npm run prisma:generate
 ```
 
-5. Start the development server:
+6. Run the same baseline validation checks used in pull requests:
+
+```bash
+npm run lint
+npm run test -- --run
+npm run typecheck
+npm run build
+```
+
+7. Start the development server:
 
 ```bash
 npm run dev
@@ -47,10 +68,11 @@ The app will be available at `http://localhost:5173`.
 
 - Local PostgreSQL is defined in `docker-compose.yml`
 - Prisma is configured in `prisma/schema.prisma`
+- Baseline SQL migrations live in `prisma/migrations/`
 - `DATABASE_URL` is validated at server startup in `app/lib/env.server.ts`
 - The shared Prisma client lives in `app/lib/db.server.ts`
 
-The current foundation intentionally stops before defining application models. Schema design and migrations belong to the next issue.
+The current foundation now includes the initial production schema and a baseline Prisma migration for the core meal-planning domain.
 
 ## Environment Variables
 
@@ -66,13 +88,35 @@ If `DATABASE_URL` is missing or invalid, the server fails fast during startup in
 
 ```bash
 npm run dev
+npm run lint
+npm run test -- --run
 npm run build
 npm run typecheck
+npm run prisma:migrate:dev -- --name <migration_name>
+npm run prisma:migrate:deploy
+npm run prisma:migrate:status
 npm run prisma:validate
 npm run prisma:generate
 docker compose up -d
 docker compose down
 ```
+
+## Pull Request Validation
+
+Pull requests now run [`.github/workflows/pr-validation.yml`](.github/workflows/pr-validation.yml) automatically when they are opened, updated, or reopened.
+
+The workflow uses Node.js `20.19.0` and runs the same baseline validation commands used locally:
+
+```bash
+npm ci
+npm run prisma:generate
+npm run lint
+npm run test -- --run
+npm run typecheck
+npm run build
+```
+
+CI sets a placeholder `DATABASE_URL` so server-side environment validation can complete without requiring a live database connection.
 
 ## Backlog Issue Generation
 
