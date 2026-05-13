@@ -28,14 +28,26 @@ cp .env.example .env
 docker compose up -d
 ```
 
-4. Validate the Prisma setup and generate the client:
+4. Create or apply the database schema:
+
+```bash
+npm run prisma:migrate:dev -- --name init
+```
+
+For applying existing migrations to another database without creating a new one:
+
+```bash
+npm run prisma:migrate:deploy
+```
+
+5. Validate the Prisma setup and generate the client:
 
 ```bash
 npm run prisma:validate
 npm run prisma:generate
 ```
 
-5. Start the development server:
+6. Start the development server:
 
 ```bash
 npm run dev
@@ -47,10 +59,11 @@ The app will be available at `http://localhost:5173`.
 
 - Local PostgreSQL is defined in `docker-compose.yml`
 - Prisma is configured in `prisma/schema.prisma`
+- Baseline SQL migrations live in `prisma/migrations/`
 - `DATABASE_URL` is validated at server startup in `app/lib/env.server.ts`
 - The shared Prisma client lives in `app/lib/db.server.ts`
 
-The current foundation intentionally stops before defining application models. Schema design and migrations belong to the next issue.
+The current foundation now includes the initial production schema and a baseline Prisma migration for the core meal-planning domain.
 
 ## Environment Variables
 
@@ -68,6 +81,9 @@ If `DATABASE_URL` is missing or invalid, the server fails fast during startup in
 npm run dev
 npm run build
 npm run typecheck
+npm run prisma:migrate:dev -- --name <migration_name>
+npm run prisma:migrate:deploy
+npm run prisma:migrate:status
 npm run prisma:validate
 npm run prisma:generate
 docker compose up -d

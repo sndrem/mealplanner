@@ -6,3 +6,268 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum FamilyRole {
+  ADMIN
+  MEMBER
+}
+
+enum RecipeScope {
+  GLOBAL
+  FAMILY
+}
+
+enum MealPlanStatus {
+  DRAFT
+  APPROVED
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  SNACK
+  DINNER
+  SUPPER
+}
+
+enum ShoppingItemSource {
+  GENERATED
+  MANUAL
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  passwordHash      String?
+  displayName       String
+  isGlobalAdmin     Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  createdFamilies   Family[]           @relation("FamilyCreatedBy")
+  memberships       FamilyMembership[]
+  createdRecipes    Recipe[]           @relation("RecipeCreatedBy")
+  approvedMealPlans MealPlan[]         @relation("MealPlanApprovedBy")
+
+  @@index([displayName])
+}
+
+model Family {
+  id              String             @id @default(cuid())
+  name            String
+  joinCode        String             @unique
+  createdByUserId String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  createdByUser   User?              @relation("FamilyCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  memberships     FamilyMembership[]
+  recipes         Recipe[]
+  mealPlans       MealPlan[]
+  stores          Store[]
+
+  @@index([createdByUserId])
+  @@index([name])
+}
+
+model FamilyMembership {
+  id        String     @id @default(cuid())
+  familyId  String
+  userId    String
+  role      FamilyRole
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  family    Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, userId])
+  @@index([userId])
+  @@index([familyId, role])
+}
+
+model IngredientCategory {
+  id                  String               @id @default(cuid())
+  key                 String               @unique
+  displayName         String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  ingredients         Ingredient[]
+  recipeIngredients   RecipeIngredient[]
+  manualShoppingItems ManualShoppingItem[]
+  storeSections       StoreSection[]
+
+  @@index([displayName])
+}
+
+model Ingredient {
+  id                String              @id @default(cuid())
+  canonicalName     String              @unique
+  defaultCategoryId String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  defaultCategory   IngredientCategory? @relation(fields: [defaultCategoryId], references: [id], onDelete: SetNull)
+  recipeIngredients RecipeIngredient[]
+
+  @@index([defaultCategoryId])
+}
+
+model Recipe {
+  id              String             @id @default(cuid())
+  scope           RecipeScope
+  familyId        String?
+  createdByUserId String?
+  title           String
+  description     String?
+  defaultServings Int?
+  prepMinutes     Int?
+  tags            String[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  family          Family?            @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdByUser   User?              @relation("RecipeCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  ingredients     RecipeIngredient[]
+  mealPlanEntries MealPlanEntry[]
+
+  @@index([familyId])
+  @@index([createdByUserId])
+  @@index([scope])
+  @@index([title])
+}
+
+model RecipeIngredient {
+  id               String             @id @default(cuid())
+  recipeId         String
+  ingredientId     String?
+  displayName      String
+  amount           String?
+  unit             String?
+  categoryId       String
+  preferredStoreId String?
+  sortOrder        Int                @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  recipe           Recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient       Ingredient?        @relation(fields: [ingredientId], references: [id], onDelete: SetNull)
+  category         IngredientCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  preferredStore   Store?             @relation("RecipeIngredientPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
+
+  @@index([recipeId, sortOrder])
+  @@index([ingredientId])
+  @@index([categoryId])
+  @@index([preferredStoreId])
+}
+
+model MealPlan {
+  id                   String                 @id @default(cuid())
+  familyId             String
+  title                String
+  startDate            DateTime               @db.Date
+  endDate              DateTime               @db.Date
+  status               MealPlanStatus         @default(DRAFT)
+  approvedByUserId     String?
+  approvedAt           DateTime?
+  copiedFromMealPlanId String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  family               Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  approvedByUser       User?                  @relation("MealPlanApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  copiedFromMealPlan   MealPlan?              @relation("MealPlanCopies", fields: [copiedFromMealPlanId], references: [id], onDelete: SetNull)
+  copiedToMealPlans    MealPlan[]             @relation("MealPlanCopies")
+  entries              MealPlanEntry[]
+  manualShoppingItems  ManualShoppingItem[]
+  shoppingOverrides    ShoppingItemOverride[]
+
+  @@index([familyId, startDate, endDate])
+  @@index([approvedByUserId])
+  @@index([copiedFromMealPlanId])
+  @@index([status])
+}
+
+model MealPlanEntry {
+  id         String   @id @default(cuid())
+  mealPlanId String
+  date       DateTime @db.Date
+  mealType   MealType @default(DINNER)
+  recipeId   String?
+  note       String?
+  locked     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe     Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@unique([mealPlanId, date, mealType])
+  @@index([mealPlanId, date])
+  @@index([recipeId])
+}
+
+model ManualShoppingItem {
+  id               String             @id @default(cuid())
+  mealPlanId       String
+  name             String
+  quantity         String?
+  categoryId       String
+  preferredStoreId String?
+  buyOnDate        DateTime?          @db.Date
+  note             String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  mealPlan         MealPlan           @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  category         IngredientCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  preferredStore   Store?             @relation("ManualShoppingItemPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
+
+  @@index([mealPlanId])
+  @@index([categoryId])
+  @@index([preferredStoreId])
+  @@index([buyOnDate])
+}
+
+model ShoppingItemOverride {
+  id                 String             @id @default(cuid())
+  mealPlanId         String
+  sourceType         ShoppingItemSource
+  sourceKey          String
+  checked            Boolean            @default(false)
+  postponedUntilDate DateTime?          @db.Date
+  preferredStoreId   String?
+  note               String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  mealPlan           MealPlan           @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  preferredStore     Store?             @relation("ShoppingItemOverridePreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
+
+  @@unique([mealPlanId, sourceType, sourceKey])
+  @@index([mealPlanId, sourceType])
+  @@index([preferredStoreId])
+  @@index([postponedUntilDate])
+}
+
+model Store {
+  id                         String                 @id @default(cuid())
+  familyId                   String
+  name                       String
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  family                     Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  sections                   StoreSection[]
+  recipeIngredientsPreferred RecipeIngredient[]     @relation("RecipeIngredientPreferredStore")
+  manualItemsPreferred       ManualShoppingItem[]   @relation("ManualShoppingItemPreferredStore")
+  shoppingOverridesPreferred ShoppingItemOverride[] @relation("ShoppingItemOverridePreferredStore")
+
+  @@unique([familyId, name])
+  @@index([familyId])
+}
+
+model StoreSection {
+  id          String             @id @default(cuid())
+  storeId     String
+  categoryId  String
+  displayName String
+  sortOrder   Int
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  store       Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  category    IngredientCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([storeId, categoryId])
+  @@index([storeId, sortOrder])
+  @@index([categoryId])
+}

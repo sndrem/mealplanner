@@ -1,0 +1,29 @@
+description: Project standards for React Router, Prisma, GitHub, and frontend code
+alwaysApply: true
+
+---
+
+# Project Standards
+
+- Use React Router 7 as the application framework and follow its conventions for routes, loaders, actions, and server/client boundaries.
+- Use Prisma as the ORM for database access and prefer Prisma-based solutions over introducing other data access layers unless the user asks for it.
+- For GitHub work, treat this `mealplanner` project as the default repository context unless the user explicitly points to another repository.
+- Default to React, TypeScript, and Tailwind solutions that are clean, concise, and easy to maintain.
+- Prefer extending or extracting reusable components, hooks, and helpers over duplicating UI or logic.
+- Keep components focused; move complex state, data shaping, or conditional rendering into small helpers when it improves clarity.
+- Favor clear prop APIs and strong typing over broad, hard-to-maintain abstractions.
+- Reuse existing primitives and patterns before introducing new wrappers, variants, or utilities.
+- In Tailwind, prefer readable utility composition and shared patterns over long repeated class strings.
+- Match existing project conventions and keep changes minimal.
+
+```tsx
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  tone?: "primary" | "secondary";
+};
+
+export function Button({ tone = "primary", className, ...props }: ButtonProps) {
+  return (
+    <button className={cn(buttonStyles({ tone }), className)} {...props} />
+  );
+}
+```

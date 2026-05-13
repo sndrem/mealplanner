@@ -7,6 +7,9 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "prisma:generate": "prisma generate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:status": "prisma migrate status",
     "prisma:validate": "prisma validate",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc"
