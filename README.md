@@ -40,14 +40,20 @@ For applying existing migrations to another database without creating a new one:
 npm run prisma:migrate:deploy
 ```
 
-5. Validate the Prisma setup and generate the client:
+5. Seed the development database with starter categories, stores, and recipes:
+
+```bash
+npm run prisma:seed
+```
+
+6. Validate the Prisma setup and generate the client:
 
 ```bash
 npm run prisma:validate
 npm run prisma:generate
 ```
 
-6. Run the same baseline validation checks used in pull requests:
+7. Run the same baseline validation checks used in pull requests:
 
 ```bash
 npm run lint
@@ -56,7 +62,7 @@ npm run typecheck
 npm run build
 ```
 
-7. Start the development server:
+8. Start the development server:
 
 ```bash
 npm run dev
@@ -73,6 +79,7 @@ The app will be available at `http://localhost:5173`.
 - The shared Prisma client lives in `app/lib/db.server.ts`
 
 The current foundation now includes the initial production schema and a baseline Prisma migration for the core meal-planning domain.
+The Prisma seed script populates reusable global starter data for ingredient categories, store section defaults, and recipes derived from the validated prototype.
 
 ## Environment Variables
 
@@ -95,6 +102,7 @@ npm run typecheck
 npm run prisma:migrate:dev -- --name <migration_name>
 npm run prisma:migrate:deploy
 npm run prisma:migrate:status
+npm run prisma:seed
 npm run prisma:validate
 npm run prisma:generate
 docker compose up -d
