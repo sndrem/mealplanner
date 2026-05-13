@@ -16,6 +16,7 @@ const { dbMock, randomIntMock, txMock } = vi.hoisted(() => {
     },
     familyMembership: {
       create: vi.fn(),
+      delete: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
     },
@@ -44,7 +45,15 @@ vi.mock("./db.server", () => {
   };
 });
 
-import { createFamilyForUser, joinFamilyByCode } from "./family.server";
+import {
+  createFamilyForUser,
+  getFamilyMembershipForUser,
+  joinFamilyByCode,
+  listFamilyMembers,
+  removeFamilyMember,
+  requireFamilyAdmin,
+  requireFamilyMembership,
+} from "./family.server";
 
 describe("family.server", () => {
   beforeEach(() => {
@@ -211,6 +220,274 @@ describe("family.server", () => {
         joinCode: "ABC123",
         name: "Solberg",
       },
+    });
+  });
+
+  it("looks up a family membership by family and user id", async () => {
+    dbMock.familyMembership.findUnique.mockResolvedValue({
+      family: {
+        id: "family-1",
+        joinCode: "ABC123",
+        name: "Solberg",
+      },
+      familyId: "family-1",
+      id: "membership-1",
+      role: "ADMIN",
+      userId: "user-1",
+    });
+
+    const result = await getFamilyMembershipForUser({
+      familyId: "family-1",
+      userId: "user-1",
+    });
+
+    expect(dbMock.familyMembership.findUnique).toHaveBeenCalledWith({
+      where: {
+        familyId_userId: {
+          familyId: "family-1",
+          userId: "user-1",
+        },
+      },
+      select: {
+        id: true,
+        familyId: true,
+        role: true,
+        userId: true,
+        family: {
+          select: {
+            id: true,
+            joinCode: true,
+            name: true,
+          },
+        },
+      },
+    });
+    expect(result).toEqual({
+      family: {
+        id: "family-1",
+        joinCode: "ABC123",
+        name: "Solberg",
+      },
+      familyId: "family-1",
+      id: "membership-1",
+      role: "ADMIN",
+      userId: "user-1",
+    });
+  });
+
+  it("throws a not found response when the user is not part of the family", async () => {
+    dbMock.familyMembership.findUnique.mockResolvedValue(null);
+
+    await expect(
+      requireFamilyMembership({
+        familyId: "family-1",
+        userId: "user-1",
+      }),
+    ).rejects.toMatchObject({
+      status: 404,
+      statusText: "Not Found",
+    });
+  });
+
+  it("throws a forbidden response when a family member is not an admin", async () => {
+    dbMock.familyMembership.findUnique.mockResolvedValue({
+      family: {
+        id: "family-1",
+        joinCode: "ABC123",
+        name: "Solberg",
+      },
+      familyId: "family-1",
+      id: "membership-1",
+      role: "MEMBER",
+      userId: "user-1",
+    });
+
+    await expect(
+      requireFamilyAdmin({
+        familyId: "family-1",
+        userId: "user-1",
+      }),
+    ).rejects.toMatchObject({
+      status: 403,
+      statusText: "Forbidden",
+    });
+  });
+
+  it("lists family members for the management UI", async () => {
+    dbMock.familyMembership.findMany.mockResolvedValue([
+      {
+        id: "membership-1",
+        role: "ADMIN",
+        user: {
+          displayName: "Ola",
+          email: "ola@example.com",
+          id: "user-1",
+        },
+      },
+    ]);
+
+    const result = await listFamilyMembers("family-1");
+
+    expect(dbMock.familyMembership.findMany).toHaveBeenCalledWith({
+      where: { familyId: "family-1" },
+      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        role: true,
+        user: {
+          select: {
+            displayName: true,
+            email: true,
+            id: true,
+          },
+        },
+      },
+    });
+    expect(result).toEqual([
+      {
+        id: "membership-1",
+        role: "ADMIN",
+        user: {
+          displayName: "Ola",
+          email: "ola@example.com",
+          id: "user-1",
+        },
+      },
+    ]);
+  });
+
+  it("removes a non-admin family member when requested by an admin", async () => {
+    dbMock.familyMembership.findUnique
+      .mockResolvedValueOnce({
+        family: {
+          id: "family-1",
+          joinCode: "ABC123",
+          name: "Solberg",
+        },
+        familyId: "family-1",
+        id: "membership-admin",
+        role: "ADMIN",
+        userId: "user-admin",
+      })
+      .mockResolvedValueOnce({
+        id: "membership-member",
+        role: "MEMBER",
+        user: {
+          displayName: "Kari",
+          id: "user-member",
+        },
+      });
+
+    const result = await removeFamilyMember({
+      actorUserId: "user-admin",
+      familyId: "family-1",
+      targetUserId: "user-member",
+    });
+
+    expect(dbMock.familyMembership.delete).toHaveBeenCalledWith({
+      where: { id: "membership-member" },
+    });
+    expect(result).toEqual({
+      status: "REMOVED",
+      removedUser: {
+        displayName: "Kari",
+        id: "user-member",
+      },
+    });
+  });
+
+  it("refuses to remove another admin", async () => {
+    dbMock.familyMembership.findUnique
+      .mockResolvedValueOnce({
+        family: {
+          id: "family-1",
+          joinCode: "ABC123",
+          name: "Solberg",
+        },
+        familyId: "family-1",
+        id: "membership-admin",
+        role: "ADMIN",
+        userId: "user-admin",
+      })
+      .mockResolvedValueOnce({
+        id: "membership-target-admin",
+        role: "ADMIN",
+        user: {
+          displayName: "Kari",
+          id: "user-target-admin",
+        },
+      });
+
+    const result = await removeFamilyMember({
+      actorUserId: "user-admin",
+      familyId: "family-1",
+      targetUserId: "user-target-admin",
+    });
+
+    expect(dbMock.familyMembership.delete).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      status: "CANNOT_REMOVE_ADMIN",
+    });
+  });
+
+  it("refuses to remove the acting admin", async () => {
+    dbMock.familyMembership.findUnique
+      .mockResolvedValueOnce({
+        family: {
+          id: "family-1",
+          joinCode: "ABC123",
+          name: "Solberg",
+        },
+        familyId: "family-1",
+        id: "membership-admin",
+        role: "ADMIN",
+        userId: "user-admin",
+      })
+      .mockResolvedValueOnce({
+        id: "membership-admin",
+        role: "ADMIN",
+        user: {
+          displayName: "Ola",
+          id: "user-admin",
+        },
+      });
+
+    const result = await removeFamilyMember({
+      actorUserId: "user-admin",
+      familyId: "family-1",
+      targetUserId: "user-admin",
+    });
+
+    expect(dbMock.familyMembership.delete).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      status: "CANNOT_REMOVE_SELF",
+    });
+  });
+
+  it("returns NOT_FOUND when the target user is not in the family", async () => {
+    dbMock.familyMembership.findUnique
+      .mockResolvedValueOnce({
+        family: {
+          id: "family-1",
+          joinCode: "ABC123",
+          name: "Solberg",
+        },
+        familyId: "family-1",
+        id: "membership-admin",
+        role: "ADMIN",
+        userId: "user-admin",
+      })
+      .mockResolvedValueOnce(null);
+
+    const result = await removeFamilyMember({
+      actorUserId: "user-admin",
+      familyId: "family-1",
+      targetUserId: "user-member",
+    });
+
+    expect(dbMock.familyMembership.delete).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      status: "NOT_FOUND",
     });
   });
 });

@@ -220,13 +220,16 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
                     </span>
                   </div>
                   <p className="mt-3 text-sm leading-6 text-slate-600">
-                    Familiekode: <span className="font-semibold text-slate-900">{membership.family.joinCode}</span>
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
                     {membership.role === "ADMIN"
-                      ? "Du er administrator for denne familien og kan dele koden for a invitere flere senere."
-                      : "Du har tilgang til denne familien og er klar for videre arbeid med ukeplaner og samarbeid."}
+                      ? "Du er administrator for denne familien og kan administrere medlemmer fra familieoversikten."
+                      : "Du har tilgang til denne familien og kan apne familieoversikten for videre arbeid."}
                   </p>
+                  <Link
+                    className="mt-5 inline-flex rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                    to={`/families/${membership.family.id}`}
+                  >
+                    Apne familie
+                  </Link>
                 </article>
               ))}
             </section>

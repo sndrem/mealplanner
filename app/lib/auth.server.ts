@@ -95,9 +95,9 @@ export async function requireUser(request: Request) {
 }
 
 export async function requireAnonymous(request: Request) {
-  const userId = await getUserId(request);
+  const user = await getCurrentUser(request);
 
-  if (!userId) {
+  if (!user) {
     return;
   }
 
