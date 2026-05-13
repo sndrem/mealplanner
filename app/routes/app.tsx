@@ -8,6 +8,8 @@ import {
   joinFamilyByCode,
 } from "../lib/family.server";
 
+type AppNotice = "family-already-member" | "family-created" | "family-joined";
+
 interface AppActionData {
   fieldErrors?: {
     familyName?: string;
@@ -19,6 +21,43 @@ interface AppActionData {
     familyName?: string;
     joinCode?: string;
   };
+}
+
+function getAppNotice(request: Request): AppNotice | null {
+  const notice = new URL(request.url).searchParams.get("notice");
+
+  if (notice === "family-created" || notice === "family-joined" || notice === "family-already-member") {
+    return notice;
+  }
+
+  return null;
+}
+
+function buildAppRedirect(request: Request, notice: AppNotice) {
+  const url = new URL("/app", request.url);
+  url.searchParams.set("notice", notice);
+
+  return Response.redirect(url, 302);
+}
+
+function getNoticeContent(notice: AppNotice) {
+  switch (notice) {
+    case "family-created":
+      return {
+        description: "Du opprettet en familie og ble lagt til som administrator.",
+        title: "Familien er klar",
+      };
+    case "family-joined":
+      return {
+        description: "Du er lagt til i familien og kan fortsette i den beskyttede appen.",
+        title: "Du ble med i familien",
+      };
+    case "family-already-member":
+      return {
+        description: "Du hadde allerede tilgang til denne familien, sa vi viste deg oversikten i stedet.",
+        title: "Du er allerede medlem",
+      };
+  }
 }
 
 export const meta: Route.MetaFunction = () => {
@@ -34,6 +73,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   return {
     memberships,
+    notice: getAppNotice(request),
     user,
   };
 }
@@ -63,7 +103,7 @@ export async function action({ request }: Route.ActionArgs) {
       userId: user.id,
     });
 
-    return Response.redirect(new URL("/app", request.url), 302);
+    return buildAppRedirect(request, "family-created");
   }
 
   if (intent === "join-family") {
@@ -96,7 +136,11 @@ export async function action({ request }: Route.ActionArgs) {
       } satisfies AppActionData;
     }
 
-    return Response.redirect(new URL("/app", request.url), 302);
+    if (result.status === "ALREADY_MEMBER") {
+      return buildAppRedirect(request, "family-already-member");
+    }
+
+    return buildAppRedirect(request, "family-joined");
   }
 
   return {
@@ -108,6 +152,7 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
   const hasFamilies = loaderData.memberships.length > 0;
+  const noticeContent = loaderData.notice ? getNoticeContent(loaderData.notice) : null;
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -121,8 +166,8 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">Hei, {loaderData.user.displayName}</h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
                 {hasFamilies
-                  ? "Du er logget inn og klar for neste steg i produksjonsappen."
-                  : "Du er logget inn. Opprett en familie eller bli med i en eksisterende familie for a komme videre."}
+                  ? "Dette er den beskyttede familieoversikten din, klar for videre arbeid med ukeplaner og handlelister."
+                  : "Dette er den beskyttede inngangen til appen. Opprett en familie eller bli med i en eksisterende familie for a komme videre."}
               </p>
             </div>
 
@@ -145,10 +190,25 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
           </div>
         </section>
 
+        {noticeContent ? (
+          <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
+            <h2 className="text-base font-semibold">{noticeContent.title}</h2>
+            <p className="mt-2 text-sm leading-6 text-emerald-900">{noticeContent.description}</p>
+          </section>
+        ) : null}
+
         {hasFamilies ? (
           <>
+            <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+              <h2 className="text-lg font-semibold text-slate-950">Familier du har tilgang til</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+                Dette er den forste beskyttede familieflaten i produksjonsappen. Hver familie er klar som
+                utgangspunkt for neste steg med ukeplaner, handlelister og samarbeid.
+              </p>
+            </section>
+
             <section className="grid gap-4 md:grid-cols-3">
-              {loaderData.memberships.map((membership) => (
+              {loaderData.memberships.map((membership: (typeof loaderData.memberships)[number]) => (
                 <article
                   key={membership.id}
                   className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
@@ -163,7 +223,9 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
                     Familiekode: <span className="font-semibold text-slate-900">{membership.family.joinCode}</span>
                   </p>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Denne delen er klar for videre arbeid med ukeplaner, handlelister og samarbeid.
+                    {membership.role === "ADMIN"
+                      ? "Du er administrator for denne familien og kan dele koden for a invitere flere senere."
+                      : "Du har tilgang til denne familien og er klar for videre arbeid med ukeplaner og samarbeid."}
                   </p>
                 </article>
               ))}
@@ -172,8 +234,8 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
             <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
               <h2 className="text-lg font-semibold text-slate-950">Hva kommer na</h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Auth, session og beskyttede ruter er pa plass. Neste steg er a bygge ukeplaner, familievisning
-                og handleliste pa toppen av ekte serverdata.
+                Familieonboarding, auth, session og beskyttede ruter er pa plass. Neste steg er a bygge
+                familievisning, ukeplaner og handleliste pa toppen av ekte serverdata.
               </p>
             </section>
           </>

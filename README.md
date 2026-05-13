@@ -99,8 +99,8 @@ If either environment variable is missing or invalid, the server fails fast duri
 - Users can now register with name, e-post, and password
 - Users can log in and out with a signed cookie session
 - Protected routes redirect unauthenticated requests to `/login`
-- The first protected route lives at `/app`
-- Authenticated users can create a family or join one with a family code
+- The first protected route lives at `/app` and acts as the current family onboarding and landing state
+- Authenticated users can create a family or join one with a family code from that protected flow
 
 ## Useful Commands
 
