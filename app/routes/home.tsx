@@ -25,13 +25,22 @@ export default function Home() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+              to="/register"
+            >
+              Opprett konto
+            </Link>
+            <Link
+              className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/15"
+              to="/login"
+            >
+              Logg inn
+            </Link>
+            <Link
+              className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/15"
               to="/prototype"
             >
               Apne prototype
             </Link>
-            <span className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-200">
-              Kode ligger i `prototype/`
-            </span>
           </div>
         </section>
 
