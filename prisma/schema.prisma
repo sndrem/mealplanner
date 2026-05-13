@@ -242,11 +242,12 @@ model ShoppingItemOverride {
 
 model Store {
   id                         String                 @id @default(cuid())
-  familyId                   String
+  key                        String?                @unique
+  familyId                   String?
   name                       String
   createdAt                  DateTime               @default(now())
   updatedAt                  DateTime               @updatedAt
-  family                     Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  family                     Family?                @relation(fields: [familyId], references: [id], onDelete: Cascade)
   sections                   StoreSection[]
   recipeIngredientsPreferred RecipeIngredient[]     @relation("RecipeIngredientPreferredStore")
   manualItemsPreferred       ManualShoppingItem[]   @relation("ManualShoppingItemPreferredStore")
