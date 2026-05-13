@@ -1,8 +1,29 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getSafeRedirectTo, hashPassword, requireUser, verifyPassword } from "./auth.server";
+const { dbMock } = vi.hoisted(() => {
+  return {
+    dbMock: {
+      user: {
+        findUnique: vi.fn(),
+      },
+    },
+  };
+});
+
+vi.mock("./db.server", () => {
+  return {
+    db: dbMock,
+  };
+});
+
+import { getSafeRedirectTo, hashPassword, requireAnonymous, requireUser, verifyPassword } from "./auth.server";
+import { getSession, sessionStorage } from "./session.server";
 
 describe("auth.server", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("hashes and verifies passwords", async () => {
     const passwordHash = await hashPassword("super-secret-password");
 
@@ -31,5 +52,23 @@ describe("auth.server", () => {
       expect(response.status).toBe(302);
       expect(response.headers.get("Location")).toBe("/login?redirectTo=%2Fapp%3Ftab%3Doverview");
     }
+  });
+
+  it("treats stale session cookies as anonymous users", async () => {
+    const request = new Request("http://localhost/login");
+    const session = await getSession(request);
+    session.set("userId", "missing-user");
+
+    dbMock.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      requireAnonymous(
+        new Request("http://localhost/login", {
+          headers: {
+            Cookie: await sessionStorage.commitSession(session),
+          },
+        }),
+      ),
+    ).resolves.toBeUndefined();
   });
 });
