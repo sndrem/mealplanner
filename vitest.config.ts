@@ -9,6 +9,10 @@ export default defineConfig({
     },
   },
   test: {
+    env: {
+      DATABASE_URL: "postgresql://mealplanner:mealplanner@localhost:5466/mealplanner?schema=public",
+      SESSION_SECRET: "test-session-secret-that-is-at-least-thirty-two-characters",
+    },
     environment: "node",
     globals: true,
     include: ["**/*.{test,spec}.{ts,tsx}"],

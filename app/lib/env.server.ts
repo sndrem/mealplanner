@@ -18,12 +18,16 @@ const databaseUrlSchema = z.string().trim().min(1, "DATABASE_URL is required").s
   }
 });
 
+const sessionSecretSchema = z.string().trim().min(32, "SESSION_SECRET must be at least 32 characters long");
+
 const envSchema = z.object({
   DATABASE_URL: databaseUrlSchema,
+  SESSION_SECRET: sessionSecretSchema,
 });
 
 const parsedEnv = envSchema.safeParse({
   DATABASE_URL: process.env.DATABASE_URL,
+  SESSION_SECRET: process.env.SESSION_SECRET,
 });
 
 if (!parsedEnv.success) {

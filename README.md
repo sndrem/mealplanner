@@ -83,13 +83,24 @@ The Prisma seed script populates reusable global starter data for ingredient cat
 
 ## Environment Variables
 
-Only one environment variable is required right now:
+Two environment variables are required right now:
 
 ```bash
 DATABASE_URL="postgresql://mealplanner:mealplanner@localhost:5466/mealplanner?schema=public"
+SESSION_SECRET="replace-this-with-a-long-random-string-of-at-least-32-characters"
 ```
 
-If `DATABASE_URL` is missing or invalid, the server fails fast during startup instead of waiting until the first database access.
+`SESSION_SECRET` should be a long random string used to sign the login session cookie.
+
+If either environment variable is missing or invalid, the server fails fast during startup instead of waiting until the first database access.
+
+## Authentication
+
+- Users can now register with name, e-post, and password
+- Users can log in and out with a signed cookie session
+- Protected routes redirect unauthenticated requests to `/login`
+- The first protected route lives at `/app`
+- Authenticated users can create a family or join one with a family code
 
 ## Useful Commands
 
@@ -124,7 +135,7 @@ npm run typecheck
 npm run build
 ```
 
-CI sets a placeholder `DATABASE_URL` so server-side environment validation can complete without requiring a live database connection.
+CI sets placeholder values for `DATABASE_URL` and `SESSION_SECRET` so server-side environment validation can complete without requiring a live database connection.
 
 ## Backlog Issue Generation
 
