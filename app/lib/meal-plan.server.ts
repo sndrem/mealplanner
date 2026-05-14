@@ -7,6 +7,7 @@ const MEAL_PLAN_MAX_SPAN_DAYS = 7;
 const MEAL_PLAN_MAX_DAY_OFFSET = MEAL_PLAN_MAX_SPAN_DAYS - 1;
 
 const mealPlanSummarySelect = {
+  activeShoppingDate: true,
   createdAt: true,
   endDate: true,
   id: true,
@@ -47,6 +48,7 @@ const mealPlanEntrySelect = Prisma.validator<Prisma.MealPlanEntrySelect>()({
 });
 
 const mealPlanPlanningDetailSelect = Prisma.validator<Prisma.MealPlanSelect>()({
+  activeShoppingDate: true,
   approvedAt: true,
   approvedByUserId: true,
   copiedFromMealPlanId: true,
@@ -346,11 +348,14 @@ export async function createMealPlan(input: MealPlanMutationInput) {
     };
   }
 
+  const startDate = parseDateOnly(validation.values.startDate)!;
+  const endDate = parseDateOnly(validation.values.endDate)!;
   const mealPlan = await db.mealPlan.create({
     data: {
-      endDate: parseDateOnly(validation.values.endDate)!,
+      activeShoppingDate: startDate,
+      endDate,
       familyId: input.familyId,
-      startDate: parseDateOnly(validation.values.startDate)!,
+      startDate,
       title: validation.values.title,
     },
     select: mealPlanDetailSelect,
@@ -414,6 +419,7 @@ export async function copyMealPlan(input: CopyMealPlanInput) {
     const endDate = parseDateOnly(validation.values.endDate)!;
     const mealPlan = await tx.mealPlan.create({
       data: {
+        activeShoppingDate: startDate,
         copiedFromMealPlanId: sourceMealPlan.id,
         endDate,
         familyId: input.familyId,
@@ -487,6 +493,7 @@ export async function updateMealPlan(input: MealPlanMutationInput & { mealPlanId
 
   const existingMealPlan = await db.mealPlan.findFirst({
     select: {
+      activeShoppingDate: true,
       id: true,
     },
     where: {
@@ -511,10 +518,17 @@ export async function updateMealPlan(input: MealPlanMutationInput & { mealPlanId
     };
   }
 
+  const nextStartDate = parseDateOnly(validation.values.startDate)!;
+  const nextEndDate = parseDateOnly(validation.values.endDate)!;
   const mealPlan = await db.mealPlan.update({
     data: {
-      endDate: parseDateOnly(validation.values.endDate)!,
-      startDate: parseDateOnly(validation.values.startDate)!,
+      activeShoppingDate: clampShoppingDateToRange(
+        existingMealPlan.activeShoppingDate,
+        nextStartDate,
+        nextEndDate,
+      ),
+      endDate: nextEndDate,
+      startDate: nextStartDate,
       title: validation.values.title,
     },
     select: mealPlanDetailSelect,
@@ -869,4 +883,24 @@ function differenceInUtcDays(startDate: Date, endDate: Date) {
 
 function addUtcDays(date: Date, amount: number) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + amount));
+}
+
+function clampShoppingDateToRange(
+  activeShoppingDate: Date | null,
+  startDate: Date,
+  endDate: Date,
+) {
+  if (!activeShoppingDate) {
+    return null;
+  }
+
+  if (activeShoppingDate.getTime() < startDate.getTime()) {
+    return startDate;
+  }
+
+  if (activeShoppingDate.getTime() > endDate.getTime()) {
+    return startDate;
+  }
+
+  return activeShoppingDate;
 }

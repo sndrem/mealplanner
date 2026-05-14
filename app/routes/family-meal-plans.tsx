@@ -60,6 +60,7 @@ export async function loader({
     family: result.family,
     mealPlans: result.mealPlans.map((mealPlan) => ({
       ...mealPlan,
+      activeShoppingDate: mealPlan.activeShoppingDate ? formatDateOnly(mealPlan.activeShoppingDate) : null,
       endDate: formatDateOnly(mealPlan.endDate),
       startDate: formatDateOnly(mealPlan.startDate),
     })),

@@ -97,6 +97,9 @@ export async function loader({
     family: result.family,
     mealPlan: {
       ...result.mealPlan,
+      activeShoppingDate: result.mealPlan.activeShoppingDate
+        ? formatDateOnly(result.mealPlan.activeShoppingDate)
+        : null,
       approvedAt: result.mealPlan.approvedAt ? result.mealPlan.approvedAt.toISOString() : null,
       endDate: formatDateOnly(result.mealPlan.endDate),
       entries: undefined,
@@ -284,6 +287,12 @@ export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlan
                 to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
               >
                 Apne handleliste
+              </Link>
+              <Link
+                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/store-mode`}
+              >
+                Apne butikkmodus
               </Link>
               <Link
                 className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"

@@ -57,6 +57,7 @@ describe("family meal plan route", () => {
         name: "Solberg",
       },
       mealPlan: {
+        activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
         approvedAt: null,
         approvedByUserId: null,
         copiedFromMealPlanId: null,
@@ -114,6 +115,7 @@ describe("family meal plan route", () => {
         name: "Solberg",
       },
       mealPlan: {
+        activeShoppingDate: "2026-05-15",
         approvedByUserId: null,
         approvedAt: null,
         copiedFromMealPlanId: null,
@@ -262,6 +264,7 @@ describe("family meal plan route", () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(approveMealPlan).mockResolvedValue({
       mealPlan: {
+        activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
         approvedAt: new Date("2026-05-16T09:30:00.000Z"),
         approvedByUserId: "user-1",
         copiedFromMealPlanId: null,
@@ -305,6 +308,7 @@ describe("family meal plan route", () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(reopenMealPlan).mockResolvedValue({
       mealPlan: {
+        activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
         approvedAt: null,
         approvedByUserId: null,
         copiedFromMealPlanId: null,

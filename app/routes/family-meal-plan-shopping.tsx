@@ -88,6 +88,9 @@ export async function loader({
     itemCounts: result.itemCounts,
     mealPlan: {
       ...result.mealPlan,
+      activeShoppingDate: result.mealPlan.activeShoppingDate
+        ? formatDateOnly(result.mealPlan.activeShoppingDate)
+        : null,
       endDate: formatDateOnly(result.mealPlan.endDate),
       entries: undefined,
       manualShoppingItems: undefined,
@@ -319,6 +322,12 @@ export default function FamilyMealPlanShoppingRoute({
             <div className="flex flex-wrap gap-3">
               <Link
                 className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+                to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/store-mode`}
+              >
+                Apne butikkmodus
+              </Link>
+              <Link
+                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
                 to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}`}
               >
                 Tilbake til ukeplan

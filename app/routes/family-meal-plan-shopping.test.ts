@@ -72,6 +72,7 @@ describe("family meal plan shopping route", () => {
         total: 2,
       },
       mealPlan: {
+        activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
         endDate: new Date("2026-05-18T00:00:00.000Z"),
         entries: [],
         id: "meal-plan-1",
@@ -250,6 +251,7 @@ describe("family meal plan shopping route", () => {
         total: 2,
       },
       mealPlan: {
+        activeShoppingDate: "2026-05-16",
         endDate: "2026-05-18",
         entries: undefined,
         id: "meal-plan-1",

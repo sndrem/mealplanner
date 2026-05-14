@@ -2,34 +2,41 @@
 
 ## Current Objective
 
-Implement issue `#12`'s persisted shopping interactions so meal-plan shopping lists can mix deterministic generated items with manual rows and saved user state.
+Implement issue `#13`'s store configuration and in-store shopping flow: family store CRUD, persisted active shopping date, persisted per-user selected store, and a compact mobile-first store mode route.
 
 ## Completed
 
-- Expanded `app/lib/shopping.server.ts` so the shopping read model now loads manual shopping items, all shopping overrides, available categories/stores, merged item counts, and a discriminated generated/manual projection grouped by store and section.
-- Added `app/lib/shopping-write.server.ts` with validated manual item create/update/delete flows, generated override updates, checked-state persistence, and transactional cleanup of manual override rows.
-- Reworked `app/routes/family-meal-plan-shopping.tsx` from a loader-only page into a multi-intent shopping route with add/edit/delete forms for manual rows, generated-item override controls, checked toggles, notices, and serialized loader data for both item types.
-- Expanded focused coverage in `app/lib/shopping.server.test.ts`, `app/lib/shopping-write.server.test.ts`, and `app/routes/family-meal-plan-shopping.test.ts` for merged projection, write-path validation, override behavior, cleanup, redirects, and route action payloads.
+- Extended `prisma/schema.prisma` with `MealPlan.activeShoppingDate` and a new `UserStorePreference` model, plus a matching migration in `prisma/migrations/20260514184500_store_mode_preferences/migration.sql`.
+- Added `app/lib/store.server.ts` and `app/lib/store-write.server.ts` for scoped store reads plus family store create/update/reorder/delete and per-user selected-store persistence.
+- Expanded `app/lib/shopping.server.ts` with `getMealPlanStoreModeData()` so store mode reuses the merged shopping projection but filters to due items by active shopping date and re-groups them using the selected store's section order.
+- Added `updateActiveShoppingDate()` to `app/lib/shopping-write.server.ts` and updated `app/lib/meal-plan.server.ts` so new meal plans start with a valid active shopping date and range edits clamp it safely.
+- Added `app/routes/family-stores.tsx` plus `app/components/family-store-editor-card.tsx` so family stores now use an explicit edit mode with staged React DnD section ordering and a single save instead of per-move server round-trips, then wired the new flow into the existing store CRUD route.
+- Added `app/routes/family-meal-plan-store-mode.tsx` for the mobile shopping flow, then wired navigation in `app/routes.ts`, `app/routes/family.tsx`, `app/routes/family-meal-plan.tsx`, and `app/routes/family-meal-plan-shopping.tsx`.
+- Added focused coverage in `app/lib/store-write.server.test.ts`, `app/lib/shopping.server.test.ts`, `app/lib/shopping-write.server.test.ts`, `app/routes/family-stores.test.ts`, and `app/routes/family-meal-plan-store-mode.test.ts`, plus updated existing meal-plan/shopping route tests for serialized `activeShoppingDate`.
 
 ## Files To Read First
 
-- `app/lib/shopping.server.ts` - Combined generated/manual shopping read model, grouping, counts, and projected item types.
-- `app/lib/shopping-write.server.ts` - Validated shopping mutations for manual rows and generated/manual persisted state.
-- `app/routes/family-meal-plan-shopping.tsx` - Loader/action route, notice flow, and all shopping forms and controls.
-- `app/lib/shopping-write.server.test.ts` - Focused write-path coverage for validation, cleanup, and override persistence rules.
+- `app/lib/store-write.server.ts` - Family store CRUD rules, section reorder behavior, and selected-store persistence.
+- `app/components/family-store-editor-card.tsx` - Local edit mode, staged section drafts, and React DnD row reordering before save.
+- `app/lib/shopping.server.ts` - Shared shopping projection plus the new store-mode view model.
+- `app/routes/family-stores.tsx` - Store management route, action intents, and editable family-store UI.
+- `app/routes/family-meal-plan-store-mode.tsx` - Compact in-store shopping route, serialized loader data, and action handling.
 
 ## Validation
 
-- `npm run test:run -- app/lib/shopping.server.test.ts app/lib/shopping-write.server.test.ts app/routes/family-meal-plan-shopping.test.ts`
+- `npm run test:run -- app/lib/store-write.server.test.ts app/lib/shopping.server.test.ts app/lib/shopping-write.server.test.ts app/routes/family-stores.test.ts app/routes/family-meal-plan-store-mode.test.ts app/routes/family-meal-plan-shopping.test.ts app/routes/family-meal-plan.test.ts app/routes/family-meal-plans.test.ts`
+- `npm run test:run` (all tests passed except the two existing `crypto is not defined` failures in `app/lib/session.server.test.ts` and `app/lib/auth.server.test.ts`)
 - `./node_modules/.bin/tsc --noEmit`
 
 ## Open Items
 
-- No manual browser smoke test has been run yet for `families/:familyId/meal-plans/:mealPlanId/shopping`.
-- Generated source keys are still only stable for the same merged occurrence set, so recipe or meal-plan changes that alter a merge bucket will naturally stop matching any existing generated override row for that bucket.
-- Generated override writes currently trust the posted `sourceKey`; the UI only submits live keys, but there is no extra server-side verification that a generated key still exists in the current projection before persisting an override.
-- The route now supports full-page form submissions only; there is still no fetcher-based or mobile store-mode shopping UX.
+- No manual browser smoke test has been run yet for `families/:familyId/stores` or `families/:familyId/meal-plans/:mealPlanId/store-mode`.
+- The new store editor uses the HTML5 React DnD backend, so drag-and-drop should be manually verified in the browser environment you care about most.
+- `npm run typecheck` currently fails before project checks run because the local Node runtime is `v18.20.8` while the installed React Router toolchain now expects `>20`; plain `tsc --noEmit` succeeds.
+- The only remaining automated test failures are pre-existing environment/runtime issues where React Router cookie/session helpers expect `crypto.subtle` during `app/lib/session.server.test.ts` and `app/lib/auth.server.test.ts`.
+- Family store creation currently starts from the full category list ordered by category display name. There is no "copy from seeded store" shortcut yet.
+- Seeded/global stores remain visible alongside family stores in selectors and management views; there is no hide/archive behavior for seeded stores.
 
 ## Next Step
 
-Run a manual end-to-end smoke test of the shopping route with both generated and manual rows, especially add/edit/delete, checked toggles, and generated override persistence across a refresh.
+Run a manual end-to-end smoke test covering store creation/reordering/deletion and the new store-mode flow, then rerun `npm run typecheck` in a Node `>20` environment to confirm the full React Router/typegen pipeline.
