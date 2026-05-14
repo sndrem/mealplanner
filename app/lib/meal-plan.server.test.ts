@@ -3,12 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { dbMock, requireFamilyMembershipMock } = vi.hoisted(() => {
   return {
     dbMock: {
+      $transaction: vi.fn(),
       mealPlan: {
         create: vi.fn(),
         delete: vi.fn(),
         findFirst: vi.fn(),
         findMany: vi.fn(),
         update: vi.fn(),
+      },
+      mealPlanEntry: {
+        deleteMany: vi.fn(),
+        upsert: vi.fn(),
+      },
+      recipe: {
+        findMany: vi.fn(),
       },
     },
     requireFamilyMembershipMock: vi.fn(),
@@ -32,7 +40,9 @@ import {
   deleteMealPlan,
   formatDateOnly,
   getMealPlanForFamily,
+  getMealPlanPlanningData,
   listMealPlansForFamily,
+  saveMealPlanEntries,
   updateMealPlan,
   validateMealPlanRange,
 } from "./meal-plan.server";
@@ -53,6 +63,9 @@ describe("meal-plan.server", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requireFamilyMembershipMock.mockResolvedValue(mockMembership);
+    dbMock.$transaction.mockImplementation(async (callback: (tx: typeof dbMock) => Promise<unknown>) =>
+      callback(dbMock),
+    );
   });
 
   it("rejects missing date fields", () => {
@@ -224,6 +237,76 @@ describe("meal-plan.server", () => {
     });
   });
 
+  it("loads planning data with visible dates and available recipes", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      approvedAt: null,
+      approvedByUserId: null,
+      copiedFromMealPlanId: null,
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          createdAt: new Date("2026-05-01T12:00:00.000Z"),
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          locked: false,
+          mealType: "DINNER",
+          note: "Bruk rester",
+          recipe: null,
+          recipeId: null,
+          updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+        },
+      ],
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    });
+    dbMock.recipe.findMany.mockResolvedValue([
+      {
+        defaultServings: 4,
+        description: "Rask middagsfavoritt.",
+        id: "kylling-taco",
+        prepMinutes: 25,
+        tags: ["rask"],
+        title: "Kyllingtaco",
+      },
+    ]);
+
+    const result = await getMealPlanPlanningData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.visibleDates).toEqual(["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"]);
+    expect(result.recipes).toEqual([
+      {
+        defaultServings: 4,
+        description: "Rask middagsfavoritt.",
+        id: "kylling-taco",
+        prepMinutes: 25,
+        tags: ["rask"],
+        title: "Kyllingtaco",
+      },
+    ]);
+    expect(dbMock.recipe.findMany).toHaveBeenCalledWith({
+      orderBy: [{ title: "asc" }],
+      select: {
+        defaultServings: true,
+        description: true,
+        id: true,
+        prepMinutes: true,
+        tags: true,
+        title: true,
+      },
+      where: {
+        OR: [{ scope: "GLOBAL" }, { familyId: "family-1", scope: "FAMILY" }],
+      },
+    });
+  });
+
   it("returns NOT_FOUND when updating a missing meal plan", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue(null);
 
@@ -240,6 +323,159 @@ describe("meal-plan.server", () => {
       status: "NOT_FOUND",
     });
     expect(dbMock.mealPlan.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects entry submissions that do not cover the full visible range", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+
+    const result = await saveMealPlanEntries({
+      entries: [
+        {
+          date: "2026-05-15",
+          note: "",
+          recipeId: "kylling-taco",
+        },
+      ],
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      formError: "Noen dager mangler i ukeplanen. Last siden pa nytt og prov igjen.",
+      status: "VALIDATION_ERROR",
+      values: [
+        {
+          date: "2026-05-15",
+          note: "",
+          recipeId: "kylling-taco",
+        },
+      ],
+    });
+    expect(dbMock.mealPlanEntry.upsert).not.toHaveBeenCalled();
+  });
+
+  it("upserts dinner entries and clears empty dates", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-16T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.recipe.findMany.mockResolvedValue([{ id: "kylling-taco" }]);
+
+    const result = await saveMealPlanEntries({
+      entries: [
+        {
+          date: "2026-05-15",
+          note: "",
+          recipeId: "kylling-taco",
+        },
+        {
+          date: "2026-05-16",
+          note: "",
+          recipeId: "",
+        },
+      ],
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "UPDATED",
+    });
+    expect(dbMock.mealPlanEntry.upsert).toHaveBeenCalledTimes(1);
+    expect(dbMock.mealPlanEntry.deleteMany).toHaveBeenCalledWith({
+      where: {
+        date: new Date("2026-05-16T00:00:00.000Z"),
+        mealPlanId: "meal-plan-1",
+        mealType: "DINNER",
+      },
+    });
+  });
+
+  it("supports note-only entries while keeping recipe optional", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-15T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+
+    const result = await saveMealPlanEntries({
+      entries: [
+        {
+          date: "2026-05-15",
+          note: "Bruk rester til lunsj",
+          recipeId: "",
+        },
+      ],
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "UPDATED",
+    });
+    expect(dbMock.mealPlanEntry.upsert).toHaveBeenCalledWith({
+      create: {
+        date: new Date("2026-05-15T00:00:00.000Z"),
+        mealPlanId: "meal-plan-1",
+        mealType: "DINNER",
+        note: "Bruk rester til lunsj",
+        recipeId: null,
+      },
+      update: {
+        note: "Bruk rester til lunsj",
+        recipeId: null,
+      },
+      where: {
+        mealPlanId_date_mealType: {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          mealPlanId: "meal-plan-1",
+          mealType: "DINNER",
+        },
+      },
+    });
+  });
+
+  it("rejects inaccessible recipe selections before writing entries", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-15T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.recipe.findMany.mockResolvedValue([]);
+
+    const result = await saveMealPlanEntries({
+      entries: [
+        {
+          date: "2026-05-15",
+          note: "",
+          recipeId: "ukjent-rett",
+        },
+      ],
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      formError: "Minst en valgt oppskrift er ikke tilgjengelig for familien.",
+      status: "VALIDATION_ERROR",
+      values: [
+        {
+          date: "2026-05-15",
+          note: "",
+          recipeId: "ukjent-rett",
+        },
+      ],
+    });
+    expect(dbMock.mealPlanEntry.upsert).not.toHaveBeenCalled();
   });
 
   it("deletes meal plans only within the scoped family", async () => {

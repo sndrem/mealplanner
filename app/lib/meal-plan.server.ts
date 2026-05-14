@@ -1,3 +1,5 @@
+import { MealType, Prisma, RecipeScope } from "@prisma/client";
+
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 
@@ -20,6 +22,48 @@ const mealPlanDetailSelect = {
   approvedByUserId: true,
   copiedFromMealPlanId: true,
 };
+
+const recipeOptionSelect = Prisma.validator<Prisma.RecipeSelect>()({
+  defaultServings: true,
+  description: true,
+  id: true,
+  prepMinutes: true,
+  tags: true,
+  title: true,
+});
+
+const mealPlanEntrySelect = Prisma.validator<Prisma.MealPlanEntrySelect>()({
+  createdAt: true,
+  date: true,
+  id: true,
+  locked: true,
+  mealType: true,
+  note: true,
+  recipe: {
+    select: recipeOptionSelect,
+  },
+  recipeId: true,
+  updatedAt: true,
+});
+
+const mealPlanPlanningDetailSelect = Prisma.validator<Prisma.MealPlanSelect>()({
+  approvedAt: true,
+  approvedByUserId: true,
+  copiedFromMealPlanId: true,
+  createdAt: true,
+  endDate: true,
+  entries: {
+    orderBy: [{ date: "asc" }, { mealType: "asc" }],
+    select: mealPlanEntrySelect,
+  },
+  id: true,
+  startDate: true,
+  status: true,
+  title: true,
+  updatedAt: true,
+});
+
+const PLANNING_MEAL_TYPE = MealType.DINNER;
 
 export interface MealPlanFieldErrors {
   endDate?: string;
@@ -52,6 +96,19 @@ interface MealPlanMutationInput {
   userId: string;
 }
 
+export interface MealPlanEntryValues {
+  date: string;
+  note: string;
+  recipeId: string;
+}
+
+interface SaveMealPlanEntriesInput {
+  entries: MealPlanEntryValues[];
+  familyId: string;
+  mealPlanId: string;
+  userId: string;
+}
+
 interface DeleteMealPlanInput {
   familyId: string;
   mealPlanId: string;
@@ -65,12 +122,26 @@ interface MealPlanListInput {
   userId: string;
 }
 
+type MealPlanPlanningInput = GetMealPlanInput;
+
 export function formatDateOnly(date: Date) {
   return [
     date.getUTCFullYear().toString().padStart(4, "0"),
     (date.getUTCMonth() + 1).toString().padStart(2, "0"),
     date.getUTCDate().toString().padStart(2, "0"),
   ].join("-");
+}
+
+export function getMealPlanDateRange(startDate: Date, endDate: Date) {
+  let currentDate = new Date(startDate.getTime());
+  let dates: string[] = [];
+
+  while (currentDate.getTime() <= endDate.getTime()) {
+    dates.push(formatDateOnly(currentDate));
+    currentDate = addUtcDays(currentDate, 1);
+  }
+
+  return dates;
 }
 
 export function validateMealPlanRange(startDate: string, endDate: string): MealPlanValidationResult {
@@ -207,6 +278,51 @@ export async function getMealPlanForFamily({ familyId, mealPlanId, userId }: Get
   };
 }
 
+export async function getMealPlanPlanningData({
+  familyId,
+  mealPlanId,
+  userId,
+}: MealPlanPlanningInput) {
+  const membership = await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const mealPlan = await db.mealPlan.findFirst({
+    select: mealPlanPlanningDetailSelect,
+    where: {
+      familyId,
+      id: mealPlanId,
+    },
+  });
+
+  if (!mealPlan) {
+    throw new Response("Fant ikke ukeplanen.", {
+      status: 404,
+      statusText: "Not Found",
+    });
+  }
+
+  const recipes = await db.recipe.findMany({
+    orderBy: [{ title: "asc" }],
+    select: recipeOptionSelect,
+    where: {
+      OR: [{ scope: RecipeScope.GLOBAL }, { familyId, scope: RecipeScope.FAMILY }],
+    },
+  });
+
+  return {
+    family: {
+      id: membership.family.id,
+      name: membership.family.name,
+    },
+    mealPlan,
+    recipes,
+    userRole: membership.role,
+    visibleDates: getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate),
+  };
+}
+
 export async function createMealPlan(input: MealPlanMutationInput) {
   const membership = await requireFamilyMembership({
     familyId: input.familyId,
@@ -327,6 +443,117 @@ export async function deleteMealPlan({ familyId, mealPlanId, userId }: DeleteMea
   };
 }
 
+export async function saveMealPlanEntries({
+  entries,
+  familyId,
+  mealPlanId,
+  userId,
+}: SaveMealPlanEntriesInput) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const mealPlan = await db.mealPlan.findFirst({
+    select: {
+      endDate: true,
+      id: true,
+      startDate: true,
+    },
+    where: {
+      familyId,
+      id: mealPlanId,
+    },
+  });
+
+  if (!mealPlan) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  const values = entries.map(normalizeMealPlanEntryValues);
+  const validationError = validateMealPlanEntries(values, mealPlan.startDate, mealPlan.endDate);
+
+  if (validationError) {
+    return {
+      formError: validationError,
+      status: "VALIDATION_ERROR" as const,
+      values,
+    };
+  }
+
+  const recipeIds = [...new Set(values.map((entry) => entry.recipeId).filter(Boolean))];
+
+  if (recipeIds.length > 0) {
+    const recipes = await db.recipe.findMany({
+      select: {
+        id: true,
+      },
+      where: {
+        id: {
+          in: recipeIds,
+        },
+        OR: [{ scope: RecipeScope.GLOBAL }, { familyId, scope: RecipeScope.FAMILY }],
+      },
+    });
+
+    if (recipes.length !== recipeIds.length) {
+      return {
+        formError: "Minst en valgt oppskrift er ikke tilgjengelig for familien.",
+        status: "VALIDATION_ERROR" as const,
+        values,
+      };
+    }
+  }
+
+  await db.$transaction(async (tx) => {
+    for (let entry of values) {
+      const date = parseDateOnly(entry.date);
+
+      if (!date) {
+        throw new Error(`Expected validated meal plan date for "${entry.date}".`);
+      }
+
+      if (!entry.note && !entry.recipeId) {
+        await tx.mealPlanEntry.deleteMany({
+          where: {
+            date,
+            mealPlanId: mealPlan.id,
+            mealType: PLANNING_MEAL_TYPE,
+          },
+        });
+        continue;
+      }
+
+      await tx.mealPlanEntry.upsert({
+        create: {
+          date,
+          mealPlanId: mealPlan.id,
+          mealType: PLANNING_MEAL_TYPE,
+          note: entry.note || null,
+          recipeId: entry.recipeId || null,
+        },
+        update: {
+          note: entry.note || null,
+          recipeId: entry.recipeId || null,
+        },
+        where: {
+          mealPlanId_date_mealType: {
+            date,
+            mealPlanId: mealPlan.id,
+            mealType: PLANNING_MEAL_TYPE,
+          },
+        },
+      });
+    }
+  });
+
+  return {
+    status: "UPDATED" as const,
+  };
+}
+
 function validateMealPlanInput({
   endDate,
   startDate,
@@ -365,6 +592,48 @@ function validateMealPlanInput({
   };
 }
 
+function normalizeMealPlanEntryValues(entry: MealPlanEntryValues): MealPlanEntryValues {
+  return {
+    date: entry.date.trim(),
+    note: entry.note.trim(),
+    recipeId: entry.recipeId.trim(),
+  };
+}
+
+function validateMealPlanEntries(entries: MealPlanEntryValues[], startDate: Date, endDate: Date) {
+  const visibleDateSet = new Set(getMealPlanDateRange(startDate, endDate));
+
+  if (entries.length !== visibleDateSet.size) {
+    return "Noen dager mangler i ukeplanen. Last siden pa nytt og prov igjen.";
+  }
+
+  const seenDates = new Set<string>();
+
+  for (let entry of entries) {
+    if (!entry.date) {
+      return "Fant en ugyldig dag i ukeplanen.";
+    }
+
+    const parsedDate = parseDateOnly(entry.date);
+
+    if (!parsedDate) {
+      return "Fant en ugyldig dag i ukeplanen.";
+    }
+
+    if (!visibleDateSet.has(entry.date)) {
+      return "En av dagene ligger utenfor den aktive perioden.";
+    }
+
+    if (seenDates.has(entry.date)) {
+      return "Hver dag kan bare sendes inn en gang per lagring.";
+    }
+
+    seenDates.add(entry.date);
+  }
+
+  return null;
+}
+
 function parseDateOnly(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return null;
@@ -392,4 +661,8 @@ function differenceInUtcDays(startDate: Date, endDate: Date) {
   const millisecondsPerDay = 1000 * 60 * 60 * 24;
 
   return Math.round((endDate.getTime() - startDate.getTime()) / millisecondsPerDay);
+}
+
+function addUtcDays(date: Date, amount: number) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + amount));
 }

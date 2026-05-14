@@ -1,17 +1,32 @@
 import { Form, Link, isRouteErrorResponse, useNavigation, type MetaFunction } from "react-router";
 
 import { requireUser } from "../lib/auth.server";
-import { formatDateOnly, getMealPlanForFamily, updateMealPlan } from "../lib/meal-plan.server";
+import {
+  formatDateOnly,
+  getMealPlanPlanningData,
+  saveMealPlanEntries,
+  type MealPlanEntryValues,
+  updateMealPlan,
+} from "../lib/meal-plan.server";
 
-type MealPlanNotice = "meal-plan-created" | "meal-plan-updated";
+type MealPlanNotice = "meal-plan-created" | "meal-plan-entries-saved" | "meal-plan-updated";
+type MealPlanIntent = "save-meal-plan-entries" | "update-meal-plan";
+
+interface MealPlanEntryFormState {
+  note: string;
+  recipeId: string;
+}
 
 interface MealPlanActionData {
+  entryFormError?: string;
+  entryValues?: Record<string, MealPlanEntryFormState>;
   fieldErrors?: {
     endDate?: string;
     startDate?: string;
     title?: string;
   };
   formError?: string;
+  intent?: MealPlanIntent;
   values?: {
     endDate?: string;
     startDate?: string;
@@ -44,20 +59,40 @@ export async function loader({
   const user = await requireUser(request);
   const familyId = requireRouteParam(params.familyId, "Fant ikke familien.");
   const mealPlanId = requireRouteParam(params.mealPlanId, "Fant ikke ukeplanen.");
-  const result = await getMealPlanForFamily({
+  const result = await getMealPlanPlanningData({
     familyId,
     mealPlanId,
     userId: user.id,
   });
+
+  const entriesByDate = Object.fromEntries(
+    result.visibleDates.map((date) => {
+      const entry = result.mealPlan.entries.find(
+        (mealPlanEntry) => mealPlanEntry.mealType === "DINNER" && formatDateOnly(mealPlanEntry.date) === date,
+      );
+
+      return [
+        date,
+        {
+          note: entry?.note ?? "",
+          recipeId: entry?.recipeId ?? "",
+        },
+      ];
+    }),
+  );
 
   return {
     family: result.family,
     mealPlan: {
       ...result.mealPlan,
       endDate: formatDateOnly(result.mealPlan.endDate),
+      entries: undefined,
       startDate: formatDateOnly(result.mealPlan.startDate),
     },
     notice: getMealPlanNotice(request),
+    recipes: result.recipes,
+    visibleDates: result.visibleDates,
+    entriesByDate,
   };
 }
 
@@ -76,6 +111,37 @@ export async function action({
   const mealPlanId = requireRouteParam(params.mealPlanId, "Fant ikke ukeplanen.");
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
+
+  if (intent === "save-meal-plan-entries") {
+    const result = await saveMealPlanEntries({
+      entries: parseMealPlanEntries(formData),
+      familyId,
+      mealPlanId,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw new Response("Fant ikke ukeplanen.", {
+        status: 404,
+        statusText: "Not Found",
+      });
+    }
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        entryFormError: result.formError,
+        entryValues: indexMealPlanEntryValues(result.values),
+        intent,
+      } satisfies MealPlanActionData;
+    }
+
+    return buildMealPlanRedirect({
+      familyId,
+      mealPlanId,
+      notice: "meal-plan-entries-saved",
+      request,
+    });
+  }
 
   if (intent !== "update-meal-plan") {
     return {
@@ -102,6 +168,7 @@ export async function action({
   if (result.status === "VALIDATION_ERROR") {
     return {
       fieldErrors: result.fieldErrors,
+      intent,
       values: result.values,
     } satisfies MealPlanActionData;
   }
@@ -116,11 +183,22 @@ export async function action({
 
 export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlanRouteProps) {
   const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
+  const pendingIntent = navigation.formData?.get("intent");
+  const isSavingEntries = navigation.state === "submitting" && pendingIntent === "save-meal-plan-entries";
+  const isUpdatingMetadata = navigation.state === "submitting" && pendingIntent === "update-meal-plan";
   const noticeContent = loaderData.notice ? getMealPlanNoticeContent(loaderData.notice) : null;
   const titleValue = actionData?.values?.title ?? loaderData.mealPlan.title;
   const startDateValue = actionData?.values?.startDate ?? loaderData.mealPlan.startDate;
   const endDateValue = actionData?.values?.endDate ?? loaderData.mealPlan.endDate;
+  const entryValues =
+    actionData?.intent === "save-meal-plan-entries" && actionData.entryValues
+      ? actionData.entryValues
+      : loaderData.entriesByDate;
+  const selectedRecipeIds = new Set(
+    Object.values(entryValues)
+      .map((entry) => entry.recipeId)
+      .filter(Boolean),
+  );
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -129,12 +207,12 @@ export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlan
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
               <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
-                Rediger ukeplan
+                Middagsplanlegging
               </span>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">{loaderData.mealPlan.title}</h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                Oppdater navn og datointervall for denne familieukeplanen. Daglige malinger og handleliste
-                kan bygges videre pa denne ruten senere.
+                Planlegg middager dag for dag i den aktive perioden. Oppskrifter og notater lagres pa
+                serveren for hele familien.
               </p>
             </div>
 
@@ -156,17 +234,176 @@ export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlan
           </section>
         ) : null}
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-lg font-semibold text-slate-950">Middager for aktiv periode</h2>
+              <p className="text-sm leading-6 text-slate-600">
+                Hver dag kan ha en middag, et notat eller begge deler. Tomme dager blir lagret som
+                up planlagt.
+              </p>
+            </div>
+
+            <Form className="mt-6 space-y-4" method="post">
+              <input name="intent" type="hidden" value="save-meal-plan-entries" />
+
+              <div className="grid gap-4">
+                {loaderData.visibleDates.map((date) => {
+                  const entry = entryValues[date] ?? { note: "", recipeId: "" };
+                  const selectedRecipe = loaderData.recipes.find((recipe) => recipe.id === entry.recipeId) ?? null;
+
+                  return (
+                    <article key={date} className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                      <input name="entryDate" type="hidden" value={date} />
+
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+                              Middag
+                            </p>
+                            <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                              {formatWeekdayLabel(date)}
+                            </h3>
+                            <p className="mt-1 text-sm font-medium text-slate-500">{formatDateLabel(date)}</p>
+                          </div>
+
+                          <div className="w-full sm:max-w-sm">
+                            <label className="block text-sm font-medium text-slate-700">
+                              Oppskrift
+                              <select
+                                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                                defaultValue={entry.recipeId}
+                                name={`recipeId:${date}`}
+                              >
+                                <option value="">Velg middag</option>
+                                {loaderData.recipes.map((recipe) => (
+                                  <option key={recipe.id} value={recipe.id}>
+                                    {recipe.title}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                        </div>
+
+                        <label className="block text-sm font-medium text-slate-700">
+                          Notat
+                          <textarea
+                            className="mt-2 min-h-28 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                            defaultValue={entry.note}
+                            name={`note:${date}`}
+                            placeholder="F.eks. bytt ut ris med pasta eller husk rester til dagen etter"
+                          />
+                        </label>
+
+                        <div className="rounded-[20px] bg-white p-4 ring-1 ring-slate-200">
+                          <p className="text-sm leading-6 text-slate-600">
+                            {selectedRecipe
+                              ? `${selectedRecipe.description ?? "Ingen beskrivelse."} · ${selectedRecipe.prepMinutes ?? "?"} min · ${selectedRecipe.defaultServings ?? "?"} personer`
+                              : entry.note
+                                ? "Bare notat lagres for denne dagen."
+                                : "Ingen rett valgt enda."}
+                          </p>
+
+                          {selectedRecipe?.tags.length ? (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {selectedRecipe.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              {actionData?.intent === "save-meal-plan-entries" && actionData.entryFormError ? (
+                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {actionData.entryFormError}
+                </p>
+              ) : null}
+
+              <button
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                disabled={isSavingEntries}
+                type="submit"
+              >
+                {isSavingEntries ? "Lagrer middager..." : "Lagre middager"}
+              </button>
+            </Form>
+          </article>
+
+          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-lg font-semibold text-slate-950">Oppskriftsbank</h2>
+              <p className="text-sm leading-6 text-slate-600">
+                Seedede oppskrifter du kan bruke i den forste produksjonsflyten for middagsplanlegging.
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-3">
+              {loaderData.recipes.map((recipe) => (
+                <article
+                  key={recipe.id}
+                  className={
+                    selectedRecipeIds.has(recipe.id)
+                      ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-5"
+                      : "rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                  }
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-950">{recipe.title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{recipe.description}</p>
+                    </div>
+                    {selectedRecipeIds.has(recipe.id) ? (
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                        I planen
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                      {recipe.prepMinutes ?? "?"} min
+                    </span>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                      {recipe.defaultServings ?? "?"} personer
+                    </span>
+                    {recipe.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">Detaljer</h2>
               <p className="text-sm leading-6 text-slate-600">
-                Planen tilhorer familien {loaderData.family.name} og bruker et lagret datointervall som
-                grunnlag for neste steg i planleggingsflyten.
+                Planen tilhorer familien {loaderData.family.name} og bruker et lagret datointervall pa maks
+                7 dager.
               </p>
             </div>
 
-            <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+            <dl className="mt-6 grid gap-4">
               <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
                 <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">Status</dt>
                 <dd className="mt-2 text-base font-semibold text-slate-950">
@@ -189,7 +426,7 @@ export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlan
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">Oppdater ukeplan</h2>
               <p className="text-sm leading-6 text-slate-600">
-                Datointervallet kan vare maks 7 dager og ma alltid ha en gyldig start- og sluttdato.
+                Du kan fortsatt endre navn og datointervall her. Datointervallet kan vare maks 7 dager.
               </p>
             </div>
 
@@ -206,7 +443,9 @@ export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlan
                 />
               </label>
 
-              {actionData?.fieldErrors?.title ? <p className="text-sm text-rose-600">{actionData.fieldErrors.title}</p> : null}
+              {actionData?.intent === "update-meal-plan" && actionData.fieldErrors?.title ? (
+                <p className="text-sm text-rose-600">{actionData.fieldErrors.title}</p>
+              ) : null}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-slate-700">
@@ -230,10 +469,10 @@ export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlan
                 </label>
               </div>
 
-              {actionData?.fieldErrors?.startDate ? (
+              {actionData?.intent === "update-meal-plan" && actionData.fieldErrors?.startDate ? (
                 <p className="text-sm text-rose-600">{actionData.fieldErrors.startDate}</p>
               ) : null}
-              {actionData?.fieldErrors?.endDate ? (
+              {actionData?.intent === "update-meal-plan" && actionData.fieldErrors?.endDate ? (
                 <p className="text-sm text-rose-600">{actionData.fieldErrors.endDate}</p>
               ) : null}
               {actionData?.formError ? (
@@ -244,10 +483,10 @@ export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlan
 
               <button
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={isSubmitting}
+                disabled={isUpdatingMetadata}
                 type="submit"
               >
-                {isSubmitting ? "Lagrer..." : "Lagre endringer"}
+                {isUpdatingMetadata ? "Lagrer..." : "Lagre endringer"}
               </button>
             </Form>
           </article>
@@ -301,7 +540,11 @@ function requireRouteParam(value: string | undefined, message: string) {
 function getMealPlanNotice(request: Request): MealPlanNotice | null {
   const notice = new URL(request.url).searchParams.get("notice");
 
-  if (notice === "meal-plan-created" || notice === "meal-plan-updated") {
+  if (
+    notice === "meal-plan-created" ||
+    notice === "meal-plan-entries-saved" ||
+    notice === "meal-plan-updated"
+  ) {
     return notice;
   }
 
@@ -332,6 +575,11 @@ function getMealPlanNoticeContent(notice: MealPlanNotice) {
         description: "Ukeplanen er klar for videre arbeid med innhold og handleliste.",
         title: "Ukeplan opprettet",
       };
+    case "meal-plan-entries-saved":
+      return {
+        description: "Middagene og notatene ble lagret for den aktive perioden.",
+        title: "Middager lagret",
+      };
     case "meal-plan-updated":
       return {
         description: "Endringene i navn og datointervall ble lagret.",
@@ -350,4 +598,45 @@ function formatMealPlanWindow(startDate: string, endDate: string) {
   return `${formatter.format(new Date(`${startDate}T00:00:00.000Z`))} - ${formatter.format(
     new Date(`${endDate}T00:00:00.000Z`),
   )}`;
+}
+
+function parseMealPlanEntries(formData: FormData): MealPlanEntryValues[] {
+  return formData.getAll("entryDate").map((dateValue) => {
+    const date = String(dateValue);
+
+    return {
+      date,
+      note: String(formData.get(`note:${date}`) ?? ""),
+      recipeId: String(formData.get(`recipeId:${date}`) ?? ""),
+    };
+  });
+}
+
+function indexMealPlanEntryValues(entries: MealPlanEntryValues[]) {
+  return Object.fromEntries(
+    entries.map((entry) => [
+      entry.date,
+      {
+        note: entry.note,
+        recipeId: entry.recipeId,
+      },
+    ]),
+  );
+}
+
+function formatDateLabel(date: string) {
+  return new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T00:00:00.000Z`));
+}
+
+function formatWeekdayLabel(date: string) {
+  const label = new Intl.DateTimeFormat("nb-NO", {
+    timeZone: "UTC",
+    weekday: "long",
+  }).format(new Date(`${date}T00:00:00.000Z`));
+
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }

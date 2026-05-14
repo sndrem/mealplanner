@@ -24,9 +24,10 @@ Follow this sequence:
 1. Resolve the repository context from git@github.com:sndrem/mealplanner.git
 2. Fetch the GitHub issue.
 3. Summarize the issue in your own words.
-4. Inspect the codebase areas likely affected.
-5. Produce a detailed implementation plan.
-6. Stop and wait for approval before editing code.
+4. Have a look at the file AGENT_HANDOFF.md for context of the previous issue resolved
+5. Inspect the codebase areas likely affected.
+6. Produce a detailed implementation plan.
+7. Stop and wait for approval before editing code.
 
 Do not start implementation as part of this skill unless the user explicitly asks for it after reviewing the plan.
 
