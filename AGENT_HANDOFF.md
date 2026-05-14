@@ -2,32 +2,33 @@
 
 ## Current Objective
 
-Implement issue `#10`'s meal-plan approval workflow so admins can move plans between draft and approved states without locking editing yet.
+Implement issue `#11`'s deterministic shopping projection so generated shopping items come from persisted meal-plan recipes on the server with exact-match merging and focused coverage.
 
 ## Completed
 
-- Added admin-only meal-plan approval transitions in `app/lib/meal-plan.server.ts`, including `approveMealPlan()`, `reopenMealPlan()`, valid draft/approved transition checks, and persisted `approvedByUserId` / `approvedAt` metadata.
-- Updated `app/routes/family-meal-plan.tsx` to support approve/reopen intents, route notices, admin-only approval controls, and approved timestamp display on the meal-plan detail page.
-- Expanded focused coverage in `app/lib/meal-plan.server.test.ts` and `app/routes/family-meal-plan.test.ts` for approval success paths, invalid transitions, authorization failures, and redirect handling.
+- Added `app/lib/shopping.server.ts` with a dedicated meal-plan-scoped shopping projection query, deterministic generated-item source keys, exact-match merge behavior, override application, and store/section ordering.
+- Added the first production shopping route in `app/routes/family-meal-plan-shopping.tsx` and registered it in `app/routes.ts` so families can open a read-only server-generated shopping view from a meal plan.
+- Expanded focused coverage in `app/lib/shopping.server.test.ts` and `app/routes/family-meal-plan-shopping.test.ts` for projection, merge boundaries, override application, ordering, scoping, and loader serialization.
+- Updated `app/routes/family-meal-plan.tsx` with a direct link to the new shopping view.
 
 ## Files To Read First
 
-- `app/lib/meal-plan.server.ts` - Approval state mutations, transition rules, and shared meal-plan server logic.
-- `app/routes/family-meal-plan.tsx` - Detail-route action branching, approval UI, and success/error notices.
-- `app/lib/meal-plan.server.test.ts` - Service-level approval behavior and authorization expectations.
-- `app/routes/family-meal-plan.test.ts` - Route intent wiring and approval notice coverage.
+- `app/lib/shopping.server.ts` - Core server-side shopping projection, merge logic, override application, and store grouping.
+- `app/routes/family-meal-plan-shopping.tsx` - Read-only shopping projection loader and UI for one meal plan.
+- `app/lib/shopping.server.test.ts` - Service-level coverage for deterministic source keys, exact-match merging, overrides, and ordering.
+- `app/routes/family-meal-plan.tsx` - Meal-plan detail page entry point linking into the shopping route.
 
 ## Validation
 
-- `npm run test:run -- app/lib/meal-plan.server.test.ts app/routes/family-meal-plan.test.ts`
+- `npm run test:run -- app/lib/shopping.server.test.ts app/routes/family-meal-plan-shopping.test.ts`
 - `./node_modules/.bin/tsc --noEmit`
 
 ## Open Items
 
-- No manual browser smoke test has been run yet for the approve/reopen flow on `families/:familyId/meal-plans/:mealPlanId`.
-- Approved meal plans are still editable by design in this first pass; stricter locking for edits, deletes, shopping, or calendar flows is still future work.
-- The detail view shows approval time but not approver display name. If product wants that context, extend the meal-plan select and loader payload later.
+- No manual browser smoke test has been run yet for `families/:familyId/meal-plans/:mealPlanId/shopping`.
+- The new production shopping flow is generated-item only; manual shopping items, override mutation actions, checked-state editing, postponement editing, and store-mode UX are still future work.
+- Generated source keys are stable for the same merged occurrence set, but a merge bucket changing because entries were added or removed will naturally produce a new key and reset any existing override for that generated row.
 
 ## Next Step
 
-Run a manual end-to-end check of the meal-plan detail page to verify admin approve/reopen actions, status notices, and approved timestamp rendering before tightening workflow rules further.
+Run a manual end-to-end check of the new shopping route from an existing meal plan, then decide whether the next issue should add persisted manual items or override mutation actions first.
