@@ -280,6 +280,12 @@ export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlan
 
             <div className="flex flex-wrap gap-3">
               <Link
+                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+                to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
+              >
+                Apne handleliste
+              </Link>
+              <Link
                 className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
                 to={`/families/${loaderData.family.id}/meal-plans`}
               >

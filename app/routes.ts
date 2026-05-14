@@ -6,6 +6,7 @@ export default [
   route("families/:familyId", "routes/family.tsx"),
   route("families/:familyId/meal-plans", "routes/family-meal-plans.tsx"),
   route("families/:familyId/meal-plans/:mealPlanId", "routes/family-meal-plan.tsx"),
+  route("families/:familyId/meal-plans/:mealPlanId/shopping", "routes/family-meal-plan-shopping.tsx"),
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
   route("prototype", "routes/prototype.tsx"),
