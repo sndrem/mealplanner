@@ -2,15 +2,26 @@ import { Form, Link, isRouteErrorResponse, useNavigation, type MetaFunction } fr
 
 import { requireUser } from "../lib/auth.server";
 import {
+  approveMealPlan,
   formatDateOnly,
   getMealPlanPlanningData,
+  reopenMealPlan,
   saveMealPlanEntries,
   type MealPlanEntryValues,
   updateMealPlan,
 } from "../lib/meal-plan.server";
 
-type MealPlanNotice = "meal-plan-created" | "meal-plan-entries-saved" | "meal-plan-updated";
-type MealPlanIntent = "save-meal-plan-entries" | "update-meal-plan";
+type MealPlanNotice =
+  | "meal-plan-approved"
+  | "meal-plan-created"
+  | "meal-plan-entries-saved"
+  | "meal-plan-reopened"
+  | "meal-plan-updated";
+type MealPlanIntent =
+  | "approve-meal-plan"
+  | "reopen-meal-plan"
+  | "save-meal-plan-entries"
+  | "update-meal-plan";
 
 interface MealPlanEntryFormState {
   note: string;
@@ -27,6 +38,7 @@ interface MealPlanActionData {
   };
   formError?: string;
   intent?: MealPlanIntent;
+  statusFormError?: string;
   values?: {
     endDate?: string;
     startDate?: string;
@@ -85,12 +97,14 @@ export async function loader({
     family: result.family,
     mealPlan: {
       ...result.mealPlan,
+      approvedAt: result.mealPlan.approvedAt ? result.mealPlan.approvedAt.toISOString() : null,
       endDate: formatDateOnly(result.mealPlan.endDate),
       entries: undefined,
       startDate: formatDateOnly(result.mealPlan.startDate),
     },
     notice: getMealPlanNotice(request),
     recipes: result.recipes,
+    userRole: result.userRole,
     visibleDates: result.visibleDates,
     entriesByDate,
   };
@@ -143,6 +157,42 @@ export async function action({
     });
   }
 
+  if (intent === "approve-meal-plan" || intent === "reopen-meal-plan") {
+    const result =
+      intent === "approve-meal-plan"
+        ? await approveMealPlan({
+            familyId,
+            mealPlanId,
+            userId: user.id,
+          })
+        : await reopenMealPlan({
+            familyId,
+            mealPlanId,
+            userId: user.id,
+          });
+
+    if (result.status === "NOT_FOUND") {
+      throw new Response("Fant ikke ukeplanen.", {
+        status: 404,
+        statusText: "Not Found",
+      });
+    }
+
+    if (result.status === "INVALID_TRANSITION") {
+      return {
+        intent,
+        statusFormError: result.formError,
+      } satisfies MealPlanActionData;
+    }
+
+    return buildMealPlanRedirect({
+      familyId,
+      mealPlanId,
+      notice: result.status === "APPROVED" ? "meal-plan-approved" : "meal-plan-reopened",
+      request,
+    });
+  }
+
   if (intent !== "update-meal-plan") {
     return {
       formError: "Ukjent handling.",
@@ -184,12 +234,24 @@ export async function action({
 export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlanRouteProps) {
   const navigation = useNavigation();
   const pendingIntent = navigation.formData?.get("intent");
+  const isApprovingMealPlan = navigation.state === "submitting" && pendingIntent === "approve-meal-plan";
+  const isReopeningMealPlan = navigation.state === "submitting" && pendingIntent === "reopen-meal-plan";
   const isSavingEntries = navigation.state === "submitting" && pendingIntent === "save-meal-plan-entries";
   const isUpdatingMetadata = navigation.state === "submitting" && pendingIntent === "update-meal-plan";
+  const canManageApproval = loaderData.userRole === "ADMIN";
   const noticeContent = loaderData.notice ? getMealPlanNoticeContent(loaderData.notice) : null;
   const titleValue = actionData?.values?.title ?? loaderData.mealPlan.title;
   const startDateValue = actionData?.values?.startDate ?? loaderData.mealPlan.startDate;
   const endDateValue = actionData?.values?.endDate ?? loaderData.mealPlan.endDate;
+  const approvalIntent = loaderData.mealPlan.status === "APPROVED" ? "reopen-meal-plan" : "approve-meal-plan";
+  const approvalButtonLabel =
+    approvalIntent === "approve-meal-plan"
+      ? isApprovingMealPlan
+        ? "Godkjenner..."
+        : "Godkjenn ukeplan"
+      : isReopeningMealPlan
+        ? "Gjenapner..."
+        : "Gjenapne som utkast";
   const entryValues =
     actionData?.intent === "save-meal-plan-entries" && actionData.entryValues
       ? actionData.entryValues
@@ -409,6 +471,11 @@ export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlan
                 <dd className="mt-2 text-base font-semibold text-slate-950">
                   {loaderData.mealPlan.status === "APPROVED" ? "Godkjent" : "Utkast"}
                 </dd>
+                {loaderData.mealPlan.approvedAt ? (
+                  <dd className="mt-2 text-sm leading-6 text-slate-600">
+                    Godkjent {formatApprovalTimestamp(loaderData.mealPlan.approvedAt)}
+                  </dd>
+                ) : null}
               </div>
 
               <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
@@ -420,6 +487,31 @@ export default function FamilyMealPlanRoute({ actionData, loaderData }: MealPlan
                 </dd>
               </div>
             </dl>
+
+            {canManageApproval ? (
+              <Form className="mt-6 space-y-4" method="post">
+                <input name="intent" type="hidden" value={approvalIntent} />
+
+                <p className="text-sm leading-6 text-slate-600">
+                  Godkjenning markerer ukeplanen som klar for neste steg uten a lase redigering enda.
+                </p>
+
+                {(actionData?.intent === "approve-meal-plan" || actionData?.intent === "reopen-meal-plan") &&
+                actionData.statusFormError ? (
+                  <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {actionData.statusFormError}
+                  </p>
+                ) : null}
+
+                <button
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  disabled={isApprovingMealPlan || isReopeningMealPlan}
+                  type="submit"
+                >
+                  {approvalButtonLabel}
+                </button>
+              </Form>
+            ) : null}
           </article>
 
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -541,8 +633,10 @@ function getMealPlanNotice(request: Request): MealPlanNotice | null {
   const notice = new URL(request.url).searchParams.get("notice");
 
   if (
+    notice === "meal-plan-approved" ||
     notice === "meal-plan-created" ||
     notice === "meal-plan-entries-saved" ||
+    notice === "meal-plan-reopened" ||
     notice === "meal-plan-updated"
   ) {
     return notice;
@@ -570,6 +664,11 @@ function buildMealPlanRedirect({
 
 function getMealPlanNoticeContent(notice: MealPlanNotice) {
   switch (notice) {
+    case "meal-plan-approved":
+      return {
+        description: "Ukeplanen er markert som godkjent og klar for neste steg.",
+        title: "Ukeplan godkjent",
+      };
     case "meal-plan-created":
       return {
         description: "Ukeplanen er klar for videre arbeid med innhold og handleliste.",
@@ -579,6 +678,11 @@ function getMealPlanNoticeContent(notice: MealPlanNotice) {
       return {
         description: "Middagene og notatene ble lagret for den aktive perioden.",
         title: "Middager lagret",
+      };
+    case "meal-plan-reopened":
+      return {
+        description: "Ukeplanen er gjenapnet som utkast og kan fortsatt redigeres.",
+        title: "Ukeplan gjenapnet",
       };
     case "meal-plan-updated":
       return {
@@ -598,6 +702,16 @@ function formatMealPlanWindow(startDate: string, endDate: string) {
   return `${formatter.format(new Date(`${startDate}T00:00:00.000Z`))} - ${formatter.format(
     new Date(`${endDate}T00:00:00.000Z`),
   )}`;
+}
+
+function formatApprovalTimestamp(value: string) {
+  return new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(value));
 }
 
 function parseMealPlanEntries(formData: FormData): MealPlanEntryValues[] {
