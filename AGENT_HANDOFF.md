@@ -2,33 +2,33 @@
 
 ## Current Objective
 
-Implement issue `#8`'s first production dinner-planning flow. The selected meal-plan route now supports day-by-day dinner recipe selection plus per-day notes, backed by server persistence and the existing seeded recipe data.
+Implement issue `#9`'s first production meal-plan copy/reuse flow. Users can now create a new meal plan from an existing one, map copied dinner entries and notes into a selected target date range by relative day offset, and keep the change scoped to current meal-planning functionality.
 
 ## Completed
 
-- Extended `app/lib/meal-plan.server.ts` with a planning loader that returns visible meal-plan dates, existing dinner entries, and accessible recipes, plus a bulk save mutation for dinner entries with server-side date and recipe validation.
-- Reworked `app/routes/family-meal-plan.tsx` into the first production planning screen: users can save dinners and notes for each active date, browse a recipe bank, and still edit meal-plan metadata on the same route.
-- Expanded focused coverage in `app/lib/meal-plan.server.test.ts` and `app/routes/family-meal-plan.test.ts` for planning-data loading, entry save/clear behavior, validation errors, and route redirects.
+- Added `copyMealPlan()` to `app/lib/meal-plan.server.ts` as a dedicated transactional reuse mutation that validates the new range, scopes the source plan to the current family, sets `copiedFromMealPlanId`, copies only dinner entries plus notes, and truncates copied entries that fall outside the new target range.
+- Updated `app/routes/family-meal-plans.tsx` so the existing `Opprett ukeplan` form can optionally reuse a previous meal plan via a source selector while preserving the server-first action/notice flow.
+- Expanded focused coverage in `app/lib/meal-plan.server.test.ts` and `app/routes/family-meal-plans.test.ts` for relative-offset copying, shorter target truncation, source-plan not found handling, and copy-specific redirects/validation state.
 
 ## Files To Read First
 
-- `app/lib/meal-plan.server.ts` - Meal-plan CRUD, planning-data query, UTC date helpers, and bulk dinner entry persistence.
-- `app/routes/family-meal-plan.tsx` - Server-backed dinner planner UI, form parsing, notices, and metadata editing on the selected meal-plan route.
-- `app/lib/meal-plan.server.test.ts` - Fastest reference for entry validation, save semantics, and scoped access rules.
-- `app/routes/family-meal-plan.test.ts` - Loader/action expectations for the production planner route.
+- `app/lib/meal-plan.server.ts` - Meal-plan CRUD plus the new `copyMealPlan()` mutation and UTC date helpers used for relative-offset remapping.
+- `app/routes/family-meal-plans.tsx` - Meal-plan list/create UI, optional reuse selector, action branching, and copy notice handling.
+- `app/lib/meal-plan.server.test.ts` - Fastest reference for range validation, scoped access rules, and copy/truncation behavior.
+- `app/routes/family-meal-plans.test.ts` - Loader/action expectations for create vs reuse flows on the list route.
 
 ## Validation
 
-- `npm run test:run -- app/lib/meal-plan.server.test.ts app/routes/family-meal-plan.test.ts`
+- `npm run test:run -- app/lib/meal-plan.server.test.ts app/routes/family-meal-plans.test.ts`
 - `npm run lint`
 - `./node_modules/.bin/tsc --noEmit`
 
 ## Open Items
 
-- No manual browser smoke test has been run yet for the dinner planner route.
-- Copy/reuse, shopping generation, and approval state are still follow-up slices; this change only covers daily dinner entry editing plus notes.
-- The planner currently saves the full visible date range in one submit; if product later prefers autosave or per-day saves, the route/action contract will need to change.
+- No manual browser smoke test has been run yet for the meal-plan list page or copied-plan detail flow.
+- Manual shopping items, shopping overrides, and approval state still remain out of scope for copy/reuse; this change only copies dinner entries plus notes.
+- The copied plan currently redirects back to the meal-plan list with a success notice. If product later prefers jumping directly into the copied plan, the list-route redirect flow should be revisited.
 
 ## Next Step
 
-Run a manual end-to-end check of `families/:familyId/meal-plans/:mealPlanId` to verify saving, clearing, and reloading dinners/notes in the browser, then continue with the next meal-planning slice such as copy/reuse or approval.
+Run a manual end-to-end check of `families/:familyId/meal-plans` to verify reusing a source plan, then open the copied plan and confirm dinners/notes landed on the expected target dates before moving on to approval or shopping-generation work.
