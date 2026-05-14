@@ -1,7 +1,7 @@
-import { MealType, Prisma, RecipeScope } from "@prisma/client";
+import { MealPlanStatus, MealType, Prisma, RecipeScope } from "@prisma/client";
 
 import { db } from "./db.server";
-import { requireFamilyMembership } from "./family.server";
+import { requireFamilyAdmin, requireFamilyMembership } from "./family.server";
 
 const MEAL_PLAN_MAX_SPAN_DAYS = 7;
 const MEAL_PLAN_MAX_DAY_OFFSET = MEAL_PLAN_MAX_SPAN_DAYS - 1;
@@ -119,6 +119,8 @@ interface DeleteMealPlanInput {
   userId: string;
 }
 
+type MealPlanApprovalInput = DeleteMealPlanInput;
+
 type GetMealPlanInput = DeleteMealPlanInput;
 
 interface MealPlanListInput {
@@ -127,6 +129,8 @@ interface MealPlanListInput {
 }
 
 type MealPlanPlanningInput = GetMealPlanInput;
+
+type MealPlanApprovalAction = "APPROVE" | "REOPEN";
 
 export function formatDateOnly(date: Date) {
   return [
@@ -467,6 +471,14 @@ export async function copyMealPlan(input: CopyMealPlanInput) {
   };
 }
 
+export async function approveMealPlan(input: MealPlanApprovalInput) {
+  return updateMealPlanApprovalState(input, "APPROVE");
+}
+
+export async function reopenMealPlan(input: MealPlanApprovalInput) {
+  return updateMealPlanApprovalState(input, "REOPEN");
+}
+
 export async function updateMealPlan(input: MealPlanMutationInput & { mealPlanId: string }) {
   await requireFamilyMembership({
     familyId: input.familyId,
@@ -663,6 +675,65 @@ export async function saveMealPlanEntries({
   };
 }
 
+async function updateMealPlanApprovalState(
+  { familyId, mealPlanId, userId }: MealPlanApprovalInput,
+  action: MealPlanApprovalAction,
+) {
+  await requireFamilyAdmin({
+    familyId,
+    userId,
+  });
+
+  const mealPlan = await db.mealPlan.findFirst({
+    select: {
+      id: true,
+      status: true,
+    },
+    where: {
+      familyId,
+      id: mealPlanId,
+    },
+  });
+
+  if (!mealPlan) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  if (!isMealPlanStatusTransitionAllowed(mealPlan.status, action)) {
+    return {
+      formError: getMealPlanApprovalTransitionError(action, mealPlan.status),
+      status: "INVALID_TRANSITION" as const,
+    };
+  }
+
+  const nextStatus = action === "APPROVE" ? MealPlanStatus.APPROVED : MealPlanStatus.DRAFT;
+  const updatedMealPlan = await db.mealPlan.update({
+    data:
+      nextStatus === MealPlanStatus.APPROVED
+        ? {
+            approvedAt: new Date(),
+            approvedByUserId: userId,
+            status: MealPlanStatus.APPROVED,
+          }
+        : {
+            approvedAt: null,
+            approvedByUserId: null,
+            status: MealPlanStatus.DRAFT,
+          },
+    select: mealPlanDetailSelect,
+    where: {
+      id: mealPlan.id,
+    },
+  });
+
+  return {
+    mealPlan: updatedMealPlan,
+    status: action === "APPROVE" ? ("APPROVED" as const) : ("REOPENED" as const),
+  };
+}
+
 function validateMealPlanInput({
   endDate,
   startDate,
@@ -699,6 +770,30 @@ function validateMealPlanInput({
     ok: true,
     values,
   };
+}
+
+function isMealPlanStatusTransitionAllowed(status: MealPlanStatus, action: MealPlanApprovalAction) {
+  if (action === "APPROVE") {
+    return status === MealPlanStatus.DRAFT;
+  }
+
+  return status === MealPlanStatus.APPROVED;
+}
+
+function getMealPlanApprovalTransitionError(action: MealPlanApprovalAction, currentStatus: MealPlanStatus) {
+  if (action === "APPROVE") {
+    if (currentStatus === MealPlanStatus.APPROVED) {
+      return "Ukeplanen er allerede godkjent.";
+    }
+
+    return "Ukeplanen kan ikke godkjennes fra gjeldende status.";
+  }
+
+  if (currentStatus === MealPlanStatus.DRAFT) {
+    return "Ukeplanen er allerede et utkast.";
+  }
+
+  return "Ukeplanen kan ikke gjenapnes fra gjeldende status.";
 }
 
 function normalizeMealPlanEntryValues(entry: MealPlanEntryValues): MealPlanEntryValues {

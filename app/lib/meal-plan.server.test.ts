@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { dbMock, requireFamilyMembershipMock } = vi.hoisted(() => {
+const { dbMock, requireFamilyAdminMock, requireFamilyMembershipMock } = vi.hoisted(() => {
   return {
     dbMock: {
       $transaction: vi.fn(),
@@ -20,6 +20,7 @@ const { dbMock, requireFamilyMembershipMock } = vi.hoisted(() => {
         findMany: vi.fn(),
       },
     },
+    requireFamilyAdminMock: vi.fn(),
     requireFamilyMembershipMock: vi.fn(),
   };
 });
@@ -32,11 +33,13 @@ vi.mock("./db.server", () => {
 
 vi.mock("./family.server", () => {
   return {
+    requireFamilyAdmin: requireFamilyAdminMock,
     requireFamilyMembership: requireFamilyMembershipMock,
   };
 });
 
 import {
+  approveMealPlan,
   copyMealPlan,
   createMealPlan,
   deleteMealPlan,
@@ -44,6 +47,7 @@ import {
   getMealPlanForFamily,
   getMealPlanPlanningData,
   listMealPlansForFamily,
+  reopenMealPlan,
   saveMealPlanEntries,
   updateMealPlan,
   validateMealPlanRange,
@@ -64,6 +68,7 @@ const mockMembership = {
 describe("meal-plan.server", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    requireFamilyAdminMock.mockResolvedValue(mockMembership);
     requireFamilyMembershipMock.mockResolvedValue(mockMembership);
     dbMock.$transaction.mockImplementation(async (callback: (tx: typeof dbMock) => Promise<unknown>) =>
       callback(dbMock),
@@ -510,6 +515,148 @@ describe("meal-plan.server", () => {
       status: "NOT_FOUND",
     });
     expect(dbMock.mealPlan.update).not.toHaveBeenCalled();
+  });
+
+  it("approves a draft meal plan as an admin", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      id: "meal-plan-1",
+      status: "DRAFT",
+    });
+    dbMock.mealPlan.update.mockResolvedValue({
+      approvedAt: new Date("2026-05-16T09:30:00.000Z"),
+      approvedByUserId: "user-1",
+      copiedFromMealPlanId: null,
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "APPROVED",
+      title: "Langhelg",
+      updatedAt: new Date("2026-05-16T09:30:00.000Z"),
+    });
+
+    const result = await approveMealPlan({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(requireFamilyAdminMock).toHaveBeenCalledWith({
+      familyId: "family-1",
+      userId: "user-1",
+    });
+    expect(dbMock.mealPlan.update).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        approvedAt: expect.any(Date),
+        approvedByUserId: "user-1",
+        status: "APPROVED",
+      }),
+      select: {
+        approvedAt: true,
+        approvedByUserId: true,
+        copiedFromMealPlanId: true,
+        createdAt: true,
+        endDate: true,
+        id: true,
+        startDate: true,
+        status: true,
+        title: true,
+        updatedAt: true,
+      },
+      where: {
+        id: "meal-plan-1",
+      },
+    });
+    expect(result.status).toBe("APPROVED");
+  });
+
+  it("reopens an approved meal plan back to draft", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      id: "meal-plan-1",
+      status: "APPROVED",
+    });
+    dbMock.mealPlan.update.mockResolvedValue({
+      approvedAt: null,
+      approvedByUserId: null,
+      copiedFromMealPlanId: null,
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+      updatedAt: new Date("2026-05-16T09:35:00.000Z"),
+    });
+
+    const result = await reopenMealPlan({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(dbMock.mealPlan.update).toHaveBeenCalledWith({
+      data: {
+        approvedAt: null,
+        approvedByUserId: null,
+        status: "DRAFT",
+      },
+      select: {
+        approvedAt: true,
+        approvedByUserId: true,
+        copiedFromMealPlanId: true,
+        createdAt: true,
+        endDate: true,
+        id: true,
+        startDate: true,
+        status: true,
+        title: true,
+        updatedAt: true,
+      },
+      where: {
+        id: "meal-plan-1",
+      },
+    });
+    expect(result.status).toBe("REOPENED");
+  });
+
+  it("returns an invalid-transition error when approving an already approved meal plan", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      id: "meal-plan-1",
+      status: "APPROVED",
+    });
+
+    const result = await approveMealPlan({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      formError: "Ukeplanen er allerede godkjent.",
+      status: "INVALID_TRANSITION",
+    });
+    expect(dbMock.mealPlan.update).not.toHaveBeenCalled();
+  });
+
+  it("rethrows the admin authorization failure for approval changes", async () => {
+    requireFamilyAdminMock.mockRejectedValue(
+      new Response("Forbidden", {
+        status: 403,
+        statusText: "Forbidden",
+      }),
+    );
+
+    await expect(
+      approveMealPlan({
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+        userId: "user-2",
+      }),
+    ).rejects.toMatchObject({
+      status: 403,
+      statusText: "Forbidden",
+    });
+    expect(dbMock.mealPlan.findFirst).not.toHaveBeenCalled();
   });
 
   it("rejects entry submissions that do not cover the full visible range", async () => {

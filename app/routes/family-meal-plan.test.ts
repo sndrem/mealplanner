@@ -11,15 +11,23 @@ vi.mock("../lib/auth.server", async () => {
 
 vi.mock("../lib/meal-plan.server", () => {
   return {
+    approveMealPlan: vi.fn(),
     formatDateOnly: vi.fn((date: Date) => date.toISOString().slice(0, 10)),
     getMealPlanPlanningData: vi.fn(),
+    reopenMealPlan: vi.fn(),
     saveMealPlanEntries: vi.fn(),
     updateMealPlan: vi.fn(),
   };
 });
 
 import { requireUser } from "../lib/auth.server";
-import { getMealPlanPlanningData, saveMealPlanEntries, updateMealPlan } from "../lib/meal-plan.server";
+import {
+  approveMealPlan,
+  getMealPlanPlanningData,
+  reopenMealPlan,
+  saveMealPlanEntries,
+  updateMealPlan,
+} from "../lib/meal-plan.server";
 import { action, loader } from "./family-meal-plan";
 
 const mockUser = {
@@ -106,8 +114,8 @@ describe("family meal plan route", () => {
         name: "Solberg",
       },
       mealPlan: {
-        approvedAt: null,
         approvedByUserId: null,
+        approvedAt: null,
         copiedFromMealPlanId: null,
         createdAt: new Date("2026-05-01T12:00:00.000Z"),
         endDate: "2026-05-18",
@@ -129,6 +137,7 @@ describe("family meal plan route", () => {
           title: "Kyllingtaco",
         },
       ],
+      userRole: "ADMIN",
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
       entriesByDate: {
         "2026-05-15": {
@@ -247,6 +256,116 @@ describe("family meal plan route", () => {
     expect(response.headers.get("Location")).toBe(
       "http://localhost/families/family-1/meal-plans/meal-plan-1?notice=meal-plan-entries-saved",
     );
+  });
+
+  it("redirects with an explicit notice after approving a meal plan", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(approveMealPlan).mockResolvedValue({
+      mealPlan: {
+        approvedAt: new Date("2026-05-16T09:30:00.000Z"),
+        approvedByUserId: "user-1",
+        copiedFromMealPlanId: null,
+        createdAt: new Date("2026-05-01T12:00:00.000Z"),
+        endDate: new Date("2026-05-18T00:00:00.000Z"),
+        id: "meal-plan-1",
+        startDate: new Date("2026-05-15T00:00:00.000Z"),
+        status: "APPROVED",
+        title: "Langhelg",
+        updatedAt: new Date("2026-05-16T09:30:00.000Z"),
+      },
+      status: "APPROVED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "approve-meal-plan");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest("http://localhost/families/family-1/meal-plans/meal-plan-1", formData),
+    });
+
+    expect(approveMealPlan).toHaveBeenCalledWith({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+    expect(result).toBeInstanceOf(Response);
+
+    const response = result as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "http://localhost/families/family-1/meal-plans/meal-plan-1?notice=meal-plan-approved",
+    );
+  });
+
+  it("redirects with an explicit notice after reopening a meal plan", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(reopenMealPlan).mockResolvedValue({
+      mealPlan: {
+        approvedAt: null,
+        approvedByUserId: null,
+        copiedFromMealPlanId: null,
+        createdAt: new Date("2026-05-01T12:00:00.000Z"),
+        endDate: new Date("2026-05-18T00:00:00.000Z"),
+        id: "meal-plan-1",
+        startDate: new Date("2026-05-15T00:00:00.000Z"),
+        status: "DRAFT",
+        title: "Langhelg",
+        updatedAt: new Date("2026-05-16T09:35:00.000Z"),
+      },
+      status: "REOPENED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "reopen-meal-plan");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest("http://localhost/families/family-1/meal-plans/meal-plan-1", formData),
+    });
+
+    expect(reopenMealPlan).toHaveBeenCalledWith({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+    expect(result).toBeInstanceOf(Response);
+
+    const response = result as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "http://localhost/families/family-1/meal-plans/meal-plan-1?notice=meal-plan-reopened",
+    );
+  });
+
+  it("returns approval transition errors from the server module", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(approveMealPlan).mockResolvedValue({
+      formError: "Ukeplanen er allerede godkjent.",
+      status: "INVALID_TRANSITION",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "approve-meal-plan");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest("http://localhost/families/family-1/meal-plans/meal-plan-1", formData),
+    });
+
+    expect(result).toEqual({
+      intent: "approve-meal-plan",
+      statusFormError: "Ukeplanen er allerede godkjent.",
+    });
   });
 
   it("returns update validation errors from the server module", async () => {
