@@ -1,9 +1,15 @@
 import { Form, Link, useNavigation, type MetaFunction } from "react-router";
 
 import { requireUser } from "../lib/auth.server";
-import { createMealPlan, deleteMealPlan, formatDateOnly, listMealPlansForFamily } from "../lib/meal-plan.server";
+import {
+  copyMealPlan,
+  createMealPlan,
+  deleteMealPlan,
+  formatDateOnly,
+  listMealPlansForFamily,
+} from "../lib/meal-plan.server";
 
-type MealPlanNotice = "meal-plan-created" | "meal-plan-deleted";
+type MealPlanNotice = "meal-plan-copied" | "meal-plan-created" | "meal-plan-deleted";
 
 interface MealPlanActionData {
   fieldErrors?: {
@@ -16,6 +22,7 @@ interface MealPlanActionData {
   targetMealPlanId?: string;
   values?: {
     endDate?: string;
+    sourceMealPlanId?: string;
     startDate?: string;
     title?: string;
   };
@@ -75,25 +82,51 @@ export async function action({
   const intent = String(formData.get("intent") ?? "");
 
   if (intent === "create-meal-plan") {
-    const result = await createMealPlan({
+    const values = {
       endDate: String(formData.get("endDate") ?? ""),
-      familyId,
+      sourceMealPlanId: String(formData.get("sourceMealPlanId") ?? "").trim(),
       startDate: String(formData.get("startDate") ?? ""),
       title: String(formData.get("title") ?? ""),
-      userId: user.id,
-    });
+    };
+    const result = values.sourceMealPlanId
+      ? await copyMealPlan({
+          endDate: values.endDate,
+          familyId,
+          sourceMealPlanId: values.sourceMealPlanId,
+          startDate: values.startDate,
+          title: values.title,
+          userId: user.id,
+        })
+      : await createMealPlan({
+          endDate: values.endDate,
+          familyId,
+          startDate: values.startDate,
+          title: values.title,
+          userId: user.id,
+        });
 
     if (result.status === "VALIDATION_ERROR") {
       return {
         fieldErrors: result.fieldErrors,
         intent,
-        values: result.values,
+        values: {
+          ...result.values,
+          sourceMealPlanId: values.sourceMealPlanId,
+        },
+      } satisfies MealPlanActionData;
+    }
+
+    if (result.status === "NOT_FOUND") {
+      return {
+        formError: "Fant ikke ukeplanen du ville gjenbruke. Velg en annen ukeplan og prov igjen.",
+        intent,
+        values,
       } satisfies MealPlanActionData;
     }
 
     return buildMealPlanRedirect({
       familyId,
-      notice: "meal-plan-created",
+      notice: values.sourceMealPlanId ? "meal-plan-copied" : "meal-plan-created",
       request,
     });
   }
@@ -140,6 +173,7 @@ export default function FamilyMealPlansRoute({ actionData, loaderData }: MealPla
   const pendingMealPlanId = String(navigation.formData?.get("mealPlanId") ?? "");
   const isCreatingMealPlan = navigation.state === "submitting" && pendingIntent === "create-meal-plan";
   const isDeletingMealPlan = navigation.state === "submitting" && pendingIntent === "delete-meal-plan";
+  const sourceMealPlanValue = actionData?.intent === "create-meal-plan" ? actionData.values?.sourceMealPlanId ?? "" : "";
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -179,8 +213,8 @@ export default function FamilyMealPlansRoute({ actionData, loaderData }: MealPla
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">Opprett ukeplan</h2>
               <p className="text-sm leading-6 text-slate-600">
-                Velg et navn og et datointervall pa maks 7 dager. Delvise uker som torsdag til sondag
-                er stottet.
+                Velg et navn og et datointervall pa maks 7 dager. Du kan starte fra en tom ukeplan eller
+                gjenbruke middager og notater fra en tidligere plan.
               </p>
             </div>
 
@@ -201,6 +235,27 @@ export default function FamilyMealPlansRoute({ actionData, loaderData }: MealPla
               {actionData?.intent === "create-meal-plan" && actionData.fieldErrors?.title ? (
                 <p className="text-sm text-rose-600">{actionData.fieldErrors.title}</p>
               ) : null}
+
+              <label className="block text-sm font-medium text-slate-700">
+                Start med eksisterende ukeplan
+                <select
+                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  defaultValue={sourceMealPlanValue}
+                  name="sourceMealPlanId"
+                >
+                  <option value="">Tom ukeplan</option>
+                  {loaderData.mealPlans.map((mealPlan) => (
+                    <option key={mealPlan.id} value={mealPlan.id}>
+                      {mealPlan.title} ({formatMealPlanWindow(mealPlan.startDate, mealPlan.endDate)})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <p className="text-sm leading-6 text-slate-500">
+                Velg en tidligere ukeplan for a kopiere middager og notater til samme relative dager i den
+                nye perioden.
+              </p>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-slate-700">
@@ -339,7 +394,7 @@ function requireFamilyId(familyId: string | undefined) {
 function getMealPlanNotice(request: Request): MealPlanNotice | null {
   const notice = new URL(request.url).searchParams.get("notice");
 
-  if (notice === "meal-plan-created" || notice === "meal-plan-deleted") {
+  if (notice === "meal-plan-copied" || notice === "meal-plan-created" || notice === "meal-plan-deleted") {
     return notice;
   }
 
@@ -363,6 +418,11 @@ function buildMealPlanRedirect({
 
 function getMealPlanNoticeContent(notice: MealPlanNotice) {
   switch (notice) {
+    case "meal-plan-copied":
+      return {
+        description: "Den nye ukeplanen ble opprettet med kopierte middager og notater i den valgte perioden.",
+        title: "Ukeplan gjenbrukt",
+      };
     case "meal-plan-created":
       return {
         description: "Ukeplanen ble lagret med start- og sluttdato for familien.",

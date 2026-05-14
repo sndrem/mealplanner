@@ -12,6 +12,7 @@ const { dbMock, requireFamilyMembershipMock } = vi.hoisted(() => {
         update: vi.fn(),
       },
       mealPlanEntry: {
+        createMany: vi.fn(),
         deleteMany: vi.fn(),
         upsert: vi.fn(),
       },
@@ -36,6 +37,7 @@ vi.mock("./family.server", () => {
 });
 
 import {
+  copyMealPlan,
   createMealPlan,
   deleteMealPlan,
   formatDateOnly,
@@ -220,6 +222,191 @@ describe("meal-plan.server", () => {
       },
     });
     expect(dbMock.mealPlan.create).not.toHaveBeenCalled();
+  });
+
+  it("copies dinner entries into a new target range using relative offsets", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          note: "Rester til lunsj",
+          recipeId: "kylling-taco",
+        },
+        {
+          date: new Date("2026-05-17T00:00:00.000Z"),
+          note: null,
+          recipeId: "tomatsuppe",
+        },
+      ],
+      id: "meal-plan-source",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.mealPlan.create.mockResolvedValue({
+      approvedAt: null,
+      approvedByUserId: null,
+      copiedFromMealPlanId: "meal-plan-source",
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-22T00:00:00.000Z"),
+      id: "meal-plan-copy",
+      startDate: new Date("2026-05-20T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Neste uke",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    });
+
+    const result = await copyMealPlan({
+      endDate: "2026-05-22",
+      familyId: "family-1",
+      sourceMealPlanId: "meal-plan-source",
+      startDate: "2026-05-20",
+      title: "Neste uke",
+      userId: "user-1",
+    });
+
+    expect(result.status).toBe("CREATED");
+    expect(dbMock.mealPlan.findFirst).toHaveBeenCalledWith({
+      select: {
+        entries: {
+          orderBy: [{ date: "asc" }],
+          select: {
+            date: true,
+            note: true,
+            recipeId: true,
+          },
+          where: {
+            mealType: "DINNER",
+          },
+        },
+        id: true,
+        startDate: true,
+      },
+      where: {
+        familyId: "family-1",
+        id: "meal-plan-source",
+      },
+    });
+    expect(dbMock.mealPlan.create).toHaveBeenCalledWith({
+      data: {
+        copiedFromMealPlanId: "meal-plan-source",
+        endDate: new Date("2026-05-22T00:00:00.000Z"),
+        familyId: "family-1",
+        startDate: new Date("2026-05-20T00:00:00.000Z"),
+        title: "Neste uke",
+      },
+      select: {
+        approvedAt: true,
+        approvedByUserId: true,
+        copiedFromMealPlanId: true,
+        createdAt: true,
+        endDate: true,
+        id: true,
+        startDate: true,
+        status: true,
+        title: true,
+        updatedAt: true,
+      },
+    });
+    expect(dbMock.mealPlanEntry.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          date: new Date("2026-05-20T00:00:00.000Z"),
+          mealPlanId: "meal-plan-copy",
+          mealType: "DINNER",
+          note: "Rester til lunsj",
+          recipeId: "kylling-taco",
+        },
+        {
+          date: new Date("2026-05-22T00:00:00.000Z"),
+          mealPlanId: "meal-plan-copy",
+          mealType: "DINNER",
+          note: null,
+          recipeId: "tomatsuppe",
+        },
+      ],
+    });
+  });
+
+  it("truncates copied entries that fall outside a shorter target range", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          note: "",
+          recipeId: "kylling-taco",
+        },
+        {
+          date: new Date("2026-05-16T00:00:00.000Z"),
+          note: "Bare notat",
+          recipeId: null,
+        },
+        {
+          date: new Date("2026-05-17T00:00:00.000Z"),
+          note: "",
+          recipeId: "tomatsuppe",
+        },
+      ],
+      id: "meal-plan-source",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.mealPlan.create.mockResolvedValue({
+      approvedAt: null,
+      approvedByUserId: null,
+      copiedFromMealPlanId: "meal-plan-source",
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-21T00:00:00.000Z"),
+      id: "meal-plan-copy",
+      startDate: new Date("2026-05-20T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Kort uke",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    });
+
+    await copyMealPlan({
+      endDate: "2026-05-21",
+      familyId: "family-1",
+      sourceMealPlanId: "meal-plan-source",
+      startDate: "2026-05-20",
+      title: "Kort uke",
+      userId: "user-1",
+    });
+
+    expect(dbMock.mealPlanEntry.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          date: new Date("2026-05-20T00:00:00.000Z"),
+          mealPlanId: "meal-plan-copy",
+          mealType: "DINNER",
+          note: "",
+          recipeId: "kylling-taco",
+        },
+        {
+          date: new Date("2026-05-21T00:00:00.000Z"),
+          mealPlanId: "meal-plan-copy",
+          mealType: "DINNER",
+          note: "Bare notat",
+          recipeId: null,
+        },
+      ],
+    });
+  });
+
+  it("returns NOT_FOUND when the source meal plan is outside the family scope", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue(null);
+
+    const result = await copyMealPlan({
+      endDate: "2026-05-22",
+      familyId: "family-1",
+      sourceMealPlanId: "meal-plan-404",
+      startDate: "2026-05-20",
+      title: "Neste uke",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "NOT_FOUND",
+    });
+    expect(dbMock.mealPlan.create).not.toHaveBeenCalled();
+    expect(dbMock.mealPlanEntry.createMany).not.toHaveBeenCalled();
   });
 
   it("throws a not-found response when a meal plan is outside the family scope", async () => {

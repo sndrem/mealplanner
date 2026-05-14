@@ -96,6 +96,10 @@ interface MealPlanMutationInput {
   userId: string;
 }
 
+interface CopyMealPlanInput extends MealPlanMutationInput {
+  sourceMealPlanId: string;
+}
+
 export interface MealPlanEntryValues {
   date: string;
   note: string;
@@ -354,6 +358,111 @@ export async function createMealPlan(input: MealPlanMutationInput) {
       name: membership.family.name,
     },
     mealPlan,
+    status: "CREATED" as const,
+  };
+}
+
+export async function copyMealPlan(input: CopyMealPlanInput) {
+  const membership = await requireFamilyMembership({
+    familyId: input.familyId,
+    userId: input.userId,
+  });
+  const validation = validateMealPlanInput(input);
+
+  if (!validation.ok) {
+    return {
+      fieldErrors: validation.fieldErrors,
+      status: "VALIDATION_ERROR" as const,
+      values: validation.values,
+    };
+  }
+
+  const result = await db.$transaction(async (tx) => {
+    const sourceMealPlan = await tx.mealPlan.findFirst({
+      select: {
+        entries: {
+          orderBy: [{ date: "asc" }],
+          select: {
+            date: true,
+            note: true,
+            recipeId: true,
+          },
+          where: {
+            mealType: PLANNING_MEAL_TYPE,
+          },
+        },
+        id: true,
+        startDate: true,
+      },
+      where: {
+        familyId: input.familyId,
+        id: input.sourceMealPlanId,
+      },
+    });
+
+    if (!sourceMealPlan) {
+      return {
+        status: "NOT_FOUND" as const,
+      };
+    }
+
+    const startDate = parseDateOnly(validation.values.startDate)!;
+    const endDate = parseDateOnly(validation.values.endDate)!;
+    const mealPlan = await tx.mealPlan.create({
+      data: {
+        copiedFromMealPlanId: sourceMealPlan.id,
+        endDate,
+        familyId: input.familyId,
+        startDate,
+        title: validation.values.title,
+      },
+      select: mealPlanDetailSelect,
+    });
+    const copiedEntries = sourceMealPlan.entries.flatMap((entry) => {
+      if (!entry.note && !entry.recipeId) {
+        return [];
+      }
+
+      const dayOffset = differenceInUtcDays(sourceMealPlan.startDate, entry.date);
+      const targetDate = addUtcDays(startDate, dayOffset);
+
+      if (targetDate.getTime() > endDate.getTime()) {
+        return [];
+      }
+
+      return [
+        {
+          date: targetDate,
+          mealPlanId: mealPlan.id,
+          mealType: PLANNING_MEAL_TYPE,
+          note: entry.note,
+          recipeId: entry.recipeId,
+        },
+      ];
+    });
+
+    if (copiedEntries.length > 0) {
+      await tx.mealPlanEntry.createMany({
+        data: copiedEntries,
+      });
+    }
+
+    return {
+      mealPlan,
+      status: "CREATED" as const,
+    };
+  });
+
+  if (result.status === "NOT_FOUND") {
+    return result;
+  }
+
+  return {
+    family: {
+      id: membership.family.id,
+      name: membership.family.name,
+    },
+    mealPlan: result.mealPlan,
     status: "CREATED" as const,
   };
 }
