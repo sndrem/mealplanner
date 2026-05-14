@@ -4,23 +4,27 @@ import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 import { getMealPlanDateRange } from "./meal-plan.server";
 
+const storeSummarySelect = Prisma.validator<Prisma.StoreSelect>()({
+  id: true,
+  name: true,
+});
+
+const categorySummarySelect = Prisma.validator<Prisma.IngredientCategorySelect>()({
+  displayName: true,
+  id: true,
+});
+
 const generatedShoppingRecipeIngredientSelect = Prisma.validator<Prisma.RecipeIngredientSelect>()({
   amount: true,
   category: {
-    select: {
-      displayName: true,
-      id: true,
-    },
+    select: categorySummarySelect,
   },
   categoryId: true,
   displayName: true,
   id: true,
   ingredientId: true,
   preferredStore: {
-    select: {
-      id: true,
-      name: true,
-    },
+    select: storeSummarySelect,
   },
   preferredStoreId: true,
   sortOrder: true,
@@ -46,19 +50,32 @@ const generatedShoppingMealPlanEntrySelect = Prisma.validator<Prisma.MealPlanEnt
   recipeId: true,
 });
 
-const generatedShoppingOverrideSelect = Prisma.validator<Prisma.ShoppingItemOverrideSelect>()({
+const shoppingOverrideSelect = Prisma.validator<Prisma.ShoppingItemOverrideSelect>()({
   checked: true,
   note: true,
   postponedUntilDate: true,
   preferredStore: {
-    select: {
-      id: true,
-      name: true,
-    },
+    select: storeSummarySelect,
   },
   preferredStoreId: true,
   sourceKey: true,
   sourceType: true,
+});
+
+const manualShoppingItemSelect = Prisma.validator<Prisma.ManualShoppingItemSelect>()({
+  buyOnDate: true,
+  category: {
+    select: categorySummarySelect,
+  },
+  categoryId: true,
+  id: true,
+  name: true,
+  note: true,
+  preferredStore: {
+    select: storeSummarySelect,
+  },
+  preferredStoreId: true,
+  quantity: true,
 });
 
 const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
@@ -71,12 +88,13 @@ const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
     },
   },
   id: true,
+  manualShoppingItems: {
+    orderBy: [{ buyOnDate: "asc" }, { id: "asc" }],
+    select: manualShoppingItemSelect,
+  },
   shoppingOverrides: {
-    orderBy: [{ sourceKey: "asc" }],
-    select: generatedShoppingOverrideSelect,
-    where: {
-      sourceType: ShoppingItemSource.GENERATED,
-    },
+    orderBy: [{ sourceType: "asc" }, { sourceKey: "asc" }],
+    select: shoppingOverrideSelect,
   },
   startDate: true,
   status: true,
@@ -98,11 +116,22 @@ const shoppingStoreSelect = Prisma.validator<Prisma.StoreSelect>()({
   },
 });
 
+const shoppingCategorySelect = Prisma.validator<Prisma.IngredientCategorySelect>()({
+  displayName: true,
+  id: true,
+});
+
 type ShoppingMealPlan = Prisma.MealPlanGetPayload<{
   select: typeof shoppingMealPlanSelect;
 }>;
 type ShoppingStore = Prisma.StoreGetPayload<{
   select: typeof shoppingStoreSelect;
+}>;
+type ShoppingCategory = Prisma.IngredientCategoryGetPayload<{
+  select: typeof shoppingCategorySelect;
+}>;
+type ShoppingOverride = Prisma.ShoppingItemOverrideGetPayload<{
+  select: typeof shoppingOverrideSelect;
 }>;
 
 type StoreSummary = {
@@ -133,6 +162,21 @@ interface GeneratedProjectionBucket {
   unit: string | null;
 }
 
+interface ProjectedShoppingItemBase {
+  category: {
+    id: string;
+    name: string;
+  };
+  checked: boolean;
+  name: string;
+  note: string | null;
+  preferredStore: StoreSummary;
+  quantityLabel: string | null;
+  section: StoreSectionSummary;
+  sourceKey: string;
+  sourceType: ShoppingItemSource;
+}
+
 export interface ProjectedShoppingOccurrence {
   date: Date;
   mealPlanEntryId: string;
@@ -141,27 +185,24 @@ export interface ProjectedShoppingOccurrence {
   recipeTitle: string;
 }
 
-export interface ProjectedShoppingItem {
+export interface ProjectedGeneratedShoppingItem extends ProjectedShoppingItemBase {
   amount: string | null;
-  category: {
-    id: string;
-    name: string;
-  };
-  checked: boolean;
   firstDate: Date;
   lastDate: Date;
-  name: string;
-  note: string | null;
   occurrenceCount: number;
   occurrences: ProjectedShoppingOccurrence[];
   postponedUntilDate: Date | null;
-  preferredStore: StoreSummary;
-  quantityLabel: string | null;
-  section: StoreSectionSummary;
-  sourceKey: string;
   sourceType: "GENERATED";
   unit: string | null;
 }
+
+export interface ProjectedManualShoppingItem extends ProjectedShoppingItemBase {
+  buyOnDate: Date | null;
+  quantity: string | null;
+  sourceType: "MANUAL";
+}
+
+export type ProjectedShoppingItem = ProjectedGeneratedShoppingItem | ProjectedManualShoppingItem;
 
 export interface ProjectedShoppingSectionGroup {
   category: {
@@ -206,27 +247,48 @@ export async function getMealPlanShoppingData({
     });
   }
 
-  const stores = await db.store.findMany({
-    orderBy: [{ name: "asc" }],
-    select: shoppingStoreSelect,
-    where: {
-      OR: [{ familyId: null }, { familyId }],
-    },
-  });
+  const [stores, categories] = await Promise.all([
+    db.store.findMany({
+      orderBy: [{ name: "asc" }],
+      select: shoppingStoreSelect,
+      where: {
+        OR: [{ familyId: null }, { familyId }],
+      },
+    }),
+    db.ingredientCategory.findMany({
+      orderBy: [{ displayName: "asc" }],
+      select: shoppingCategorySelect,
+    }),
+  ]);
 
-  const projectedItems = projectGeneratedShoppingItems({
+  const generatedItems = projectGeneratedShoppingItems({
     mealPlan,
     stores,
   });
+  const manualItems = projectManualShoppingItems({
+    mealPlan,
+    stores,
+  });
+  const projectedItems = [...generatedItems, ...manualItems].sort(compareProjectedItems);
 
   return {
+    categories,
     family: {
       id: membership.family.id,
       name: membership.family.name,
     },
+    itemCounts: {
+      generated: generatedItems.length,
+      manual: manualItems.length,
+      total: projectedItems.length,
+    },
     mealPlan,
     projectedItems,
     storeGroups: buildProjectedStoreGroups(projectedItems),
+    stores: stores.map((store) => ({
+      id: store.id,
+      name: store.name,
+    })),
     userRole: membership.role,
     visibleDates: getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate),
   };
@@ -239,23 +301,8 @@ function projectGeneratedShoppingItems({
   mealPlan: ShoppingMealPlan;
   stores: ShoppingStore[];
 }) {
-  const storeSectionsByStoreId = new Map(
-    stores.map((store) => [
-      store.id,
-      new Map(
-        store.sections.map((section) => [
-          section.categoryId,
-          {
-            displayName: section.displayName,
-            sortOrder: section.sortOrder,
-          },
-        ]),
-      ),
-    ]),
-  );
-  const overrideBySourceKey = new Map(
-    mealPlan.shoppingOverrides.map((override) => [override.sourceKey, override]),
-  );
+  const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
+  const overrideBySourceKey = buildOverrideMap(mealPlan.shoppingOverrides, ShoppingItemSource.GENERATED);
   const buckets = new Map<string, GeneratedProjectionBucket>();
 
   for (const entry of mealPlan.entries) {
@@ -291,11 +338,13 @@ function projectGeneratedShoppingItems({
         existingBucket.occurrenceKeys.push(occurrenceKey);
         existingBucket.occurrences.push(occurrence);
 
-        if (compareProjectionAnchors(existingBucket.sortAnchor, {
-          date: entry.date,
-          ingredientSortOrder: ingredient.sortOrder,
-          recipeTitle: recipe.title,
-        }) > 0) {
+        if (
+          compareProjectionAnchors(existingBucket.sortAnchor, {
+            date: entry.date,
+            ingredientSortOrder: ingredient.sortOrder,
+            recipeTitle: recipe.title,
+          }) > 0
+        ) {
           existingBucket.sortAnchor = {
             date: entry.date,
             ingredientSortOrder: ingredient.sortOrder,
@@ -309,8 +358,8 @@ function projectGeneratedShoppingItems({
       buckets.set(mergeKey, {
         amount: ingredient.amount,
         category: {
-          name: ingredient.category.displayName,
           id: ingredient.category.id,
+          name: ingredient.category.displayName,
         },
         name: ingredient.displayName,
         occurrences: [occurrence],
@@ -326,38 +375,77 @@ function projectGeneratedShoppingItems({
     }
   }
 
-  return [...buckets.values()]
-    .map((bucket) => {
-      const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
-      const override = overrideBySourceKey.get(sourceKey);
-      const preferredStore = override?.preferredStore ?? bucket.preferredStore;
-      const section = resolveStoreSection({
-        category: bucket.category,
-        preferredStore,
-        storeSectionsByStoreId,
-      });
-      const occurrences = [...bucket.occurrences].sort(compareProjectedOccurrences);
+  return [...buckets.values()].map((bucket) => {
+    const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
+    const override = overrideBySourceKey.get(sourceKey);
+    const preferredStore = override?.preferredStore ?? bucket.preferredStore;
+    const section = resolveStoreSection({
+      category: bucket.category,
+      preferredStore,
+      storeSectionsByStoreId,
+    });
+    const occurrences = [...bucket.occurrences].sort(compareProjectedOccurrences);
 
-      return {
-        amount: bucket.amount,
-        category: bucket.category,
-        checked: override?.checked ?? false,
-        firstDate: occurrences[0]!.date,
-        lastDate: occurrences[occurrences.length - 1]!.date,
-        name: bucket.name,
-        note: override?.note ?? null,
-        occurrenceCount: occurrences.length,
-        occurrences,
-        postponedUntilDate: override?.postponedUntilDate ?? null,
-        preferredStore,
-        quantityLabel: buildQuantityLabel(bucket.amount, bucket.unit),
-        section,
-        sourceKey,
-        sourceType: ShoppingItemSource.GENERATED,
-        unit: bucket.unit,
-      } satisfies ProjectedShoppingItem;
-    })
-    .sort(compareProjectedItems);
+    return {
+      amount: bucket.amount,
+      category: bucket.category,
+      checked: override?.checked ?? false,
+      firstDate: occurrences[0]!.date,
+      lastDate: occurrences[occurrences.length - 1]!.date,
+      name: bucket.name,
+      note: override?.note ?? null,
+      occurrenceCount: occurrences.length,
+      occurrences,
+      postponedUntilDate: override?.postponedUntilDate ?? null,
+      preferredStore,
+      quantityLabel: buildQuantityLabel(bucket.amount, bucket.unit),
+      section,
+      sourceKey,
+      sourceType: ShoppingItemSource.GENERATED,
+      unit: bucket.unit,
+    } satisfies ProjectedGeneratedShoppingItem;
+  });
+}
+
+function projectManualShoppingItems({
+  mealPlan,
+  stores,
+}: {
+  mealPlan: ShoppingMealPlan;
+  stores: ShoppingStore[];
+}) {
+  const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
+  const overrideBySourceKey = buildOverrideMap(mealPlan.shoppingOverrides, ShoppingItemSource.MANUAL);
+
+  return mealPlan.manualShoppingItems.map((item) => {
+    const override = overrideBySourceKey.get(item.id);
+    const preferredStore = item.preferredStore;
+    const section = resolveStoreSection({
+      category: {
+        id: item.category.id,
+        name: item.category.displayName,
+      },
+      preferredStore,
+      storeSectionsByStoreId,
+    });
+
+    return {
+      buyOnDate: item.buyOnDate,
+      category: {
+        id: item.category.id,
+        name: item.category.displayName,
+      },
+      checked: override?.checked ?? false,
+      name: item.name,
+      note: item.note,
+      preferredStore,
+      quantity: item.quantity,
+      quantityLabel: buildManualQuantityLabel(item.quantity),
+      section,
+      sourceKey: item.id,
+      sourceType: ShoppingItemSource.MANUAL,
+    } satisfies ProjectedManualShoppingItem;
+  });
 }
 
 function buildProjectedStoreGroups(items: ProjectedShoppingItem[]): ProjectedShoppingStoreGroup[] {
@@ -421,6 +509,31 @@ function buildProjectedStoreGroups(items: ProjectedShoppingItem[]): ProjectedSho
       };
     })
     .sort((left, right) => compareStoreSummaries(left.store, right.store));
+}
+
+function buildStoreSectionsByStoreId(stores: ShoppingStore[]) {
+  return new Map(
+    stores.map((store) => [
+      store.id,
+      new Map(
+        store.sections.map((section) => [
+          section.categoryId,
+          {
+            displayName: section.displayName,
+            sortOrder: section.sortOrder,
+          },
+        ]),
+      ),
+    ]),
+  );
+}
+
+function buildOverrideMap(overrides: ShoppingOverride[], sourceType: ShoppingItemSource) {
+  return new Map(
+    overrides
+      .filter((override) => override.sourceType === sourceType)
+      .map((override) => [override.sourceKey, override]),
+  );
 }
 
 function buildGeneratedOccurrenceKey({
@@ -500,6 +613,12 @@ function buildQuantityLabel(amount: string | null, unit: string | null) {
   return parts.length ? parts.join(" ") : null;
 }
 
+function buildManualQuantityLabel(quantity: string | null) {
+  const trimmedQuantity = quantity?.trim() ?? "";
+
+  return trimmedQuantity.length > 0 ? trimmedQuantity : null;
+}
+
 function compareProjectedOccurrences(left: ProjectedShoppingOccurrence, right: ProjectedShoppingOccurrence) {
   if (left.date.getTime() !== right.date.getTime()) {
     return left.date.getTime() - right.date.getTime();
@@ -562,8 +681,11 @@ function compareProjectedItems(left: ProjectedShoppingItem, right: ProjectedShop
     return sectionComparison;
   }
 
-  if (left.firstDate.getTime() !== right.firstDate.getTime()) {
-    return left.firstDate.getTime() - right.firstDate.getTime();
+  const leftSortTimestamp = getProjectedItemSortTimestamp(left);
+  const rightSortTimestamp = getProjectedItemSortTimestamp(right);
+
+  if (leftSortTimestamp !== rightSortTimestamp) {
+    return leftSortTimestamp - rightSortTimestamp;
   }
 
   const nameComparison = left.name.localeCompare(right.name, "nb");
@@ -573,4 +695,12 @@ function compareProjectedItems(left: ProjectedShoppingItem, right: ProjectedShop
   }
 
   return left.sourceKey.localeCompare(right.sourceKey, "nb");
+}
+
+function getProjectedItemSortTimestamp(item: ProjectedShoppingItem) {
+  if (item.sourceType === "GENERATED") {
+    return item.firstDate.getTime();
+  }
+
+  return item.buyOnDate ? item.buyOnDate.getTime() : Number.MIN_SAFE_INTEGER;
 }
