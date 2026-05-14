@@ -1,5 +1,11 @@
 import { ShoppingItemSource } from "@prisma/client";
-import { Form, Link, isRouteErrorResponse, useNavigation, type MetaFunction } from "react-router";
+import {
+  Form,
+  Link,
+  isRouteErrorResponse,
+  useNavigation,
+  type MetaFunction,
+} from "react-router";
 
 import { requireUser } from "../lib/auth.server";
 import { getMealPlanShoppingData } from "../lib/shopping.server";
@@ -59,7 +65,11 @@ const defaultManualShoppingItemValues: ManualShoppingItemValues = {
 export const meta: MetaFunction = () => {
   return [
     { title: "Handleliste | Mealplanner" },
-    { name: "description", content: "Handleliste med genererte og manuelle varelinjer for valgt ukeplan." },
+    {
+      name: "description",
+      content:
+        "Handleliste med genererte og manuelle varelinjer for valgt ukeplan.",
+    },
   ];
 };
 
@@ -75,7 +85,10 @@ export async function loader({
 }) {
   const user = await requireUser(request);
   const familyId = requireRouteParam(params.familyId, "Fant ikke familien.");
-  const mealPlanId = requireRouteParam(params.mealPlanId, "Fant ikke ukeplanen.");
+  const mealPlanId = requireRouteParam(
+    params.mealPlanId,
+    "Fant ikke ukeplanen.",
+  );
   const result = await getMealPlanShoppingData({
     familyId,
     mealPlanId,
@@ -123,7 +136,10 @@ export async function action({
 }) {
   const user = await requireUser(request);
   const familyId = requireRouteParam(params.familyId, "Fant ikke familien.");
-  const mealPlanId = requireRouteParam(params.mealPlanId, "Fant ikke ukeplanen.");
+  const mealPlanId = requireRouteParam(
+    params.mealPlanId,
+    "Fant ikke ukeplanen.",
+  );
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
 
@@ -301,7 +317,9 @@ export default function FamilyMealPlanShoppingRoute({
     actionData?.intent === "add-manual-shopping-item" && actionData.manualValues
       ? actionData.manualValues
       : defaultManualShoppingItemValues;
-  const noticeContent = loaderData.notice ? getShoppingNoticeContent(loaderData.notice) : null;
+  const noticeContent = loaderData.notice
+    ? getShoppingNoticeContent(loaderData.notice)
+    : null;
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -312,10 +330,13 @@ export default function FamilyMealPlanShoppingRoute({
               <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
                 Handleliste
               </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">{loaderData.mealPlan.title}</h1>
+              <h1 className="mt-4 text-4xl font-semibold tracking-tight">
+                {loaderData.mealPlan.title}
+              </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                Handlelisten kombinerer deterministisk genererte ingredienser fra ukeplanen med manuelle
-                varelinjer. Avkryssing, notater, handledato og butikkvalg lagres pa serveren.
+                Handlelisten kombinerer deterministisk genererte ingredienser
+                fra ukeplanen med manuelle varelinjer. Avkryssing, notater,
+                handledato og butikkvalg lagres pa serveren.
               </p>
             </div>
 
@@ -324,7 +345,7 @@ export default function FamilyMealPlanShoppingRoute({
                 className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
                 to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/store-mode`}
               >
-                Apne butikkmodus
+                Åpne butikkmodus
               </Link>
               <Link
                 className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
@@ -345,13 +366,17 @@ export default function FamilyMealPlanShoppingRoute({
         {noticeContent ? (
           <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">{noticeContent.description}</p>
+            <p className="mt-2 text-sm leading-6 text-emerald-900">
+              {noticeContent.description}
+            </p>
           </section>
         ) : null}
 
         {actionData?.formError ? (
           <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
-            <h2 className="text-base font-semibold">Kunne ikke oppdatere handlelisten</h2>
+            <h2 className="text-base font-semibold">
+              Kunne ikke oppdatere handlelisten
+            </h2>
             <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
           </section>
         ) : null}
@@ -361,28 +386,41 @@ export default function FamilyMealPlanShoppingRoute({
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">Oversikt</h2>
               <p className="text-sm leading-6 text-slate-600">
-                Listen dekker perioden {formatMealPlanWindow(loaderData.mealPlan.startDate, loaderData.mealPlan.endDate)}
-                {" "}og inneholder {loaderData.itemCounts.total} varelinjer totalt.
+                Listen dekker perioden{" "}
+                {formatMealPlanWindow(
+                  loaderData.mealPlan.startDate,
+                  loaderData.mealPlan.endDate,
+                )}{" "}
+                og inneholder {loaderData.itemCounts.total} varelinjer totalt.
               </p>
             </div>
 
             <dl className="mt-6 grid gap-4">
               <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">Status</dt>
+                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+                  Status
+                </dt>
                 <dd className="mt-2 text-base font-semibold text-slate-950">
-                  {loaderData.mealPlan.status === "APPROVED" ? "Godkjent" : "Utkast"}
+                  {loaderData.mealPlan.status === "APPROVED"
+                    ? "Godkjent"
+                    : "Utkast"}
                 </dd>
               </div>
 
               <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">Varelinjer</dt>
+                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+                  Varelinjer
+                </dt>
                 <dd className="mt-2 text-sm leading-6 text-slate-700">
-                  {loaderData.itemCounts.generated} genererte og {loaderData.itemCounts.manual} manuelle linjer.
+                  {loaderData.itemCounts.generated} genererte og{" "}
+                  {loaderData.itemCounts.manual} manuelle linjer.
                 </dd>
               </div>
 
               <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">Synlige datoer</dt>
+                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+                  Synlige datoer
+                </dt>
                 <dd className="mt-2 text-sm leading-6 text-slate-700">
                   {loaderData.visibleDates.map(formatDateLabel).join(", ")}
                 </dd>
@@ -392,15 +430,21 @@ export default function FamilyMealPlanShoppingRoute({
 
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">Legg til manuell varelinje</h2>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Legg til manuell varelinje
+              </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Bruk dette for varer som ikke kommer direkte fra oppskriftene, men som skal med i samme
-                handleliste og sortering.
+                Bruk dette for varer som ikke kommer direkte fra oppskriftene,
+                men som skal med i samme handleliste og sortering.
               </p>
             </div>
 
             <Form className="mt-6 space-y-4" method="post">
-              <input name="intent" type="hidden" value="add-manual-shopping-item" />
+              <input
+                name="intent"
+                type="hidden"
+                value="add-manual-shopping-item"
+              />
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-slate-700">
@@ -425,8 +469,11 @@ export default function FamilyMealPlanShoppingRoute({
                 </label>
               </div>
 
-              {actionData?.intent === "add-manual-shopping-item" && actionData.manualFieldErrors?.name ? (
-                <p className="text-sm text-rose-600">{actionData.manualFieldErrors.name}</p>
+              {actionData?.intent === "add-manual-shopping-item" &&
+              actionData.manualFieldErrors?.name ? (
+                <p className="text-sm text-rose-600">
+                  {actionData.manualFieldErrors.name}
+                </p>
               ) : null}
 
               <div className="grid gap-4 sm:grid-cols-3">
@@ -475,15 +522,23 @@ export default function FamilyMealPlanShoppingRoute({
                 </label>
               </div>
 
-              {actionData?.intent === "add-manual-shopping-item" && actionData.manualFieldErrors?.categoryId ? (
-                <p className="text-sm text-rose-600">{actionData.manualFieldErrors.categoryId}</p>
+              {actionData?.intent === "add-manual-shopping-item" &&
+              actionData.manualFieldErrors?.categoryId ? (
+                <p className="text-sm text-rose-600">
+                  {actionData.manualFieldErrors.categoryId}
+                </p>
               ) : null}
               {actionData?.intent === "add-manual-shopping-item" &&
               actionData.manualFieldErrors?.preferredStoreId ? (
-                <p className="text-sm text-rose-600">{actionData.manualFieldErrors.preferredStoreId}</p>
+                <p className="text-sm text-rose-600">
+                  {actionData.manualFieldErrors.preferredStoreId}
+                </p>
               ) : null}
-              {actionData?.intent === "add-manual-shopping-item" && actionData.manualFieldErrors?.buyOnDate ? (
-                <p className="text-sm text-rose-600">{actionData.manualFieldErrors.buyOnDate}</p>
+              {actionData?.intent === "add-manual-shopping-item" &&
+              actionData.manualFieldErrors?.buyOnDate ? (
+                <p className="text-sm text-rose-600">
+                  {actionData.manualFieldErrors.buyOnDate}
+                </p>
               ) : null}
 
               <label className="block text-sm font-medium text-slate-700">
@@ -498,10 +553,14 @@ export default function FamilyMealPlanShoppingRoute({
 
               <button
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={navigation.state === "submitting" && pendingIntent === "add-manual-shopping-item"}
+                disabled={
+                  navigation.state === "submitting" &&
+                  pendingIntent === "add-manual-shopping-item"
+                }
                 type="submit"
               >
-                {navigation.state === "submitting" && pendingIntent === "add-manual-shopping-item"
+                {navigation.state === "submitting" &&
+                pendingIntent === "add-manual-shopping-item"
                   ? "Legger til..."
                   : "Legg til varelinje"}
               </button>
@@ -511,11 +570,14 @@ export default function FamilyMealPlanShoppingRoute({
 
         <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold text-slate-950">Hvordan dette bygges</h2>
+            <h2 className="text-lg font-semibold text-slate-950">
+              Hvordan dette bygges
+            </h2>
             <p className="text-sm leading-6 text-slate-600">
-              Genererte linjer bygger pa lagrede oppskriftsingredienser. Like ingredienser slas bare sammen
-              nar navn, mengde, enhet, kategori og foretrukket butikk matcher eksakt. Manuelle linjer blir
-              lagt oppa samme sortering uten a endre den deterministiske projeksjonen.
+              Genererte linjer bygger pa lagrede oppskriftsingredienser. Like
+              ingredienser slas bare sammen nar navn, mengde, enhet, kategori og
+              foretrukket butikk matcher eksakt. Manuelle linjer blir lagt oppa
+              samme sortering uten a endre den deterministiske projeksjonen.
             </p>
           </div>
         </section>
@@ -540,7 +602,9 @@ export default function FamilyMealPlanShoppingRoute({
 
                 <div className="mt-6 grid gap-5">
                   {group.sections.map((section) => (
-                    <section key={`${group.store?.id ?? "no-store"}:${section.category.id}`}>
+                    <section
+                      key={`${group.store?.id ?? "no-store"}:${section.category.id}`}
+                    >
                       <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
                         {section.displayName}
                       </h3>
@@ -561,11 +625,14 @@ export default function FamilyMealPlanShoppingRoute({
                             pendingSourceKey === item.sourceKey;
                           const isPendingGeneratedSave =
                             navigation.state === "submitting" &&
-                            pendingIntent === "update-generated-shopping-item" &&
+                            pendingIntent ===
+                              "update-generated-shopping-item" &&
                             pendingSourceKey === item.sourceKey;
                           const manualValues =
-                            actionData?.intent === "update-manual-shopping-item" &&
-                            actionData.itemTarget?.sourceKey === item.sourceKey &&
+                            actionData?.intent ===
+                              "update-manual-shopping-item" &&
+                            actionData.itemTarget?.sourceKey ===
+                              item.sourceKey &&
                             actionData.manualValues
                               ? actionData.manualValues
                               : item.sourceType === "MANUAL"
@@ -574,20 +641,25 @@ export default function FamilyMealPlanShoppingRoute({
                                     categoryId: item.category.id,
                                     name: item.name,
                                     note: item.note ?? "",
-                                    preferredStoreId: item.preferredStore?.id ?? "",
+                                    preferredStoreId:
+                                      item.preferredStore?.id ?? "",
                                     quantity: item.quantity ?? "",
                                   }
                                 : null;
                           const overrideValues =
-                            actionData?.intent === "update-generated-shopping-item" &&
-                            actionData.itemTarget?.sourceKey === item.sourceKey &&
+                            actionData?.intent ===
+                              "update-generated-shopping-item" &&
+                            actionData.itemTarget?.sourceKey ===
+                              item.sourceKey &&
                             actionData.overrideValues
                               ? actionData.overrideValues
                               : item.sourceType === "GENERATED"
                                 ? {
                                     note: item.note ?? "",
-                                    postponedUntilDate: item.postponedUntilDate ?? "",
-                                    preferredStoreId: item.preferredStore?.id ?? "",
+                                    postponedUntilDate:
+                                      item.postponedUntilDate ?? "",
+                                    preferredStoreId:
+                                      item.preferredStore?.id ?? "",
                                   }
                                 : null;
 
@@ -597,7 +669,9 @@ export default function FamilyMealPlanShoppingRoute({
                               className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
                             >
                               <div className="flex flex-wrap items-center gap-2">
-                                <h4 className="text-base font-semibold text-slate-950">{item.name}</h4>
+                                <h4 className="text-base font-semibold text-slate-950">
+                                  {item.name}
+                                </h4>
                                 {item.quantityLabel ? (
                                   <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
                                     {item.quantityLabel}
@@ -613,12 +687,15 @@ export default function FamilyMealPlanShoppingRoute({
                                     Avkrysset
                                   </span>
                                 ) : null}
-                                {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
+                                {item.sourceType === "GENERATED" &&
+                                item.postponedUntilDate ? (
                                   <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-                                    Utsatt til {formatDateLabel(item.postponedUntilDate)}
+                                    Utsatt til{" "}
+                                    {formatDateLabel(item.postponedUntilDate)}
                                   </span>
                                 ) : null}
-                                {item.sourceType === "MANUAL" && item.buyOnDate ? (
+                                {item.sourceType === "MANUAL" &&
+                                item.buyOnDate ? (
                                   <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
                                     Kjopes {formatDateLabel(item.buyOnDate)}
                                   </span>
@@ -628,14 +705,18 @@ export default function FamilyMealPlanShoppingRoute({
                               <p className="mt-3 text-sm leading-6 text-slate-600">
                                 {item.sourceType === "GENERATED"
                                   ? `Fra ${item.occurrenceCount} planlagte ${
-                                      item.occurrenceCount === 1 ? "middag" : "middager"
+                                      item.occurrenceCount === 1
+                                        ? "middag"
+                                        : "middager"
                                     } mellom ${formatDateLabel(item.firstDate)} og ${formatDateLabel(item.lastDate)}.`
                                   : item.buyOnDate
                                     ? `Lagt til manuelt og planlagt for ${formatDateLabel(item.buyOnDate)}.`
                                     : "Lagt til manuelt uten spesifikk handledato."}
                               </p>
                               {item.note ? (
-                                <p className="mt-2 text-sm leading-6 text-slate-700">Notat: {item.note}</p>
+                                <p className="mt-2 text-sm leading-6 text-slate-700">
+                                  Notat: {item.note}
+                                </p>
                               ) : null}
 
                               <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
@@ -647,8 +728,11 @@ export default function FamilyMealPlanShoppingRoute({
                                       </p>
                                       <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                                         {item.occurrences.map((occurrence) => (
-                                          <li key={`${occurrence.mealPlanEntryId}:${occurrence.recipeIngredientId}`}>
-                                            {formatDateLabel(occurrence.date)}: {occurrence.recipeTitle}
+                                          <li
+                                            key={`${occurrence.mealPlanEntryId}:${occurrence.recipeIngredientId}`}
+                                          >
+                                            {formatDateLabel(occurrence.date)}:{" "}
+                                            {occurrence.recipeTitle}
                                           </li>
                                         ))}
                                       </ul>
@@ -659,7 +743,8 @@ export default function FamilyMealPlanShoppingRoute({
                                         Manuell rad
                                       </p>
                                       <p className="mt-3 text-sm leading-6 text-slate-700">
-                                        Denne varelinjen kommer ikke fra en oppskrift og kan redigeres eller slettes
+                                        Denne varelinjen kommer ikke fra en
+                                        oppskrift og kan redigeres eller slettes
                                         direkte her.
                                       </p>
                                     </>
@@ -668,10 +753,26 @@ export default function FamilyMealPlanShoppingRoute({
 
                                 <div className="grid gap-3">
                                   <Form method="post">
-                                    <input name="intent" type="hidden" value="toggle-shopping-item-checked" />
-                                    <input name="sourceKey" type="hidden" value={item.sourceKey} />
-                                    <input name="sourceType" type="hidden" value={item.sourceType} />
-                                    <input name="checked" type="hidden" value={item.checked ? "false" : "true"} />
+                                    <input
+                                      name="intent"
+                                      type="hidden"
+                                      value="toggle-shopping-item-checked"
+                                    />
+                                    <input
+                                      name="sourceKey"
+                                      type="hidden"
+                                      value={item.sourceKey}
+                                    />
+                                    <input
+                                      name="sourceType"
+                                      type="hidden"
+                                      value={item.sourceType}
+                                    />
+                                    <input
+                                      name="checked"
+                                      type="hidden"
+                                      value={item.checked ? "false" : "true"}
+                                    />
                                     <button
                                       className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                                       disabled={isPendingCheckToggle}
@@ -687,21 +788,37 @@ export default function FamilyMealPlanShoppingRoute({
                                     </button>
                                   </Form>
 
-                                  {item.sourceType === "GENERATED" && overrideValues ? (
+                                  {item.sourceType === "GENERATED" &&
+                                  overrideValues ? (
                                     <Form className="grid gap-3" method="post">
-                                      <input name="intent" type="hidden" value="update-generated-shopping-item" />
-                                      <input name="sourceKey" type="hidden" value={item.sourceKey} />
+                                      <input
+                                        name="intent"
+                                        type="hidden"
+                                        value="update-generated-shopping-item"
+                                      />
+                                      <input
+                                        name="sourceKey"
+                                        type="hidden"
+                                        value={item.sourceKey}
+                                      />
 
                                       <label className="block text-sm font-medium text-slate-700">
                                         Foretrukket butikk
                                         <select
                                           className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                                          defaultValue={overrideValues.preferredStoreId}
+                                          defaultValue={
+                                            overrideValues.preferredStoreId
+                                          }
                                           name="preferredStoreId"
                                         >
-                                          <option value="">Ingen valgt butikk</option>
+                                          <option value="">
+                                            Ingen valgt butikk
+                                          </option>
                                           {loaderData.stores.map((store) => (
-                                            <option key={store.id} value={store.id}>
+                                            <option
+                                              key={store.id}
+                                              value={store.id}
+                                            >
                                               {store.name}
                                             </option>
                                           ))}
@@ -712,7 +829,9 @@ export default function FamilyMealPlanShoppingRoute({
                                         Utsatt til
                                         <input
                                           className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                                          defaultValue={overrideValues.postponedUntilDate}
+                                          defaultValue={
+                                            overrideValues.postponedUntilDate
+                                          }
                                           max={loaderData.mealPlan.endDate}
                                           min={loaderData.mealPlan.startDate}
                                           name="postponedUntilDate"
@@ -729,18 +848,32 @@ export default function FamilyMealPlanShoppingRoute({
                                         />
                                       </label>
 
-                                      {actionData?.intent === "update-generated-shopping-item" &&
-                                      actionData.itemTarget?.sourceKey === item.sourceKey &&
-                                      actionData.generatedOverrideFieldErrors?.preferredStoreId ? (
+                                      {actionData?.intent ===
+                                        "update-generated-shopping-item" &&
+                                      actionData.itemTarget?.sourceKey ===
+                                        item.sourceKey &&
+                                      actionData.generatedOverrideFieldErrors
+                                        ?.preferredStoreId ? (
                                         <p className="text-sm text-rose-600">
-                                          {actionData.generatedOverrideFieldErrors.preferredStoreId}
+                                          {
+                                            actionData
+                                              .generatedOverrideFieldErrors
+                                              .preferredStoreId
+                                          }
                                         </p>
                                       ) : null}
-                                      {actionData?.intent === "update-generated-shopping-item" &&
-                                      actionData.itemTarget?.sourceKey === item.sourceKey &&
-                                      actionData.generatedOverrideFieldErrors?.postponedUntilDate ? (
+                                      {actionData?.intent ===
+                                        "update-generated-shopping-item" &&
+                                      actionData.itemTarget?.sourceKey ===
+                                        item.sourceKey &&
+                                      actionData.generatedOverrideFieldErrors
+                                        ?.postponedUntilDate ? (
                                         <p className="text-sm text-rose-600">
-                                          {actionData.generatedOverrideFieldErrors.postponedUntilDate}
+                                          {
+                                            actionData
+                                              .generatedOverrideFieldErrors
+                                              .postponedUntilDate
+                                          }
                                         </p>
                                       ) : null}
 
@@ -749,16 +882,30 @@ export default function FamilyMealPlanShoppingRoute({
                                         disabled={isPendingGeneratedSave}
                                         type="submit"
                                       >
-                                        {isPendingGeneratedSave ? "Lagrer tilpasninger..." : "Lagre tilpasninger"}
+                                        {isPendingGeneratedSave
+                                          ? "Lagrer tilpasninger..."
+                                          : "Lagre tilpasninger"}
                                       </button>
                                     </Form>
                                   ) : null}
 
-                                  {item.sourceType === "MANUAL" && manualValues ? (
+                                  {item.sourceType === "MANUAL" &&
+                                  manualValues ? (
                                     <>
-                                      <Form className="grid gap-3" method="post">
-                                        <input name="intent" type="hidden" value="update-manual-shopping-item" />
-                                        <input name="manualItemId" type="hidden" value={item.sourceKey} />
+                                      <Form
+                                        className="grid gap-3"
+                                        method="post"
+                                      >
+                                        <input
+                                          name="intent"
+                                          type="hidden"
+                                          value="update-manual-shopping-item"
+                                        />
+                                        <input
+                                          name="manualItemId"
+                                          type="hidden"
+                                          value={item.sourceKey}
+                                        />
 
                                         <label className="block text-sm font-medium text-slate-700">
                                           Varenavn
@@ -775,7 +922,9 @@ export default function FamilyMealPlanShoppingRoute({
                                             Mengde
                                             <input
                                               className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                                              defaultValue={manualValues.quantity}
+                                              defaultValue={
+                                                manualValues.quantity
+                                              }
                                               name="quantity"
                                               type="text"
                                             />
@@ -785,9 +934,13 @@ export default function FamilyMealPlanShoppingRoute({
                                             Handledato
                                             <input
                                               className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                                              defaultValue={manualValues.buyOnDate}
+                                              defaultValue={
+                                                manualValues.buyOnDate
+                                              }
                                               max={loaderData.mealPlan.endDate}
-                                              min={loaderData.mealPlan.startDate}
+                                              min={
+                                                loaderData.mealPlan.startDate
+                                              }
                                               name="buyOnDate"
                                               type="date"
                                             />
@@ -799,15 +952,24 @@ export default function FamilyMealPlanShoppingRoute({
                                             Kategori
                                             <select
                                               className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                                              defaultValue={manualValues.categoryId}
+                                              defaultValue={
+                                                manualValues.categoryId
+                                              }
                                               name="categoryId"
                                             >
-                                              <option value="">Velg kategori</option>
-                                              {loaderData.categories.map((category) => (
-                                                <option key={category.id} value={category.id}>
-                                                  {category.displayName}
-                                                </option>
-                                              ))}
+                                              <option value="">
+                                                Velg kategori
+                                              </option>
+                                              {loaderData.categories.map(
+                                                (category) => (
+                                                  <option
+                                                    key={category.id}
+                                                    value={category.id}
+                                                  >
+                                                    {category.displayName}
+                                                  </option>
+                                                ),
+                                              )}
                                             </select>
                                           </label>
 
@@ -815,15 +977,24 @@ export default function FamilyMealPlanShoppingRoute({
                                             Foretrukket butikk
                                             <select
                                               className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                                              defaultValue={manualValues.preferredStoreId}
+                                              defaultValue={
+                                                manualValues.preferredStoreId
+                                              }
                                               name="preferredStoreId"
                                             >
-                                              <option value="">Ingen valgt butikk</option>
-                                              {loaderData.stores.map((store) => (
-                                                <option key={store.id} value={store.id}>
-                                                  {store.name}
-                                                </option>
-                                              ))}
+                                              <option value="">
+                                                Ingen valgt butikk
+                                              </option>
+                                              {loaderData.stores.map(
+                                                (store) => (
+                                                  <option
+                                                    key={store.id}
+                                                    value={store.id}
+                                                  >
+                                                    {store.name}
+                                                  </option>
+                                                ),
+                                              )}
                                             </select>
                                           </label>
                                         </div>
@@ -837,30 +1008,52 @@ export default function FamilyMealPlanShoppingRoute({
                                           />
                                         </label>
 
-                                        {actionData?.intent === "update-manual-shopping-item" &&
-                                        actionData.itemTarget?.sourceKey === item.sourceKey &&
+                                        {actionData?.intent ===
+                                          "update-manual-shopping-item" &&
+                                        actionData.itemTarget?.sourceKey ===
+                                          item.sourceKey &&
                                         actionData.manualFieldErrors?.name ? (
-                                          <p className="text-sm text-rose-600">{actionData.manualFieldErrors.name}</p>
-                                        ) : null}
-                                        {actionData?.intent === "update-manual-shopping-item" &&
-                                        actionData.itemTarget?.sourceKey === item.sourceKey &&
-                                        actionData.manualFieldErrors?.categoryId ? (
                                           <p className="text-sm text-rose-600">
-                                            {actionData.manualFieldErrors.categoryId}
+                                            {actionData.manualFieldErrors.name}
                                           </p>
                                         ) : null}
-                                        {actionData?.intent === "update-manual-shopping-item" &&
-                                        actionData.itemTarget?.sourceKey === item.sourceKey &&
-                                        actionData.manualFieldErrors?.preferredStoreId ? (
+                                        {actionData?.intent ===
+                                          "update-manual-shopping-item" &&
+                                        actionData.itemTarget?.sourceKey ===
+                                          item.sourceKey &&
+                                        actionData.manualFieldErrors
+                                          ?.categoryId ? (
                                           <p className="text-sm text-rose-600">
-                                            {actionData.manualFieldErrors.preferredStoreId}
+                                            {
+                                              actionData.manualFieldErrors
+                                                .categoryId
+                                            }
                                           </p>
                                         ) : null}
-                                        {actionData?.intent === "update-manual-shopping-item" &&
-                                        actionData.itemTarget?.sourceKey === item.sourceKey &&
-                                        actionData.manualFieldErrors?.buyOnDate ? (
+                                        {actionData?.intent ===
+                                          "update-manual-shopping-item" &&
+                                        actionData.itemTarget?.sourceKey ===
+                                          item.sourceKey &&
+                                        actionData.manualFieldErrors
+                                          ?.preferredStoreId ? (
                                           <p className="text-sm text-rose-600">
-                                            {actionData.manualFieldErrors.buyOnDate}
+                                            {
+                                              actionData.manualFieldErrors
+                                                .preferredStoreId
+                                            }
+                                          </p>
+                                        ) : null}
+                                        {actionData?.intent ===
+                                          "update-manual-shopping-item" &&
+                                        actionData.itemTarget?.sourceKey ===
+                                          item.sourceKey &&
+                                        actionData.manualFieldErrors
+                                          ?.buyOnDate ? (
+                                          <p className="text-sm text-rose-600">
+                                            {
+                                              actionData.manualFieldErrors
+                                                .buyOnDate
+                                            }
                                           </p>
                                         ) : null}
 
@@ -869,19 +1062,31 @@ export default function FamilyMealPlanShoppingRoute({
                                           disabled={isPendingManualSave}
                                           type="submit"
                                         >
-                                          {isPendingManualSave ? "Lagrer varelinje..." : "Lagre varelinje"}
+                                          {isPendingManualSave
+                                            ? "Lagrer varelinje..."
+                                            : "Lagre varelinje"}
                                         </button>
                                       </Form>
 
                                       <Form method="post">
-                                        <input name="intent" type="hidden" value="delete-manual-shopping-item" />
-                                        <input name="manualItemId" type="hidden" value={item.sourceKey} />
+                                        <input
+                                          name="intent"
+                                          type="hidden"
+                                          value="delete-manual-shopping-item"
+                                        />
+                                        <input
+                                          name="manualItemId"
+                                          type="hidden"
+                                          value={item.sourceKey}
+                                        />
                                         <button
                                           className="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:bg-rose-100 disabled:text-rose-400"
                                           disabled={isPendingManualDelete}
                                           type="submit"
                                         >
-                                          {isPendingManualDelete ? "Sletter varelinje..." : "Slett varelinje"}
+                                          {isPendingManualDelete
+                                            ? "Sletter varelinje..."
+                                            : "Slett varelinje"}
                                         </button>
                                       </Form>
                                     </>
@@ -900,9 +1105,12 @@ export default function FamilyMealPlanShoppingRoute({
           </section>
         ) : (
           <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">Ingen varer ennå</h2>
+            <h2 className="text-lg font-semibold text-slate-950">
+              Ingen varer ennå
+            </h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-              Legg til middager i ukeplanen eller opprett en manuell varelinje for a starte handlelisten.
+              Legg til middager i ukeplanen eller opprett en manuell varelinje
+              for a starte handlelisten.
             </p>
           </section>
         )}
@@ -921,7 +1129,8 @@ export function ErrorBoundary({ error }: { error: unknown }) {
       description = "Du har ikke tilgang til denne familiehandlelisten.";
     } else if (error.status === 404) {
       title = "Handlelisten finnes ikke";
-      description = "Vi fant ikke ukeplanen du forsokte a hente handlelisten for.";
+      description =
+        "Vi fant ikke ukeplanen du forsokte a hente handlelisten for.";
     }
   }
 
@@ -960,7 +1169,9 @@ function requireRouteParam(value: string | undefined, message: string) {
 }
 
 function serializeProjectedShoppingItem(
-  item: Awaited<ReturnType<typeof getMealPlanShoppingData>>["projectedItems"][number],
+  item: Awaited<
+    ReturnType<typeof getMealPlanShoppingData>
+  >["projectedItems"][number],
 ) {
   if (item.sourceType === ShoppingItemSource.GENERATED) {
     return {
@@ -971,7 +1182,9 @@ function serializeProjectedShoppingItem(
         ...occurrence,
         date: formatDateOnly(occurrence.date),
       })),
-      postponedUntilDate: item.postponedUntilDate ? formatDateOnly(item.postponedUntilDate) : null,
+      postponedUntilDate: item.postponedUntilDate
+        ? formatDateOnly(item.postponedUntilDate)
+        : null,
     };
   }
 
@@ -981,7 +1194,9 @@ function serializeProjectedShoppingItem(
   };
 }
 
-function parseManualShoppingItemValues(formData: FormData): ManualShoppingItemValues {
+function parseManualShoppingItemValues(
+  formData: FormData,
+): ManualShoppingItemValues {
   return {
     buyOnDate: String(formData.get("buyOnDate") ?? ""),
     categoryId: String(formData.get("categoryId") ?? ""),
@@ -992,7 +1207,9 @@ function parseManualShoppingItemValues(formData: FormData): ManualShoppingItemVa
   };
 }
 
-function parseGeneratedShoppingItemOverrideValues(formData: FormData): GeneratedShoppingItemOverrideValues {
+function parseGeneratedShoppingItemOverrideValues(
+  formData: FormData,
+): GeneratedShoppingItemOverrideValues {
   return {
     note: String(formData.get("note") ?? ""),
     postponedUntilDate: String(formData.get("postponedUntilDate") ?? ""),
@@ -1001,7 +1218,10 @@ function parseGeneratedShoppingItemOverrideValues(formData: FormData): Generated
 }
 
 function parseShoppingItemSource(value: FormDataEntryValue | null) {
-  if (value === ShoppingItemSource.GENERATED || value === ShoppingItemSource.MANUAL) {
+  if (
+    value === ShoppingItemSource.GENERATED ||
+    value === ShoppingItemSource.MANUAL
+  ) {
     return value;
   }
 
@@ -1055,7 +1275,10 @@ function buildShoppingRedirect({
   notice: ShoppingNotice;
   request: Request;
 }) {
-  const url = new URL(`/families/${familyId}/meal-plans/${mealPlanId}/shopping`, request.url);
+  const url = new URL(
+    `/families/${familyId}/meal-plans/${mealPlanId}/shopping`,
+    request.url,
+  );
   url.searchParams.set("notice", notice);
 
   return Response.redirect(url, 302);
@@ -1065,7 +1288,8 @@ function getShoppingNoticeContent(notice: ShoppingNotice) {
   switch (notice) {
     case "manual-shopping-item-added":
       return {
-        description: "Den manuelle varelinjen ble lagt til i handlelisten og sortert sammen med de andre varene.",
+        description:
+          "Den manuelle varelinjen ble lagt til i handlelisten og sortert sammen med de andre varene.",
         title: "Varelinje lagt til",
       };
     case "manual-shopping-item-updated":
@@ -1075,12 +1299,14 @@ function getShoppingNoticeContent(notice: ShoppingNotice) {
       };
     case "manual-shopping-item-deleted":
       return {
-        description: "Den manuelle varelinjen og eventuell avkryssing ble fjernet fra handlelisten.",
+        description:
+          "Den manuelle varelinjen og eventuell avkryssing ble fjernet fra handlelisten.",
         title: "Varelinje slettet",
       };
     case "generated-shopping-item-updated":
       return {
-        description: "Butikkvalg, notat og handledato for den genererte varelinjen ble lagret.",
+        description:
+          "Butikkvalg, notat og handledato for den genererte varelinjen ble lagret.",
         title: "Tilpasninger lagret",
       };
     case "shopping-item-check-state-updated":
