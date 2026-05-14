@@ -9,27 +9,29 @@ const storeSummarySelect = Prisma.validator<Prisma.StoreSelect>()({
   name: true,
 });
 
-const categorySummarySelect = Prisma.validator<Prisma.IngredientCategorySelect>()({
-  displayName: true,
-  id: true,
-});
+const categorySummarySelect =
+  Prisma.validator<Prisma.IngredientCategorySelect>()({
+    displayName: true,
+    id: true,
+  });
 
-const generatedShoppingRecipeIngredientSelect = Prisma.validator<Prisma.RecipeIngredientSelect>()({
-  amount: true,
-  category: {
-    select: categorySummarySelect,
-  },
-  categoryId: true,
-  displayName: true,
-  id: true,
-  ingredientId: true,
-  preferredStore: {
-    select: storeSummarySelect,
-  },
-  preferredStoreId: true,
-  sortOrder: true,
-  unit: true,
-});
+const generatedShoppingRecipeIngredientSelect =
+  Prisma.validator<Prisma.RecipeIngredientSelect>()({
+    amount: true,
+    category: {
+      select: categorySummarySelect,
+    },
+    categoryId: true,
+    displayName: true,
+    id: true,
+    ingredientId: true,
+    preferredStore: {
+      select: storeSummarySelect,
+    },
+    preferredStoreId: true,
+    sortOrder: true,
+    unit: true,
+  });
 
 const generatedShoppingRecipeSelect = Prisma.validator<Prisma.RecipeSelect>()({
   id: true,
@@ -40,43 +42,46 @@ const generatedShoppingRecipeSelect = Prisma.validator<Prisma.RecipeSelect>()({
   title: true,
 });
 
-const generatedShoppingMealPlanEntrySelect = Prisma.validator<Prisma.MealPlanEntrySelect>()({
-  date: true,
-  id: true,
-  mealType: true,
-  recipe: {
-    select: generatedShoppingRecipeSelect,
-  },
-  recipeId: true,
-});
+const generatedShoppingMealPlanEntrySelect =
+  Prisma.validator<Prisma.MealPlanEntrySelect>()({
+    date: true,
+    id: true,
+    mealType: true,
+    recipe: {
+      select: generatedShoppingRecipeSelect,
+    },
+    recipeId: true,
+  });
 
-const shoppingOverrideSelect = Prisma.validator<Prisma.ShoppingItemOverrideSelect>()({
-  checked: true,
-  note: true,
-  postponedUntilDate: true,
-  preferredStore: {
-    select: storeSummarySelect,
-  },
-  preferredStoreId: true,
-  sourceKey: true,
-  sourceType: true,
-});
+const shoppingOverrideSelect =
+  Prisma.validator<Prisma.ShoppingItemOverrideSelect>()({
+    checked: true,
+    note: true,
+    postponedUntilDate: true,
+    preferredStore: {
+      select: storeSummarySelect,
+    },
+    preferredStoreId: true,
+    sourceKey: true,
+    sourceType: true,
+  });
 
-const manualShoppingItemSelect = Prisma.validator<Prisma.ManualShoppingItemSelect>()({
-  buyOnDate: true,
-  category: {
-    select: categorySummarySelect,
-  },
-  categoryId: true,
-  id: true,
-  name: true,
-  note: true,
-  preferredStore: {
-    select: storeSummarySelect,
-  },
-  preferredStoreId: true,
-  quantity: true,
-});
+const manualShoppingItemSelect =
+  Prisma.validator<Prisma.ManualShoppingItemSelect>()({
+    buyOnDate: true,
+    category: {
+      select: categorySummarySelect,
+    },
+    categoryId: true,
+    id: true,
+    name: true,
+    note: true,
+    preferredStore: {
+      select: storeSummarySelect,
+    },
+    preferredStoreId: true,
+    quantity: true,
+  });
 
 const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
   endDate: true,
@@ -116,19 +121,17 @@ const shoppingStoreSelect = Prisma.validator<Prisma.StoreSelect>()({
   },
 });
 
-const shoppingCategorySelect = Prisma.validator<Prisma.IngredientCategorySelect>()({
-  displayName: true,
-  id: true,
-});
+const shoppingCategorySelect =
+  Prisma.validator<Prisma.IngredientCategorySelect>()({
+    displayName: true,
+    id: true,
+  });
 
 type ShoppingMealPlan = Prisma.MealPlanGetPayload<{
   select: typeof shoppingMealPlanSelect;
 }>;
 type ShoppingStore = Prisma.StoreGetPayload<{
   select: typeof shoppingStoreSelect;
-}>;
-type ShoppingCategory = Prisma.IngredientCategoryGetPayload<{
-  select: typeof shoppingCategorySelect;
 }>;
 type ShoppingOverride = Prisma.ShoppingItemOverrideGetPayload<{
   select: typeof shoppingOverrideSelect;
@@ -202,7 +205,9 @@ export interface ProjectedManualShoppingItem extends ProjectedShoppingItemBase {
   sourceType: "MANUAL";
 }
 
-export type ProjectedShoppingItem = ProjectedGeneratedShoppingItem | ProjectedManualShoppingItem;
+export type ProjectedShoppingItem =
+  | ProjectedGeneratedShoppingItem
+  | ProjectedManualShoppingItem;
 
 export interface ProjectedShoppingSectionGroup {
   category: {
@@ -269,7 +274,9 @@ export async function getMealPlanShoppingData({
     mealPlan,
     stores,
   });
-  const projectedItems = [...generatedItems, ...manualItems].sort(compareProjectedItems);
+  const projectedItems = [...generatedItems, ...manualItems].sort(
+    compareProjectedItems,
+  );
 
   return {
     categories,
@@ -302,7 +309,10 @@ function projectGeneratedShoppingItems({
   stores: ShoppingStore[];
 }) {
   const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
-  const overrideBySourceKey = buildOverrideMap(mealPlan.shoppingOverrides, ShoppingItemSource.GENERATED);
+  const overrideBySourceKey = buildOverrideMap(
+    mealPlan.shoppingOverrides,
+    ShoppingItemSource.GENERATED,
+  );
   const buckets = new Map<string, GeneratedProjectionBucket>();
 
   for (const entry of mealPlan.entries) {
@@ -384,7 +394,9 @@ function projectGeneratedShoppingItems({
       preferredStore,
       storeSectionsByStoreId,
     });
-    const occurrences = [...bucket.occurrences].sort(compareProjectedOccurrences);
+    const occurrences = [...bucket.occurrences].sort(
+      compareProjectedOccurrences,
+    );
 
     return {
       amount: bucket.amount,
@@ -415,7 +427,10 @@ function projectManualShoppingItems({
   stores: ShoppingStore[];
 }) {
   const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
-  const overrideBySourceKey = buildOverrideMap(mealPlan.shoppingOverrides, ShoppingItemSource.MANUAL);
+  const overrideBySourceKey = buildOverrideMap(
+    mealPlan.shoppingOverrides,
+    ShoppingItemSource.MANUAL,
+  );
 
   return mealPlan.manualShoppingItems.map((item) => {
     const override = overrideBySourceKey.get(item.id);
@@ -448,7 +463,9 @@ function projectManualShoppingItems({
   });
 }
 
-function buildProjectedStoreGroups(items: ProjectedShoppingItem[]): ProjectedShoppingStoreGroup[] {
+function buildProjectedStoreGroups(
+  items: ProjectedShoppingItem[],
+): ProjectedShoppingStoreGroup[] {
   const groupMap = new Map<
     string,
     {
@@ -528,7 +545,10 @@ function buildStoreSectionsByStoreId(stores: ShoppingStore[]) {
   );
 }
 
-function buildOverrideMap(overrides: ShoppingOverride[], sourceType: ShoppingItemSource) {
+function buildOverrideMap(
+  overrides: ShoppingOverride[],
+  sourceType: ShoppingItemSource,
+) {
   return new Map(
     overrides
       .filter((override) => override.sourceType === sourceType)
@@ -608,7 +628,9 @@ function resolveStoreSection({
 }
 
 function buildQuantityLabel(amount: string | null, unit: string | null) {
-  const parts = [amount, unit].filter((value) => value && value.trim().length > 0);
+  const parts = [amount, unit].filter(
+    (value) => value && value.trim().length > 0,
+  );
 
   return parts.length ? parts.join(" ") : null;
 }
@@ -619,12 +641,18 @@ function buildManualQuantityLabel(quantity: string | null) {
   return trimmedQuantity.length > 0 ? trimmedQuantity : null;
 }
 
-function compareProjectedOccurrences(left: ProjectedShoppingOccurrence, right: ProjectedShoppingOccurrence) {
+function compareProjectedOccurrences(
+  left: ProjectedShoppingOccurrence,
+  right: ProjectedShoppingOccurrence,
+) {
   if (left.date.getTime() !== right.date.getTime()) {
     return left.date.getTime() - right.date.getTime();
   }
 
-  const recipeTitleComparison = left.recipeTitle.localeCompare(right.recipeTitle, "nb");
+  const recipeTitleComparison = left.recipeTitle.localeCompare(
+    right.recipeTitle,
+    "nb",
+  );
 
   if (recipeTitleComparison !== 0) {
     return recipeTitleComparison;
@@ -664,8 +692,14 @@ function compareStoreSummaries(left: StoreSummary, right: StoreSummary) {
   return left.name.localeCompare(right.name, "nb");
 }
 
-function compareProjectedItems(left: ProjectedShoppingItem, right: ProjectedShoppingItem) {
-  const storeComparison = compareStoreSummaries(left.preferredStore, right.preferredStore);
+function compareProjectedItems(
+  left: ProjectedShoppingItem,
+  right: ProjectedShoppingItem,
+) {
+  const storeComparison = compareStoreSummaries(
+    left.preferredStore,
+    right.preferredStore,
+  );
 
   if (storeComparison !== 0) {
     return storeComparison;
@@ -675,7 +709,10 @@ function compareProjectedItems(left: ProjectedShoppingItem, right: ProjectedShop
     return left.section.sortOrder - right.section.sortOrder;
   }
 
-  const sectionComparison = left.section.displayName.localeCompare(right.section.displayName, "nb");
+  const sectionComparison = left.section.displayName.localeCompare(
+    right.section.displayName,
+    "nb",
+  );
 
   if (sectionComparison !== 0) {
     return sectionComparison;
