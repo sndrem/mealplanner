@@ -84,6 +84,7 @@ const manualShoppingItemSelect =
   });
 
 const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
+  activeShoppingDate: true,
   endDate: true,
   entries: {
     orderBy: [{ date: "asc" }, { id: "asc" }],
@@ -223,6 +224,11 @@ export interface ProjectedShoppingStoreGroup {
   store: StoreSummary;
 }
 
+export interface StoreModeProgress {
+  checkedCount: number;
+  totalCount: number;
+}
+
 export async function getMealPlanShoppingData({
   familyId,
   mealPlanId,
@@ -292,6 +298,108 @@ export async function getMealPlanShoppingData({
     mealPlan,
     projectedItems,
     storeGroups: buildProjectedStoreGroups(projectedItems),
+    stores: stores.map((store) => ({
+      id: store.id,
+      name: store.name,
+    })),
+    userRole: membership.role,
+    visibleDates: getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate),
+  };
+}
+
+export async function getMealPlanStoreModeData({
+  familyId,
+  mealPlanId,
+  userId,
+}: {
+  familyId: string;
+  mealPlanId: string;
+  userId: string;
+}) {
+  const membership = await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const [mealPlan, stores, selectedStorePreference] = await Promise.all([
+    db.mealPlan.findFirst({
+      select: shoppingMealPlanSelect,
+      where: {
+        familyId,
+        id: mealPlanId,
+      },
+    }),
+    db.store.findMany({
+      orderBy: [{ name: "asc" }],
+      select: shoppingStoreSelect,
+      where: {
+        OR: [{ familyId: null }, { familyId }],
+      },
+    }),
+    db.userStorePreference.findUnique({
+      select: {
+        selectedStoreId: true,
+      },
+      where: {
+        userId_familyId: {
+          familyId,
+          userId,
+        },
+      },
+    }),
+  ]);
+
+  if (!mealPlan) {
+    throw new Response("Fant ikke ukeplanen.", {
+      status: 404,
+      statusText: "Not Found",
+    });
+  }
+
+  const generatedItems = projectGeneratedShoppingItems({
+    mealPlan,
+    stores,
+  });
+  const manualItems = projectManualShoppingItems({
+    mealPlan,
+    stores,
+  });
+  const projectedItems = [...generatedItems, ...manualItems];
+  const activeShoppingDate = mealPlan.activeShoppingDate ?? mealPlan.startDate;
+  const selectedStore = resolveSelectedStoreSummary(
+    stores,
+    selectedStorePreference?.selectedStoreId ?? null,
+  );
+  const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
+  const dueItems = projectedItems
+    .filter((item) => isProjectedItemDueBy(item, activeShoppingDate))
+    .sort((left, right) =>
+      compareProjectedItemsForStoreMode(
+        left,
+        right,
+        selectedStore,
+        storeSectionsByStoreId,
+      ),
+    );
+  const laterItems = projectedItems
+    .filter((item) => !isProjectedItemDueBy(item, activeShoppingDate))
+    .sort(compareProjectedItemsByRelevantDate);
+
+  return {
+    activeShoppingDate,
+    dueSectionGroups: buildStoreModeSectionGroups({
+      items: dueItems,
+      selectedStore,
+      storeSectionsByStoreId,
+    }),
+    family: {
+      id: membership.family.id,
+      name: membership.family.name,
+    },
+    laterItems,
+    mealPlan,
+    progress: buildStoreModeProgress(dueItems),
+    selectedStore,
     stores: stores.map((store) => ({
       id: store.id,
       name: store.name,
@@ -528,6 +636,68 @@ function buildProjectedStoreGroups(
     .sort((left, right) => compareStoreSummaries(left.store, right.store));
 }
 
+function buildStoreModeSectionGroups({
+  items,
+  selectedStore,
+  storeSectionsByStoreId,
+}: {
+  items: ProjectedShoppingItem[];
+  selectedStore: StoreSummary;
+  storeSectionsByStoreId: Map<string, Map<string, StoreSectionSummary>>;
+}) {
+  const sectionMap = new Map<
+    string,
+    ProjectedShoppingSectionGroup & {
+      sortOrder: number;
+    }
+  >();
+
+  for (const item of items) {
+    const section = resolveStoreSection({
+      category: item.category,
+      preferredStore: selectedStore,
+      storeSectionsByStoreId,
+    });
+    const sectionKey = `${item.category.id}:${section.displayName}`;
+    const existingSection = sectionMap.get(sectionKey);
+
+    if (!existingSection) {
+      sectionMap.set(sectionKey, {
+        category: item.category,
+        displayName: section.displayName,
+        items: [item],
+        sortOrder: section.sortOrder,
+      });
+      continue;
+    }
+
+    existingSection.items.push(item);
+  }
+
+  return [...sectionMap.values()]
+    .map((section) => ({
+      category: section.category,
+      displayName: section.displayName,
+      items: [...section.items],
+      sortOrder: section.sortOrder,
+    }))
+    .sort((left, right) => {
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.displayName.localeCompare(right.displayName, "nb");
+    })
+    .map(({ sortOrder: _sortOrder, ...section }) => section);
+}
+
+function buildStoreModeProgress(items: ProjectedShoppingItem[]): StoreModeProgress {
+  return {
+    checkedCount: items.filter((item) => item.checked).length,
+    totalCount: items.length,
+  };
+}
+
 function buildStoreSectionsByStoreId(stores: ShoppingStore[]) {
   return new Map(
     stores.map((store) => [
@@ -625,6 +795,51 @@ function resolveStoreSection({
   }
 
   return section;
+}
+
+function resolveSelectedStoreSummary(
+  stores: ShoppingStore[],
+  selectedStoreId: string | null,
+): StoreSummary {
+  if (selectedStoreId) {
+    const matchingStore = stores.find((store) => store.id === selectedStoreId);
+
+    if (matchingStore) {
+      return {
+        id: matchingStore.id,
+        name: matchingStore.name,
+      };
+    }
+  }
+
+  const fallbackStore = stores[0];
+
+  if (!fallbackStore) {
+    return null;
+  }
+
+  return {
+    id: fallbackStore.id,
+    name: fallbackStore.name,
+  };
+}
+
+function isProjectedItemDueBy(item: ProjectedShoppingItem, activeShoppingDate: Date) {
+  const relevantDate = getProjectedItemRelevantDate(item);
+
+  if (!relevantDate) {
+    return true;
+  }
+
+  return relevantDate.getTime() <= activeShoppingDate.getTime();
+}
+
+function getProjectedItemRelevantDate(item: ProjectedShoppingItem) {
+  if (item.sourceType === "GENERATED") {
+    return item.postponedUntilDate ?? item.firstDate;
+  }
+
+  return item.buyOnDate;
 }
 
 function buildQuantityLabel(amount: string | null, unit: string | null) {
@@ -734,10 +949,89 @@ function compareProjectedItems(
   return left.sourceKey.localeCompare(right.sourceKey, "nb");
 }
 
+function compareProjectedItemsForStoreMode(
+  left: ProjectedShoppingItem,
+  right: ProjectedShoppingItem,
+  selectedStore: StoreSummary,
+  storeSectionsByStoreId: Map<string, Map<string, StoreSectionSummary>>,
+) {
+  const leftSection = resolveStoreSection({
+    category: left.category,
+    preferredStore: selectedStore,
+    storeSectionsByStoreId,
+  });
+  const rightSection = resolveStoreSection({
+    category: right.category,
+    preferredStore: selectedStore,
+    storeSectionsByStoreId,
+  });
+
+  if (leftSection.sortOrder !== rightSection.sortOrder) {
+    return leftSection.sortOrder - rightSection.sortOrder;
+  }
+
+  const sectionComparison = leftSection.displayName.localeCompare(
+    rightSection.displayName,
+    "nb",
+  );
+
+  if (sectionComparison !== 0) {
+    return sectionComparison;
+  }
+
+  const leftRelevantTimestamp = getProjectedItemRelevantTimestamp(left);
+  const rightRelevantTimestamp = getProjectedItemRelevantTimestamp(right);
+
+  if (leftRelevantTimestamp !== rightRelevantTimestamp) {
+    return leftRelevantTimestamp - rightRelevantTimestamp;
+  }
+
+  const leftPreferredStoreComparison = compareStoreSummaries(
+    left.preferredStore,
+    right.preferredStore,
+  );
+
+  if (leftPreferredStoreComparison !== 0) {
+    return leftPreferredStoreComparison;
+  }
+
+  const nameComparison = left.name.localeCompare(right.name, "nb");
+
+  if (nameComparison !== 0) {
+    return nameComparison;
+  }
+
+  return left.sourceKey.localeCompare(right.sourceKey, "nb");
+}
+
+function compareProjectedItemsByRelevantDate(
+  left: ProjectedShoppingItem,
+  right: ProjectedShoppingItem,
+) {
+  const leftRelevantTimestamp = getProjectedItemRelevantTimestamp(left);
+  const rightRelevantTimestamp = getProjectedItemRelevantTimestamp(right);
+
+  if (leftRelevantTimestamp !== rightRelevantTimestamp) {
+    return leftRelevantTimestamp - rightRelevantTimestamp;
+  }
+
+  const nameComparison = left.name.localeCompare(right.name, "nb");
+
+  if (nameComparison !== 0) {
+    return nameComparison;
+  }
+
+  return left.sourceKey.localeCompare(right.sourceKey, "nb");
+}
+
 function getProjectedItemSortTimestamp(item: ProjectedShoppingItem) {
   if (item.sourceType === "GENERATED") {
     return item.firstDate.getTime();
   }
 
   return item.buyOnDate ? item.buyOnDate.getTime() : Number.MIN_SAFE_INTEGER;
+}
+
+function getProjectedItemRelevantTimestamp(item: ProjectedShoppingItem) {
+  return getProjectedItemRelevantDate(item)?.getTime() ?? Number.MIN_SAFE_INTEGER;
 }

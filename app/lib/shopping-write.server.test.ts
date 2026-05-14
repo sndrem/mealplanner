@@ -24,6 +24,7 @@ const { dbMock, requireFamilyMembershipMock, transactionMock } = vi.hoisted(() =
       },
       mealPlan: {
         findFirst: vi.fn(),
+        update: vi.fn(),
       },
       shoppingItemOverride: {
         delete: vi.fn(),
@@ -56,6 +57,7 @@ import {
   createManualShoppingItem,
   deleteManualShoppingItem,
   toggleShoppingItemChecked,
+  updateActiveShoppingDate,
   updateGeneratedShoppingItemOverride,
 } from "./shopping-write.server";
 
@@ -274,6 +276,27 @@ describe("shopping-write.server", () => {
           sourceKey: "entry-1:ingredient-1",
           sourceType: ShoppingItemSource.GENERATED,
         },
+      },
+    });
+  });
+
+  it("updates the meal plan active shopping date within range", async () => {
+    const result = await updateActiveShoppingDate({
+      activeShoppingDate: "2026-05-17",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "UPDATED",
+    });
+    expect(dbMock.mealPlan.update).toHaveBeenCalledWith({
+      data: {
+        activeShoppingDate: new Date("2026-05-17T00:00:00.000Z"),
+      },
+      where: {
+        id: "meal-plan-1",
       },
     });
   });

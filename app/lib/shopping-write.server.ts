@@ -30,6 +30,10 @@ export interface GeneratedShoppingItemOverrideFieldErrors {
   preferredStoreId?: string;
 }
 
+export interface ActiveShoppingDateFieldErrors {
+  activeShoppingDate?: string;
+}
+
 export async function createManualShoppingItem({
   familyId,
   mealPlanId,
@@ -413,6 +417,63 @@ export async function updateGeneratedShoppingItemOverride({
         sourceKey,
         sourceType: ShoppingItemSource.GENERATED,
       },
+    },
+  });
+
+  return {
+    status: "UPDATED" as const,
+  };
+}
+
+export async function updateActiveShoppingDate({
+  activeShoppingDate,
+  familyId,
+  mealPlanId,
+  userId,
+}: {
+  activeShoppingDate: string;
+  familyId: string;
+  mealPlanId: string;
+  userId: string;
+}) {
+  const mealPlan = await getScopedMealPlan({
+    familyId,
+    mealPlanId,
+    userId,
+  });
+
+  if (!mealPlan) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  const normalizedDate = activeShoppingDate.trim();
+  const validation = validateOptionalDateInRange(
+    normalizedDate,
+    mealPlan.startDate,
+    mealPlan.endDate,
+    "Velg en gyldig handledato.",
+  );
+
+  if (!validation.ok) {
+    return {
+      fieldErrors: {
+        activeShoppingDate: validation.fieldError,
+      },
+      status: "VALIDATION_ERROR" as const,
+      values: {
+        activeShoppingDate: normalizedDate,
+      },
+    };
+  }
+
+  await db.mealPlan.update({
+    data: {
+      activeShoppingDate: validation.date ?? mealPlan.startDate,
+    },
+    where: {
+      id: mealPlan.id,
     },
   });
 

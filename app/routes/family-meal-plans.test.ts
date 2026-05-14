@@ -51,6 +51,7 @@ describe("family meal plans route", () => {
       },
       mealPlans: [
         {
+          activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
           createdAt: new Date("2026-05-01T12:00:00.000Z"),
           endDate: new Date("2026-05-18T00:00:00.000Z"),
           id: "meal-plan-1",
@@ -81,6 +82,7 @@ describe("family meal plans route", () => {
       },
       mealPlans: [
         {
+          activeShoppingDate: "2026-05-15",
           createdAt: new Date("2026-05-01T12:00:00.000Z"),
           endDate: "2026-05-18",
           id: "meal-plan-1",
@@ -201,6 +203,7 @@ describe("family meal plans route", () => {
         name: "Solberg",
       },
       mealPlan: {
+        activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
         approvedAt: null,
         approvedByUserId: null,
         copiedFromMealPlanId: null,
@@ -245,6 +248,7 @@ describe("family meal plans route", () => {
         name: "Solberg",
       },
       mealPlan: {
+        activeShoppingDate: new Date("2026-05-20T00:00:00.000Z"),
         approvedAt: null,
         approvedByUserId: null,
         copiedFromMealPlanId: "meal-plan-source",

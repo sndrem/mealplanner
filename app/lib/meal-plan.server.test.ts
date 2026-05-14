@@ -154,6 +154,7 @@ describe("meal-plan.server", () => {
     expect(dbMock.mealPlan.findMany).toHaveBeenCalledWith({
       orderBy: [{ startDate: "desc" }, { createdAt: "desc" }],
       select: {
+        activeShoppingDate: true,
         createdAt: true,
         endDate: true,
         id: true,
@@ -292,6 +293,7 @@ describe("meal-plan.server", () => {
     });
     expect(dbMock.mealPlan.create).toHaveBeenCalledWith({
       data: {
+        activeShoppingDate: new Date("2026-05-20T00:00:00.000Z"),
         copiedFromMealPlanId: "meal-plan-source",
         endDate: new Date("2026-05-22T00:00:00.000Z"),
         familyId: "family-1",
@@ -299,6 +301,7 @@ describe("meal-plan.server", () => {
         title: "Neste uke",
       },
       select: {
+        activeShoppingDate: true,
         approvedAt: true,
         approvedByUserId: true,
         copiedFromMealPlanId: true,
@@ -552,6 +555,7 @@ describe("meal-plan.server", () => {
         status: "APPROVED",
       }),
       select: {
+        activeShoppingDate: true,
         approvedAt: true,
         approvedByUserId: true,
         copiedFromMealPlanId: true,
@@ -601,6 +605,7 @@ describe("meal-plan.server", () => {
         status: "DRAFT",
       },
       select: {
+        activeShoppingDate: true,
         approvedAt: true,
         approvedByUserId: true,
         copiedFromMealPlanId: true,

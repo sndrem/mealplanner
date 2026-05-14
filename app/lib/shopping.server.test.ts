@@ -12,6 +12,9 @@ const { dbMock, requireFamilyMembershipMock } = vi.hoisted(() => {
       store: {
         findMany: vi.fn(),
       },
+      userStorePreference: {
+        findUnique: vi.fn(),
+      },
     },
     requireFamilyMembershipMock: vi.fn(),
   };
@@ -29,7 +32,7 @@ vi.mock("./family.server", () => {
   };
 });
 
-import { getMealPlanShoppingData } from "./shopping.server";
+import { getMealPlanShoppingData, getMealPlanStoreModeData } from "./shopping.server";
 
 const mockMembership = {
   family: {
@@ -47,6 +50,7 @@ describe("shopping.server", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requireFamilyMembershipMock.mockResolvedValue(mockMembership);
+    dbMock.userStorePreference.findUnique.mockResolvedValue(null);
     dbMock.ingredientCategory.findMany.mockResolvedValue([
       {
         displayName: "Brod",
@@ -65,6 +69,7 @@ describe("shopping.server", () => {
 
   it("projects deterministic generated and manual shopping items with exact-match merge, overrides, and store ordering", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
       endDate: new Date("2026-05-18T00:00:00.000Z"),
       entries: [
         {
@@ -422,6 +427,7 @@ describe("shopping.server", () => {
 
   it("keeps generated items separate when exact-match fields differ", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
       endDate: new Date("2026-05-18T00:00:00.000Z"),
       entries: [
         {
@@ -525,6 +531,176 @@ describe("shopping.server", () => {
       "entry-2:ingredient-2",
     ]);
     expect(result.projectedItems.map((item) => item.quantityLabel)).toEqual(["1 beger", "2 beger"]);
+  });
+
+  it("builds store mode with all due items ordered by the selected store layout", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  id: "category-bakery",
+                  name: "Brod",
+                },
+                categoryId: "category-bakery",
+                displayName: "Wraps",
+                id: "ingredient-1",
+                ingredientId: "canonical-wraps",
+                preferredStore: {
+                  id: "store-1",
+                  name: "Coop Mega",
+                },
+                preferredStoreId: "store-1",
+                sortOrder: 1,
+                unit: "pk",
+              },
+              {
+                amount: "1",
+                category: {
+                  id: "category-produce",
+                  name: "Frukt og gront",
+                },
+                categoryId: "category-produce",
+                displayName: "Paprika",
+                id: "ingredient-2",
+                ingredientId: "canonical-paprika",
+                preferredStore: {
+                  id: "store-2",
+                  name: "Meny",
+                },
+                preferredStoreId: "store-2",
+                sortOrder: 2,
+                unit: "stk",
+              },
+            ],
+            title: "Tacofredag",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [
+        {
+          buyOnDate: new Date("2026-05-18T00:00:00.000Z"),
+          category: {
+            displayName: "Meieri",
+            id: "category-dairy",
+          },
+          categoryId: "category-dairy",
+          id: "manual-item-1",
+          name: "Yoghurt",
+          note: null,
+          preferredStore: {
+            id: "store-1",
+            name: "Coop Mega",
+          },
+          preferredStoreId: "store-1",
+          quantity: "2 beger",
+        },
+      ],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Helgehandel",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-produce",
+            displayName: "Frukt og gront",
+            id: "section-1",
+            sortOrder: 1,
+          },
+          {
+            categoryId: "category-bakery",
+            displayName: "Brod",
+            id: "section-2",
+            sortOrder: 2,
+          },
+          {
+            categoryId: "category-dairy",
+            displayName: "Meieri",
+            id: "section-3",
+            sortOrder: 3,
+          },
+        ],
+      },
+      {
+        familyId: "family-1",
+        id: "store-2",
+        name: "Meny",
+        sections: [
+          {
+            categoryId: "category-bakery",
+            displayName: "Brod",
+            id: "section-4",
+            sortOrder: 1,
+          },
+          {
+            categoryId: "category-produce",
+            displayName: "Frukt og gront",
+            id: "section-5",
+            sortOrder: 2,
+          },
+          {
+            categoryId: "category-dairy",
+            displayName: "Meieri",
+            id: "section-6",
+            sortOrder: 3,
+          },
+        ],
+      },
+    ]);
+    dbMock.userStorePreference.findUnique.mockResolvedValue({
+      selectedStoreId: "store-2",
+    });
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(dbMock.userStorePreference.findUnique).toHaveBeenCalledWith({
+      select: {
+        selectedStoreId: true,
+      },
+      where: {
+        userId_familyId: {
+          familyId: "family-1",
+          userId: "user-1",
+        },
+      },
+    });
+    expect(result.selectedStore).toEqual({
+      id: "store-2",
+      name: "Meny",
+    });
+    expect(result.activeShoppingDate).toEqual(new Date("2026-05-16T00:00:00.000Z"));
+    expect(result.dueSectionGroups.map((section) => section.displayName)).toEqual([
+      "Brod",
+      "Frukt og gront",
+    ]);
+    expect(result.dueSectionGroups[0]?.items.map((item) => item.name)).toEqual(["Wraps"]);
+    expect(result.dueSectionGroups[1]?.items.map((item) => item.name)).toEqual(["Paprika"]);
+    expect(result.laterItems.map((item) => item.name)).toEqual(["Yoghurt"]);
+    expect(result.progress).toEqual({
+      checkedCount: 0,
+      totalCount: 2,
+    });
   });
 
   it("throws a not-found response when the meal plan is outside the family scope", async () => {
