@@ -2,35 +2,33 @@
 
 ## Current Objective
 
-Implement issue `#7`'s first production meal-plan CRUD flow. The branch now has family-scoped, server-backed meal-plan create/list/select/update/delete with persisted date ranges and centralized 7-day validation.
+Implement issue `#8`'s first production dinner-planning flow. The selected meal-plan route now supports day-by-day dinner recipe selection plus per-day notes, backed by server persistence and the existing seeded recipe data.
 
 ## Completed
 
-- Added `app/lib/meal-plan.server.ts` with family-scoped meal-plan CRUD, UTC date-only helpers, and shared `startDate` / `endDate` validation.
-- Added dedicated production routes in `app/routes/family-meal-plans.tsx` and `app/routes/family-meal-plan.tsx`, and registered them in `app/routes.ts`.
-- Linked the family overview in `app/routes/family.tsx` into the new meal-plan flow.
-- Added focused tests in `app/lib/meal-plan.server.test.ts`, `app/routes/family-meal-plans.test.ts`, and `app/routes/family-meal-plan.test.ts`.
+- Extended `app/lib/meal-plan.server.ts` with a planning loader that returns visible meal-plan dates, existing dinner entries, and accessible recipes, plus a bulk save mutation for dinner entries with server-side date and recipe validation.
+- Reworked `app/routes/family-meal-plan.tsx` into the first production planning screen: users can save dinners and notes for each active date, browse a recipe bank, and still edit meal-plan metadata on the same route.
+- Expanded focused coverage in `app/lib/meal-plan.server.test.ts` and `app/routes/family-meal-plan.test.ts` for planning-data loading, entry save/clear behavior, validation errors, and route redirects.
 
 ## Files To Read First
 
-- `app/lib/meal-plan.server.ts` - Core CRUD, family scoping, and date-range validation logic for meal plans.
-- `app/routes/family-meal-plans.tsx` - Family meal-plan list/create/delete route and UI.
-- `app/routes/family-meal-plan.tsx` - Selected meal-plan metadata edit route and redirect/error handling.
-- `app/lib/meal-plan.server.test.ts` - Fastest reference for expected validation and service behavior.
+- `app/lib/meal-plan.server.ts` - Meal-plan CRUD, planning-data query, UTC date helpers, and bulk dinner entry persistence.
+- `app/routes/family-meal-plan.tsx` - Server-backed dinner planner UI, form parsing, notices, and metadata editing on the selected meal-plan route.
+- `app/lib/meal-plan.server.test.ts` - Fastest reference for entry validation, save semantics, and scoped access rules.
+- `app/routes/family-meal-plan.test.ts` - Loader/action expectations for the production planner route.
 
 ## Validation
 
-- `npm run test:run -- app/lib/meal-plan.server.test.ts app/routes/family-meal-plans.test.ts app/routes/family-meal-plan.test.ts`
+- `npm run test:run -- app/lib/meal-plan.server.test.ts app/routes/family-meal-plan.test.ts`
 - `npm run lint`
 - `./node_modules/.bin/tsc --noEmit`
-- `npm run typecheck` failed in this environment because `react-router typegen` requires Node `>20`, but the machine is on Node `18.20.8`.
 
 ## Open Items
 
-- No manual browser smoke test has been run yet for the new meal-plan routes.
-- `npm run typecheck` will keep failing until the environment uses Node `20+` for `react-router typegen`.
-- The current scope only covers meal-plan metadata CRUD; entry editing, copy/reuse, shopping generation, and approval state are still follow-up work.
+- No manual browser smoke test has been run yet for the dinner planner route.
+- Copy/reuse, shopping generation, and approval state are still follow-up slices; this change only covers daily dinner entry editing plus notes.
+- The planner currently saves the full visible date range in one submit; if product later prefers autosave or per-day saves, the route/action contract will need to change.
 
 ## Next Step
 
-Run a manual end-to-end check of `families/:familyId/meal-plans` and `families/:familyId/meal-plans/:mealPlanId`, then continue with the next meal-planning slice on top of the new route structure.
+Run a manual end-to-end check of `families/:familyId/meal-plans/:mealPlanId` to verify saving, clearing, and reloading dinners/notes in the browser, then continue with the next meal-planning slice such as copy/reuse or approval.

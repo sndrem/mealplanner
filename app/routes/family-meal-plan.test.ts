@@ -12,13 +12,14 @@ vi.mock("../lib/auth.server", async () => {
 vi.mock("../lib/meal-plan.server", () => {
   return {
     formatDateOnly: vi.fn((date: Date) => date.toISOString().slice(0, 10)),
-    getMealPlanForFamily: vi.fn(),
+    getMealPlanPlanningData: vi.fn(),
+    saveMealPlanEntries: vi.fn(),
     updateMealPlan: vi.fn(),
   };
 });
 
 import { requireUser } from "../lib/auth.server";
-import { getMealPlanForFamily, updateMealPlan } from "../lib/meal-plan.server";
+import { getMealPlanPlanningData, saveMealPlanEntries, updateMealPlan } from "../lib/meal-plan.server";
 import { action, loader } from "./family-meal-plan";
 
 const mockUser = {
@@ -40,9 +41,9 @@ describe("family meal plan route", () => {
     vi.clearAllMocks();
   });
 
-  it("loads a serialized meal plan for metadata editing", async () => {
+  it("loads planning data with visible dates, entries, and recipe options", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
-    vi.mocked(getMealPlanForFamily).mockResolvedValue({
+    vi.mocked(getMealPlanPlanningData).mockResolvedValue({
       family: {
         id: "family-1",
         name: "Solberg",
@@ -53,13 +54,37 @@ describe("family meal plan route", () => {
         copiedFromMealPlanId: null,
         createdAt: new Date("2026-05-01T12:00:00.000Z"),
         endDate: new Date("2026-05-18T00:00:00.000Z"),
+        entries: [
+          {
+            createdAt: new Date("2026-05-01T12:00:00.000Z"),
+            date: new Date("2026-05-15T00:00:00.000Z"),
+            id: "entry-1",
+            locked: false,
+            mealType: "DINNER",
+            note: "Bruk rester til lunsj",
+            recipe: null,
+            recipeId: "",
+            updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+          },
+        ],
         id: "meal-plan-1",
         startDate: new Date("2026-05-15T00:00:00.000Z"),
         status: "DRAFT",
         title: "Langhelg",
         updatedAt: new Date("2026-05-01T12:00:00.000Z"),
       },
+      recipes: [
+        {
+          defaultServings: 4,
+          description: "Rask middagsfavoritt.",
+          id: "kylling-taco",
+          prepMinutes: 25,
+          tags: ["rask"],
+          title: "Kyllingtaco",
+        },
+      ],
       userRole: "ADMIN",
+      visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
 
     const result = await loader({
@@ -70,7 +95,7 @@ describe("family meal plan route", () => {
       request: buildRequest("http://localhost/families/family-1/meal-plans/meal-plan-1?notice=meal-plan-created"),
     });
 
-    expect(getMealPlanForFamily).toHaveBeenCalledWith({
+    expect(getMealPlanPlanningData).toHaveBeenCalledWith({
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",
@@ -86,6 +111,7 @@ describe("family meal plan route", () => {
         copiedFromMealPlanId: null,
         createdAt: new Date("2026-05-01T12:00:00.000Z"),
         endDate: "2026-05-18",
+        entries: undefined,
         id: "meal-plan-1",
         startDate: "2026-05-15",
         status: "DRAFT",
@@ -93,7 +119,134 @@ describe("family meal plan route", () => {
         updatedAt: new Date("2026-05-01T12:00:00.000Z"),
       },
       notice: "meal-plan-created",
+      recipes: [
+        {
+          defaultServings: 4,
+          description: "Rask middagsfavoritt.",
+          id: "kylling-taco",
+          prepMinutes: 25,
+          tags: ["rask"],
+          title: "Kyllingtaco",
+        },
+      ],
+      visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
+      entriesByDate: {
+        "2026-05-15": {
+          note: "Bruk rester til lunsj",
+          recipeId: "",
+        },
+        "2026-05-16": {
+          note: "",
+          recipeId: "",
+        },
+        "2026-05-17": {
+          note: "",
+          recipeId: "",
+        },
+        "2026-05-18": {
+          note: "",
+          recipeId: "",
+        },
+      },
     });
+  });
+
+  it("returns planner validation errors from the server module", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(saveMealPlanEntries).mockResolvedValue({
+      formError: "En av dagene ligger utenfor den aktive perioden.",
+      status: "VALIDATION_ERROR",
+      values: [
+        {
+          date: "2026-05-15",
+          note: "Bruk rester til lunsj",
+          recipeId: "",
+        },
+        {
+          date: "2026-05-16",
+          note: "",
+          recipeId: "kylling-taco",
+        },
+      ],
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "save-meal-plan-entries");
+    formData.append("entryDate", "2026-05-15");
+    formData.append("entryDate", "2026-05-16");
+    formData.set("note:2026-05-15", "Bruk rester til lunsj");
+    formData.set("recipeId:2026-05-15", "");
+    formData.set("note:2026-05-16", "");
+    formData.set("recipeId:2026-05-16", "kylling-taco");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest("http://localhost/families/family-1/meal-plans/meal-plan-1", formData),
+    });
+
+    expect(saveMealPlanEntries).toHaveBeenCalledWith({
+      entries: [
+        {
+          date: "2026-05-15",
+          note: "Bruk rester til lunsj",
+          recipeId: "",
+        },
+        {
+          date: "2026-05-16",
+          note: "",
+          recipeId: "kylling-taco",
+        },
+      ],
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+    expect(result).toEqual({
+      entryFormError: "En av dagene ligger utenfor den aktive perioden.",
+      entryValues: {
+        "2026-05-15": {
+          note: "Bruk rester til lunsj",
+          recipeId: "",
+        },
+        "2026-05-16": {
+          note: "",
+          recipeId: "kylling-taco",
+        },
+      },
+      intent: "save-meal-plan-entries",
+    });
+  });
+
+  it("redirects with an explicit notice after saving meal plan entries", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(saveMealPlanEntries).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "save-meal-plan-entries");
+    formData.append("entryDate", "2026-05-15");
+    formData.set("recipeId:2026-05-15", "kylling-taco");
+    formData.set("note:2026-05-15", "");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest("http://localhost/families/family-1/meal-plans/meal-plan-1", formData),
+    });
+
+    expect(result).toBeInstanceOf(Response);
+
+    const response = result as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "http://localhost/families/family-1/meal-plans/meal-plan-1?notice=meal-plan-entries-saved",
+    );
   });
 
   it("returns update validation errors from the server module", async () => {
@@ -113,8 +266,8 @@ describe("family meal plan route", () => {
     const formData = new FormData();
     formData.set("intent", "update-meal-plan");
     formData.set("title", "Langhelg");
-    formData.set("startDate", "2026-05-18");
-    formData.set("endDate", "2026-05-15");
+    formData.set("startDate", "2026-05-15");
+    formData.set("endDate", "2026-05-18");
 
     const result = await action({
       params: {
@@ -124,18 +277,11 @@ describe("family meal plan route", () => {
       request: buildRequest("http://localhost/families/family-1/meal-plans/meal-plan-1", formData),
     });
 
-    expect(updateMealPlan).toHaveBeenCalledWith({
-      endDate: "2026-05-15",
-      familyId: "family-1",
-      mealPlanId: "meal-plan-1",
-      startDate: "2026-05-18",
-      title: "Langhelg",
-      userId: "user-1",
-    });
     expect(result).toEqual({
       fieldErrors: {
         endDate: "Sluttdatoen kan ikke være før startdatoen.",
       },
+      intent: "update-meal-plan",
       values: {
         endDate: "2026-05-15",
         startDate: "2026-05-18",
@@ -144,58 +290,17 @@ describe("family meal plan route", () => {
     });
   });
 
-  it("redirects with an explicit notice after updating a meal plan", async () => {
+  it("throws a not-found response when the meal plan disappears before an entry save", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
-    vi.mocked(updateMealPlan).mockResolvedValue({
-      mealPlan: {
-        approvedAt: null,
-        approvedByUserId: null,
-        copiedFromMealPlanId: null,
-        createdAt: new Date("2026-05-01T12:00:00.000Z"),
-        endDate: new Date("2026-05-18T00:00:00.000Z"),
-        id: "meal-plan-1",
-        startDate: new Date("2026-05-15T00:00:00.000Z"),
-        status: "DRAFT",
-        title: "Langhelg",
-        updatedAt: new Date("2026-05-02T12:00:00.000Z"),
-      },
-      status: "UPDATED",
-    });
-
-    const formData = new FormData();
-    formData.set("intent", "update-meal-plan");
-    formData.set("title", "Langhelg");
-    formData.set("startDate", "2026-05-15");
-    formData.set("endDate", "2026-05-18");
-
-    const result = await action({
-      params: {
-        familyId: "family-1",
-        mealPlanId: "meal-plan-1",
-      },
-      request: buildRequest("http://localhost/families/family-1/meal-plans/meal-plan-1", formData),
-    });
-
-    expect(result).toBeInstanceOf(Response);
-
-    const response = result as Response;
-    expect(response.status).toBe(302);
-    expect(response.headers.get("Location")).toBe(
-      "http://localhost/families/family-1/meal-plans/meal-plan-1?notice=meal-plan-updated",
-    );
-  });
-
-  it("throws a not-found response when the meal plan disappears before update", async () => {
-    vi.mocked(requireUser).mockResolvedValue(mockUser);
-    vi.mocked(updateMealPlan).mockResolvedValue({
+    vi.mocked(saveMealPlanEntries).mockResolvedValue({
       status: "NOT_FOUND",
     });
 
     const formData = new FormData();
-    formData.set("intent", "update-meal-plan");
-    formData.set("title", "Langhelg");
-    formData.set("startDate", "2026-05-15");
-    formData.set("endDate", "2026-05-18");
+    formData.set("intent", "save-meal-plan-entries");
+    formData.append("entryDate", "2026-05-15");
+    formData.set("recipeId:2026-05-15", "kylling-taco");
+    formData.set("note:2026-05-15", "");
 
     await expect(
       action({
