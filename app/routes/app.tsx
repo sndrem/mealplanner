@@ -26,7 +26,11 @@ interface AppActionData {
 function getAppNotice(request: Request): AppNotice | null {
   const notice = new URL(request.url).searchParams.get("notice");
 
-  if (notice === "family-created" || notice === "family-joined" || notice === "family-already-member") {
+  if (
+    notice === "family-created" ||
+    notice === "family-joined" ||
+    notice === "family-already-member"
+  ) {
     return notice;
   }
 
@@ -44,17 +48,20 @@ function getNoticeContent(notice: AppNotice) {
   switch (notice) {
     case "family-created":
       return {
-        description: "Du opprettet en familie og ble lagt til som administrator.",
+        description:
+          "Du opprettet en familie og ble lagt til som administrator.",
         title: "Familien er klar",
       };
     case "family-joined":
       return {
-        description: "Du er lagt til i familien og kan fortsette i den beskyttede appen.",
+        description:
+          "Du er lagt til i familien og kan fortsette i den beskyttede appen.",
         title: "Du ble med i familien",
       };
     case "family-already-member":
       return {
-        description: "Du hadde allerede tilgang til denne familien, sa vi viste deg oversikten i stedet.",
+        description:
+          "Du hadde allerede tilgang til denne familien, sa vi viste deg oversikten i stedet.",
         title: "Du er allerede medlem",
       };
   }
@@ -148,11 +155,16 @@ export async function action({ request }: Route.ActionArgs) {
   } satisfies AppActionData;
 }
 
-export default function AppRoute({ actionData, loaderData }: Route.ComponentProps) {
+export default function AppRoute({
+  actionData,
+  loaderData,
+}: Route.ComponentProps) {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
   const hasFamilies = loaderData.memberships.length > 0;
-  const noticeContent = loaderData.notice ? getNoticeContent(loaderData.notice) : null;
+  const noticeContent = loaderData.notice
+    ? getNoticeContent(loaderData.notice)
+    : null;
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -163,7 +175,9 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
               <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
                 Mealplanner
               </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">Hei, {loaderData.user.displayName}</h1>
+              <h1 className="mt-4 text-4xl font-semibold tracking-tight">
+                Hei, {loaderData.user.displayName}
+              </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
                 {hasFamilies
                   ? "Dette er den beskyttede familieoversikten din, klar for videre arbeid med ukeplaner og handlelister."
@@ -193,59 +207,73 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
         {noticeContent ? (
           <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">{noticeContent.description}</p>
+            <p className="mt-2 text-sm leading-6 text-emerald-900">
+              {noticeContent.description}
+            </p>
           </section>
         ) : null}
 
         {hasFamilies ? (
           <>
             <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-lg font-semibold text-slate-950">Familier du har tilgang til</h2>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Familier du har tilgang til
+              </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Dette er den forste beskyttede familieflaten i produksjonsappen. Hver familie er klar som
-                utgangspunkt for neste steg med ukeplaner, handlelister og samarbeid.
+                Dette er den forste beskyttede familieflaten i produksjonsappen.
+                Hver familie er klar som utgangspunkt for neste steg med
+                ukeplaner, handlelister og samarbeid.
               </p>
             </section>
 
             <section className="grid gap-4 md:grid-cols-3">
-              {loaderData.memberships.map((membership: (typeof loaderData.memberships)[number]) => (
-                <article
-                  key={membership.id}
-                  className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-semibold text-slate-950">{membership.family.name}</h2>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600">
-                      {membership.role === "ADMIN" ? "Admin" : "Medlem"}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">
-                    {membership.role === "ADMIN"
-                      ? "Du er administrator for denne familien og kan administrere medlemmer fra familieoversikten."
-                      : "Du har tilgang til denne familien og kan apne familieoversikten for videre arbeid."}
-                  </p>
-                  <Link
-                    className="mt-5 inline-flex rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
-                    to={`/families/${membership.family.id}`}
+              {loaderData.memberships.map(
+                (membership: (typeof loaderData.memberships)[number]) => (
+                  <article
+                    key={membership.id}
+                    className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
                   >
-                    Apne familie
-                  </Link>
-                </article>
-              ))}
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-lg font-semibold text-slate-950">
+                        {membership.family.name}
+                      </h2>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                        {membership.role === "ADMIN" ? "Admin" : "Medlem"}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                      {membership.role === "ADMIN"
+                        ? "Du er administrator for denne familien og kan administrere medlemmer fra familieoversikten."
+                        : "Du har tilgang til denne familien og kan Åpne familieoversikten for videre arbeid."}
+                    </p>
+                    <Link
+                      className="mt-5 inline-flex rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                      to={`/families/${membership.family.id}`}
+                    >
+                      Åpne familie
+                    </Link>
+                  </article>
+                ),
+              )}
             </section>
 
             <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-lg font-semibold text-slate-950">Hva kommer na</h2>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Hva kommer na
+              </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Familieonboarding, auth, session og beskyttede ruter er pa plass. Neste steg er a bygge
-                familievisning, ukeplaner og handleliste pa toppen av ekte serverdata.
+                Familieonboarding, auth, session og beskyttede ruter er pa
+                plass. Neste steg er a bygge familievisning, ukeplaner og
+                handleliste pa toppen av ekte serverdata.
               </p>
             </section>
           </>
         ) : (
           <section className="grid gap-4 lg:grid-cols-2">
             <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-lg font-semibold text-slate-950">Opprett familie</h2>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Opprett familie
+              </h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 Lag en ny familie og bli automatisk administrator.
               </p>
@@ -257,15 +285,22 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
                   Familienavn
                   <input
                     className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={actionData?.intent === "create-family" ? actionData.values?.familyName ?? "" : ""}
+                    defaultValue={
+                      actionData?.intent === "create-family"
+                        ? (actionData.values?.familyName ?? "")
+                        : ""
+                    }
                     name="familyName"
                     placeholder="For eksempel Solberg"
                     type="text"
                   />
                 </label>
 
-                {actionData?.intent === "create-family" && actionData.fieldErrors?.familyName ? (
-                  <p className="text-sm text-rose-600">{actionData.fieldErrors.familyName}</p>
+                {actionData?.intent === "create-family" &&
+                actionData.fieldErrors?.familyName ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.fieldErrors.familyName}
+                  </p>
                 ) : null}
 
                 <button
@@ -279,7 +314,9 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
             </article>
 
             <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-lg font-semibold text-slate-950">Bli med i familie</h2>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Bli med i familie
+              </h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 Har du allerede en familiekode? Skriv den inn her.
               </p>
@@ -291,17 +328,25 @@ export default function AppRoute({ actionData, loaderData }: Route.ComponentProp
                   Familiekode
                   <input
                     className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm uppercase tracking-[0.24em] text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={actionData?.intent === "join-family" ? actionData.values?.joinCode ?? "" : ""}
+                    defaultValue={
+                      actionData?.intent === "join-family"
+                        ? (actionData.values?.joinCode ?? "")
+                        : ""
+                    }
                     name="joinCode"
                     placeholder="ABC123"
                     type="text"
                   />
                 </label>
 
-                {actionData?.intent === "join-family" && actionData.fieldErrors?.joinCode ? (
-                  <p className="text-sm text-rose-600">{actionData.fieldErrors.joinCode}</p>
+                {actionData?.intent === "join-family" &&
+                actionData.fieldErrors?.joinCode ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.fieldErrors.joinCode}
+                  </p>
                 ) : null}
-                {actionData?.intent === "join-family" && actionData.formError ? (
+                {actionData?.intent === "join-family" &&
+                actionData.formError ? (
                   <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                     {actionData.formError}
                   </p>

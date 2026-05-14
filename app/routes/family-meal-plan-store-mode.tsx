@@ -1,5 +1,11 @@
 import { ShoppingItemSource } from "@prisma/client";
-import { Form, Link, isRouteErrorResponse, useNavigation, type MetaFunction } from "react-router";
+import {
+  Form,
+  Link,
+  isRouteErrorResponse,
+  useNavigation,
+  type MetaFunction,
+} from "react-router";
 
 import { requireUser } from "../lib/auth.server";
 import { getMealPlanStoreModeData } from "../lib/shopping.server";
@@ -40,7 +46,10 @@ interface FamilyMealPlanStoreModeRouteProps {
 export const meta: MetaFunction = () => {
   return [
     { title: "Butikkmodus | Mealplanner" },
-    { name: "description", content: "Kompakt butikkmodus for handlelisten i Mealplanner." },
+    {
+      name: "description",
+      content: "Kompakt butikkmodus for handlelisten i Mealplanner.",
+    },
   ];
 };
 
@@ -56,7 +65,10 @@ export async function loader({
 }) {
   const user = await requireUser(request);
   const familyId = requireRouteParam(params.familyId, "Fant ikke familien.");
-  const mealPlanId = requireRouteParam(params.mealPlanId, "Fant ikke ukeplanen.");
+  const mealPlanId = requireRouteParam(
+    params.mealPlanId,
+    "Fant ikke ukeplanen.",
+  );
   const result = await getMealPlanStoreModeData({
     familyId,
     mealPlanId,
@@ -103,7 +115,10 @@ export async function action({
 }) {
   const user = await requireUser(request);
   const familyId = requireRouteParam(params.familyId, "Fant ikke familien.");
-  const mealPlanId = requireRouteParam(params.mealPlanId, "Fant ikke ukeplanen.");
+  const mealPlanId = requireRouteParam(
+    params.mealPlanId,
+    "Fant ikke ukeplanen.",
+  );
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
 
@@ -205,13 +220,17 @@ export default function FamilyMealPlanStoreModeRoute({
   const navigation = useNavigation();
   const pendingIntent = navigation.formData?.get("intent");
   const pendingSourceKey = getPendingSourceKey(navigation.formData);
-  const noticeContent = loaderData.notice ? getStoreModeNoticeContent(loaderData.notice) : null;
+  const noticeContent = loaderData.notice
+    ? getStoreModeNoticeContent(loaderData.notice)
+    : null;
   const selectedStoreValue =
-    actionData?.intent === "update-selected-store" && actionData.selectedStoreValue !== undefined
+    actionData?.intent === "update-selected-store" &&
+    actionData.selectedStoreValue !== undefined
       ? actionData.selectedStoreValue
-      : loaderData.selectedStore?.id ?? "";
+      : (loaderData.selectedStore?.id ?? "");
   const activeShoppingDateValue =
-    actionData?.intent === "update-active-shopping-date" && actionData.activeShoppingDateValue
+    actionData?.intent === "update-active-shopping-date" &&
+    actionData.activeShoppingDateValue
       ? actionData.activeShoppingDateValue
       : loaderData.activeShoppingDate;
 
@@ -225,10 +244,13 @@ export default function FamilyMealPlanStoreModeRoute({
                 <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
                   Butikkmodus
                 </span>
-                <h1 className="mt-4 text-3xl font-semibold tracking-tight">{loaderData.mealPlan.title}</h1>
+                <h1 className="mt-4 text-3xl font-semibold tracking-tight">
+                  {loaderData.mealPlan.title}
+                </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                  Storflatevisning for handleturen med seksjonsrekkefolge fra valgt butikk og bare varer
-                  som er relevante innen handledatoen.
+                  Storflatevisning for handleturen med seksjonsrekkefolge fra
+                  valgt butikk og bare varer som er relevante innen
+                  handledatoen.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -236,7 +258,7 @@ export default function FamilyMealPlanStoreModeRoute({
                   className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
                   to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
                 >
-                  Apne handleliste
+                  Åpne handleliste
                 </Link>
                 <Link
                   className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
@@ -256,12 +278,15 @@ export default function FamilyMealPlanStoreModeRoute({
               </div>
               <div className="rounded-[24px] bg-white/10 p-4">
                 <p className="text-sm text-slate-300">Handledato</p>
-                <p className="mt-1 text-lg font-semibold">{formatDateLabel(loaderData.activeShoppingDate)}</p>
+                <p className="mt-1 text-lg font-semibold">
+                  {formatDateLabel(loaderData.activeShoppingDate)}
+                </p>
               </div>
               <div className="rounded-[24px] bg-emerald-500/20 p-4 ring-1 ring-emerald-400/30">
                 <p className="text-sm text-emerald-100">Fremdrift</p>
                 <p className="mt-1 text-lg font-semibold">
-                  {loaderData.progress.checkedCount}/{loaderData.progress.totalCount} varer krysset av
+                  {loaderData.progress.checkedCount}/
+                  {loaderData.progress.totalCount} varer krysset av
                 </p>
               </div>
             </div>
@@ -271,22 +296,32 @@ export default function FamilyMealPlanStoreModeRoute({
         {noticeContent ? (
           <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">{noticeContent.description}</p>
+            <p className="mt-2 text-sm leading-6 text-emerald-900">
+              {noticeContent.description}
+            </p>
           </section>
         ) : null}
 
         {actionData?.formError ? (
           <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
-            <h2 className="text-base font-semibold">Kunne ikke oppdatere butikkmodus</h2>
+            <h2 className="text-base font-semibold">
+              Kunne ikke oppdatere butikkmodus
+            </h2>
             <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
           </section>
         ) : null}
 
         <section className="grid gap-4 sm:grid-cols-2">
           <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">Velg butikk</h2>
+            <h2 className="text-lg font-semibold text-slate-950">
+              Velg butikk
+            </h2>
             <Form className="mt-4 space-y-3" method="post">
-              <input name="intent" type="hidden" value="update-selected-store" />
+              <input
+                name="intent"
+                type="hidden"
+                value="update-selected-store"
+              />
               <select
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                 defaultValue={selectedStoreValue}
@@ -300,14 +335,20 @@ export default function FamilyMealPlanStoreModeRoute({
               </select>
               {actionData?.intent === "update-selected-store" &&
               actionData.selectedStoreFieldErrors?.selectedStoreId ? (
-                <p className="text-sm text-rose-600">{actionData.selectedStoreFieldErrors.selectedStoreId}</p>
+                <p className="text-sm text-rose-600">
+                  {actionData.selectedStoreFieldErrors.selectedStoreId}
+                </p>
               ) : null}
               <button
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={navigation.state === "submitting" && pendingIntent === "update-selected-store"}
+                disabled={
+                  navigation.state === "submitting" &&
+                  pendingIntent === "update-selected-store"
+                }
                 type="submit"
               >
-                {navigation.state === "submitting" && pendingIntent === "update-selected-store"
+                {navigation.state === "submitting" &&
+                pendingIntent === "update-selected-store"
                   ? "Lagrer butikk..."
                   : "Lagre butikkvalg"}
               </button>
@@ -315,9 +356,15 @@ export default function FamilyMealPlanStoreModeRoute({
           </article>
 
           <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">Velg handledato</h2>
+            <h2 className="text-lg font-semibold text-slate-950">
+              Velg handledato
+            </h2>
             <Form className="mt-4 space-y-3" method="post">
-              <input name="intent" type="hidden" value="update-active-shopping-date" />
+              <input
+                name="intent"
+                type="hidden"
+                value="update-active-shopping-date"
+              />
               <select
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                 defaultValue={activeShoppingDateValue}
@@ -337,10 +384,14 @@ export default function FamilyMealPlanStoreModeRoute({
               ) : null}
               <button
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={navigation.state === "submitting" && pendingIntent === "update-active-shopping-date"}
+                disabled={
+                  navigation.state === "submitting" &&
+                  pendingIntent === "update-active-shopping-date"
+                }
                 type="submit"
               >
-                {navigation.state === "submitting" && pendingIntent === "update-active-shopping-date"
+                {navigation.state === "submitting" &&
+                pendingIntent === "update-active-shopping-date"
                   ? "Lagrer dato..."
                   : "Lagre handledato"}
               </button>
@@ -356,7 +407,9 @@ export default function FamilyMealPlanStoreModeRoute({
                 className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-slate-950">{section.displayName}</h2>
+                  <h2 className="text-lg font-semibold text-slate-950">
+                    {section.displayName}
+                  </h2>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                     {section.items.length} varer
                   </span>
@@ -380,10 +433,26 @@ export default function FamilyMealPlanStoreModeRoute({
                       >
                         <div className="flex items-start gap-4">
                           <Form method="post">
-                            <input name="intent" type="hidden" value="toggle-shopping-item-checked" />
-                            <input name="sourceKey" type="hidden" value={item.sourceKey} />
-                            <input name="sourceType" type="hidden" value={item.sourceType} />
-                            <input name="checked" type="hidden" value={item.checked ? "false" : "true"} />
+                            <input
+                              name="intent"
+                              type="hidden"
+                              value="toggle-shopping-item-checked"
+                            />
+                            <input
+                              name="sourceKey"
+                              type="hidden"
+                              value={item.sourceKey}
+                            />
+                            <input
+                              name="sourceType"
+                              type="hidden"
+                              value={item.sourceType}
+                            />
+                            <input
+                              name="checked"
+                              type="hidden"
+                              value={item.checked ? "false" : "true"}
+                            />
                             <button
                               className={
                                 item.checked
@@ -399,7 +468,9 @@ export default function FamilyMealPlanStoreModeRoute({
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-base font-semibold text-slate-950">{item.name}</h3>
+                              <h3 className="text-base font-semibold text-slate-950">
+                                {item.name}
+                              </h3>
                               {item.quantityLabel ? (
                                 <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
                                   {item.quantityLabel}
@@ -410,7 +481,9 @@ export default function FamilyMealPlanStoreModeRoute({
                                   Manuell
                                 </span>
                               ) : null}
-                              {item.preferredStore && item.preferredStore.id !== loaderData.selectedStore?.id ? (
+                              {item.preferredStore &&
+                              item.preferredStore.id !==
+                                loaderData.selectedStore?.id ? (
                                 <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
                                   Foretrekker {item.preferredStore.name}
                                 </span>
@@ -420,7 +493,9 @@ export default function FamilyMealPlanStoreModeRoute({
                             <p className="mt-2 text-sm leading-6 text-slate-600">
                               {item.sourceType === "GENERATED"
                                 ? `Fra ${item.occurrenceCount} planlagte ${
-                                    item.occurrenceCount === 1 ? "middag" : "middager"
+                                    item.occurrenceCount === 1
+                                      ? "middag"
+                                      : "middager"
                                   } fram til ${formatDateLabel(item.lastDate)}.`
                                 : item.buyOnDate
                                   ? `Manuell vare planlagt for ${formatDateLabel(item.buyOnDate)}.`
@@ -428,11 +503,15 @@ export default function FamilyMealPlanStoreModeRoute({
                             </p>
 
                             {item.note ? (
-                              <p className="mt-2 text-sm leading-6 text-slate-700">Notat: {item.note}</p>
+                              <p className="mt-2 text-sm leading-6 text-slate-700">
+                                Notat: {item.note}
+                              </p>
                             ) : null}
-                            {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
+                            {item.sourceType === "GENERATED" &&
+                            item.postponedUntilDate ? (
                               <p className="mt-2 text-sm leading-6 text-amber-800">
-                                Utsatt til {formatDateLabel(item.postponedUntilDate)}.
+                                Utsatt til{" "}
+                                {formatDateLabel(item.postponedUntilDate)}.
                               </p>
                             ) : null}
                           </div>
@@ -446,15 +525,20 @@ export default function FamilyMealPlanStoreModeRoute({
           </section>
         ) : (
           <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">Ingen varer ma handles na</h2>
+            <h2 className="text-lg font-semibold text-slate-950">
+              Ingen varer ma handles na
+            </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Alt er enten ferdig handlet eller planlagt for senere i den aktive ukeplanen.
+              Alt er enten ferdig handlet eller planlagt for senere i den aktive
+              ukeplanen.
             </p>
           </section>
         )}
 
         <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-lg font-semibold text-slate-950">Senere i perioden</h2>
+          <h2 className="text-lg font-semibold text-slate-950">
+            Senere i perioden
+          </h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {loaderData.laterItems.length > 0 ? (
               loaderData.laterItems.map((item) => (
@@ -472,7 +556,9 @@ export default function FamilyMealPlanStoreModeRoute({
                 </span>
               ))
             ) : (
-              <p className="text-sm leading-6 text-slate-600">Ingen senere varer akkurat na.</p>
+              <p className="text-sm leading-6 text-slate-600">
+                Ingen senere varer akkurat na.
+              </p>
             )}
           </div>
         </section>
@@ -500,7 +586,10 @@ export function ErrorBoundary({ error }: { error: unknown }) {
       <div className="mx-auto max-w-2xl rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
         <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">{message}</p>
-        <Link className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white" to="/app">
+        <Link
+          className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
+          to="/app"
+        >
           Til appen
         </Link>
       </div>
@@ -509,7 +598,9 @@ export function ErrorBoundary({ error }: { error: unknown }) {
 }
 
 function serializeProjectedShoppingItem(
-  item: Awaited<ReturnType<typeof getMealPlanStoreModeData>>["laterItems"][number],
+  item: Awaited<
+    ReturnType<typeof getMealPlanStoreModeData>
+  >["laterItems"][number],
 ) {
   if (item.sourceType === ShoppingItemSource.GENERATED) {
     return {
@@ -520,7 +611,9 @@ function serializeProjectedShoppingItem(
         ...occurrence,
         date: formatDateOnly(occurrence.date),
       })),
-      postponedUntilDate: item.postponedUntilDate ? formatDateOnly(item.postponedUntilDate) : null,
+      postponedUntilDate: item.postponedUntilDate
+        ? formatDateOnly(item.postponedUntilDate)
+        : null,
     };
   }
 
@@ -575,14 +668,20 @@ function buildStoreModeRedirect({
   notice: StoreModeNotice;
   request: Request;
 }) {
-  const url = new URL(`/families/${familyId}/meal-plans/${mealPlanId}/store-mode`, request.url);
+  const url = new URL(
+    `/families/${familyId}/meal-plans/${mealPlanId}/store-mode`,
+    request.url,
+  );
   url.searchParams.set("notice", notice);
 
   return Response.redirect(url, 302);
 }
 
 function parseShoppingItemSource(value: FormDataEntryValue | null) {
-  if (value === ShoppingItemSource.GENERATED || value === ShoppingItemSource.MANUAL) {
+  if (
+    value === ShoppingItemSource.GENERATED ||
+    value === ShoppingItemSource.MANUAL
+  ) {
     return value;
   }
 

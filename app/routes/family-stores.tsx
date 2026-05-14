@@ -1,6 +1,12 @@
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Form, Link, isRouteErrorResponse, useNavigation, type MetaFunction } from "react-router";
+import {
+  Form,
+  Link,
+  isRouteErrorResponse,
+  useNavigation,
+  type MetaFunction,
+} from "react-router";
 
 import { requireUser } from "../lib/auth.server";
 import { FamilyStoreEditorCard } from "../components/family-store-editor-card";
@@ -13,15 +19,9 @@ import {
   type FamilyStoreValues,
 } from "../lib/store-write.server";
 
-type StoresNotice =
-  | "store-created"
-  | "store-deleted"
-  | "store-updated";
+type StoresNotice = "store-created" | "store-deleted" | "store-updated";
 
-type StoresIntent =
-  | "create-store"
-  | "delete-store"
-  | "update-store";
+type StoresIntent = "create-store" | "delete-store" | "update-store";
 
 interface StoresActionData {
   createFieldErrors?: {
@@ -45,7 +45,11 @@ interface FamilyStoresRouteProps {
 export const meta: MetaFunction = () => {
   return [
     { title: "Butikker | Mealplanner" },
-    { name: "description", content: "Administrer familiebutikker og seksjonsrekkefolge i Mealplanner." },
+    {
+      name: "description",
+      content:
+        "Administrer familiebutikker og seksjonsrekkefolge i Mealplanner.",
+    },
   ];
 };
 
@@ -190,13 +194,19 @@ export async function action({
   } satisfies StoresActionData;
 }
 
-export default function FamilyStoresRoute({ actionData, loaderData }: FamilyStoresRouteProps) {
+export default function FamilyStoresRoute({
+  actionData,
+  loaderData,
+}: FamilyStoresRouteProps) {
   const navigation = useNavigation();
-  const noticeContent = loaderData.notice ? getStoresNoticeContent(loaderData.notice) : null;
+  const noticeContent = loaderData.notice
+    ? getStoresNoticeContent(loaderData.notice)
+    : null;
   const pendingIntent = navigation.formData?.get("intent");
-  const createValues = actionData?.intent === "create-store" && actionData.createValues
-    ? actionData.createValues
-    : { name: "" };
+  const createValues =
+    actionData?.intent === "create-store" && actionData.createValues
+      ? actionData.createValues
+      : { name: "" };
   const canManageStores = loaderData.userRole === "ADMIN";
 
   return (
@@ -208,10 +218,12 @@ export default function FamilyStoresRoute({ actionData, loaderData }: FamilyStor
               <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
                 Butikker
               </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">{loaderData.family.name}</h1>
+              <h1 className="mt-4 text-4xl font-semibold tracking-tight">
+                {loaderData.family.name}
+              </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                Administrer familiebutikker og bestem seksjonsrekkefolgen slik at butikkmodus folger
-                handleturen deres.
+                Administrer familiebutikker og bestem seksjonsrekkefolgen slik
+                at butikkmodus folger handleturen deres.
               </p>
             </div>
 
@@ -220,7 +232,7 @@ export default function FamilyStoresRoute({ actionData, loaderData }: FamilyStor
                 className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
                 to={`/families/${loaderData.family.id}/meal-plans`}
               >
-                Apne ukeplaner
+                Åpne ukeplaner
               </Link>
               <Link
                 className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
@@ -235,13 +247,17 @@ export default function FamilyStoresRoute({ actionData, loaderData }: FamilyStor
         {noticeContent ? (
           <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">{noticeContent.description}</p>
+            <p className="mt-2 text-sm leading-6 text-emerald-900">
+              {noticeContent.description}
+            </p>
           </section>
         ) : null}
 
         {actionData?.formError ? (
           <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
-            <h2 className="text-base font-semibold">Kunne ikke oppdatere butikkene</h2>
+            <h2 className="text-base font-semibold">
+              Kunne ikke oppdatere butikkene
+            </h2>
             <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
           </section>
         ) : null}
@@ -249,9 +265,12 @@ export default function FamilyStoresRoute({ actionData, loaderData }: FamilyStor
         {canManageStores ? (
           <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">Opprett familiebutikk</h2>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Opprett familiebutikk
+              </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Nye butikker starter med alle kategorier og kan tilpasses videre under.
+                Nye butikker starter med alle kategorier og kan tilpasses videre
+                under.
               </p>
             </div>
 
@@ -267,15 +286,22 @@ export default function FamilyStoresRoute({ actionData, loaderData }: FamilyStor
                   type="text"
                 />
               </label>
-              {actionData?.intent === "create-store" && actionData.createFieldErrors?.name ? (
-                <p className="text-sm text-rose-600">{actionData.createFieldErrors.name}</p>
+              {actionData?.intent === "create-store" &&
+              actionData.createFieldErrors?.name ? (
+                <p className="text-sm text-rose-600">
+                  {actionData.createFieldErrors.name}
+                </p>
               ) : null}
               <button
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={navigation.state === "submitting" && pendingIntent === "create-store"}
+                disabled={
+                  navigation.state === "submitting" &&
+                  pendingIntent === "create-store"
+                }
                 type="submit"
               >
-                {navigation.state === "submitting" && pendingIntent === "create-store"
+                {navigation.state === "submitting" &&
+                pendingIntent === "create-store"
                   ? "Oppretter..."
                   : "Opprett butikk"}
               </button>
@@ -286,16 +312,24 @@ export default function FamilyStoresRoute({ actionData, loaderData }: FamilyStor
         <section className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">Seedede standardbutikker</h2>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Seedede standardbutikker
+              </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Disse butikkene er tilgjengelige for familien som faste utgangspunkt og kan ikke redigeres.
+                Disse butikkene er tilgjengelige for familien som faste
+                utgangspunkt og kan ikke redigeres.
               </p>
             </div>
 
             <div className="mt-6 grid gap-4">
               {loaderData.globalStores.map((store) => (
-                <article key={store.id} className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                  <h3 className="text-base font-semibold text-slate-950">{store.name}</h3>
+                <article
+                  key={store.id}
+                  className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                >
+                  <h3 className="text-base font-semibold text-slate-950">
+                    {store.name}
+                  </h3>
                   <ol className="mt-4 grid gap-2 text-sm leading-6 text-slate-700">
                     {store.sections.map((section, index) => (
                       <li key={section.id}>
@@ -310,9 +344,12 @@ export default function FamilyStoresRoute({ actionData, loaderData }: FamilyStor
 
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">Familiebutikker</h2>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Familiebutikker
+              </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Gi butikkene egne navn og tilpass seksjonsrekkefolgen for akkurat denne familien.
+                Gi butikkene egne navn og tilpass seksjonsrekkefolgen for
+                akkurat denne familien.
               </p>
             </div>
 
@@ -325,12 +362,14 @@ export default function FamilyStoresRoute({ actionData, loaderData }: FamilyStor
                       key={store.id}
                       store={store}
                       updateFieldErrors={
-                        actionData?.intent === "update-store" && actionData.targetStoreId === store.id
+                        actionData?.intent === "update-store" &&
+                        actionData.targetStoreId === store.id
                           ? actionData.updateFieldErrors
                           : undefined
                       }
                       updateValues={
-                        actionData?.intent === "update-store" && actionData.targetStoreId === store.id
+                        actionData?.intent === "update-store" &&
+                        actionData.targetStoreId === store.id
                           ? actionData.updateValues
                           : undefined
                       }
@@ -340,7 +379,8 @@ export default function FamilyStoresRoute({ actionData, loaderData }: FamilyStor
               </DndProvider>
             ) : (
               <p className="mt-6 text-sm leading-6 text-slate-600">
-                Familien har ingen egne butikker ennå. Opprett en butikk for a fa en egen seksjonsrekkefolge.
+                Familien har ingen egne butikker ennå. Opprett en butikk for a
+                fa en egen seksjonsrekkefolge.
               </p>
             )}
           </article>
@@ -369,7 +409,10 @@ export function ErrorBoundary({ error }: { error: unknown }) {
       <div className="mx-auto max-w-2xl rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
         <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">{message}</p>
-        <Link className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white" to="/app">
+        <Link
+          className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
+          to="/app"
+        >
           Til appen
         </Link>
       </div>
@@ -395,7 +438,8 @@ function getStoresNoticeContent(notice: StoresNotice) {
   switch (notice) {
     case "store-created":
       return {
-        description: "Butikken ble opprettet med alle kategorier klare for videre tilpasning.",
+        description:
+          "Butikken ble opprettet med alle kategorier klare for videre tilpasning.",
         title: "Butikken er opprettet",
       };
     case "store-updated":
@@ -405,7 +449,8 @@ function getStoresNoticeContent(notice: StoresNotice) {
       };
     case "store-deleted":
       return {
-        description: "Butikken ble slettet. Eventuelle preferanser peker na ikke lenger til denne butikken.",
+        description:
+          "Butikken ble slettet. Eventuelle preferanser peker na ikke lenger til denne butikken.",
         title: "Butikken er slettet",
       };
   }
@@ -427,13 +472,17 @@ function buildStoresRedirect({
 }
 
 function parseFamilyStoreValues(formData: FormData): FamilyStoreValues {
-  const categoryIds = formData.getAll("sectionCategoryId").map((value) => String(value));
+  const categoryIds = formData
+    .getAll("sectionCategoryId")
+    .map((value) => String(value));
 
   return {
     name: String(formData.get("name") ?? ""),
     sections: categoryIds.map((categoryId) => ({
       categoryId,
-      displayName: String(formData.get(`sectionDisplayName:${categoryId}`) ?? ""),
+      displayName: String(
+        formData.get(`sectionDisplayName:${categoryId}`) ?? "",
+      ),
     })),
   };
 }

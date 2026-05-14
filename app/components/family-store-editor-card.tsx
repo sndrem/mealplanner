@@ -134,7 +134,7 @@ export function FamilyStoreEditorCard({
           <p className="mt-2 text-sm leading-6 text-slate-600">
             {isEditing
               ? "Dra og slipp seksjonene i den rekkefolgen dere faktisk gar gjennom butikken, og lagre nar alt ser riktig ut."
-              : "Aapne redigering for a endre navn, seksjonsnavn og rekkefolge i en samlet lagring."}
+              : "Åpne redigering for a endre navn, seksjonsnavn og rekkefolge i en samlet lagring."}
           </p>
         </div>
 

@@ -6,6 +6,11 @@ export default [
   route("families/:familyId", "routes/family.tsx"),
   route("families/:familyId/meal-plans", "routes/family-meal-plans.tsx"),
   route("families/:familyId/meal-plans/:mealPlanId", "routes/family-meal-plan.tsx"),
+  route("families/:familyId/meal-plans/:mealPlanId/calendar.ics", "routes/family-meal-plan-calendar.ts"),
+  route(
+    "families/:familyId/meal-plans/:mealPlanId/days/:date/calendar.ics",
+    "routes/family-meal-plan-day-calendar.ts",
+  ),
   route("families/:familyId/meal-plans/:mealPlanId/shopping", "routes/family-meal-plan-shopping.tsx"),
   route("families/:familyId/meal-plans/:mealPlanId/store-mode", "routes/family-meal-plan-store-mode.tsx"),
   route("families/:familyId/stores", "routes/family-stores.tsx"),

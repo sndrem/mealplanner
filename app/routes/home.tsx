@@ -3,7 +3,10 @@ import { Link, type MetaFunction } from "react-router";
 export const meta: MetaFunction = () => {
   return [
     { title: "Mealplanner" },
-    { name: "description", content: "Prototype og videre arbeid for Mealplanner." },
+    {
+      name: "description",
+      content: "Prototype og videre arbeid for Mealplanner.",
+    },
   ];
 };
 
@@ -19,8 +22,8 @@ export default function Home() {
             Prototype for familievennlig ukeplan og handleliste
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-            Prototypen ligger i sin egen mappe slik at vi kan utforske flyten uten a blande den
-            sammen med den framtidige produksjonsappen.
+            Prototypen ligger i sin egen mappe slik at vi kan utforske flyten
+            uten a blande den sammen med den framtidige produksjonsappen.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -39,7 +42,7 @@ export default function Home() {
               className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/15"
               to="/prototype"
             >
-              Apne prototype
+              Åpne prototype
             </Link>
           </div>
         </section>
@@ -48,20 +51,30 @@ export default function Home() {
           {[
             {
               title: "Ukeplan",
-              description: "Velg middager for hver dag og marker nar menyen er klar for godkjenning.",
+              description:
+                "Velg middager for hver dag og marker nar menyen er klar for godkjenning.",
             },
             {
               title: "Handleliste",
-              description: "Genereres automatisk fra ukens oppskrifter og kan kombineres med egne varer.",
+              description:
+                "Genereres automatisk fra ukens oppskrifter og kan kombineres med egne varer.",
             },
             {
               title: "Butikkmodus",
-              description: "Mobilvennlig visning med sortering per butikk og varer som kan utsettes.",
+              description:
+                "Mobilvennlig visning med sortering per butikk og varer som kan utsettes.",
             },
           ].map((item) => (
-            <article key={item.title} className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-lg font-semibold text-slate-950">{item.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
+            <article
+              key={item.title}
+              className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
+            >
+              <h2 className="text-lg font-semibold text-slate-950">
+                {item.title}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {item.description}
+              </p>
             </article>
           ))}
         </section>

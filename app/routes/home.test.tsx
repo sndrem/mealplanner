@@ -15,9 +15,8 @@ describe("Home", () => {
         name: /Prototype for familievennlig ukeplan og handleliste/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Apne prototype/i })).toHaveAttribute(
-      "href",
-      "/prototype",
-    );
+    expect(
+      screen.getByRole("link", { name: /Åpne prototype/i }),
+    ).toHaveAttribute("href", "/prototype");
   });
 });
