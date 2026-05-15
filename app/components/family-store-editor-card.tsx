@@ -61,10 +61,11 @@ export function FamilyStoreEditorCard({
   const [ignoreSubmittedValues, setIgnoreSubmittedValues] = useState(false);
   const sourceValues =
     updateValues && !ignoreSubmittedValues ? updateValues : persistedValues;
-  const sourceKey = JSON.stringify(sourceValues);
-  const [draftName, setDraftName] = useState(sourceValues.name);
+  const sourceName = sourceValues.name;
+  const sourceSections = sourceValues.sections;
+  const [draftName, setDraftName] = useState(sourceName);
   const [draftSections, setDraftSections] = useState<FamilyStoreSection[]>(
-    toDraftSections(store.sections, sourceValues.sections),
+    toDraftSections(store.sections, sourceSections),
   );
   const [isEditing, setIsEditing] = useState(Boolean(updateValues));
 
@@ -75,10 +76,16 @@ export function FamilyStoreEditorCard({
   }, [updateValues]);
 
   useEffect(() => {
-    setDraftName(sourceValues.name);
-    setDraftSections(toDraftSections(store.sections, sourceValues.sections));
+    setDraftName(sourceName);
+    setDraftSections(toDraftSections(store.sections, sourceSections));
     setIsEditing(Boolean(updateValues && !ignoreSubmittedValues));
-  }, [ignoreSubmittedValues, sourceKey, store.sections, updateValues]);
+  }, [
+    ignoreSubmittedValues,
+    sourceName,
+    sourceSections,
+    store.sections,
+    updateValues,
+  ]);
 
   function handleSectionDisplayNameChange(
     categoryId: string,

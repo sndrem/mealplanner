@@ -100,7 +100,8 @@ describe("family meal plan store mode route", () => {
                 sortOrder: 1,
               },
               sourceKey: "entry-1:ingredient-1",
-              sourceType: "GENERATED",
+              collaborationVersion: "",
+        sourceType: "GENERATED",
               unit: "stk",
             },
           ],
@@ -121,6 +122,7 @@ describe("family meal plan store mode route", () => {
         startDate: new Date("2026-05-15T00:00:00.000Z"),
         status: "DRAFT",
         title: "Langhelg",
+        updatedAt: new Date("2026-05-01T12:00:00.000Z"),
       },
       progress: {
         checkedCount: 0,
@@ -190,6 +192,7 @@ describe("family meal plan store mode route", () => {
 
     expect(updateActiveShoppingDate).toHaveBeenCalledWith({
       activeShoppingDate: "2026-05-20",
+      expectedMealPlanUpdatedAt: "",
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",

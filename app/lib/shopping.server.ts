@@ -56,6 +56,7 @@ const generatedShoppingMealPlanEntrySelect =
 const shoppingOverrideSelect =
   Prisma.validator<Prisma.ShoppingItemOverrideSelect>()({
     checked: true,
+    id: true,
     note: true,
     postponedUntilDate: true,
     preferredStore: {
@@ -64,6 +65,7 @@ const shoppingOverrideSelect =
     preferredStoreId: true,
     sourceKey: true,
     sourceType: true,
+    updatedAt: true,
   });
 
 const manualShoppingItemSelect =
@@ -81,11 +83,13 @@ const manualShoppingItemSelect =
     },
     preferredStoreId: true,
     quantity: true,
+    updatedAt: true,
   });
 
 const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
   activeShoppingDate: true,
   endDate: true,
+  updatedAt: true,
   entries: {
     orderBy: [{ date: "asc" }, { id: "asc" }],
     select: generatedShoppingMealPlanEntrySelect,
@@ -172,6 +176,7 @@ interface ProjectedShoppingItemBase {
     name: string;
   };
   checked: boolean;
+  collaborationVersion: string;
   name: string;
   note: string | null;
   preferredStore: StoreSummary;
@@ -202,6 +207,7 @@ export interface ProjectedGeneratedShoppingItem extends ProjectedShoppingItemBas
 
 export interface ProjectedManualShoppingItem extends ProjectedShoppingItemBase {
   buyOnDate: Date | null;
+  overrideVersion: string;
   quantity: string | null;
   sourceType: "MANUAL";
 }
@@ -516,6 +522,7 @@ function projectGeneratedShoppingItems({
       note: override?.note ?? null,
       occurrenceCount: occurrences.length,
       occurrences,
+      collaborationVersion: override?.updatedAt?.toISOString() ?? "",
       postponedUntilDate: override?.postponedUntilDate ?? null,
       preferredStore,
       quantityLabel: buildQuantityLabel(bucket.amount, bucket.unit),
@@ -559,8 +566,10 @@ function projectManualShoppingItems({
         name: item.category.displayName,
       },
       checked: override?.checked ?? false,
+      collaborationVersion: item.updatedAt?.toISOString() ?? "",
       name: item.name,
       note: item.note,
+      overrideVersion: override?.updatedAt?.toISOString() ?? "",
       preferredStore,
       quantity: item.quantity,
       quantityLabel: buildManualQuantityLabel(item.quantity),

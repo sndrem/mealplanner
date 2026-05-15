@@ -1,7 +1,13 @@
 import { ShoppingItemSource } from "@prisma/client";
 
+import {
+  buildActorUpdate,
+  COLLABORATION_CONFLICT_MESSAGE,
+  matchesExpectedUpdatedAt,
+} from "./collaboration.server";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
+import { logCollaborationFailure, logCollaborationWrite } from "./write-observability.server";
 
 export interface ManualShoppingItemValues {
   buyOnDate: string;
@@ -71,30 +77,58 @@ export async function createManualShoppingItem({
     };
   }
 
-  await db.manualShoppingItem.create({
-    data: {
-      buyOnDate: validation.buyOnDate,
-      categoryId: validation.values.categoryId,
-      mealPlanId: mealPlan.id,
-      name: validation.values.name,
-      note: validation.values.note || null,
-      preferredStoreId: validation.preferredStoreId,
-      quantity: validation.values.quantity || null,
-    },
-  });
+  try {
+    await db.manualShoppingItem.create({
+      data: {
+        buyOnDate: validation.buyOnDate,
+        categoryId: validation.values.categoryId,
+        mealPlanId: mealPlan.id,
+        name: validation.values.name,
+        note: validation.values.note || null,
+        preferredStoreId: validation.preferredStoreId,
+        quantity: validation.values.quantity || null,
+        ...buildActorUpdate(userId),
+      },
+    });
 
-  return {
-    status: "CREATED" as const,
-  };
+    logCollaborationWrite({
+      action: "create-manual-shopping-item",
+      domain: "shopping",
+      entityType: "manual-shopping-item",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "CREATED",
+      userId,
+    });
+
+    return {
+      status: "CREATED" as const,
+    };
+  } catch (error) {
+    logCollaborationFailure({
+      action: "create-manual-shopping-item",
+      domain: "shopping",
+      entityType: "manual-shopping-item",
+      error,
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    throw error;
+  }
 }
 
 export async function updateManualShoppingItem({
+  expectedUpdatedAt,
   familyId,
   manualItemId,
   mealPlanId,
   userId,
   values,
 }: {
+  expectedUpdatedAt: string;
   familyId: string;
   manualItemId: string;
   mealPlanId: string;
@@ -116,6 +150,7 @@ export async function updateManualShoppingItem({
   const existingItem = await db.manualShoppingItem.findFirst({
     select: {
       id: true,
+      updatedAt: true,
     },
     where: {
       id: manualItemId,
@@ -129,6 +164,17 @@ export async function updateManualShoppingItem({
     };
   }
 
+  if (!matchesExpectedUpdatedAt(expectedUpdatedAt, existingItem.updatedAt)) {
+    return buildShoppingConflictResult({
+      action: "update-manual-shopping-item",
+      entityId: existingItem.id,
+      entityType: "manual-shopping-item",
+      familyId,
+      mealPlanId: mealPlan.id,
+      userId,
+    });
+  }
+
   const validation = await validateManualShoppingItemValues({
     familyId,
     mealPlan,
@@ -136,6 +182,17 @@ export async function updateManualShoppingItem({
   });
 
   if (!validation.ok) {
+    logCollaborationWrite({
+      action: "update-manual-shopping-item",
+      domain: "shopping",
+      entityId: existingItem.id,
+      entityType: "manual-shopping-item",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
     return {
       fieldErrors: validation.fieldErrors,
       status: "VALIDATION_ERROR" as const,
@@ -143,31 +200,73 @@ export async function updateManualShoppingItem({
     };
   }
 
-  await db.manualShoppingItem.update({
-    data: {
-      buyOnDate: validation.buyOnDate,
-      categoryId: validation.values.categoryId,
-      name: validation.values.name,
-      note: validation.values.note || null,
-      preferredStoreId: validation.preferredStoreId,
-      quantity: validation.values.quantity || null,
-    },
-    where: {
-      id: existingItem.id,
-    },
-  });
+  try {
+    const updateResult = await db.manualShoppingItem.updateMany({
+      data: {
+        buyOnDate: validation.buyOnDate,
+        categoryId: validation.values.categoryId,
+        name: validation.values.name,
+        note: validation.values.note || null,
+        preferredStoreId: validation.preferredStoreId,
+        quantity: validation.values.quantity || null,
+        ...buildActorUpdate(userId),
+      },
+      where: {
+        id: existingItem.id,
+        updatedAt: existingItem.updatedAt,
+      },
+    });
 
-  return {
-    status: "UPDATED" as const,
-  };
+    if (updateResult.count === 0) {
+      return buildShoppingConflictResult({
+        action: "update-manual-shopping-item",
+        entityId: existingItem.id,
+        entityType: "manual-shopping-item",
+        familyId,
+        mealPlanId: mealPlan.id,
+        userId,
+      });
+    }
+
+    logCollaborationWrite({
+      action: "update-manual-shopping-item",
+      domain: "shopping",
+      entityId: existingItem.id,
+      entityType: "manual-shopping-item",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "UPDATED",
+      userId,
+    });
+
+    return {
+      status: "UPDATED" as const,
+    };
+  } catch (error) {
+    logCollaborationFailure({
+      action: "update-manual-shopping-item",
+      domain: "shopping",
+      entityId: existingItem.id,
+      entityType: "manual-shopping-item",
+      error,
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    throw error;
+  }
 }
 
 export async function deleteManualShoppingItem({
+  expectedUpdatedAt,
   familyId,
   manualItemId,
   mealPlanId,
   userId,
 }: {
+  expectedUpdatedAt: string;
   familyId: string;
   manualItemId: string;
   mealPlanId: string;
@@ -188,6 +287,7 @@ export async function deleteManualShoppingItem({
   const existingItem = await db.manualShoppingItem.findFirst({
     select: {
       id: true,
+      updatedAt: true,
     },
     where: {
       id: manualItemId,
@@ -201,28 +301,78 @@ export async function deleteManualShoppingItem({
     };
   }
 
-  await db.$transaction(async (tx) => {
-    await tx.shoppingItemOverride.deleteMany({
+  if (!matchesExpectedUpdatedAt(expectedUpdatedAt, existingItem.updatedAt)) {
+    return buildShoppingConflictResult({
+      action: "delete-manual-shopping-item",
+      entityId: existingItem.id,
+      entityType: "manual-shopping-item",
+      familyId,
+      mealPlanId: mealPlan.id,
+      userId,
+    });
+  }
+
+  try {
+    const deleteResult = await db.manualShoppingItem.deleteMany({
+      where: {
+        id: existingItem.id,
+        updatedAt: existingItem.updatedAt,
+      },
+    });
+
+    if (deleteResult.count === 0) {
+      return buildShoppingConflictResult({
+        action: "delete-manual-shopping-item",
+        entityId: existingItem.id,
+        entityType: "manual-shopping-item",
+        familyId,
+        mealPlanId: mealPlan.id,
+        userId,
+      });
+    }
+
+    await db.shoppingItemOverride.deleteMany({
       where: {
         mealPlanId: mealPlan.id,
         sourceKey: existingItem.id,
         sourceType: ShoppingItemSource.MANUAL,
       },
     });
-    await tx.manualShoppingItem.delete({
-      where: {
-        id: existingItem.id,
-      },
-    });
-  });
 
-  return {
-    status: "DELETED" as const,
-  };
+    logCollaborationWrite({
+      action: "delete-manual-shopping-item",
+      domain: "shopping",
+      entityId: existingItem.id,
+      entityType: "manual-shopping-item",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "DELETED",
+      userId,
+    });
+
+    return {
+      status: "DELETED" as const,
+    };
+  } catch (error) {
+    logCollaborationFailure({
+      action: "delete-manual-shopping-item",
+      domain: "shopping",
+      entityId: existingItem.id,
+      entityType: "manual-shopping-item",
+      error,
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    throw error;
+  }
 }
 
 export async function toggleShoppingItemChecked({
   checked,
+  expectedUpdatedAt,
   familyId,
   mealPlanId,
   sourceKey,
@@ -230,6 +380,7 @@ export async function toggleShoppingItemChecked({
   userId,
 }: {
   checked: boolean;
+  expectedUpdatedAt: string;
   familyId: string;
   mealPlanId: string;
   sourceKey: string;
@@ -267,6 +418,15 @@ export async function toggleShoppingItemChecked({
   }
 
   const existingOverride = await db.shoppingItemOverride.findUnique({
+    select: {
+      checked: true,
+      id: true,
+      note: true,
+      postponedUntilDate: true,
+      preferredStoreId: true,
+      sourceType: true,
+      updatedAt: true,
+    },
     where: {
       mealPlanId_sourceType_sourceKey: {
         mealPlanId: mealPlan.id,
@@ -276,66 +436,157 @@ export async function toggleShoppingItemChecked({
     },
   });
 
-  if (!checked) {
-    if (!existingOverride) {
+  if (!matchesExpectedUpdatedAt(expectedUpdatedAt, existingOverride?.updatedAt)) {
+    return buildShoppingConflictResult({
+      action: "toggle-shopping-item-checked",
+      entityId: existingOverride?.id ?? sourceKey,
+      entityType: "shopping-item-override",
+      familyId,
+      mealPlanId: mealPlan.id,
+      userId,
+    });
+  }
+
+  try {
+    if (!checked) {
+      if (!existingOverride) {
+        return {
+          status: "UPDATED" as const,
+        };
+      }
+
+      if (shouldDeleteOverrideAfterUnchecked(existingOverride)) {
+        const deleteResult = await db.shoppingItemOverride.deleteMany({
+          where: {
+            id: existingOverride.id,
+            updatedAt: existingOverride.updatedAt,
+          },
+        });
+
+        if (deleteResult.count === 0) {
+          return buildShoppingConflictResult({
+            action: "toggle-shopping-item-checked",
+            entityId: existingOverride.id,
+            entityType: "shopping-item-override",
+            familyId,
+            mealPlanId: mealPlan.id,
+            userId,
+          });
+        }
+      } else {
+        const updateResult = await db.shoppingItemOverride.updateMany({
+          data: {
+            checked: false,
+            ...buildActorUpdate(userId),
+          },
+          where: {
+            id: existingOverride.id,
+            updatedAt: existingOverride.updatedAt,
+          },
+        });
+
+        if (updateResult.count === 0) {
+          return buildShoppingConflictResult({
+            action: "toggle-shopping-item-checked",
+            entityId: existingOverride.id,
+            entityType: "shopping-item-override",
+            familyId,
+            mealPlanId: mealPlan.id,
+            userId,
+          });
+        }
+      }
+
+      logCollaborationWrite({
+        action: "toggle-shopping-item-checked",
+        domain: "shopping",
+        entityId: existingOverride.id,
+        entityType: "shopping-item-override",
+        familyId,
+        mealPlanId: mealPlan.id,
+        outcome: "UPDATED",
+        userId,
+      });
+
       return {
         status: "UPDATED" as const,
       };
     }
 
-    if (shouldDeleteOverrideAfterUnchecked(existingOverride)) {
-      await db.shoppingItemOverride.delete({
+    if (existingOverride) {
+      const updateResult = await db.shoppingItemOverride.updateMany({
+        data: {
+          checked: true,
+          ...buildActorUpdate(userId),
+        },
         where: {
           id: existingOverride.id,
+          updatedAt: existingOverride.updatedAt,
         },
       });
+
+      if (updateResult.count === 0) {
+        return buildShoppingConflictResult({
+          action: "toggle-shopping-item-checked",
+          entityId: existingOverride.id,
+          entityType: "shopping-item-override",
+          familyId,
+          mealPlanId: mealPlan.id,
+          userId,
+        });
+      }
     } else {
-      await db.shoppingItemOverride.update({
+      await db.shoppingItemOverride.create({
         data: {
-          checked: false,
-        },
-        where: {
-          id: existingOverride.id,
+          checked: true,
+          mealPlanId: mealPlan.id,
+          sourceKey,
+          sourceType,
+          ...buildActorUpdate(userId),
         },
       });
     }
 
+    logCollaborationWrite({
+      action: "toggle-shopping-item-checked",
+      domain: "shopping",
+      entityId: existingOverride?.id ?? sourceKey,
+      entityType: "shopping-item-override",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "UPDATED",
+      userId,
+    });
+
     return {
       status: "UPDATED" as const,
     };
-  }
-
-  await db.shoppingItemOverride.upsert({
-    create: {
-      checked: true,
+  } catch (error) {
+    logCollaborationFailure({
+      action: "toggle-shopping-item-checked",
+      domain: "shopping",
+      entityId: existingOverride?.id ?? sourceKey,
+      entityType: "shopping-item-override",
+      error,
+      familyId,
       mealPlanId: mealPlan.id,
-      sourceKey,
-      sourceType,
-    },
-    update: {
-      checked: true,
-    },
-    where: {
-      mealPlanId_sourceType_sourceKey: {
-        mealPlanId: mealPlan.id,
-        sourceKey,
-        sourceType,
-      },
-    },
-  });
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
 
-  return {
-    status: "UPDATED" as const,
-  };
+    throw error;
+  }
 }
 
 export async function updateGeneratedShoppingItemOverride({
+  expectedUpdatedAt,
   familyId,
   mealPlanId,
   sourceKey,
   userId,
   values,
 }: {
+  expectedUpdatedAt: string;
   familyId: string;
   mealPlanId: string;
   sourceKey: string;
@@ -369,6 +620,14 @@ export async function updateGeneratedShoppingItemOverride({
   }
 
   const existingOverride = await db.shoppingItemOverride.findUnique({
+    select: {
+      checked: true,
+      id: true,
+      note: true,
+      postponedUntilDate: true,
+      preferredStoreId: true,
+      updatedAt: true,
+    },
     where: {
       mealPlanId_sourceType_sourceKey: {
         mealPlanId: mealPlan.id,
@@ -377,6 +636,18 @@ export async function updateGeneratedShoppingItemOverride({
       },
     },
   });
+
+  if (!matchesExpectedUpdatedAt(expectedUpdatedAt, existingOverride?.updatedAt)) {
+    return buildShoppingConflictResult({
+      action: "update-generated-shopping-item",
+      entityId: existingOverride?.id ?? sourceKey,
+      entityType: "shopping-item-override",
+      familyId,
+      mealPlanId: mealPlan.id,
+      userId,
+    });
+  }
+
   const nextData: {
     checked: boolean;
     note: string | null;
@@ -389,49 +660,118 @@ export async function updateGeneratedShoppingItemOverride({
     preferredStoreId: validation.preferredStoreId,
   };
 
-  if (isOverrideEmpty(nextData)) {
+  try {
+    if (isOverrideEmpty(nextData)) {
+      if (existingOverride) {
+        const deleteResult = await db.shoppingItemOverride.deleteMany({
+          where: {
+            id: existingOverride.id,
+            updatedAt: existingOverride.updatedAt,
+          },
+        });
+
+        if (deleteResult.count === 0) {
+          return buildShoppingConflictResult({
+            action: "update-generated-shopping-item",
+            entityId: existingOverride.id,
+            entityType: "shopping-item-override",
+            familyId,
+            mealPlanId: mealPlan.id,
+            userId,
+          });
+        }
+      }
+
+      logCollaborationWrite({
+        action: "update-generated-shopping-item",
+        domain: "shopping",
+        entityId: existingOverride?.id ?? sourceKey,
+        entityType: "shopping-item-override",
+        familyId,
+        mealPlanId: mealPlan.id,
+        outcome: "UPDATED",
+        userId,
+      });
+
+      return {
+        status: "UPDATED" as const,
+      };
+    }
+
     if (existingOverride) {
-      await db.shoppingItemOverride.delete({
+      const updateResult = await db.shoppingItemOverride.updateMany({
+        data: {
+          ...nextData,
+          ...buildActorUpdate(userId),
+        },
         where: {
           id: existingOverride.id,
+          updatedAt: existingOverride.updatedAt,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        return buildShoppingConflictResult({
+          action: "update-generated-shopping-item",
+          entityId: existingOverride.id,
+          entityType: "shopping-item-override",
+          familyId,
+          mealPlanId: mealPlan.id,
+          userId,
+        });
+      }
+    } else {
+      await db.shoppingItemOverride.create({
+        data: {
+          ...nextData,
+          mealPlanId: mealPlan.id,
+          sourceKey,
+          sourceType: ShoppingItemSource.GENERATED,
+          ...buildActorUpdate(userId),
         },
       });
     }
 
+    logCollaborationWrite({
+      action: "update-generated-shopping-item",
+      domain: "shopping",
+      entityId: existingOverride?.id ?? sourceKey,
+      entityType: "shopping-item-override",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "UPDATED",
+      userId,
+    });
+
     return {
       status: "UPDATED" as const,
     };
-  }
-
-  await db.shoppingItemOverride.upsert({
-    create: {
-      ...nextData,
+  } catch (error) {
+    logCollaborationFailure({
+      action: "update-generated-shopping-item",
+      domain: "shopping",
+      entityId: existingOverride?.id ?? sourceKey,
+      entityType: "shopping-item-override",
+      error,
+      familyId,
       mealPlanId: mealPlan.id,
-      sourceKey,
-      sourceType: ShoppingItemSource.GENERATED,
-    },
-    update: nextData,
-    where: {
-      mealPlanId_sourceType_sourceKey: {
-        mealPlanId: mealPlan.id,
-        sourceKey,
-        sourceType: ShoppingItemSource.GENERATED,
-      },
-    },
-  });
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
 
-  return {
-    status: "UPDATED" as const,
-  };
+    throw error;
+  }
 }
 
 export async function updateActiveShoppingDate({
   activeShoppingDate,
+  expectedMealPlanUpdatedAt,
   familyId,
   mealPlanId,
   userId,
 }: {
   activeShoppingDate: string;
+  expectedMealPlanUpdatedAt: string;
   familyId: string;
   mealPlanId: string;
   userId: string;
@@ -446,6 +786,17 @@ export async function updateActiveShoppingDate({
     return {
       status: "NOT_FOUND" as const,
     };
+  }
+
+  if (!matchesExpectedUpdatedAt(expectedMealPlanUpdatedAt, mealPlan.updatedAt)) {
+    return buildShoppingConflictResult({
+      action: "update-active-shopping-date",
+      entityId: mealPlan.id,
+      entityType: "meal-plan",
+      familyId,
+      mealPlanId: mealPlan.id,
+      userId,
+    });
   }
 
   const normalizedDate = activeShoppingDate.trim();
@@ -468,17 +819,89 @@ export async function updateActiveShoppingDate({
     };
   }
 
-  await db.mealPlan.update({
-    data: {
-      activeShoppingDate: validation.date ?? mealPlan.startDate,
-    },
-    where: {
-      id: mealPlan.id,
-    },
+  try {
+    const updateResult = await db.mealPlan.updateMany({
+      data: {
+        activeShoppingDate: validation.date ?? mealPlan.startDate,
+        ...buildActorUpdate(userId),
+      },
+      where: {
+        id: mealPlan.id,
+        updatedAt: mealPlan.updatedAt,
+      },
+    });
+
+    if (updateResult.count === 0) {
+      return buildShoppingConflictResult({
+        action: "update-active-shopping-date",
+        entityId: mealPlan.id,
+        entityType: "meal-plan",
+        familyId,
+        mealPlanId: mealPlan.id,
+        userId,
+      });
+    }
+
+    logCollaborationWrite({
+      action: "update-active-shopping-date",
+      domain: "shopping",
+      entityId: mealPlan.id,
+      entityType: "meal-plan",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "UPDATED",
+      userId,
+    });
+
+    return {
+      status: "UPDATED" as const,
+    };
+  } catch (error) {
+    logCollaborationFailure({
+      action: "update-active-shopping-date",
+      domain: "shopping",
+      entityId: mealPlan.id,
+      entityType: "meal-plan",
+      error,
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    throw error;
+  }
+}
+
+function buildShoppingConflictResult({
+  action,
+  entityId,
+  entityType,
+  familyId,
+  mealPlanId,
+  userId,
+}: {
+  action: string;
+  entityId: string;
+  entityType: string;
+  familyId: string;
+  mealPlanId: string;
+  userId: string;
+}) {
+  logCollaborationWrite({
+    action,
+    domain: "shopping",
+    entityId,
+    entityType,
+    familyId,
+    mealPlanId,
+    outcome: "CONFLICT",
+    userId,
   });
 
   return {
-    status: "UPDATED" as const,
+    formError: COLLABORATION_CONFLICT_MESSAGE,
+    status: "CONFLICT" as const,
   };
 }
 
@@ -501,6 +924,7 @@ async function getScopedMealPlan({
       endDate: true,
       id: true,
       startDate: true,
+      updatedAt: true,
     },
     where: {
       familyId,

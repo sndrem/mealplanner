@@ -109,6 +109,7 @@ export async function loader({
       manualShoppingItems: undefined,
       shoppingOverrides: undefined,
       startDate: formatDateOnly(result.mealPlan.startDate),
+      updatedAt: result.mealPlan.updatedAt.toISOString(),
     },
     notice: getShoppingNotice(request),
     storeGroups: result.storeGroups.map((group) => ({
@@ -174,6 +175,7 @@ export async function action({
   if (intent === "update-manual-shopping-item") {
     const manualItemId = String(formData.get("manualItemId") ?? "").trim();
     const result = await updateManualShoppingItem({
+      expectedUpdatedAt: parseExpectedUpdatedAt(formData),
       familyId,
       manualItemId,
       mealPlanId,
@@ -183,6 +185,13 @@ export async function action({
 
     if (result.status === "NOT_FOUND") {
       throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies ShoppingActionData;
     }
 
     if (result.status === "VALIDATION_ERROR") {
@@ -208,6 +217,7 @@ export async function action({
   if (intent === "delete-manual-shopping-item") {
     const manualItemId = String(formData.get("manualItemId") ?? "").trim();
     const result = await deleteManualShoppingItem({
+      expectedUpdatedAt: parseExpectedUpdatedAt(formData),
       familyId,
       manualItemId,
       mealPlanId,
@@ -216,6 +226,13 @@ export async function action({
 
     if (result.status === "NOT_FOUND") {
       throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies ShoppingActionData;
     }
 
     return buildShoppingRedirect({
@@ -240,6 +257,7 @@ export async function action({
 
     const result = await toggleShoppingItemChecked({
       checked,
+      expectedUpdatedAt: parseExpectedUpdatedAt(formData),
       familyId,
       mealPlanId,
       sourceKey,
@@ -249,6 +267,13 @@ export async function action({
 
     if (result.status === "NOT_FOUND") {
       throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies ShoppingActionData;
     }
 
     return buildShoppingRedirect({
@@ -270,6 +295,7 @@ export async function action({
     }
 
     const result = await updateGeneratedShoppingItemOverride({
+      expectedUpdatedAt: parseExpectedUpdatedAt(formData),
       familyId,
       mealPlanId,
       sourceKey,
@@ -279,6 +305,13 @@ export async function action({
 
     if (result.status === "NOT_FOUND") {
       throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies ShoppingActionData;
     }
 
     if (result.status === "VALIDATION_ERROR") {
@@ -773,6 +806,11 @@ export default function FamilyMealPlanShoppingRoute({
                                       type="hidden"
                                       value={item.checked ? "false" : "true"}
                                     />
+                                    <input
+                                      name="expectedUpdatedAt"
+                                      type="hidden"
+                                      value={getToggleExpectedVersion(item)}
+                                    />
                                     <button
                                       className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                                       disabled={isPendingCheckToggle}
@@ -800,6 +838,11 @@ export default function FamilyMealPlanShoppingRoute({
                                         name="sourceKey"
                                         type="hidden"
                                         value={item.sourceKey}
+                                      />
+                                      <input
+                                        name="expectedUpdatedAt"
+                                        type="hidden"
+                                        value={item.collaborationVersion}
                                       />
 
                                       <label className="block text-sm font-medium text-slate-700">
@@ -905,6 +948,11 @@ export default function FamilyMealPlanShoppingRoute({
                                           name="manualItemId"
                                           type="hidden"
                                           value={item.sourceKey}
+                                        />
+                                        <input
+                                          name="expectedUpdatedAt"
+                                          type="hidden"
+                                          value={item.collaborationVersion}
                                         />
 
                                         <label className="block text-sm font-medium text-slate-700">
@@ -1079,6 +1127,11 @@ export default function FamilyMealPlanShoppingRoute({
                                           type="hidden"
                                           value={item.sourceKey}
                                         />
+                                        <input
+                                          name="expectedUpdatedAt"
+                                          type="hidden"
+                                          value={item.collaborationVersion}
+                                        />
                                         <button
                                           className="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:bg-rose-100 disabled:text-rose-400"
                                           disabled={isPendingManualDelete}
@@ -1192,6 +1245,22 @@ function serializeProjectedShoppingItem(
     ...item,
     buyOnDate: item.buyOnDate ? formatDateOnly(item.buyOnDate) : null,
   };
+}
+
+function parseExpectedUpdatedAt(formData: FormData) {
+  return String(formData.get("expectedUpdatedAt") ?? "");
+}
+
+function getToggleExpectedVersion(item: {
+  collaborationVersion: string;
+  overrideVersion?: string;
+  sourceType: ShoppingItemSource;
+}) {
+  if (item.sourceType === ShoppingItemSource.MANUAL) {
+    return item.overrideVersion ?? "";
+  }
+
+  return item.collaborationVersion;
 }
 
 function parseManualShoppingItemValues(

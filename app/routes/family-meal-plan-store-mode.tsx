@@ -93,6 +93,7 @@ export async function loader({
       manualShoppingItems: undefined,
       shoppingOverrides: undefined,
       startDate: formatDateOnly(result.mealPlan.startDate),
+      updatedAt: result.mealPlan.updatedAt.toISOString(),
     },
     notice: getStoreModeNotice(request),
     progress: result.progress,
@@ -126,6 +127,7 @@ export async function action({
     const activeShoppingDate = String(formData.get("activeShoppingDate") ?? "");
     const result = await updateActiveShoppingDate({
       activeShoppingDate,
+      expectedMealPlanUpdatedAt: String(formData.get("mealPlanUpdatedAt") ?? ""),
       familyId,
       mealPlanId,
       userId: user.id,
@@ -139,6 +141,13 @@ export async function action({
       return {
         activeShoppingDateFieldErrors: result.fieldErrors,
         activeShoppingDateValue: result.values.activeShoppingDate,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
         intent,
       } satisfies StoreModeActionData;
     }
@@ -189,6 +198,7 @@ export async function action({
 
     const result = await toggleShoppingItemChecked({
       checked,
+      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
       familyId,
       mealPlanId,
       sourceKey,
@@ -198,6 +208,13 @@ export async function action({
 
     if (result.status === "NOT_FOUND") {
       throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
     }
 
     return buildStoreModeRedirect({
@@ -365,6 +382,11 @@ export default function FamilyMealPlanStoreModeRoute({
                 type="hidden"
                 value="update-active-shopping-date"
               />
+              <input
+                name="mealPlanUpdatedAt"
+                type="hidden"
+                value={loaderData.mealPlan.updatedAt}
+              />
               <select
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                 defaultValue={activeShoppingDateValue}
@@ -452,6 +474,11 @@ export default function FamilyMealPlanStoreModeRoute({
                               name="checked"
                               type="hidden"
                               value={item.checked ? "false" : "true"}
+                            />
+                            <input
+                              name="expectedUpdatedAt"
+                              type="hidden"
+                              value={getToggleExpectedVersion(item)}
                             />
                             <button
                               className={
@@ -718,6 +745,18 @@ function requireRouteParam(value: string | undefined, message: string) {
   }
 
   return value;
+}
+
+function getToggleExpectedVersion(item: {
+  collaborationVersion: string;
+  overrideVersion?: string;
+  sourceType: ShoppingItemSource;
+}) {
+  if (item.sourceType === ShoppingItemSource.MANUAL) {
+    return item.overrideVersion ?? "";
+  }
+
+  return item.collaborationVersion;
 }
 
 function formatDateOnly(date: Date) {

@@ -81,6 +81,7 @@ describe("family meal plan shopping route", () => {
         startDate: new Date("2026-05-15T00:00:00.000Z"),
         status: "DRAFT",
         title: "Langhelg",
+        updatedAt: new Date("2026-05-01T12:00:00.000Z"),
       },
       projectedItems: [
         {
@@ -115,7 +116,8 @@ describe("family meal plan shopping route", () => {
             sortOrder: 1,
           },
           sourceKey: "entry-1:ingredient-1",
-          sourceType: "GENERATED",
+          collaborationVersion: "",
+        sourceType: "GENERATED",
           unit: "stk",
         },
         {
@@ -138,7 +140,9 @@ describe("family meal plan shopping route", () => {
             sortOrder: 1,
           },
           sourceKey: "manual-item-1",
-          sourceType: "MANUAL",
+          collaborationVersion: "2026-05-15T00:00:00.000Z",
+        overrideVersion: "",
+        sourceType: "MANUAL",
         },
       ],
       storeGroups: [
@@ -183,6 +187,7 @@ describe("family meal plan shopping route", () => {
                     sortOrder: 1,
                   },
                   sourceKey: "entry-1:ingredient-1",
+                  collaborationVersion: "",
                   sourceType: "GENERATED",
                   unit: "stk",
                 },
@@ -206,6 +211,8 @@ describe("family meal plan shopping route", () => {
                     sortOrder: 1,
                   },
                   sourceKey: "manual-item-1",
+                  collaborationVersion: "2026-05-15T00:00:00.000Z",
+                  overrideVersion: "",
                   sourceType: "MANUAL",
                 },
               ],
@@ -260,6 +267,7 @@ describe("family meal plan shopping route", () => {
         startDate: "2026-05-15",
         status: "DRAFT",
         title: "Langhelg",
+        updatedAt: "2026-05-01T12:00:00.000Z",
       },
       notice: null,
       categories: [
@@ -310,6 +318,7 @@ describe("family meal plan shopping route", () => {
                     sortOrder: 1,
                   },
                   sourceKey: "entry-1:ingredient-1",
+                  collaborationVersion: "",
                   sourceType: "GENERATED",
                   unit: "stk",
                 },
@@ -333,6 +342,8 @@ describe("family meal plan shopping route", () => {
                     sortOrder: 1,
                   },
                   sourceKey: "manual-item-1",
+                  collaborationVersion: "2026-05-15T00:00:00.000Z",
+                  overrideVersion: "",
                   sourceType: "MANUAL",
                 },
               ],
@@ -440,6 +451,7 @@ describe("family meal plan shopping route", () => {
 
     expect(toggleShoppingItemChecked).toHaveBeenCalledWith({
       checked: true,
+      expectedUpdatedAt: "",
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       sourceKey: "manual-item-1",
@@ -485,6 +497,7 @@ describe("family meal plan shopping route", () => {
     });
 
     expect(updateGeneratedShoppingItemOverride).toHaveBeenCalledWith({
+      expectedUpdatedAt: "",
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       sourceKey: "entry-1:ingredient-1",

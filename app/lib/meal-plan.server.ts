@@ -1,7 +1,15 @@
 import { MealPlanStatus, MealType, Prisma, RecipeScope } from "@prisma/client";
 
+import {
+  buildActorUpdate,
+  buildMealPlanEntriesSnapshot,
+  COLLABORATION_APPROVAL_CONFLICT_MESSAGE,
+  COLLABORATION_CONFLICT_MESSAGE,
+  matchesExpectedUpdatedAt,
+} from "./collaboration.server";
 import { db } from "./db.server";
 import { requireFamilyAdmin, requireFamilyMembership } from "./family.server";
+import { logCollaborationFailure, logCollaborationWrite } from "./write-observability.server";
 
 const MEAL_PLAN_MAX_SPAN_DAYS = 7;
 const MEAL_PLAN_MAX_DAY_OFFSET = MEAL_PLAN_MAX_SPAN_DAYS - 1;
@@ -110,6 +118,7 @@ export interface MealPlanEntryValues {
 
 interface SaveMealPlanEntriesInput {
   entries: MealPlanEntryValues[];
+  entryVersions: Record<string, string>;
   familyId: string;
   mealPlanId: string;
   userId: string;
@@ -121,7 +130,15 @@ interface DeleteMealPlanInput {
   userId: string;
 }
 
-type MealPlanApprovalInput = DeleteMealPlanInput;
+interface MealPlanApprovalInput extends DeleteMealPlanInput {
+  entriesSnapshot: string;
+  expectedMealPlanUpdatedAt: string;
+}
+
+interface UpdateMealPlanInput extends MealPlanMutationInput {
+  expectedMealPlanUpdatedAt: string;
+  mealPlanId: string;
+}
 
 type GetMealPlanInput = DeleteMealPlanInput;
 
@@ -485,7 +502,7 @@ export async function reopenMealPlan(input: MealPlanApprovalInput) {
   return updateMealPlanApprovalState(input, "REOPEN");
 }
 
-export async function updateMealPlan(input: MealPlanMutationInput & { mealPlanId: string }) {
+export async function updateMealPlan(input: UpdateMealPlanInput) {
   await requireFamilyMembership({
     familyId: input.familyId,
     userId: input.userId,
@@ -495,6 +512,7 @@ export async function updateMealPlan(input: MealPlanMutationInput & { mealPlanId
     select: {
       activeShoppingDate: true,
       id: true,
+      updatedAt: true,
     },
     where: {
       familyId: input.familyId,
@@ -508,9 +526,40 @@ export async function updateMealPlan(input: MealPlanMutationInput & { mealPlanId
     };
   }
 
+  if (
+    !matchesExpectedUpdatedAt(input.expectedMealPlanUpdatedAt, existingMealPlan.updatedAt)
+  ) {
+    logCollaborationWrite({
+      action: "update-meal-plan",
+      domain: "meal-plan",
+      entityId: existingMealPlan.id,
+      entityType: "meal-plan",
+      familyId: input.familyId,
+      mealPlanId: existingMealPlan.id,
+      outcome: "CONFLICT",
+      userId: input.userId,
+    });
+
+    return {
+      formError: COLLABORATION_CONFLICT_MESSAGE,
+      status: "CONFLICT" as const,
+    };
+  }
+
   const validation = validateMealPlanInput(input);
 
   if (!validation.ok) {
+    logCollaborationWrite({
+      action: "update-meal-plan",
+      domain: "meal-plan",
+      entityId: existingMealPlan.id,
+      entityType: "meal-plan",
+      familyId: input.familyId,
+      mealPlanId: existingMealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId: input.userId,
+    });
+
     return {
       fieldErrors: validation.fieldErrors,
       status: "VALIDATION_ERROR" as const,
@@ -520,27 +569,81 @@ export async function updateMealPlan(input: MealPlanMutationInput & { mealPlanId
 
   const nextStartDate = parseDateOnly(validation.values.startDate)!;
   const nextEndDate = parseDateOnly(validation.values.endDate)!;
-  const mealPlan = await db.mealPlan.update({
-    data: {
-      activeShoppingDate: clampShoppingDateToRange(
-        existingMealPlan.activeShoppingDate,
-        nextStartDate,
-        nextEndDate,
-      ),
-      endDate: nextEndDate,
-      startDate: nextStartDate,
-      title: validation.values.title,
-    },
-    select: mealPlanDetailSelect,
-    where: {
-      id: existingMealPlan.id,
-    },
-  });
 
-  return {
-    mealPlan,
-    status: "UPDATED" as const,
-  };
+  try {
+    const updateResult = await db.mealPlan.updateMany({
+      data: {
+        activeShoppingDate: clampShoppingDateToRange(
+          existingMealPlan.activeShoppingDate,
+          nextStartDate,
+          nextEndDate,
+        ),
+        endDate: nextEndDate,
+        startDate: nextStartDate,
+        title: validation.values.title,
+        ...buildActorUpdate(input.userId),
+      },
+      where: {
+        id: existingMealPlan.id,
+        updatedAt: existingMealPlan.updatedAt,
+      },
+    });
+
+    if (updateResult.count === 0) {
+      logCollaborationWrite({
+        action: "update-meal-plan",
+        domain: "meal-plan",
+        entityId: existingMealPlan.id,
+        entityType: "meal-plan",
+        familyId: input.familyId,
+        mealPlanId: existingMealPlan.id,
+        outcome: "CONFLICT",
+        userId: input.userId,
+      });
+
+      return {
+        formError: COLLABORATION_CONFLICT_MESSAGE,
+        status: "CONFLICT" as const,
+      };
+    }
+
+    const mealPlan = await db.mealPlan.findUniqueOrThrow({
+      select: mealPlanDetailSelect,
+      where: {
+        id: existingMealPlan.id,
+      },
+    });
+
+    logCollaborationWrite({
+      action: "update-meal-plan",
+      domain: "meal-plan",
+      entityId: existingMealPlan.id,
+      entityType: "meal-plan",
+      familyId: input.familyId,
+      mealPlanId: existingMealPlan.id,
+      outcome: "UPDATED",
+      userId: input.userId,
+    });
+
+    return {
+      mealPlan,
+      status: "UPDATED" as const,
+    };
+  } catch (error) {
+    logCollaborationFailure({
+      action: "update-meal-plan",
+      domain: "meal-plan",
+      entityId: existingMealPlan.id,
+      entityType: "meal-plan",
+      error,
+      familyId: input.familyId,
+      mealPlanId: existingMealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId: input.userId,
+    });
+
+    throw error;
+  }
 }
 
 export async function deleteMealPlan({ familyId, mealPlanId, userId }: DeleteMealPlanInput) {
@@ -580,6 +683,7 @@ export async function deleteMealPlan({ familyId, mealPlanId, userId }: DeleteMea
 
 export async function saveMealPlanEntries({
   entries,
+  entryVersions,
   familyId,
   mealPlanId,
   userId,
@@ -611,6 +715,16 @@ export async function saveMealPlanEntries({
   const validationError = validateMealPlanEntries(values, mealPlan.startDate, mealPlan.endDate);
 
   if (validationError) {
+    logCollaborationWrite({
+      action: "save-meal-plan-entries",
+      domain: "meal-plan",
+      entityType: "meal-plan-entry",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
     return {
       formError: validationError,
       status: "VALIDATION_ERROR" as const,
@@ -634,6 +748,16 @@ export async function saveMealPlanEntries({
     });
 
     if (recipes.length !== recipeIds.length) {
+      logCollaborationWrite({
+        action: "save-meal-plan-entries",
+        domain: "meal-plan",
+        entityType: "meal-plan-entry",
+        familyId,
+        mealPlanId: mealPlan.id,
+        outcome: "VALIDATION_ERROR",
+        userId,
+      });
+
       return {
         formError: "Minst en valgt oppskrift er ikke tilgjengelig for familien.",
         status: "VALIDATION_ERROR" as const,
@@ -642,55 +766,135 @@ export async function saveMealPlanEntries({
     }
   }
 
-  await db.$transaction(async (tx) => {
-    for (let entry of values) {
-      const date = parseDateOnly(entry.date);
+  const submittedDates = values.map((entry) => parseDateOnly(entry.date)!).filter(Boolean);
+  const existingEntries = await db.mealPlanEntry.findMany({
+    select: {
+      date: true,
+      updatedAt: true,
+    },
+    where: {
+      date: {
+        in: submittedDates,
+      },
+      mealPlanId: mealPlan.id,
+      mealType: PLANNING_MEAL_TYPE,
+    },
+  });
+  const existingEntryByDate = new Map(
+    existingEntries.map((entry) => [formatDateOnly(entry.date), entry]),
+  );
+  const conflictingDates = values.flatMap((entry) => {
+    const existingEntry = existingEntryByDate.get(entry.date);
 
-      if (!date) {
-        throw new Error(`Expected validated meal plan date for "${entry.date}".`);
-      }
-
-      if (!entry.note && !entry.recipeId) {
-        await tx.mealPlanEntry.deleteMany({
-          where: {
-            date,
-            mealPlanId: mealPlan.id,
-            mealType: PLANNING_MEAL_TYPE,
-          },
-        });
-        continue;
-      }
-
-      await tx.mealPlanEntry.upsert({
-        create: {
-          date,
-          mealPlanId: mealPlan.id,
-          mealType: PLANNING_MEAL_TYPE,
-          note: entry.note || null,
-          recipeId: entry.recipeId || null,
-        },
-        update: {
-          note: entry.note || null,
-          recipeId: entry.recipeId || null,
-        },
-        where: {
-          mealPlanId_date_mealType: {
-            date,
-            mealPlanId: mealPlan.id,
-            mealType: PLANNING_MEAL_TYPE,
-          },
-        },
-      });
+    if (matchesExpectedUpdatedAt(entryVersions[entry.date], existingEntry?.updatedAt)) {
+      return [];
     }
+
+    return [entry.date];
   });
 
-  return {
-    status: "UPDATED" as const,
-  };
+  if (conflictingDates.length > 0) {
+    logCollaborationWrite({
+      action: "save-meal-plan-entries",
+      domain: "meal-plan",
+      entityType: "meal-plan-entry",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "CONFLICT",
+      userId,
+    });
+
+    return {
+      conflictingDates,
+      formError: COLLABORATION_CONFLICT_MESSAGE,
+      status: "CONFLICT" as const,
+      values,
+    };
+  }
+
+  try {
+    await db.$transaction(async (tx) => {
+      for (let entry of values) {
+        const date = parseDateOnly(entry.date);
+
+        if (!date) {
+          throw new Error(`Expected validated meal plan date for "${entry.date}".`);
+        }
+
+        if (!entry.note && !entry.recipeId) {
+          await tx.mealPlanEntry.deleteMany({
+            where: {
+              date,
+              mealPlanId: mealPlan.id,
+              mealType: PLANNING_MEAL_TYPE,
+            },
+          });
+          continue;
+        }
+
+        await tx.mealPlanEntry.upsert({
+          create: {
+            date,
+            mealPlanId: mealPlan.id,
+            mealType: PLANNING_MEAL_TYPE,
+            note: entry.note || null,
+            recipeId: entry.recipeId || null,
+            ...buildActorUpdate(userId),
+          },
+          update: {
+            note: entry.note || null,
+            recipeId: entry.recipeId || null,
+            ...buildActorUpdate(userId),
+          },
+          where: {
+            mealPlanId_date_mealType: {
+              date,
+              mealPlanId: mealPlan.id,
+              mealType: PLANNING_MEAL_TYPE,
+            },
+          },
+        });
+      }
+
+      await tx.mealPlan.update({
+        data: buildActorUpdate(userId),
+        where: {
+          id: mealPlan.id,
+        },
+      });
+    });
+
+    logCollaborationWrite({
+      action: "save-meal-plan-entries",
+      domain: "meal-plan",
+      entityType: "meal-plan-entry",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "UPDATED",
+      userId,
+    });
+
+    return {
+      status: "UPDATED" as const,
+    };
+  } catch (error) {
+    logCollaborationFailure({
+      action: "save-meal-plan-entries",
+      domain: "meal-plan",
+      entityType: "meal-plan-entry",
+      error,
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    throw error;
+  }
 }
 
 async function updateMealPlanApprovalState(
-  { familyId, mealPlanId, userId }: MealPlanApprovalInput,
+  { entriesSnapshot, expectedMealPlanUpdatedAt, familyId, mealPlanId, userId }: MealPlanApprovalInput,
   action: MealPlanApprovalAction,
 ) {
   await requireFamilyAdmin({
@@ -700,8 +904,19 @@ async function updateMealPlanApprovalState(
 
   const mealPlan = await db.mealPlan.findFirst({
     select: {
+      entries: {
+        select: {
+          date: true,
+          mealType: true,
+          updatedAt: true,
+        },
+        where: {
+          mealType: PLANNING_MEAL_TYPE,
+        },
+      },
       id: true,
       status: true,
+      updatedAt: true,
     },
     where: {
       familyId,
@@ -722,30 +937,85 @@ async function updateMealPlanApprovalState(
     };
   }
 
-  const nextStatus = action === "APPROVE" ? MealPlanStatus.APPROVED : MealPlanStatus.DRAFT;
-  const updatedMealPlan = await db.mealPlan.update({
-    data:
-      nextStatus === MealPlanStatus.APPROVED
-        ? {
-            approvedAt: new Date(),
-            approvedByUserId: userId,
-            status: MealPlanStatus.APPROVED,
-          }
-        : {
-            approvedAt: null,
-            approvedByUserId: null,
-            status: MealPlanStatus.DRAFT,
-          },
-    select: mealPlanDetailSelect,
-    where: {
-      id: mealPlan.id,
-    },
-  });
+  if (action === "APPROVE") {
+    const currentEntriesSnapshot = buildMealPlanEntriesSnapshot(mealPlan.entries);
 
-  return {
-    mealPlan: updatedMealPlan,
-    status: action === "APPROVE" ? ("APPROVED" as const) : ("REOPENED" as const),
-  };
+    if (
+      !matchesExpectedUpdatedAt(expectedMealPlanUpdatedAt, mealPlan.updatedAt) ||
+      entriesSnapshot.trim() !== currentEntriesSnapshot
+    ) {
+      logCollaborationWrite({
+        action: "approve-meal-plan",
+        domain: "meal-plan",
+        entityId: mealPlan.id,
+        entityType: "meal-plan",
+        familyId,
+        mealPlanId: mealPlan.id,
+        outcome: "CONFLICT",
+        userId,
+      });
+
+      return {
+        formError: COLLABORATION_APPROVAL_CONFLICT_MESSAGE,
+        status: "CONFLICT" as const,
+      };
+    }
+  }
+
+  const nextStatus = action === "APPROVE" ? MealPlanStatus.APPROVED : MealPlanStatus.DRAFT;
+
+  try {
+    const updatedMealPlan = await db.mealPlan.update({
+      data:
+        nextStatus === MealPlanStatus.APPROVED
+          ? {
+              approvedAt: new Date(),
+              approvedByUserId: userId,
+              status: MealPlanStatus.APPROVED,
+              ...buildActorUpdate(userId),
+            }
+          : {
+              approvedAt: null,
+              approvedByUserId: null,
+              status: MealPlanStatus.DRAFT,
+              ...buildActorUpdate(userId),
+            },
+      select: mealPlanDetailSelect,
+      where: {
+        id: mealPlan.id,
+      },
+    });
+
+    logCollaborationWrite({
+      action: action === "APPROVE" ? "approve-meal-plan" : "reopen-meal-plan",
+      domain: "meal-plan",
+      entityId: mealPlan.id,
+      entityType: "meal-plan",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "UPDATED",
+      userId,
+    });
+
+    return {
+      mealPlan: updatedMealPlan,
+      status: action === "APPROVE" ? ("APPROVED" as const) : ("REOPENED" as const),
+    };
+  } catch (error) {
+    logCollaborationFailure({
+      action: action === "APPROVE" ? "approve-meal-plan" : "reopen-meal-plan",
+      domain: "meal-plan",
+      entityId: mealPlan.id,
+      entityType: "meal-plan",
+      error,
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    throw error;
+  }
 }
 
 function validateMealPlanInput({

@@ -9,11 +9,14 @@ const { dbMock, requireFamilyAdminMock, requireFamilyMembershipMock } = vi.hoist
         delete: vi.fn(),
         findFirst: vi.fn(),
         findMany: vi.fn(),
+        findUniqueOrThrow: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn(),
       },
       mealPlanEntry: {
         createMany: vi.fn(),
         deleteMany: vi.fn(),
+        findMany: vi.fn(),
         upsert: vi.fn(),
       },
       recipe: {
@@ -35,6 +38,13 @@ vi.mock("./family.server", () => {
   return {
     requireFamilyAdmin: requireFamilyAdminMock,
     requireFamilyMembership: requireFamilyMembershipMock,
+  };
+});
+
+vi.mock("./write-observability.server", () => {
+  return {
+    logCollaborationFailure: vi.fn(),
+    logCollaborationWrite: vi.fn(),
   };
 });
 
@@ -73,6 +83,12 @@ describe("meal-plan.server", () => {
     dbMock.$transaction.mockImplementation(async (callback: (tx: typeof dbMock) => Promise<unknown>) =>
       callback(dbMock),
     );
+    dbMock.mealPlanEntry.findMany.mockResolvedValue([]);
+    dbMock.mealPlan.updateMany.mockResolvedValue({ count: 1 });
+    dbMock.mealPlan.findUniqueOrThrow.mockResolvedValue({
+      id: "meal-plan-1",
+      title: "Langhelg",
+    });
   });
 
   it("rejects missing date fields", () => {
@@ -507,6 +523,7 @@ describe("meal-plan.server", () => {
 
     const result = await updateMealPlan({
       endDate: "2026-05-18",
+      expectedMealPlanUpdatedAt: "",
       familyId: "family-1",
       mealPlanId: "meal-plan-404",
       startDate: "2026-05-15",
@@ -522,8 +539,10 @@ describe("meal-plan.server", () => {
 
   it("approves a draft meal plan as an admin", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue({
+      entries: [],
       id: "meal-plan-1",
       status: "DRAFT",
+      updatedAt: new Date("2026-05-16T09:00:00.000Z"),
     });
     dbMock.mealPlan.update.mockResolvedValue({
       approvedAt: new Date("2026-05-16T09:30:00.000Z"),
@@ -539,6 +558,8 @@ describe("meal-plan.server", () => {
     });
 
     const result = await approveMealPlan({
+      entriesSnapshot: "",
+      expectedMealPlanUpdatedAt: new Date("2026-05-16T09:00:00.000Z").toISOString(),
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",
@@ -553,6 +574,7 @@ describe("meal-plan.server", () => {
         approvedAt: expect.any(Date),
         approvedByUserId: "user-1",
         status: "APPROVED",
+        updatedByUserId: "user-1",
       }),
       select: {
         activeShoppingDate: true,
@@ -576,8 +598,10 @@ describe("meal-plan.server", () => {
 
   it("reopens an approved meal plan back to draft", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue({
+      entries: [],
       id: "meal-plan-1",
       status: "APPROVED",
+      updatedAt: new Date("2026-05-16T09:30:00.000Z"),
     });
     dbMock.mealPlan.update.mockResolvedValue({
       approvedAt: null,
@@ -593,6 +617,8 @@ describe("meal-plan.server", () => {
     });
 
     const result = await reopenMealPlan({
+      entriesSnapshot: "",
+      expectedMealPlanUpdatedAt: "",
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",
@@ -603,6 +629,7 @@ describe("meal-plan.server", () => {
         approvedAt: null,
         approvedByUserId: null,
         status: "DRAFT",
+        updatedByUserId: "user-1",
       },
       select: {
         activeShoppingDate: true,
@@ -626,11 +653,15 @@ describe("meal-plan.server", () => {
 
   it("returns an invalid-transition error when approving an already approved meal plan", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue({
+      entries: [],
       id: "meal-plan-1",
       status: "APPROVED",
+      updatedAt: new Date("2026-05-16T09:30:00.000Z"),
     });
 
     const result = await approveMealPlan({
+      entriesSnapshot: "",
+      expectedMealPlanUpdatedAt: new Date("2026-05-16T09:00:00.000Z").toISOString(),
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",
@@ -653,6 +684,8 @@ describe("meal-plan.server", () => {
 
     await expect(
       approveMealPlan({
+        entriesSnapshot: "",
+        expectedMealPlanUpdatedAt: "",
         familyId: "family-1",
         mealPlanId: "meal-plan-1",
         userId: "user-2",
@@ -681,6 +714,7 @@ describe("meal-plan.server", () => {
       ],
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
+      entryVersions: {},
       userId: "user-1",
     });
 
@@ -719,6 +753,7 @@ describe("meal-plan.server", () => {
           recipeId: "",
         },
       ],
+      entryVersions: {},
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",
@@ -752,6 +787,7 @@ describe("meal-plan.server", () => {
           recipeId: "",
         },
       ],
+      entryVersions: {},
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",
@@ -767,10 +803,12 @@ describe("meal-plan.server", () => {
         mealType: "DINNER",
         note: "Bruk rester til lunsj",
         recipeId: null,
+        updatedByUserId: "user-1",
       },
       update: {
         note: "Bruk rester til lunsj",
         recipeId: null,
+        updatedByUserId: "user-1",
       },
       where: {
         mealPlanId_date_mealType: {
@@ -780,6 +818,50 @@ describe("meal-plan.server", () => {
         },
       },
     });
+  });
+
+  it("returns CONFLICT when an entry version is stale", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-15T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.mealPlanEntry.findMany.mockResolvedValue([
+      {
+        date: new Date("2026-05-15T00:00:00.000Z"),
+        updatedAt: new Date("2026-05-16T10:00:00.000Z"),
+      },
+    ]);
+
+    const result = await saveMealPlanEntries({
+      entries: [
+        {
+          date: "2026-05-15",
+          note: "Oppdatert notat",
+          recipeId: "",
+        },
+      ],
+      entryVersions: {
+        "2026-05-15": "2026-05-15T09:00:00.000Z",
+      },
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      conflictingDates: ["2026-05-15"],
+      formError: expect.stringContaining("Noen andre har oppdatert"),
+      status: "CONFLICT",
+      values: [
+        {
+          date: "2026-05-15",
+          note: "Oppdatert notat",
+          recipeId: "",
+        },
+      ],
+    });
+    expect(dbMock.mealPlanEntry.upsert).not.toHaveBeenCalled();
   });
 
   it("rejects inaccessible recipe selections before writing entries", async () => {
@@ -798,6 +880,7 @@ describe("meal-plan.server", () => {
           recipeId: "ukjent-rett",
         },
       ],
+      entryVersions: {},
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",
