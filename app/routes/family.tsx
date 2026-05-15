@@ -203,6 +203,12 @@ export default function FamilyRoute({
               </Link>
               <Link
                 className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                to={`/families/${loaderData.family.id}/recipes`}
+              >
+                Administrer oppskrifter
+              </Link>
+              <Link
+                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
                 to="/app"
               >
                 Tilbake til oversikten
