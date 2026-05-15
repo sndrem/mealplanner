@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Form, useNavigation } from "react-router";
 
 import type {
@@ -74,6 +74,12 @@ export function FamilyRecipeEditorCard({
     updateValues && !ignoreSubmittedValues ? updateValues : persistedValues;
   const [isEditing, setIsEditing] = useState(Boolean(updateValues));
   const [draftValues, setDraftValues] = useState(sourceValues);
+  const [focusIngredientIndex, setFocusIngredientIndex] = useState<number | null>(
+    null,
+  );
+  const clearIngredientDisplayNameFocus = useCallback(() => {
+    setFocusIngredientIndex(null);
+  }, []);
 
   useEffect(() => {
     if (updateValues) {
@@ -122,7 +128,9 @@ export function FamilyRecipeEditorCard({
 
   function addIngredient() {
     const defaultCategoryId = categories[0]?.id ?? "";
+    const newIngredientIndex = draftValues.ingredients.length;
 
+    setFocusIngredientIndex(newIngredientIndex);
     setDraftValues((current) => ({
       ...current,
       ingredients: [
@@ -212,7 +220,9 @@ export function FamilyRecipeEditorCard({
             draftValues={draftValues}
             familyStores={familyStores}
             fieldErrors={updateFieldErrors}
+            focusIngredientIndex={focusIngredientIndex}
             onAddIngredient={addIngredient}
+            onIngredientDisplayNameFocused={clearIngredientDisplayNameFocus}
             onMoveIngredient={moveIngredient}
             onRemoveIngredient={removeIngredient}
             onUpdateIngredient={updateIngredient}
@@ -276,7 +286,9 @@ function RecipeFields({
   draftValues,
   familyStores,
   fieldErrors,
+  focusIngredientIndex,
   onAddIngredient,
+  onIngredientDisplayNameFocused,
   onMoveIngredient,
   onRemoveIngredient,
   onUpdateIngredient,
@@ -287,7 +299,9 @@ function RecipeFields({
   draftValues: FamilyRecipeValues;
   familyStores: RecipeStore[];
   fieldErrors?: FamilyRecipeFieldErrors;
+  focusIngredientIndex: number | null;
   onAddIngredient: () => void;
+  onIngredientDisplayNameFocused: () => void;
   onMoveIngredient: (key: string, direction: "up" | "down") => void;
   onRemoveIngredient: (key: string) => void;
   onUpdateIngredient: (
@@ -396,21 +410,12 @@ function RecipeFields({
       </label>
 
       <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h3 className="text-base font-semibold text-slate-950">Ingredienser</h3>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
-              Hver rad er én ingrediens med egen handlekategori (brukes i
-              handlelisten, ikke som oppskriftstype).
-            </p>
-          </div>
-          <button
-            className="shrink-0 rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
-            onClick={onAddIngredient}
-            type="button"
-          >
-            Legg til rad
-          </button>
+        <div>
+          <h3 className="text-base font-semibold text-slate-950">Ingredienser</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            Hver rad er én ingrediens med egen handlekategori (brukes i
+            handlelisten, ikke som oppskriftstype).
+          </p>
         </div>
         {fieldErrors?.ingredients ? (
           <p className="text-sm text-rose-600">{fieldErrors.ingredients}</p>
@@ -420,8 +425,10 @@ function RecipeFields({
           <IngredientRowEditor
             categories={categories}
             familyStores={familyStores}
+            focusDisplayName={focusIngredientIndex === index}
             index={index}
             key={row.key}
+            onDisplayNameFocused={onIngredientDisplayNameFocused}
             onMove={onMoveIngredient}
             onRemove={onRemoveIngredient}
             onUpdate={onUpdateIngredient}
@@ -432,6 +439,14 @@ function RecipeFields({
             }
           />
         ))}
+
+        <button
+          className="w-full rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100 sm:w-auto"
+          onClick={onAddIngredient}
+          type="button"
+        >
+          Legg til rad
+        </button>
       </div>
     </>
   );
@@ -440,7 +455,9 @@ function RecipeFields({
 function IngredientRowEditor({
   categories,
   familyStores,
+  focusDisplayName,
   index,
+  onDisplayNameFocused,
   onMove,
   onRemove,
   onUpdate,
@@ -449,13 +466,26 @@ function IngredientRowEditor({
 }: {
   categories: RecipeCategory[];
   familyStores: RecipeStore[];
+  focusDisplayName: boolean;
   index: number;
+  onDisplayNameFocused: () => void;
   onMove: (key: string, direction: "up" | "down") => void;
   onRemove: (key: string) => void;
   onUpdate: (key: string, patch: Partial<FamilyRecipeIngredientValues>) => void;
   row: DraftIngredientRow;
   validationError?: string;
 }) {
+  const displayNameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!focusDisplayName) {
+      return;
+    }
+
+    displayNameInputRef.current?.focus();
+    onDisplayNameFocused();
+  }, [focusDisplayName, onDisplayNameFocused]);
+
   return (
     <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
       <input name="ingredientIndex" type="hidden" value={String(index)} />
@@ -490,6 +520,7 @@ function IngredientRowEditor({
         <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
           Navn
           <input
+            ref={displayNameInputRef}
             className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
             name={`ingredientDisplayName:${index}`}
             onChange={(event) =>

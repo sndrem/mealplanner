@@ -638,7 +638,7 @@ export default function FamilyMealPlanRoute({
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">Detaljer</h2>
               <p className="text-sm leading-6 text-slate-600">
-                Planen tilhorer familien {loaderData.family.name} og bruker et
+                Planen tilhører familien {loaderData.family.name} og bruker et
                 lagret datointervall pa maks 7 dager.
               </p>
             </div>
@@ -957,10 +957,7 @@ function parseMealPlanEntryVersions(formData: FormData) {
     formData.getAll("entryDate").map((dateValue) => {
       const date = String(dateValue);
 
-      return [
-        date,
-        String(formData.get(`entryUpdatedAt:${date}`) ?? ""),
-      ];
+      return [date, String(formData.get(`entryUpdatedAt:${date}`) ?? "")];
     }),
   );
 }
