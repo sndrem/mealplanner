@@ -8,6 +8,10 @@ import {
 
 import { requireUser } from "../lib/auth.server";
 import {
+  buildMealPlanEntriesSnapshot,
+  COLLABORATION_CONFLICT_MESSAGE,
+} from "../lib/collaboration.server";
+import {
   approveMealPlan,
   formatDateOnly,
   getMealPlanPlanningData,
@@ -34,6 +38,7 @@ const CALENDAR_DOWNLOAD_TARGET = "meal-plan-calendar-download";
 interface MealPlanEntryFormState {
   note: string;
   recipeId: string;
+  updatedAt: string;
 }
 
 interface MealPlanActionData {
@@ -104,9 +109,13 @@ export async function loader({
         {
           note: entry?.note ?? "",
           recipeId: entry?.recipeId ?? "",
+          updatedAt: entry?.updatedAt.toISOString() ?? "",
         },
       ];
     }),
+  );
+  const entriesSnapshot = buildMealPlanEntriesSnapshot(
+    result.mealPlan.entries.filter((entry) => entry.mealType === "DINNER"),
   );
   const calendarExportDates = result.mealPlan.entries.flatMap((entry) => {
     if (entry.mealType !== "DINNER" || !entry.recipe) {
@@ -130,7 +139,9 @@ export async function loader({
       endDate: formatDateOnly(result.mealPlan.endDate),
       entries: undefined,
       startDate: formatDateOnly(result.mealPlan.startDate),
+      updatedAt: result.mealPlan.updatedAt.toISOString(),
     },
+    entriesSnapshot,
     notice: getMealPlanNotice(request),
     recipes: result.recipes,
     userRole: result.userRole,
@@ -159,8 +170,10 @@ export async function action({
   const intent = String(formData.get("intent") ?? "");
 
   if (intent === "save-meal-plan-entries") {
+    const entryVersions = parseMealPlanEntryVersions(formData);
     const result = await saveMealPlanEntries({
       entries: parseMealPlanEntries(formData),
+      entryVersions,
       familyId,
       mealPlanId,
       userId: user.id,
@@ -173,10 +186,18 @@ export async function action({
       });
     }
 
+    if (result.status === "CONFLICT") {
+      return {
+        entryFormError: result.formError,
+        entryValues: indexMealPlanEntryValues(result.values, entryVersions),
+        intent,
+      } satisfies MealPlanActionData;
+    }
+
     if (result.status === "VALIDATION_ERROR") {
       return {
         entryFormError: result.formError,
-        entryValues: indexMealPlanEntryValues(result.values),
+        entryValues: indexMealPlanEntryValues(result.values, entryVersions),
         intent,
       } satisfies MealPlanActionData;
     }
@@ -193,11 +214,17 @@ export async function action({
     const result =
       intent === "approve-meal-plan"
         ? await approveMealPlan({
+            entriesSnapshot: String(formData.get("entriesSnapshot") ?? ""),
+            expectedMealPlanUpdatedAt: String(
+              formData.get("mealPlanUpdatedAt") ?? "",
+            ),
             familyId,
             mealPlanId,
             userId: user.id,
           })
         : await reopenMealPlan({
+            entriesSnapshot: "",
+            expectedMealPlanUpdatedAt: "",
             familyId,
             mealPlanId,
             userId: user.id,
@@ -208,6 +235,13 @@ export async function action({
         status: 404,
         statusText: "Not Found",
       });
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        intent,
+        statusFormError: result.formError,
+      } satisfies MealPlanActionData;
     }
 
     if (result.status === "INVALID_TRANSITION") {
@@ -236,6 +270,7 @@ export async function action({
 
   const result = await updateMealPlan({
     endDate: String(formData.get("endDate") ?? ""),
+    expectedMealPlanUpdatedAt: String(formData.get("mealPlanUpdatedAt") ?? ""),
     familyId,
     mealPlanId,
     startDate: String(formData.get("startDate") ?? ""),
@@ -248,6 +283,13 @@ export async function action({
       status: 404,
       statusText: "Not Found",
     });
+  }
+
+  if (result.status === "CONFLICT") {
+    return {
+      formError: result.formError ?? COLLABORATION_CONFLICT_MESSAGE,
+      intent,
+    } satisfies MealPlanActionData;
   }
 
   if (result.status === "VALIDATION_ERROR") {
@@ -405,7 +447,11 @@ export default function FamilyMealPlanRoute({
 
               <div className="grid gap-4">
                 {loaderData.visibleDates.map((date) => {
-                  const entry = entryValues[date] ?? { note: "", recipeId: "" };
+                  const entry = entryValues[date] ?? {
+                    note: "",
+                    recipeId: "",
+                    updatedAt: "",
+                  };
                   const canExportDay = calendarExportDateSet.has(date);
                   const selectedRecipe =
                     loaderData.recipes.find(
@@ -418,6 +464,11 @@ export default function FamilyMealPlanRoute({
                       className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
                     >
                       <input name="entryDate" type="hidden" value={date} />
+                      <input
+                        name={`entryUpdatedAt:${date}`}
+                        type="hidden"
+                        value={entry.updatedAt}
+                      />
 
                       <div className="flex flex-col gap-4">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -620,6 +671,20 @@ export default function FamilyMealPlanRoute({
             {canManageApproval ? (
               <Form className="mt-6 space-y-4" method="post">
                 <input name="intent" type="hidden" value={approvalIntent} />
+                {approvalIntent === "approve-meal-plan" ? (
+                  <>
+                    <input
+                      name="entriesSnapshot"
+                      type="hidden"
+                      value={loaderData.entriesSnapshot}
+                    />
+                    <input
+                      name="mealPlanUpdatedAt"
+                      type="hidden"
+                      value={loaderData.mealPlan.updatedAt}
+                    />
+                  </>
+                ) : null}
 
                 <p className="text-sm leading-6 text-slate-600">
                   Godkjenning markerer ukeplanen som klar for neste steg uten a
@@ -658,6 +723,11 @@ export default function FamilyMealPlanRoute({
 
             <Form className="mt-6 space-y-4" method="post">
               <input name="intent" type="hidden" value="update-meal-plan" />
+              <input
+                name="mealPlanUpdatedAt"
+                type="hidden"
+                value={loaderData.mealPlan.updatedAt}
+              />
 
               <label className="block text-sm font-medium text-slate-700">
                 Navn
@@ -876,13 +946,30 @@ function parseMealPlanEntries(formData: FormData): MealPlanEntryValues[] {
   });
 }
 
-function indexMealPlanEntryValues(entries: MealPlanEntryValues[]) {
+function parseMealPlanEntryVersions(formData: FormData) {
+  return Object.fromEntries(
+    formData.getAll("entryDate").map((dateValue) => {
+      const date = String(dateValue);
+
+      return [
+        date,
+        String(formData.get(`entryUpdatedAt:${date}`) ?? ""),
+      ];
+    }),
+  );
+}
+
+function indexMealPlanEntryValues(
+  entries: MealPlanEntryValues[],
+  entryVersions: Record<string, string>,
+) {
   return Object.fromEntries(
     entries.map((entry) => [
       entry.date,
       {
         note: entry.note,
         recipeId: entry.recipeId,
+        updatedAt: entryVersions[entry.date] ?? "",
       },
     ]),
   );

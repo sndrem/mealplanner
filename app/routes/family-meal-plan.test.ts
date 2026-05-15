@@ -127,8 +127,10 @@ describe("family meal plan route", () => {
         startDate: "2026-05-15",
         status: "DRAFT",
         title: "Langhelg",
-        updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+        updatedAt: "2026-05-01T12:00:00.000Z",
       },
+      entriesSnapshot:
+        "2026-05-15T00:00:00.000Z:DINNER:2026-05-01T12:00:00.000Z",
       notice: "meal-plan-created",
       recipes: [
         {
@@ -146,18 +148,22 @@ describe("family meal plan route", () => {
         "2026-05-15": {
           note: "Bruk rester til lunsj",
           recipeId: "",
+          updatedAt: "2026-05-01T12:00:00.000Z",
         },
         "2026-05-16": {
           note: "",
           recipeId: "",
+          updatedAt: "",
         },
         "2026-05-17": {
           note: "",
           recipeId: "",
+          updatedAt: "",
         },
         "2026-05-18": {
           note: "",
           recipeId: "",
+          updatedAt: "",
         },
       },
     });
@@ -212,6 +218,10 @@ describe("family meal plan route", () => {
           recipeId: "kylling-taco",
         },
       ],
+      entryVersions: {
+        "2026-05-15": "",
+        "2026-05-16": "",
+      },
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",
@@ -222,10 +232,12 @@ describe("family meal plan route", () => {
         "2026-05-15": {
           note: "Bruk rester til lunsj",
           recipeId: "",
+          updatedAt: "",
         },
         "2026-05-16": {
           note: "",
           recipeId: "kylling-taco",
+          updatedAt: "",
         },
       },
       intent: "save-meal-plan-entries",
@@ -292,6 +304,8 @@ describe("family meal plan route", () => {
     });
 
     expect(approveMealPlan).toHaveBeenCalledWith({
+      entriesSnapshot: "",
+      expectedMealPlanUpdatedAt: "",
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",
@@ -336,6 +350,8 @@ describe("family meal plan route", () => {
     });
 
     expect(reopenMealPlan).toHaveBeenCalledWith({
+      entriesSnapshot: "",
+      expectedMealPlanUpdatedAt: "",
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",

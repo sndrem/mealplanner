@@ -19,17 +19,23 @@ const { dbMock, requireFamilyMembershipMock, transactionMock } = vi.hoisted(() =
       },
       manualShoppingItem: {
         create: vi.fn(),
+        deleteMany: vi.fn(),
         findFirst: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn(),
       },
       mealPlan: {
         findFirst: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn(),
       },
       shoppingItemOverride: {
+        create: vi.fn(),
         delete: vi.fn(),
+        deleteMany: vi.fn(),
         findUnique: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn(),
         upsert: vi.fn(),
       },
       store: {
@@ -53,6 +59,13 @@ vi.mock("./family.server", () => {
   };
 });
 
+vi.mock("./write-observability.server", () => {
+  return {
+    logCollaborationFailure: vi.fn(),
+    logCollaborationWrite: vi.fn(),
+  };
+});
+
 import {
   createManualShoppingItem,
   deleteManualShoppingItem,
@@ -65,6 +78,7 @@ const mockMealPlan = {
   endDate: new Date("2026-05-18T00:00:00.000Z"),
   id: "meal-plan-1",
   startDate: new Date("2026-05-15T00:00:00.000Z"),
+  updatedAt: new Date("2026-05-15T00:00:00.000Z"),
 };
 
 describe("shopping-write.server", () => {
@@ -77,6 +91,11 @@ describe("shopping-write.server", () => {
       userId: "user-1",
     });
     dbMock.mealPlan.findFirst.mockResolvedValue(mockMealPlan);
+    dbMock.mealPlan.updateMany.mockResolvedValue({ count: 1 });
+    dbMock.manualShoppingItem.updateMany.mockResolvedValue({ count: 1 });
+    dbMock.manualShoppingItem.deleteMany.mockResolvedValue({ count: 1 });
+    dbMock.shoppingItemOverride.updateMany.mockResolvedValue({ count: 1 });
+    dbMock.shoppingItemOverride.deleteMany.mockResolvedValue({ count: 1 });
     dbMock.$transaction.mockImplementation(async (callback: (tx: typeof transactionMock) => unknown) =>
       callback(transactionMock),
     );
@@ -151,6 +170,7 @@ describe("shopping-write.server", () => {
         note: "Til smoothien",
         preferredStoreId: "store-1",
         quantity: "6 stk",
+        updatedByUserId: "user-1",
       },
     });
   });
@@ -158,9 +178,11 @@ describe("shopping-write.server", () => {
   it("deletes a manual shopping item together with any manual override rows", async () => {
     dbMock.manualShoppingItem.findFirst.mockResolvedValue({
       id: "manual-item-1",
+      updatedAt: new Date("2026-05-15T00:00:00.000Z"),
     });
 
     const result = await deleteManualShoppingItem({
+      expectedUpdatedAt: new Date("2026-05-15T00:00:00.000Z").toISOString(),
       familyId: "family-1",
       manualItemId: "manual-item-1",
       mealPlanId: "meal-plan-1",
@@ -170,17 +192,17 @@ describe("shopping-write.server", () => {
     expect(result).toEqual({
       status: "DELETED",
     });
-    expect(dbMock.$transaction).toHaveBeenCalledTimes(1);
-    expect(transactionMock.shoppingItemOverride.deleteMany).toHaveBeenCalledWith({
+    expect(dbMock.manualShoppingItem.deleteMany).toHaveBeenCalledWith({
+      where: {
+        id: "manual-item-1",
+        updatedAt: new Date("2026-05-15T00:00:00.000Z"),
+      },
+    });
+    expect(dbMock.shoppingItemOverride.deleteMany).toHaveBeenCalledWith({
       where: {
         mealPlanId: "meal-plan-1",
         sourceKey: "manual-item-1",
         sourceType: ShoppingItemSource.MANUAL,
-      },
-    });
-    expect(transactionMock.manualShoppingItem.delete).toHaveBeenCalledWith({
-      where: {
-        id: "manual-item-1",
       },
     });
   });
@@ -191,19 +213,17 @@ describe("shopping-write.server", () => {
     });
     dbMock.shoppingItemOverride.findUnique.mockResolvedValue({
       checked: true,
-      createdAt: new Date("2026-05-15T00:00:00.000Z"),
       id: "override-1",
-      mealPlanId: "meal-plan-1",
       note: null,
       postponedUntilDate: null,
       preferredStoreId: null,
-      sourceKey: "manual-item-1",
       sourceType: ShoppingItemSource.MANUAL,
       updatedAt: new Date("2026-05-15T00:00:00.000Z"),
     });
 
     const result = await toggleShoppingItemChecked({
       checked: false,
+      expectedUpdatedAt: new Date("2026-05-15T00:00:00.000Z").toISOString(),
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       sourceKey: "manual-item-1",
@@ -214,12 +234,13 @@ describe("shopping-write.server", () => {
     expect(result).toEqual({
       status: "UPDATED",
     });
-    expect(dbMock.shoppingItemOverride.delete).toHaveBeenCalledWith({
+    expect(dbMock.shoppingItemOverride.deleteMany).toHaveBeenCalledWith({
       where: {
         id: "override-1",
+        updatedAt: new Date("2026-05-15T00:00:00.000Z"),
       },
     });
-    expect(dbMock.shoppingItemOverride.update).not.toHaveBeenCalled();
+    expect(dbMock.shoppingItemOverride.updateMany).not.toHaveBeenCalled();
   });
 
   it("upserts generated override fields while preserving checked state", async () => {
@@ -240,6 +261,7 @@ describe("shopping-write.server", () => {
     });
 
     const result = await updateGeneratedShoppingItemOverride({
+      expectedUpdatedAt: new Date("2026-05-15T00:00:00.000Z").toISOString(),
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       sourceKey: "entry-1:ingredient-1",
@@ -254,28 +276,17 @@ describe("shopping-write.server", () => {
     expect(result).toEqual({
       status: "UPDATED",
     });
-    expect(dbMock.shoppingItemOverride.upsert).toHaveBeenCalledWith({
-      create: {
-        checked: true,
-        mealPlanId: "meal-plan-1",
-        note: "Husk tilbud",
-        postponedUntilDate: new Date("2026-05-17T00:00:00.000Z"),
-        preferredStoreId: "store-2",
-        sourceKey: "entry-1:ingredient-1",
-        sourceType: ShoppingItemSource.GENERATED,
-      },
-      update: {
+    expect(dbMock.shoppingItemOverride.updateMany).toHaveBeenCalledWith({
+      data: {
         checked: true,
         note: "Husk tilbud",
         postponedUntilDate: new Date("2026-05-17T00:00:00.000Z"),
         preferredStoreId: "store-2",
+        updatedByUserId: "user-1",
       },
       where: {
-        mealPlanId_sourceType_sourceKey: {
-          mealPlanId: "meal-plan-1",
-          sourceKey: "entry-1:ingredient-1",
-          sourceType: ShoppingItemSource.GENERATED,
-        },
+        id: "override-1",
+        updatedAt: new Date("2026-05-15T00:00:00.000Z"),
       },
     });
   });
@@ -283,6 +294,7 @@ describe("shopping-write.server", () => {
   it("updates the meal plan active shopping date within range", async () => {
     const result = await updateActiveShoppingDate({
       activeShoppingDate: "2026-05-17",
+      expectedMealPlanUpdatedAt: mockMealPlan.updatedAt.toISOString(),
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       userId: "user-1",
@@ -291,12 +303,14 @@ describe("shopping-write.server", () => {
     expect(result).toEqual({
       status: "UPDATED",
     });
-    expect(dbMock.mealPlan.update).toHaveBeenCalledWith({
+    expect(dbMock.mealPlan.updateMany).toHaveBeenCalledWith({
       data: {
         activeShoppingDate: new Date("2026-05-17T00:00:00.000Z"),
+        updatedByUserId: "user-1",
       },
       where: {
         id: "meal-plan-1",
+        updatedAt: mockMealPlan.updatedAt,
       },
     });
   });
