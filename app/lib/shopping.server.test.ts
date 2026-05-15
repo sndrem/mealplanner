@@ -202,6 +202,7 @@ describe("shopping.server", () => {
           },
           preferredStoreId: "store-1",
           quantity: "2 beger",
+          updatedAt: new Date("2026-05-15T00:00:00.000Z"),
         },
       ],
       shoppingOverrides: [
@@ -216,6 +217,7 @@ describe("shopping.server", () => {
           preferredStoreId: "store-2",
           sourceKey: "entry-1:ingredient-1|entry-2:ingredient-3",
           sourceType: "GENERATED",
+          updatedAt: new Date("2026-05-15T10:00:00.000Z"),
         },
         {
           checked: true,
@@ -225,6 +227,7 @@ describe("shopping.server", () => {
           preferredStoreId: null,
           sourceKey: "manual-item-1",
           sourceType: "MANUAL",
+          updatedAt: new Date("2026-05-15T11:00:00.000Z"),
         },
       ],
       startDate: new Date("2026-05-15T00:00:00.000Z"),
@@ -605,6 +608,7 @@ describe("shopping.server", () => {
           },
           preferredStoreId: "store-1",
           quantity: "2 beger",
+          updatedAt: new Date("2026-05-15T00:00:00.000Z"),
         },
       ],
       shoppingOverrides: [],
