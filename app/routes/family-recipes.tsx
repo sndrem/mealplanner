@@ -234,7 +234,9 @@ export default function FamilyRecipesRoute({
                   Ingrediensnavn
                   <input
                     className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
-                    defaultValue={createValues.ingredients[0]?.displayName ?? ""}
+                    defaultValue={
+                      createValues.ingredients[0]?.displayName ?? ""
+                    }
                     name="ingredientDisplayName:0"
                     placeholder="For eksempel Kyllingfilet"
                     type="text"
@@ -297,7 +299,7 @@ export default function FamilyRecipesRoute({
               Familieoppskrifter
             </h2>
             <p className="text-sm leading-6 text-slate-600">
-              Oppskrifter som tilhorer {loaderData.family.name}.{" "}
+              Oppskrifter som tilhører {loaderData.family.name}.{" "}
               {canManageRecipes
                 ? "Som administrator kan du opprette, redigere og slette disse."
                 : "Du kan apne og lese oppskriftene, men ikke endre dem."}
@@ -417,7 +419,7 @@ function RecipeListCard({
         </div>
         {!readOnly && to ? (
           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
-            Apne
+            Åpne
           </span>
         ) : null}
       </div>

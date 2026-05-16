@@ -3,6 +3,7 @@ import {
   Form,
   Link,
   isRouteErrorResponse,
+  useFetcher,
   useNavigation,
   type MetaFunction,
 } from "react-router";
@@ -32,6 +33,7 @@ interface StoreModeActionData {
   activeShoppingDateValue?: string;
   formError?: string;
   intent?: StoreModeIntent;
+  ok?: boolean;
   selectedStoreFieldErrors?: {
     selectedStoreId?: string;
   };
@@ -217,12 +219,10 @@ export async function action({
       } satisfies StoreModeActionData;
     }
 
-    return buildStoreModeRedirect({
-      familyId,
-      mealPlanId,
-      notice: "shopping-item-check-state-updated",
-      request,
-    });
+    return {
+      intent,
+      ok: true,
+    } satisfies StoreModeActionData;
   }
 
   return {
@@ -235,8 +235,14 @@ export default function FamilyMealPlanStoreModeRoute({
   loaderData,
 }: FamilyMealPlanStoreModeRouteProps) {
   const navigation = useNavigation();
+  const toggleFetcher = useFetcher<StoreModeActionData>();
   const pendingIntent = navigation.formData?.get("intent");
-  const pendingSourceKey = getPendingSourceKey(navigation.formData);
+  const pendingSourceKey = getPendingSourceKey(toggleFetcher.formData);
+  const toggleFormError =
+    toggleFetcher.data?.intent === "toggle-shopping-item-checked" &&
+    toggleFetcher.data.formError
+      ? toggleFetcher.data.formError
+      : null;
   const noticeContent = loaderData.notice
     ? getStoreModeNoticeContent(loaderData.notice)
     : null;
@@ -319,12 +325,14 @@ export default function FamilyMealPlanStoreModeRoute({
           </section>
         ) : null}
 
-        {actionData?.formError ? (
+        {actionData?.formError || toggleFormError ? (
           <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
             <h2 className="text-base font-semibold">
               Kunne ikke oppdatere butikkmodus
             </h2>
-            <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
+            <p className="mt-2 text-sm leading-6">
+              {actionData?.formError ?? toggleFormError}
+            </p>
           </section>
         ) : null}
 
@@ -440,21 +448,18 @@ export default function FamilyMealPlanStoreModeRoute({
                 <div className="mt-4 grid gap-3">
                   {section.items.map((item) => {
                     const isPendingToggle =
-                      navigation.state === "submitting" &&
-                      pendingIntent === "toggle-shopping-item-checked" &&
+                      toggleFetcher.state !== "idle" &&
+                      toggleFetcher.formData?.get("intent") ===
+                        "toggle-shopping-item-checked" &&
                       pendingSourceKey === item.sourceKey;
 
                     return (
-                      <article
+                      <toggleFetcher.Form
                         key={item.sourceKey}
-                        className={
-                          item.checked
-                            ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-4"
-                            : "rounded-[24px] border border-slate-200 bg-slate-50 p-4"
-                        }
+                        className="block"
+                        method="post"
+                        preventScrollReset
                       >
-                        <div className="flex items-start gap-4">
-                          <Form method="post">
                             <input
                               name="intent"
                               type="hidden"
@@ -480,24 +485,37 @@ export default function FamilyMealPlanStoreModeRoute({
                               type="hidden"
                               value={getToggleExpectedVersion(item)}
                             />
-                            <button
-                              className={
-                                item.checked
-                                  ? "flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-lg font-semibold text-white"
-                                  : "flex h-12 w-12 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-lg font-semibold text-slate-400"
-                              }
-                              disabled={isPendingToggle}
-                              type="submit"
-                            >
-                              {item.checked ? "✓" : ""}
-                            </button>
-                          </Form>
+                        <button
+                          aria-label={
+                            item.checked
+                              ? `Marker ${item.name} som ikke handlet`
+                              : `Marker ${item.name} som handlet`
+                          }
+                          aria-pressed={item.checked}
+                          className={
+                            item.checked
+                              ? "flex w-full cursor-pointer touch-manipulation items-start gap-4 rounded-[24px] border border-emerald-200 bg-emerald-50 p-4 text-left transition hover:bg-emerald-100 active:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-70"
+                              : "flex w-full cursor-pointer touch-manipulation items-start gap-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4 text-left transition hover:bg-slate-100 active:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                          }
+                          disabled={isPendingToggle}
+                          type="submit"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={
+                              item.checked
+                                ? "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg font-semibold text-white"
+                                : "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-lg font-semibold text-slate-400"
+                            }
+                          >
+                            {item.checked ? "✓" : ""}
+                          </span>
 
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-base font-semibold text-slate-950">
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <span className="text-base font-semibold text-slate-950">
                                 {item.name}
-                              </h3>
+                              </span>
                               {item.quantityLabel ? (
                                 <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
                                   {item.quantityLabel}
@@ -515,9 +533,9 @@ export default function FamilyMealPlanStoreModeRoute({
                                   Foretrekker {item.preferredStore.name}
                                 </span>
                               ) : null}
-                            </div>
+                            </span>
 
-                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                            <span className="mt-2 block text-sm leading-6 text-slate-600">
                               {item.sourceType === "GENERATED"
                                 ? `Fra ${item.occurrenceCount} planlagte ${
                                     item.occurrenceCount === 1
@@ -527,23 +545,23 @@ export default function FamilyMealPlanStoreModeRoute({
                                 : item.buyOnDate
                                   ? `Manuell vare planlagt for ${formatDateLabel(item.buyOnDate)}.`
                                   : "Manuell vare uten spesifikk handledato."}
-                            </p>
+                            </span>
 
                             {item.note ? (
-                              <p className="mt-2 text-sm leading-6 text-slate-700">
+                              <span className="mt-2 block text-sm leading-6 text-slate-700">
                                 Notat: {item.note}
-                              </p>
+                              </span>
                             ) : null}
                             {item.sourceType === "GENERATED" &&
                             item.postponedUntilDate ? (
-                              <p className="mt-2 text-sm leading-6 text-amber-800">
+                              <span className="mt-2 block text-sm leading-6 text-amber-800">
                                 Utsatt til{" "}
                                 {formatDateLabel(item.postponedUntilDate)}.
-                              </p>
+                              </span>
                             ) : null}
-                          </div>
-                        </div>
-                      </article>
+                          </span>
+                        </button>
+                      </toggleFetcher.Form>
                     );
                   })}
                 </div>
