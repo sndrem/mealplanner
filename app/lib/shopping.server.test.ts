@@ -1,24 +1,26 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 
-const { dbMock, requireFamilyMembershipMock } = vi.hoisted(() => {
-  return {
-    dbMock: {
-      ingredientCategory: {
-        findMany: vi.fn(),
+const { dbMock, getFamilyStockMatchSetMock, requireFamilyMembershipMock } =
+  vi.hoisted(() => {
+    return {
+      dbMock: {
+        ingredientCategory: {
+          findMany: vi.fn(),
+        },
+        mealPlan: {
+          findFirst: vi.fn(),
+        },
+        store: {
+          findMany: vi.fn(),
+        },
+        userStorePreference: {
+          findUnique: vi.fn(),
+        },
       },
-      mealPlan: {
-        findFirst: vi.fn(),
-      },
-      store: {
-        findMany: vi.fn(),
-      },
-      userStorePreference: {
-        findUnique: vi.fn(),
-      },
-    },
-    requireFamilyMembershipMock: vi.fn(),
-  };
-});
+      getFamilyStockMatchSetMock: vi.fn(),
+      requireFamilyMembershipMock: vi.fn(),
+    };
+  });
 
 vi.mock("./db.server", () => {
   return {
@@ -32,7 +34,20 @@ vi.mock("./family.server", () => {
   };
 });
 
-import { getMealPlanShoppingData, getMealPlanStoreModeData } from "./shopping.server";
+vi.mock("./stock.server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./stock.server")>();
+
+  return {
+    ...actual,
+    getFamilyStockMatchSet: getFamilyStockMatchSetMock,
+  };
+});
+
+import {
+  getMealPlanShoppingData,
+  getMealPlanStoreModeData,
+  getStockIngredientsForMealPlan,
+} from "./shopping.server";
 
 const mockMembership = {
   family: {
@@ -50,6 +65,10 @@ describe("shopping.server", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requireFamilyMembershipMock.mockResolvedValue(mockMembership);
+    getFamilyStockMatchSetMock.mockResolvedValue({
+      displayNameNormalized: new Set(),
+      ingredientIds: new Set(),
+    });
     dbMock.userStorePreference.findUnique.mockResolvedValue(null);
     dbMock.ingredientCategory.findMany.mockResolvedValue([
       {
@@ -208,6 +227,7 @@ describe("shopping.server", () => {
       shoppingOverrides: [
         {
           checked: true,
+          includeDespiteStock: false,
           note: "Kjop pa tilbud",
           postponedUntilDate: new Date("2026-05-16T00:00:00.000Z"),
           preferredStore: {
@@ -221,6 +241,7 @@ describe("shopping.server", () => {
         },
         {
           checked: true,
+          includeDespiteStock: false,
           note: null,
           postponedUntilDate: null,
           preferredStore: null,
@@ -705,6 +726,168 @@ describe("shopping.server", () => {
       checkedCount: 0,
       totalCount: 2,
     });
+  });
+
+  it("excludes stock ingredients from generated shopping items and exposes a stock summary", async () => {
+    getFamilyStockMatchSetMock.mockResolvedValue({
+      displayNameNormalized: new Set(),
+      ingredientIds: new Set(["canonical-lime"]),
+    });
+
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  displayName: "Frukt og gront",
+                  id: "category-produce",
+                },
+                categoryId: "category-produce",
+                displayName: "Lime",
+                id: "ingredient-1",
+                ingredientId: "canonical-lime",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+              {
+                amount: "1",
+                category: {
+                  displayName: "Brod",
+                  id: "category-bakery",
+                },
+                categoryId: "category-bakery",
+                displayName: "Tortillalefser",
+                id: "ingredient-2",
+                ingredientId: "canonical-tortilla",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 2,
+                unit: "pk",
+              },
+            ],
+            title: "Taco",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Uke 20",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [],
+      },
+    ]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.itemCounts.generated).toBe(1);
+    expect(result.projectedItems.map((item) => item.name)).toEqual(["Tortillalefser"]);
+    expect(result.stockIngredientCount).toBe(1);
+    expect(result.stockIngredientsForPlan[0]).toMatchObject({
+      isOptedIn: false,
+      name: "Lime",
+      sourceKey: "entry-1:ingredient-1",
+    });
+  });
+
+  it("includes opted-in stock ingredients in generated shopping items", async () => {
+    getFamilyStockMatchSetMock.mockResolvedValue({
+      displayNameNormalized: new Set(),
+      ingredientIds: new Set(["canonical-lime"]),
+    });
+
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  displayName: "Frukt og gront",
+                  id: "category-produce",
+                },
+                categoryId: "category-produce",
+                displayName: "Lime",
+                id: "ingredient-1",
+                ingredientId: "canonical-lime",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Taco",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [
+        {
+          checked: false,
+          includeDespiteStock: true,
+          note: null,
+          postponedUntilDate: null,
+          preferredStore: null,
+          preferredStoreId: null,
+          sourceKey: "entry-1:ingredient-1",
+          sourceType: "GENERATED",
+          updatedAt: new Date("2026-05-15T10:00:00.000Z"),
+        },
+      ],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Uke 20",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [],
+      },
+    ]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.itemCounts.generated).toBe(1);
+    expect(result.projectedItems[0]?.name).toBe("Lime");
+    expect(result.stockIngredientCount).toBe(0);
   });
 
   it("throws a not-found response when the meal plan is outside the family scope", async () => {

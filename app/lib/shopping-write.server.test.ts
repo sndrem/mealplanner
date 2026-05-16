@@ -1,7 +1,14 @@
 import { ShoppingItemSource } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { dbMock, requireFamilyMembershipMock, transactionMock } = vi.hoisted(() => {
+const {
+  dbMock,
+  getFamilyStockMatchSetMock,
+  getStockIngredientsForMealPlanMock,
+  loadShoppingMealPlanMock,
+  requireFamilyMembershipMock,
+  transactionMock,
+} = vi.hoisted(() => {
   const transactionMock = {
     manualShoppingItem: {
       delete: vi.fn(),
@@ -42,6 +49,9 @@ const { dbMock, requireFamilyMembershipMock, transactionMock } = vi.hoisted(() =
         findFirst: vi.fn(),
       },
     },
+    getFamilyStockMatchSetMock: vi.fn(),
+    getStockIngredientsForMealPlanMock: vi.fn(),
+    loadShoppingMealPlanMock: vi.fn(),
     requireFamilyMembershipMock: vi.fn(),
     transactionMock,
   };
@@ -66,9 +76,23 @@ vi.mock("./write-observability.server", () => {
   };
 });
 
+vi.mock("./shopping.server", () => {
+  return {
+    getStockIngredientsForMealPlan: getStockIngredientsForMealPlanMock,
+    loadShoppingMealPlan: loadShoppingMealPlanMock,
+  };
+});
+
+vi.mock("./stock.server", () => {
+  return {
+    getFamilyStockMatchSet: getFamilyStockMatchSetMock,
+  };
+});
+
 import {
   createManualShoppingItem,
   deleteManualShoppingItem,
+  optInStockShoppingItems,
   toggleShoppingItemChecked,
   updateActiveShoppingDate,
   updateGeneratedShoppingItemOverride,
@@ -251,6 +275,7 @@ describe("shopping-write.server", () => {
       checked: true,
       createdAt: new Date("2026-05-15T00:00:00.000Z"),
       id: "override-1",
+      includeDespiteStock: false,
       mealPlanId: "meal-plan-1",
       note: null,
       postponedUntilDate: null,
@@ -279,6 +304,7 @@ describe("shopping-write.server", () => {
     expect(dbMock.shoppingItemOverride.updateMany).toHaveBeenCalledWith({
       data: {
         checked: true,
+        includeDespiteStock: false,
         note: "Husk tilbud",
         postponedUntilDate: new Date("2026-05-17T00:00:00.000Z"),
         preferredStoreId: "store-2",
@@ -289,6 +315,48 @@ describe("shopping-write.server", () => {
         updatedAt: new Date("2026-05-15T00:00:00.000Z"),
       },
     });
+  });
+
+  it("opts stock ingredients into the generated shopping list", async () => {
+    loadShoppingMealPlanMock.mockResolvedValue({
+      id: "meal-plan-1",
+      shoppingOverrides: [],
+    });
+    getFamilyStockMatchSetMock.mockResolvedValue({
+      displayNameNormalized: new Set(),
+      ingredientIds: new Set(["ingredient-salt"]),
+    });
+    getStockIngredientsForMealPlanMock.mockReturnValue([
+      {
+        isOptedIn: false,
+        name: "Salt",
+        sourceKey: "entry-1:ingredient-1",
+      },
+    ]);
+    dbMock.shoppingItemOverride.findUnique.mockResolvedValue(null);
+    dbMock.shoppingItemOverride.upsert.mockResolvedValue({
+      id: "override-stock-1",
+    });
+
+    const result = await optInStockShoppingItems({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      sourceKeys: ["entry-1:ingredient-1"],
+      userId: "user-1",
+    });
+
+    expect(result.status).toBe("UPDATED");
+    expect(dbMock.shoppingItemOverride.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          includeDespiteStock: true,
+          sourceKey: "entry-1:ingredient-1",
+        }),
+        update: expect.objectContaining({
+          includeDespiteStock: true,
+        }),
+      }),
+    );
   });
 
   it("updates the meal plan active shopping date within range", async () => {

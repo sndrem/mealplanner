@@ -7,6 +7,11 @@ import {
 } from "./collaboration.server";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
+import {
+  getStockIngredientsForMealPlan,
+  loadShoppingMealPlan,
+} from "./shopping.server";
+import { getFamilyStockMatchSet } from "./stock.server";
 import { logCollaborationFailure, logCollaborationWrite } from "./write-observability.server";
 
 export interface ManualShoppingItemValues {
@@ -421,6 +426,7 @@ export async function toggleShoppingItemChecked({
     select: {
       checked: true,
       id: true,
+      includeDespiteStock: true,
       note: true,
       postponedUntilDate: true,
       preferredStoreId: true,
@@ -578,6 +584,147 @@ export async function toggleShoppingItemChecked({
   }
 }
 
+export async function optInStockShoppingItems({
+  familyId,
+  mealPlanId,
+  sourceKeys,
+  userId,
+}: {
+  familyId: string;
+  mealPlanId: string;
+  sourceKeys: string[];
+  userId: string;
+}) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const uniqueSourceKeys = [...new Set(sourceKeys.map((key) => key.trim()).filter(Boolean))];
+
+  if (uniqueSourceKeys.length === 0) {
+    return {
+      status: "VALIDATION_ERROR" as const,
+      formError: "Velg minst en basisvare som skal legges til i handlelisten.",
+    };
+  }
+
+  const mealPlan = await loadShoppingMealPlan({
+    familyId,
+    mealPlanId,
+  });
+
+  if (!mealPlan) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  const stockMatchSet = await getFamilyStockMatchSet(familyId);
+  const includeDespiteStockKeys = new Set(
+    mealPlan.shoppingOverrides
+      .filter(
+        (override) =>
+          override.sourceType === ShoppingItemSource.GENERATED &&
+          override.includeDespiteStock,
+      )
+      .map((override) => override.sourceKey),
+  );
+  const stockIngredients = getStockIngredientsForMealPlan({
+    includeDespiteStockKeys,
+    mealPlan,
+    stockMatchSet,
+  });
+  const allowedSourceKeys = new Set(
+    stockIngredients.map((ingredient) => ingredient.sourceKey),
+  );
+  const invalidSourceKeys = uniqueSourceKeys.filter(
+    (sourceKey) => !allowedSourceKeys.has(sourceKey),
+  );
+
+  if (invalidSourceKeys.length > 0) {
+    return {
+      status: "VALIDATION_ERROR" as const,
+      formError: "En eller flere basisvarer finnes ikke i ukeplanen.",
+    };
+  }
+
+  try {
+    for (const sourceKey of uniqueSourceKeys) {
+      const existingOverride = await db.shoppingItemOverride.findUnique({
+        select: {
+          checked: true,
+          id: true,
+          note: true,
+          postponedUntilDate: true,
+          preferredStoreId: true,
+        },
+        where: {
+          mealPlanId_sourceType_sourceKey: {
+            mealPlanId: mealPlan.id,
+            sourceKey,
+            sourceType: ShoppingItemSource.GENERATED,
+          },
+        },
+      });
+
+      await db.shoppingItemOverride.upsert({
+        create: {
+          checked: existingOverride?.checked ?? false,
+          includeDespiteStock: true,
+          mealPlanId: mealPlan.id,
+          note: existingOverride?.note ?? null,
+          postponedUntilDate: existingOverride?.postponedUntilDate ?? null,
+          preferredStoreId: existingOverride?.preferredStoreId ?? null,
+          sourceKey,
+          sourceType: ShoppingItemSource.GENERATED,
+          ...buildActorUpdate(userId),
+        },
+        update: {
+          includeDespiteStock: true,
+          ...buildActorUpdate(userId),
+        },
+        where: {
+          mealPlanId_sourceType_sourceKey: {
+            mealPlanId: mealPlan.id,
+            sourceKey,
+            sourceType: ShoppingItemSource.GENERATED,
+          },
+        },
+      });
+    }
+
+    logCollaborationWrite({
+      action: "opt-in-stock-shopping-items",
+      domain: "shopping",
+      entityId: mealPlan.id,
+      entityType: "meal-plan",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "UPDATED",
+      userId,
+    });
+
+    return {
+      status: "UPDATED" as const,
+    };
+  } catch (error) {
+    logCollaborationFailure({
+      action: "opt-in-stock-shopping-items",
+      domain: "shopping",
+      entityId: mealPlan.id,
+      entityType: "meal-plan",
+      error,
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    throw error;
+  }
+}
+
 export async function updateGeneratedShoppingItemOverride({
   expectedUpdatedAt,
   familyId,
@@ -623,6 +770,7 @@ export async function updateGeneratedShoppingItemOverride({
     select: {
       checked: true,
       id: true,
+      includeDespiteStock: true,
       note: true,
       postponedUntilDate: true,
       preferredStoreId: true,
@@ -650,11 +798,13 @@ export async function updateGeneratedShoppingItemOverride({
 
   const nextData: {
     checked: boolean;
+    includeDespiteStock: boolean;
     note: string | null;
     postponedUntilDate: Date | null;
     preferredStoreId: string | null;
   } = {
     checked: existingOverride?.checked ?? false,
+    includeDespiteStock: existingOverride?.includeDespiteStock ?? false,
     note: validation.values.note || null,
     postponedUntilDate: validation.postponedUntilDate ?? null,
     preferredStoreId: validation.preferredStoreId,
@@ -1164,6 +1314,7 @@ function parseDateOnly(value: string) {
 }
 
 function shouldDeleteOverrideAfterUnchecked(existingOverride: {
+  includeDespiteStock: boolean;
   note: string | null;
   postponedUntilDate: Date | null;
   preferredStoreId: string | null;
@@ -1173,14 +1324,26 @@ function shouldDeleteOverrideAfterUnchecked(existingOverride: {
     return true;
   }
 
-  return !existingOverride.note && !existingOverride.postponedUntilDate && !existingOverride.preferredStoreId;
+  return (
+    !existingOverride.includeDespiteStock &&
+    !existingOverride.note &&
+    !existingOverride.postponedUntilDate &&
+    !existingOverride.preferredStoreId
+  );
 }
 
 function isOverrideEmpty(values: {
   checked: boolean;
+  includeDespiteStock: boolean;
   note: string | null;
   postponedUntilDate: Date | null;
   preferredStoreId: string | null;
 }) {
-  return !values.checked && !values.note && !values.postponedUntilDate && !values.preferredStoreId;
+  return (
+    !values.checked &&
+    !values.includeDespiteStock &&
+    !values.note &&
+    !values.postponedUntilDate &&
+    !values.preferredStoreId
+  );
 }

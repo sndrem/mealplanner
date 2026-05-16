@@ -3,6 +3,11 @@ import { MealType, Prisma, ShoppingItemSource } from "@prisma/client";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 import { getMealPlanDateRange } from "./meal-plan.server";
+import {
+  getFamilyStockMatchSet,
+  isStockIngredientMatch,
+  type FamilyStockMatchSet,
+} from "./stock.server";
 
 const storeSummarySelect = Prisma.validator<Prisma.StoreSelect>()({
   id: true,
@@ -57,6 +62,7 @@ const shoppingOverrideSelect =
   Prisma.validator<Prisma.ShoppingItemOverrideSelect>()({
     checked: true,
     id: true,
+    includeDespiteStock: true,
     note: true,
     postponedUntilDate: true,
     preferredStore: {
@@ -86,7 +92,7 @@ const manualShoppingItemSelect =
     updatedAt: true,
   });
 
-const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
+export const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
   activeShoppingDate: true,
   endDate: true,
   updatedAt: true,
@@ -158,6 +164,8 @@ interface GeneratedProjectionBucket {
     id: string;
     name: string;
   };
+  displayName: string;
+  ingredientId: string | null;
   name: string;
   occurrences: ProjectedShoppingOccurrence[];
   occurrenceKeys: string[];
@@ -168,6 +176,19 @@ interface GeneratedProjectionBucket {
     recipeTitle: string;
   };
   unit: string | null;
+}
+
+export interface ProjectedStockIngredientSummary {
+  category: {
+    id: string;
+    name: string;
+  };
+  isOptedIn: boolean;
+  name: string;
+  occurrenceCount: number;
+  occurrences: ProjectedShoppingOccurrence[];
+  quantityLabel: string | null;
+  sourceKey: string;
 }
 
 interface ProjectedShoppingItemBase {
@@ -235,6 +256,22 @@ export interface StoreModeProgress {
   totalCount: number;
 }
 
+export async function loadShoppingMealPlan({
+  familyId,
+  mealPlanId,
+}: {
+  familyId: string;
+  mealPlanId: string;
+}) {
+  return db.mealPlan.findFirst({
+    select: shoppingMealPlanSelect,
+    where: {
+      familyId,
+      id: mealPlanId,
+    },
+  });
+}
+
 export async function getMealPlanShoppingData({
   familyId,
   mealPlanId,
@@ -249,12 +286,9 @@ export async function getMealPlanShoppingData({
     userId,
   });
 
-  const mealPlan = await db.mealPlan.findFirst({
-    select: shoppingMealPlanSelect,
-    where: {
-      familyId,
-      id: mealPlanId,
-    },
+  const mealPlan = await loadShoppingMealPlan({
+    familyId,
+    mealPlanId,
   });
 
   if (!mealPlan) {
@@ -264,7 +298,7 @@ export async function getMealPlanShoppingData({
     });
   }
 
-  const [stores, categories] = await Promise.all([
+  const [stores, categories, stockMatchSet] = await Promise.all([
     db.store.findMany({
       orderBy: [{ name: "asc" }],
       select: shoppingStoreSelect,
@@ -276,11 +310,22 @@ export async function getMealPlanShoppingData({
       orderBy: [{ displayName: "asc" }],
       select: shoppingCategorySelect,
     }),
+    getFamilyStockMatchSet(familyId),
   ]);
 
+  const includeDespiteStockKeys = buildIncludeDespiteStockKeys(
+    mealPlan.shoppingOverrides,
+  );
   const generatedItems = projectGeneratedShoppingItems({
+    includeDespiteStockKeys,
     mealPlan,
+    stockMatchSet,
     stores,
+  });
+  const stockIngredientsForPlan = getStockIngredientsForMealPlan({
+    includeDespiteStockKeys,
+    mealPlan,
+    stockMatchSet,
   });
   const manualItems = projectManualShoppingItems({
     mealPlan,
@@ -303,6 +348,8 @@ export async function getMealPlanShoppingData({
     },
     mealPlan,
     projectedItems,
+    stockIngredientCount: stockIngredientsForPlan.length,
+    stockIngredientsForPlan,
     storeGroups: buildProjectedStoreGroups(projectedItems),
     stores: stores.map((store) => ({
       id: store.id,
@@ -327,33 +374,35 @@ export async function getMealPlanStoreModeData({
     userId,
   });
 
-  const [mealPlan, stores, selectedStorePreference] = await Promise.all([
-    db.mealPlan.findFirst({
-      select: shoppingMealPlanSelect,
-      where: {
-        familyId,
-        id: mealPlanId,
-      },
-    }),
-    db.store.findMany({
-      orderBy: [{ name: "asc" }],
-      select: shoppingStoreSelect,
-      where: {
-        OR: [{ familyId: null }, { familyId }],
-      },
-    }),
-    db.userStorePreference.findUnique({
-      select: {
-        selectedStoreId: true,
-      },
-      where: {
-        userId_familyId: {
+  const [mealPlan, stores, selectedStorePreference, stockMatchSet] =
+    await Promise.all([
+      db.mealPlan.findFirst({
+        select: shoppingMealPlanSelect,
+        where: {
           familyId,
-          userId,
+          id: mealPlanId,
         },
-      },
-    }),
-  ]);
+      }),
+      db.store.findMany({
+        orderBy: [{ name: "asc" }],
+        select: shoppingStoreSelect,
+        where: {
+          OR: [{ familyId: null }, { familyId }],
+        },
+      }),
+      db.userStorePreference.findUnique({
+        select: {
+          selectedStoreId: true,
+        },
+        where: {
+          userId_familyId: {
+            familyId,
+            userId,
+          },
+        },
+      }),
+      getFamilyStockMatchSet(familyId),
+    ]);
 
   if (!mealPlan) {
     throw new Response("Fant ikke ukeplanen.", {
@@ -362,13 +411,23 @@ export async function getMealPlanStoreModeData({
     });
   }
 
+  const includeDespiteStockKeys = buildIncludeDespiteStockKeys(
+    mealPlan.shoppingOverrides,
+  );
   const generatedItems = projectGeneratedShoppingItems({
+    includeDespiteStockKeys,
     mealPlan,
+    stockMatchSet,
     stores,
   });
   const manualItems = projectManualShoppingItems({
     mealPlan,
     stores,
+  });
+  const stockIngredientsForPlan = getStockIngredientsForMealPlan({
+    includeDespiteStockKeys,
+    mealPlan,
+    stockMatchSet,
   });
   const projectedItems = [...generatedItems, ...manualItems];
   const activeShoppingDate = mealPlan.activeShoppingDate ?? mealPlan.startDate;
@@ -406,6 +465,8 @@ export async function getMealPlanStoreModeData({
     mealPlan,
     progress: buildStoreModeProgress(dueItems),
     selectedStore,
+    stockIngredientCount: stockIngredientsForPlan.length,
+    stockIngredientsForPlan,
     stores: stores.map((store) => ({
       id: store.id,
       name: store.name,
@@ -415,11 +476,50 @@ export async function getMealPlanStoreModeData({
   };
 }
 
-function projectGeneratedShoppingItems({
+export function getStockIngredientsForMealPlan({
+  includeDespiteStockKeys,
   mealPlan,
+  stockMatchSet,
+}: {
+  includeDespiteStockKeys: Set<string>;
+  mealPlan: ShoppingMealPlan;
+  stockMatchSet: FamilyStockMatchSet;
+}) {
+  const summaries: ProjectedStockIngredientSummary[] = [];
+
+  for (const bucket of buildGeneratedProjectionBuckets(mealPlan)) {
+    const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
+    const isStock = isStockIngredientMatch(bucket, stockMatchSet);
+
+    if (!isStock || includeDespiteStockKeys.has(sourceKey)) {
+      continue;
+    }
+
+    const occurrences = [...bucket.occurrences].sort(compareProjectedOccurrences);
+
+    summaries.push({
+      category: bucket.category,
+      isOptedIn: false,
+      name: bucket.name,
+      occurrenceCount: occurrences.length,
+      occurrences,
+      quantityLabel: buildQuantityLabel(bucket.amount, bucket.unit),
+      sourceKey,
+    });
+  }
+
+  return summaries.sort((left, right) => left.name.localeCompare(right.name, "nb"));
+}
+
+function projectGeneratedShoppingItems({
+  includeDespiteStockKeys,
+  mealPlan,
+  stockMatchSet,
   stores,
 }: {
+  includeDespiteStockKeys: Set<string>;
   mealPlan: ShoppingMealPlan;
+  stockMatchSet: FamilyStockMatchSet;
   stores: ShoppingStore[];
 }) {
   const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
@@ -427,6 +527,50 @@ function projectGeneratedShoppingItems({
     mealPlan.shoppingOverrides,
     ShoppingItemSource.GENERATED,
   );
+
+  return buildGeneratedProjectionBuckets(mealPlan)
+    .filter((bucket) => {
+      const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
+      const isStock = isStockIngredientMatch(bucket, stockMatchSet);
+
+      return !isStock || includeDespiteStockKeys.has(sourceKey);
+    })
+    .map((bucket) => {
+    const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
+    const override = overrideBySourceKey.get(sourceKey);
+    const preferredStore = override?.preferredStore ?? bucket.preferredStore;
+    const section = resolveStoreSection({
+      category: bucket.category,
+      preferredStore,
+      storeSectionsByStoreId,
+    });
+    const occurrences = [...bucket.occurrences].sort(
+      compareProjectedOccurrences,
+    );
+
+    return {
+      amount: bucket.amount,
+      category: bucket.category,
+      checked: override?.checked ?? false,
+      firstDate: occurrences[0]!.date,
+      lastDate: occurrences[occurrences.length - 1]!.date,
+      name: bucket.name,
+      note: override?.note ?? null,
+      occurrenceCount: occurrences.length,
+      occurrences,
+      collaborationVersion: override?.updatedAt?.toISOString() ?? "",
+      postponedUntilDate: override?.postponedUntilDate ?? null,
+      preferredStore,
+      quantityLabel: buildQuantityLabel(bucket.amount, bucket.unit),
+      section,
+      sourceKey,
+      sourceType: ShoppingItemSource.GENERATED,
+      unit: bucket.unit,
+    } satisfies ProjectedGeneratedShoppingItem;
+    });
+}
+
+function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {
   const buckets = new Map<string, GeneratedProjectionBucket>();
 
   for (const entry of mealPlan.entries) {
@@ -485,6 +629,8 @@ function projectGeneratedShoppingItems({
           id: ingredient.category.id,
           name: ingredient.category.displayName,
         },
+        displayName: ingredient.displayName,
+        ingredientId: ingredient.ingredientId,
         name: ingredient.displayName,
         occurrences: [occurrence],
         occurrenceKeys: [occurrenceKey],
@@ -499,39 +645,19 @@ function projectGeneratedShoppingItems({
     }
   }
 
-  return [...buckets.values()].map((bucket) => {
-    const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
-    const override = overrideBySourceKey.get(sourceKey);
-    const preferredStore = override?.preferredStore ?? bucket.preferredStore;
-    const section = resolveStoreSection({
-      category: bucket.category,
-      preferredStore,
-      storeSectionsByStoreId,
-    });
-    const occurrences = [...bucket.occurrences].sort(
-      compareProjectedOccurrences,
-    );
+  return [...buckets.values()];
+}
 
-    return {
-      amount: bucket.amount,
-      category: bucket.category,
-      checked: override?.checked ?? false,
-      firstDate: occurrences[0]!.date,
-      lastDate: occurrences[occurrences.length - 1]!.date,
-      name: bucket.name,
-      note: override?.note ?? null,
-      occurrenceCount: occurrences.length,
-      occurrences,
-      collaborationVersion: override?.updatedAt?.toISOString() ?? "",
-      postponedUntilDate: override?.postponedUntilDate ?? null,
-      preferredStore,
-      quantityLabel: buildQuantityLabel(bucket.amount, bucket.unit),
-      section,
-      sourceKey,
-      sourceType: ShoppingItemSource.GENERATED,
-      unit: bucket.unit,
-    } satisfies ProjectedGeneratedShoppingItem;
-  });
+function buildIncludeDespiteStockKeys(overrides: ShoppingOverride[]) {
+  return new Set(
+    overrides
+      .filter(
+        (override) =>
+          override.sourceType === ShoppingItemSource.GENERATED &&
+          override.includeDespiteStock,
+      )
+      .map((override) => override.sourceKey),
+  );
 }
 
 function projectManualShoppingItems({

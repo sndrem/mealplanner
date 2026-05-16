@@ -12,6 +12,7 @@ import { getMealPlanShoppingData } from "../lib/shopping.server";
 import {
   createManualShoppingItem,
   deleteManualShoppingItem,
+  optInStockShoppingItems,
   toggleShoppingItemChecked,
   updateGeneratedShoppingItemOverride,
   updateManualShoppingItem,
@@ -26,11 +27,14 @@ type ShoppingNotice =
   | "manual-shopping-item-added"
   | "manual-shopping-item-deleted"
   | "manual-shopping-item-updated"
-  | "shopping-item-check-state-updated";
+  | "shopping-item-check-state-updated"
+  | "stock-shopping-items-opted-in";
 
 type ShoppingIntent =
   | "add-manual-shopping-item"
   | "delete-manual-shopping-item"
+  | "opt-in-stock-shopping-item"
+  | "opt-in-stock-shopping-items"
   | "toggle-shopping-item-checked"
   | "update-generated-shopping-item"
   | "update-manual-shopping-item";
@@ -118,6 +122,14 @@ export async function loader({
         items: section.items.map(serializeProjectedShoppingItem),
       })),
       store: group.store,
+    })),
+    stockIngredientCount: result.stockIngredientCount,
+    stockIngredientsForPlan: result.stockIngredientsForPlan.map((ingredient) => ({
+      ...ingredient,
+      occurrences: ingredient.occurrences.map((occurrence) => ({
+        ...occurrence,
+        date: formatDateOnly(occurrence.date),
+      })),
     })),
     stores: result.stores,
     userRole: result.userRole,
@@ -284,6 +296,41 @@ export async function action({
     });
   }
 
+  if (
+    intent === "opt-in-stock-shopping-item" ||
+    intent === "opt-in-stock-shopping-items"
+  ) {
+    const sourceKeys =
+      intent === "opt-in-stock-shopping-items"
+        ? formData.getAll("sourceKey").map((value) => String(value))
+        : [String(formData.get("sourceKey") ?? "")];
+
+    const result = await optInStockShoppingItems({
+      familyId,
+      mealPlanId,
+      sourceKeys,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    return buildShoppingRedirect({
+      familyId,
+      mealPlanId,
+      notice: "stock-shopping-items-opted-in",
+      request,
+    });
+  }
+
   if (intent === "update-generated-shopping-item") {
     const sourceKey = String(formData.get("sourceKey") ?? "").trim();
 
@@ -411,6 +458,98 @@ export default function FamilyMealPlanShoppingRoute({
               Kunne ikke oppdatere handlelisten
             </h2>
             <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
+          </section>
+        ) : null}
+
+        {loaderData.stockIngredientCount > 0 ? (
+          <section className="rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-5 text-amber-950 shadow-sm">
+            <details>
+              <summary className="cursor-pointer text-base font-semibold">
+                {loaderData.stockIngredientCount} basisvarer brukt denne uken
+              </summary>
+              <div className="mt-4 space-y-4">
+                <p className="text-sm leading-6 text-amber-900">
+                  Disse varene er vanligvis på lager og vises ikke i
+                  handlelisten med mindre du legger dem til for denne uken.
+                </p>
+                <Form className="flex flex-wrap gap-3" method="post">
+                  <input
+                    name="intent"
+                    type="hidden"
+                    value="opt-in-stock-shopping-items"
+                  />
+                  {loaderData.stockIngredientsForPlan.map((ingredient) => (
+                    <input
+                      key={ingredient.sourceKey}
+                      name="sourceKey"
+                      type="hidden"
+                      value={ingredient.sourceKey}
+                    />
+                  ))}
+                  <button
+                    className="rounded-2xl bg-amber-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-950 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={
+                      navigation.state === "submitting" &&
+                      pendingIntent === "opt-in-stock-shopping-items"
+                    }
+                    type="submit"
+                  >
+                    Legg til alle i handlelisten
+                  </button>
+                </Form>
+                <ul className="grid gap-3">
+                  {loaderData.stockIngredientsForPlan.map((ingredient) => (
+                    <li
+                      key={ingredient.sourceKey}
+                      className="rounded-[20px] border border-amber-200 bg-white px-4 py-4"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-950">
+                            {ingredient.name}
+                            {ingredient.quantityLabel
+                              ? ` · ${ingredient.quantityLabel}`
+                              : ""}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-slate-600">
+                            {ingredient.occurrenceCount === 1
+                              ? `Brukt i ${ingredient.occurrences[0]?.recipeTitle}`
+                              : `Brukt i ${ingredient.occurrenceCount} oppskrifter`}
+                            {ingredient.occurrences[0]?.date
+                              ? ` · ${formatDateLabel(ingredient.occurrences[0].date)}`
+                              : ""}
+                          </p>
+                        </div>
+                        <Form method="post">
+                          <input
+                            name="intent"
+                            type="hidden"
+                            value="opt-in-stock-shopping-item"
+                          />
+                          <input
+                            name="sourceKey"
+                            type="hidden"
+                            value={ingredient.sourceKey}
+                          />
+                          <button
+                            className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={
+                              navigation.state === "submitting" &&
+                              pendingIntent === "opt-in-stock-shopping-item" &&
+                              navigation.formData?.get("sourceKey") ===
+                                ingredient.sourceKey
+                            }
+                            type="submit"
+                          >
+                            Legg til i handlelisten
+                          </button>
+                        </Form>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
           </section>
         ) : null}
 
@@ -1325,7 +1464,8 @@ function getShoppingNotice(request: Request): ShoppingNotice | null {
     notice === "manual-shopping-item-added" ||
     notice === "manual-shopping-item-deleted" ||
     notice === "manual-shopping-item-updated" ||
-    notice === "shopping-item-check-state-updated"
+    notice === "shopping-item-check-state-updated" ||
+    notice === "stock-shopping-items-opted-in"
   ) {
     return notice;
   }
@@ -1382,6 +1522,12 @@ function getShoppingNoticeContent(notice: ShoppingNotice) {
       return {
         description: "Avkryssingen for varelinjen ble oppdatert.",
         title: "Handleliste oppdatert",
+      };
+    case "stock-shopping-items-opted-in":
+      return {
+        description:
+          "Basisvarene ble lagt til i handlelisten for denne ukeplanen.",
+        title: "Basisvarer lagt til",
       };
   }
 }
