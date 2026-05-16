@@ -132,6 +132,8 @@ describe("family meal plan store mode route", () => {
         id: "store-1",
         name: "Meny",
       },
+      stockIngredientCount: 0,
+      stockIngredientsForPlan: [],
       stores: [
         {
           id: "store-1",

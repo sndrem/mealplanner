@@ -2,33 +2,34 @@
 
 ## Current Objective
 
-Issue `#33` family recipe CRUD is implemented on branch `issue/33-crud-recipes`: admin-managed family recipes, read-only global list, meal-plan integration, and clearer ingredient handlekategori UI.
+Issue `#36` stock ingredients (basisvarer) is implemented: family registry, shopping projection skip, weekly opt-in via overrides, and UI on Handleliste / Butikkmodus / family settings.
 
 ## Completed
 
-- Added `app/lib/recipe.server.ts` and `app/lib/recipe-write.server.ts` for family recipe list/detail and admin-only create/update/delete.
-- Blocked delete when a recipe is referenced by `MealPlanEntry` (`IN_USE` with entry count).
-- Added `family-recipes` list page (family vs global sections) and `family-recipe` detail editor with `FamilyRecipeEditorCard`.
-- Wired routes, family dashboard link, and meal-plan Oppskriftsbank CTA.
-- Clarified UI copy: handlekategori is per ingredient, not per recipe.
+- Added `FamilyStockIngredient` model and `ShoppingItemOverride.includeDespiteStock` (migration `20260516173423_add_family_stock_ingredients`).
+- Added `app/lib/stock.server.ts`, `app/lib/stock-write.server.ts`, and `app/lib/ingredient-normalize.ts`.
+- Updated `app/lib/shopping.server.ts` to skip stock items in generated projection and expose `getStockIngredientsForMealPlan`.
+- Added `optInStockShoppingItems` in `app/lib/shopping-write.server.ts`.
+- Added route `families/:familyId/stock-ingredients` and family dashboard link.
+- Handleliste shows expandable basisvarer notice with per-item and bulk opt-in; Butikkmodus links to Handleliste when stock items are in play.
 
 ## Files To Read First
 
-- `app/lib/recipe-write.server.ts` - Validation, ingredient replace, delete guard.
-- `app/routes/family-recipes.tsx` - List/create UI with family vs global sections.
-- `app/routes/family-recipe.tsx` - Detail update/delete actions.
-- `app/components/family-recipe-editor-card.tsx` - Ingredient editor UI.
+- `app/lib/shopping.server.ts` — projection skip + stock summary.
+- `app/lib/shopping-write.server.ts` — `optInStockShoppingItems`.
+- `app/routes/family-stock-ingredients.tsx` — admin basisvarer management.
+- `app/routes/family-meal-plan-shopping.tsx` — opt-in UI on Handleliste.
 
 ## Validation
 
-- `npm run test:run -- app/lib/recipe-write.server.test.ts app/routes/family-recipes.test.ts app/routes/family-recipe.test.ts`
+- `npm run test:run -- app/lib/stock.server.test.ts app/lib/stock-write.server.test.ts app/lib/shopping.server.test.ts app/lib/shopping-write.server.test.ts app/routes/family-stock-ingredients.test.ts app/routes/family-meal-plan-shopping.test.ts app/routes/family-meal-plan-store-mode.test.ts`
 - `./node_modules/.bin/tsc --noEmit`
 
 ## Open Items
 
-- Manual smoke test: create recipe, use in meal plan, verify shopping list grouping, try delete while in use.
-- No migration required (uses existing schema).
+- Manual smoke: configure basisvarer, plan meals with staples, confirm Handleliste exclusion, opt in one item, verify store mode and persistence after reload.
+- Display-name matching requires exact normalized names (documented in UI copy).
 
 ## Next Step
 
-Merge PR and verify family admins can manage recipes end-to-end in staging/production.
+Manual QA in browser, then open PR for issue #36 if satisfied.

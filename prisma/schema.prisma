@@ -67,8 +67,9 @@ model Family {
   memberships     FamilyMembership[]
   recipes         Recipe[]
   mealPlans       MealPlan[]
-  stores          Store[]
-  storePreferences UserStorePreference[]
+  stores              Store[]
+  storePreferences    UserStorePreference[]
+  stockIngredients    FamilyStockIngredient[]
 
   @@index([createdByUserId])
   @@index([name])
@@ -109,10 +110,27 @@ model Ingredient {
   defaultCategoryId String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
-  defaultCategory   IngredientCategory? @relation(fields: [defaultCategoryId], references: [id], onDelete: SetNull)
-  recipeIngredients RecipeIngredient[]
+  defaultCategory      IngredientCategory?     @relation(fields: [defaultCategoryId], references: [id], onDelete: SetNull)
+  recipeIngredients    RecipeIngredient[]
+  familyStockIngredients FamilyStockIngredient[]
 
   @@index([defaultCategoryId])
+}
+
+model FamilyStockIngredient {
+  id                    String   @id @default(cuid())
+  familyId              String
+  ingredientId          String?
+  displayNameNormalized String?
+  note                  String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  family                Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  ingredient            Ingredient? @relation(fields: [ingredientId], references: [id], onDelete: SetNull)
+
+  @@unique([familyId, ingredientId])
+  @@unique([familyId, displayNameNormalized])
+  @@index([familyId])
 }
 
 model Recipe {
@@ -241,11 +259,12 @@ model ShoppingItemOverride {
   mealPlanId         String
   sourceType         ShoppingItemSource
   sourceKey          String
-  checked            Boolean            @default(false)
-  postponedUntilDate DateTime?          @db.Date
-  preferredStoreId   String?
-  note               String?
-  updatedByUserId    String?
+  checked               Boolean            @default(false)
+  includeDespiteStock   Boolean            @default(false)
+  postponedUntilDate    DateTime?          @db.Date
+  preferredStoreId      String?
+  note                  String?
+  updatedByUserId       String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   mealPlan           MealPlan           @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)

@@ -19,6 +19,7 @@ vi.mock("../lib/shopping-write.server", () => {
   return {
     createManualShoppingItem: vi.fn(),
     deleteManualShoppingItem: vi.fn(),
+    optInStockShoppingItems: vi.fn(),
     toggleShoppingItemChecked: vi.fn(),
     updateGeneratedShoppingItemOverride: vi.fn(),
     updateManualShoppingItem: vi.fn(),
@@ -29,6 +30,7 @@ import { requireUser } from "../lib/auth.server";
 import { getMealPlanShoppingData } from "../lib/shopping.server";
 import {
   createManualShoppingItem,
+  optInStockShoppingItems,
   toggleShoppingItemChecked,
   updateGeneratedShoppingItemOverride,
 } from "../lib/shopping-write.server";
@@ -224,6 +226,8 @@ describe("family meal plan shopping route", () => {
           },
         },
       ],
+      stockIngredientCount: 0,
+      stockIngredientsForPlan: [],
       stores: [
         {
           id: "store-1",
@@ -355,6 +359,8 @@ describe("family meal plan shopping route", () => {
           },
         },
       ],
+      stockIngredientCount: 0,
+      stockIngredientsForPlan: [],
       stores: [
         {
           id: "store-1",
@@ -364,6 +370,107 @@ describe("family meal plan shopping route", () => {
       userRole: "ADMIN",
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
+  });
+
+  it("serializes stock ingredients for the active meal plan", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(getMealPlanShoppingData).mockResolvedValue({
+      categories: [],
+      family: {
+        id: "family-1",
+        name: "Solberg",
+      },
+      itemCounts: {
+        generated: 1,
+        manual: 0,
+        total: 1,
+      },
+      mealPlan: {
+        activeShoppingDate: null,
+        endDate: new Date("2026-05-18T00:00:00.000Z"),
+        entries: [],
+        id: "meal-plan-1",
+        manualShoppingItems: [],
+        shoppingOverrides: [],
+        startDate: new Date("2026-05-15T00:00:00.000Z"),
+        status: "DRAFT",
+        title: "Uke 20",
+        updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+      },
+      projectedItems: [],
+      stockIngredientCount: 1,
+      stockIngredientsForPlan: [
+        {
+          category: {
+            id: "category-pantry",
+            name: "Torrvarer",
+          },
+          isOptedIn: false,
+          name: "Salt",
+          occurrenceCount: 1,
+          occurrences: [
+            {
+              date: new Date("2026-05-15T00:00:00.000Z"),
+              mealPlanEntryId: "entry-1",
+              recipeId: "recipe-1",
+              recipeIngredientId: "ingredient-1",
+              recipeTitle: "Taco",
+            },
+          ],
+          quantityLabel: "1 ts",
+          sourceKey: "entry-1:ingredient-1",
+        },
+      ],
+      storeGroups: [],
+      stores: [],
+      userRole: "ADMIN",
+      visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
+    });
+
+    const result = await loader({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(),
+    });
+
+    expect(result.stockIngredientCount).toBe(1);
+    expect(result.stockIngredientsForPlan[0]?.name).toBe("Salt");
+    expect(result.stockIngredientsForPlan[0]?.occurrences[0]?.date).toBe(
+      "2026-05-15",
+    );
+  });
+
+  it("opts stock ingredients into the shopping list", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(optInStockShoppingItems).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "opt-in-stock-shopping-item");
+    formData.set("sourceKey", "entry-1:ingredient-1");
+
+    const response = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(
+        "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping",
+        formData,
+      ),
+    });
+
+    expect(optInStockShoppingItems).toHaveBeenCalledWith({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      sourceKeys: ["entry-1:ingredient-1"],
+      userId: "user-1",
+    });
+    expect(response).toBeInstanceOf(Response);
+    expect((response as Response).status).toBe(302);
   });
 
   it("returns manual item validation errors from the server module", async () => {
