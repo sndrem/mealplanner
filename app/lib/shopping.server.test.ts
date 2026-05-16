@@ -43,11 +43,7 @@ vi.mock("./stock.server", async (importOriginal) => {
   };
 });
 
-import {
-  getMealPlanShoppingData,
-  getMealPlanStoreModeData,
-  getStockIngredientsForMealPlan,
-} from "./shopping.server";
+import { getMealPlanShoppingData, getMealPlanStoreModeData } from "./shopping.server";
 
 const mockMembership = {
   family: {
