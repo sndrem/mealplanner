@@ -13,6 +13,7 @@ import {
 } from "../lib/collaboration.server";
 import {
   approveMealPlan,
+  autoFillMealPlanEntries,
   formatDateOnly,
   getMealPlanPlanningData,
   reopenMealPlan,
@@ -23,15 +24,22 @@ import {
 
 type MealPlanNotice =
   | "meal-plan-approved"
+  | "meal-plan-auto-filled"
   | "meal-plan-created"
   | "meal-plan-entries-saved"
   | "meal-plan-reopened"
   | "meal-plan-updated";
 type MealPlanIntent =
   | "approve-meal-plan"
+  | "auto-fill-meal-plan-entries"
   | "reopen-meal-plan"
   | "save-meal-plan-entries"
   | "update-meal-plan";
+
+interface MealPlanNoticeMeta {
+  filledCount: number;
+  warning?: string;
+}
 
 const CALENDAR_DOWNLOAD_TARGET = "meal-plan-calendar-download";
 
@@ -42,6 +50,7 @@ interface MealPlanEntryFormState {
 }
 
 interface MealPlanActionData {
+  autoFillFormError?: string;
   entryFormError?: string;
   entryValues?: Record<string, MealPlanEntryFormState>;
   fieldErrors?: {
@@ -143,6 +152,7 @@ export async function loader({
     },
     entriesSnapshot,
     notice: getMealPlanNotice(request),
+    noticeMeta: getMealPlanNoticeMeta(request),
     recipes: result.recipes,
     userRole: result.userRole,
     visibleDates: result.visibleDates,
@@ -168,6 +178,68 @@ export async function action({
   );
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
+
+  if (intent === "auto-fill-meal-plan-entries") {
+    const result = await autoFillMealPlanEntries({
+      familyId,
+      mealPlanId,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw new Response("Fant ikke ukeplanen.", {
+        status: 404,
+        statusText: "Not Found",
+      });
+    }
+
+    if (
+      result.status === "NOT_DRAFT" ||
+      result.status === "NO_ELIGIBLE_RECIPES"
+    ) {
+      return {
+        autoFillFormError: result.formError,
+        intent,
+      } satisfies MealPlanActionData;
+    }
+
+    if (result.status === "NOTHING_TO_FILL") {
+      return {
+        autoFillFormError: "Alle dagene har allerede en oppskrift eller et notat.",
+        intent,
+      } satisfies MealPlanActionData;
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        autoFillFormError: result.formError,
+        intent,
+      } satisfies MealPlanActionData;
+    }
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        autoFillFormError: result.formError,
+        intent,
+      } satisfies MealPlanActionData;
+    }
+
+    if (result.status === "AUTO_FILLED") {
+      return buildMealPlanRedirect({
+        familyId,
+        filledCount: result.filledCount,
+        mealPlanId,
+        notice: "meal-plan-auto-filled",
+        request,
+        warning: result.warning,
+      });
+    }
+
+    return {
+      autoFillFormError: "Kunne ikke fylle ukeplanen automatisk.",
+      intent,
+    } satisfies MealPlanActionData;
+  }
 
   if (intent === "save-meal-plan-entries") {
     const entryVersions = parseMealPlanEntryVersions(formData);
@@ -318,6 +390,9 @@ export default function FamilyMealPlanRoute({
     navigation.state === "submitting" && pendingIntent === "approve-meal-plan";
   const isReopeningMealPlan =
     navigation.state === "submitting" && pendingIntent === "reopen-meal-plan";
+  const isAutoFillingEntries =
+    navigation.state === "submitting" &&
+    pendingIntent === "auto-fill-meal-plan-entries";
   const isSavingEntries =
     navigation.state === "submitting" &&
     pendingIntent === "save-meal-plan-entries";
@@ -325,8 +400,15 @@ export default function FamilyMealPlanRoute({
     navigation.state === "submitting" && pendingIntent === "update-meal-plan";
   const canManageApproval = loaderData.userRole === "ADMIN";
   const noticeContent = loaderData.notice
-    ? getMealPlanNoticeContent(loaderData.notice)
+    ? getMealPlanNoticeContent(loaderData.notice, loaderData.noticeMeta)
     : null;
+  const emptyDayCount = loaderData.visibleDates.filter((date) => {
+    const entry = loaderData.entriesByDate[date];
+
+    return !entry?.recipeId && !entry?.note;
+  }).length;
+  const canAutoFillEntries =
+    loaderData.mealPlan.status === "DRAFT" && emptyDayCount > 0;
   const titleValue = actionData?.values?.title ?? loaderData.mealPlan.title;
   const startDateValue =
     actionData?.values?.startDate ?? loaderData.mealPlan.startDate;
@@ -438,7 +520,11 @@ export default function FamilyMealPlanRoute({
               </p>
             </div>
 
-            <Form className="mt-6 space-y-4" method="post">
+            <Form
+              key={loaderData.entriesSnapshot}
+              className="mt-6 space-y-4"
+              method="post"
+            >
               <input
                 name="intent"
                 type="hidden"
@@ -558,12 +644,45 @@ export default function FamilyMealPlanRoute({
                 </p>
               ) : null}
 
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  disabled={isSavingEntries || isAutoFillingEntries}
+                  type="submit"
+                >
+                  {isSavingEntries ? "Lagrer middager..." : "Lagre middager"}
+                </button>
+              </div>
+            </Form>
+
+            <Form className="mt-4 space-y-3" method="post">
+              <input
+                name="intent"
+                type="hidden"
+                value="auto-fill-meal-plan-entries"
+              />
+              <p className="text-sm leading-6 text-slate-600">
+                Fyll tomme dager med tilfeldige oppskrifter. Oppskrifter fra de
+                to forrige ukeplanene utelates.
+              </p>
+
+              {actionData?.intent === "auto-fill-meal-plan-entries" &&
+              actionData.autoFillFormError ? (
+                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {actionData.autoFillFormError}
+                </p>
+              ) : null}
+
               <button
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={isSavingEntries}
+                className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                disabled={
+                  !canAutoFillEntries || isAutoFillingEntries || isSavingEntries
+                }
                 type="submit"
               >
-                {isSavingEntries ? "Lagrer middager..." : "Lagre middager"}
+                {isAutoFillingEntries
+                  ? "Fyller tomme dager..."
+                  : "Fyll tomme dager"}
               </button>
             </Form>
           </article>
@@ -853,6 +972,7 @@ function getMealPlanNotice(request: Request): MealPlanNotice | null {
 
   if (
     notice === "meal-plan-approved" ||
+    notice === "meal-plan-auto-filled" ||
     notice === "meal-plan-created" ||
     notice === "meal-plan-entries-saved" ||
     notice === "meal-plan-reopened" ||
@@ -864,16 +984,38 @@ function getMealPlanNotice(request: Request): MealPlanNotice | null {
   return null;
 }
 
+function getMealPlanNoticeMeta(request: Request): MealPlanNoticeMeta | null {
+  const params = new URL(request.url).searchParams;
+
+  if (params.get("notice") !== "meal-plan-auto-filled") {
+    return null;
+  }
+
+  const filledCount = Number(params.get("filled") ?? "0");
+
+  const warningMessage =
+    params.get("warning") === "1" ? params.get("warningMessage") ?? undefined : undefined;
+
+  return {
+    filledCount: Number.isFinite(filledCount) ? filledCount : 0,
+    warning: warningMessage,
+  };
+}
+
 function buildMealPlanRedirect({
   familyId,
+  filledCount,
   mealPlanId,
   notice,
   request,
+  warning,
 }: {
   familyId: string;
+  filledCount?: number;
   mealPlanId: string;
   notice: MealPlanNotice;
   request: Request;
+  warning?: string;
 }) {
   const url = new URL(
     `/families/${familyId}/meal-plans/${mealPlanId}`,
@@ -881,10 +1023,22 @@ function buildMealPlanRedirect({
   );
   url.searchParams.set("notice", notice);
 
+  if (filledCount !== undefined) {
+    url.searchParams.set("filled", String(filledCount));
+  }
+
+  if (warning) {
+    url.searchParams.set("warning", "1");
+    url.searchParams.set("warningMessage", warning);
+  }
+
   return Response.redirect(url, 302);
 }
 
-function getMealPlanNoticeContent(notice: MealPlanNotice) {
+function getMealPlanNoticeContent(
+  notice: MealPlanNotice,
+  noticeMeta: MealPlanNoticeMeta | null,
+) {
   switch (notice) {
     case "meal-plan-approved":
       return {
@@ -892,6 +1046,17 @@ function getMealPlanNoticeContent(notice: MealPlanNotice) {
           "Ukeplanen er markert som godkjent og klar for neste steg.",
         title: "Ukeplan godkjent",
       };
+    case "meal-plan-auto-filled": {
+      const filledCount = noticeMeta?.filledCount ?? 0;
+      const warning = noticeMeta?.warning;
+
+      return {
+        description: warning
+          ? `${filledCount} tomme dager ble fylt automatisk. ${warning}`
+          : `${filledCount} tomme dager ble fylt automatisk med oppskrifter som ikke var i de to forrige ukeplanene.`,
+        title: "Tomme dager fylt",
+      };
+    }
     case "meal-plan-created":
       return {
         description:

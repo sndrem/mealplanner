@@ -260,6 +260,7 @@ model ShoppingItemOverride {
   sourceType         ShoppingItemSource
   sourceKey          String
   checked               Boolean            @default(false)
+  excludedFromList      Boolean            @default(false)
   includeDespiteStock   Boolean            @default(false)
   postponedUntilDate    DateTime?          @db.Date
   preferredStoreId      String?

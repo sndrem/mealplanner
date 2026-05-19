@@ -1,3 +1,5 @@
+import { randomInt } from "node:crypto";
+
 import { MealPlanStatus, MealType, Prisma, RecipeScope } from "@prisma/client";
 
 import {
@@ -149,7 +151,15 @@ interface MealPlanListInput {
 
 type MealPlanPlanningInput = GetMealPlanInput;
 
+interface AutoFillMealPlanEntriesInput extends DeleteMealPlanInput {}
+
 type MealPlanApprovalAction = "APPROVE" | "REOPEN";
+
+const AUTO_FILL_NOT_DRAFT_MESSAGE = "Godkjente ukeplaner kan ikke fylles automatisk.";
+const AUTO_FILL_NO_ELIGIBLE_RECIPES_MESSAGE =
+  "Ingen tilgjengelige oppskrifter etter a ha utelatt middager fra de to forrige ukeplanene.";
+const AUTO_FILL_REPEAT_WARNING_MESSAGE =
+  "Noen middager ble valgt flere ganger fordi det var for fa oppskrifter igjen.";
 
 export function formatDateOnly(date: Date) {
   return [
@@ -681,6 +691,179 @@ export async function deleteMealPlan({ familyId, mealPlanId, userId }: DeleteMea
   };
 }
 
+export async function getRecentlyUsedRecipeIds({
+  currentMealPlanId,
+  familyId,
+}: {
+  currentMealPlanId: string;
+  familyId: string;
+}) {
+  const priorPlans = await db.mealPlan.findMany({
+    orderBy: {
+      endDate: "desc",
+    },
+    select: {
+      entries: {
+        select: {
+          recipeId: true,
+        },
+        where: {
+          mealType: PLANNING_MEAL_TYPE,
+          recipeId: {
+            not: null,
+          },
+        },
+      },
+    },
+    take: 2,
+    where: {
+      familyId,
+      id: {
+        not: currentMealPlanId,
+      },
+    },
+  });
+
+  return new Set(
+    priorPlans.flatMap((plan) =>
+      plan.entries
+        .map((entry) => entry.recipeId)
+        .filter((recipeId): recipeId is string => Boolean(recipeId)),
+    ),
+  );
+}
+
+export async function autoFillMealPlanEntries({
+  familyId,
+  mealPlanId,
+  userId,
+}: AutoFillMealPlanEntriesInput) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const mealPlan = await db.mealPlan.findFirst({
+    select: mealPlanPlanningDetailSelect,
+    where: {
+      familyId,
+      id: mealPlanId,
+    },
+  });
+
+  if (!mealPlan) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  if (mealPlan.status !== MealPlanStatus.DRAFT) {
+    return {
+      formError: AUTO_FILL_NOT_DRAFT_MESSAGE,
+      status: "NOT_DRAFT" as const,
+    };
+  }
+
+  const visibleDates = getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate);
+  const dinnerEntriesByDate = new Map(
+    mealPlan.entries
+      .filter((entry) => entry.mealType === PLANNING_MEAL_TYPE)
+      .map((entry) => [formatDateOnly(entry.date), entry]),
+  );
+  const targetDates = visibleDates.filter((date) => {
+    const entry = dinnerEntriesByDate.get(date);
+
+    return !entry?.recipeId && !entry?.note;
+  });
+
+  if (targetDates.length === 0) {
+    return {
+      filledCount: 0,
+      status: "NOTHING_TO_FILL" as const,
+    };
+  }
+
+  const recipes = await db.recipe.findMany({
+    orderBy: [{ title: "asc" }],
+    select: {
+      id: true,
+    },
+    where: {
+      OR: [{ scope: RecipeScope.GLOBAL }, { familyId, scope: RecipeScope.FAMILY }],
+    },
+  });
+  const excludedRecipeIds = await getRecentlyUsedRecipeIds({
+    currentMealPlanId: mealPlan.id,
+    familyId,
+  });
+  const eligibleRecipeIds = recipes
+    .map((recipe) => recipe.id)
+    .filter((recipeId) => !excludedRecipeIds.has(recipeId));
+
+  if (eligibleRecipeIds.length === 0) {
+    return {
+      formError: AUTO_FILL_NO_ELIGIBLE_RECIPES_MESSAGE,
+      status: "NO_ELIGIBLE_RECIPES" as const,
+    };
+  }
+
+  const usedRecipeIdsInPlan = new Set(
+    [...dinnerEntriesByDate.values()]
+      .map((entry) => entry.recipeId)
+      .filter((recipeId): recipeId is string => Boolean(recipeId)),
+  );
+  const { assignments, hadRepeats } = assignRecipesToDates({
+    eligibleRecipeIds,
+    targetDateCount: targetDates.length,
+    usedRecipeIdsInPlan,
+  });
+  const assignmentsByDate = new Map(
+    targetDates.map((date, index) => [date, assignments[index]!]),
+  );
+  const entries = visibleDates.map((date) => {
+    const existingEntry = dinnerEntriesByDate.get(date);
+    const assignedRecipeId = assignmentsByDate.get(date);
+
+    if (assignedRecipeId) {
+      return {
+        date,
+        note: "",
+        recipeId: assignedRecipeId,
+      };
+    }
+
+    return {
+      date,
+      note: existingEntry?.note ?? "",
+      recipeId: existingEntry?.recipeId ?? "",
+    };
+  });
+  const entryVersions = Object.fromEntries(
+    visibleDates.map((date) => [
+      date,
+      dinnerEntriesByDate.get(date)?.updatedAt.toISOString() ?? "",
+    ]),
+  );
+  const saveResult = await saveMealPlanEntries({
+    entries,
+    entryVersions,
+    familyId,
+    mealPlanId,
+    userId,
+  });
+
+  if (saveResult.status !== "UPDATED") {
+    return saveResult;
+  }
+
+  return {
+    excludedCount: excludedRecipeIds.size,
+    filledCount: targetDates.length,
+    status: "AUTO_FILLED" as const,
+    warning: hadRepeats ? AUTO_FILL_REPEAT_WARNING_MESSAGE : undefined,
+  };
+}
+
 export async function saveMealPlanEntries({
   entries,
   entryVersions,
@@ -1078,6 +1261,53 @@ function getMealPlanApprovalTransitionError(action: MealPlanApprovalAction, curr
   }
 
   return "Ukeplanen kan ikke gjenapnes fra gjeldende status.";
+}
+
+function shuffleRecipeIds(recipeIds: string[]) {
+  const shuffled = [...recipeIds];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(0, index + 1);
+    const currentValue = shuffled[index]!;
+    shuffled[index] = shuffled[swapIndex]!;
+    shuffled[swapIndex] = currentValue;
+  }
+
+  return shuffled;
+}
+
+function assignRecipesToDates({
+  eligibleRecipeIds,
+  targetDateCount,
+  usedRecipeIdsInPlan,
+}: {
+  eligibleRecipeIds: string[];
+  targetDateCount: number;
+  usedRecipeIdsInPlan: Set<string>;
+}) {
+  const uniquePool = shuffleRecipeIds(
+    eligibleRecipeIds.filter((recipeId) => !usedRecipeIdsInPlan.has(recipeId)),
+  );
+  const assignments: string[] = [];
+  let hadRepeats = false;
+
+  for (let index = 0; index < targetDateCount; index += 1) {
+    if (index < uniquePool.length) {
+      const recipeId = uniquePool[index]!;
+      assignments.push(recipeId);
+      usedRecipeIdsInPlan.add(recipeId);
+      continue;
+    }
+
+    hadRepeats = true;
+    const repeatPool = shuffleRecipeIds(eligibleRecipeIds);
+    assignments.push(repeatPool[index % repeatPool.length]!);
+  }
+
+  return {
+    assignments,
+    hadRepeats,
+  };
 }
 
 function normalizeMealPlanEntryValues(entry: MealPlanEntryValues): MealPlanEntryValues {
