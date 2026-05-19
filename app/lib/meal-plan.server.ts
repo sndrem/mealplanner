@@ -151,7 +151,7 @@ interface MealPlanListInput {
 
 type MealPlanPlanningInput = GetMealPlanInput;
 
-interface AutoFillMealPlanEntriesInput extends DeleteMealPlanInput {}
+type AutoFillMealPlanEntriesInput = DeleteMealPlanInput;
 
 type MealPlanApprovalAction = "APPROVE" | "REOPEN";
 
