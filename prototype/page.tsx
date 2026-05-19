@@ -81,9 +81,14 @@ export function MealPlannerPrototype() {
 
   let activeStore = getStoreById(state.selectedStoreId) ?? stores[0];
   let activeStoreOrder = getStoreOrder(state, activeStore.id);
-  let selectedRecipeIds = new Set(visibleDays.map((dayId) => selectedWeek.mealPlan[dayId]).filter(Boolean));
+  let selectedRecipeIds = new Set(
+    visibleDays.map((dayId) => selectedWeek.mealPlan[dayId]).filter(Boolean),
+  );
 
-  let shoppingItems = useMemo(() => buildShoppingItems(selectedWeek), [selectedWeek]);
+  let shoppingItems = useMemo(
+    () => buildShoppingItems(selectedWeek),
+    [selectedWeek],
+  );
   let dueItems = useMemo(
     () => getItemsDueToday(shoppingItems, selectedWeek.shoppingDay),
     [shoppingItems, selectedWeek.shoppingDay],
@@ -100,14 +105,17 @@ export function MealPlannerPrototype() {
   }, [dueItems, laterItems, shoppingItems, state.shoppingFilter]);
 
   let groupedItems = useMemo(
-    () => groupItemsBySection(visibleShoppingItems, activeStore, activeStoreOrder),
+    () =>
+      groupItemsBySection(visibleShoppingItems, activeStore, activeStoreOrder),
     [activeStore, activeStoreOrder, visibleShoppingItems],
   );
 
   let checkedItemIds = new Set(selectedWeek.checkedItemIds);
   let plannedMealCount = getPlannedMealCount(selectedWeek);
   let shoppingProgress = getShoppingProgress(selectedWeek, dueItems);
-  let openLaterCount = laterItems.filter((item) => !checkedItemIds.has(item.id)).length;
+  let openLaterCount = laterItems.filter(
+    (item) => !checkedItemIds.has(item.id),
+  ).length;
   let nextWeekStartDate = getNextWeekStartDate(state.weeks);
   let [weekDraft, setWeekDraft] = useState<WeekDraft>(() =>
     createWeekDraft(`Ny uke ${state.weeks.length + 1}`, nextWeekStartDate),
@@ -120,7 +128,9 @@ export function MealPlannerPrototype() {
   function updateSelectedWeek(recipe: (week: MealPlanWeek) => MealPlanWeek) {
     updateState((current) => ({
       ...current,
-      weeks: current.weeks.map((week) => (week.id === current.selectedWeekId ? recipe(week) : week)),
+      weeks: current.weeks.map((week) =>
+        week.id === current.selectedWeekId ? recipe(week) : week,
+      ),
     }));
   }
 
@@ -161,7 +171,10 @@ export function MealPlannerPrototype() {
       mealPlan: {
         ...week.mealPlan,
         ...Object.fromEntries(
-          getVisibleDays(week).map((dayId, index) => [dayId, recipes[index % recipes.length].id]),
+          getVisibleDays(week).map((dayId, index) => [
+            dayId,
+            recipes[index % recipes.length].id,
+          ]),
         ),
       },
       checkedItemIds: [],
@@ -175,7 +188,9 @@ export function MealPlannerPrototype() {
       planApproved: false,
       mealPlan: {
         ...week.mealPlan,
-        ...Object.fromEntries(getVisibleDays(week).map((dayId) => [dayId, null])),
+        ...Object.fromEntries(
+          getVisibleDays(week).map((dayId) => [dayId, null]),
+        ),
       },
       checkedItemIds: [],
       postponedItemDays: {},
@@ -183,7 +198,10 @@ export function MealPlannerPrototype() {
   }
 
   function toggleApproved() {
-    updateSelectedWeek((week) => ({ ...week, planApproved: !week.planApproved }));
+    updateSelectedWeek((week) => ({
+      ...week,
+      planApproved: !week.planApproved,
+    }));
   }
 
   function toggleChecked(itemId: string) {
@@ -205,12 +223,19 @@ export function MealPlannerPrototype() {
     }));
   }
 
-  function moveStoreCategory(category: IngredientCategory, direction: "up" | "down") {
+  function moveStoreCategory(
+    category: IngredientCategory,
+    direction: "up" | "down",
+  ) {
     updateState((current) => ({
       ...current,
       storeOrders: {
         ...current.storeOrders,
-        [activeStore.id]: moveCategoryOrder(getStoreOrder(current, activeStore.id), category, direction),
+        [activeStore.id]: moveCategoryOrder(
+          getStoreOrder(current, activeStore.id),
+          category,
+          direction,
+        ),
       },
     }));
   }
@@ -218,8 +243,16 @@ export function MealPlannerPrototype() {
   function createNextWeek() {
     let title = weekDraft.title.trim() || `Ny uke ${state.weeks.length + 1}`;
     let week = createBlankWeek(title, weekDraft.startDate, weekDraft.endDate);
-    setManualDraft((current) => ({ ...current, buyOnDay: getVisibleDays(week)[0] ?? "now" }));
-    setWeekDraft(createWeekDraft(`Ny uke ${state.weeks.length + 2}`, getNextWeekStartDate([...state.weeks, week])));
+    setManualDraft((current) => ({
+      ...current,
+      buyOnDay: getVisibleDays(week)[0] ?? "now",
+    }));
+    setWeekDraft(
+      createWeekDraft(
+        `Ny uke ${state.weeks.length + 2}`,
+        getNextWeekStartDate([...state.weeks, week]),
+      ),
+    );
     updateState((current) => ({
       ...current,
       selectedWeekId: week.id,
@@ -230,10 +263,21 @@ export function MealPlannerPrototype() {
 
   function reuseSelectedWeek() {
     let title = weekDraft.title.trim() || `${selectedWeek.title} kopi`;
-    let weekCopy = cloneWeek(selectedWeek, title, weekDraft.startDate, weekDraft.endDate);
-    setManualDraft((current) => ({ ...current, buyOnDay: getVisibleDays(weekCopy)[0] ?? "now" }));
+    let weekCopy = cloneWeek(
+      selectedWeek,
+      title,
+      weekDraft.startDate,
+      weekDraft.endDate,
+    );
+    setManualDraft((current) => ({
+      ...current,
+      buyOnDay: getVisibleDays(weekCopy)[0] ?? "now",
+    }));
     setWeekDraft(
-      createWeekDraft(`Ny uke ${state.weeks.length + 2}`, getNextWeekStartDate([...state.weeks, weekCopy])),
+      createWeekDraft(
+        `Ny uke ${state.weeks.length + 2}`,
+        getNextWeekStartDate([...state.weeks, weekCopy]),
+      ),
     );
     updateState((current) => ({
       ...current,
@@ -281,7 +325,10 @@ export function MealPlannerPrototype() {
       return;
     }
 
-    let content = createCalendarFile(`Mealplanner - ${selectedWeek.title}`, events);
+    let content = createCalendarFile(
+      `Mealplanner - ${selectedWeek.title}`,
+      events,
+    );
     downloadCalendarFile(`${toSlug(selectedWeek.title)}-ukeplan.ics`, content);
   }
 
@@ -342,17 +389,25 @@ export function MealPlannerPrototype() {
               </span>
               <div className="space-y-3">
                 <h1 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
-                  Ukeplan og handleliste for familier som planlegger flere uker samtidig.
+                  Ukeplan og handleliste for familier som planlegger flere uker
+                  samtidig.
                 </h1>
                 <p className="max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-                  Denne versjonen tester flere planuker, gjenbruk av tidligere uker og aktive uker
-                  som kan starte midt i kalenderuken, for eksempel pa torsdag.
+                  Denne versjonen tester flere planuker, gjenbruk av tidligere
+                  uker og aktive uker som kan starte midt i kalenderuken, for
+                  eksempel pa torsdag.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3 text-sm text-slate-200">
                 <InfoPill label="Sprak" value="Norsk" />
-                <InfoPill label="Oppsett" value={`${state.weeks.length} planuker`} />
-                <InfoPill label="Lagring" value={hydrated ? "LocalStorage aktiv" : "Laster demo-data"} />
+                <InfoPill
+                  label="Oppsett"
+                  value={`${state.weeks.length} planuker`}
+                />
+                <InfoPill
+                  label="Lagring"
+                  value={hydrated ? "LocalStorage aktiv" : "Laster demo-data"}
+                />
               </div>
             </div>
 
@@ -367,7 +422,11 @@ export function MealPlannerPrototype() {
                 value={`${shoppingProgress.totalCount - shoppingProgress.checkedCount} varer`}
                 tone="sky"
               />
-              <StatCard label="Senere i perioden" value={`${openLaterCount} varer`} tone="amber" />
+              <StatCard
+                label="Senere i perioden"
+                value={`${openLaterCount} varer`}
+                tone="amber"
+              />
             </div>
           </div>
         </header>
@@ -377,7 +436,8 @@ export function MealPlannerPrototype() {
             <div>
               <p className="text-sm font-medium text-slate-500">Navigasjon</p>
               <p className="text-sm text-slate-600">
-                Bytt raskt mellom planlegging, handleliste, butikkmodus og butikkoppsett.
+                Bytt raskt mellom planlegging, handleliste, butikkmodus og
+                butikkoppsett.
               </p>
             </div>
 
@@ -404,16 +464,25 @@ export function MealPlannerPrototype() {
           <section className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-500">Klar til a handle</p>
+                <p className="text-sm font-medium text-slate-500">
+                  Klar til a handle
+                </p>
                 <h2 className="text-xl font-semibold tracking-tight text-slate-950">
                   Sjekk butikk og uke, sa er du klar.
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                  <InfoPill label="Periode" value={getWeekWindowLabel(selectedWeek)} dark={false} />
+                  <InfoPill
+                    label="Periode"
+                    value={getWeekWindowLabel(selectedWeek)}
+                    dark={false}
+                  />
                   <InfoPill
                     label="Datoer"
                     value={`${formatDateLabel(getDateForWeekDay(selectedWeek, visibleDays[0]))} - ${formatDateLabel(
-                      getDateForWeekDay(selectedWeek, visibleDays[visibleDays.length - 1]),
+                      getDateForWeekDay(
+                        selectedWeek,
+                        visibleDays[visibleDays.length - 1],
+                      ),
                     )}`}
                     dark={false}
                   />
@@ -474,19 +543,26 @@ export function MealPlannerPrototype() {
                   <article className="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 p-4 md:col-span-2">
                     <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr_1fr_auto]">
                       <label className="grid gap-1.5 text-sm">
-                        <span className="font-medium text-slate-700">Tittel</span>
+                        <span className="font-medium text-slate-700">
+                          Tittel
+                        </span>
                         <input
                           className={inputClassName}
                           value={weekDraft.title}
                           onChange={(event) =>
-                            setWeekDraft((current) => ({ ...current, title: event.target.value }))
+                            setWeekDraft((current) => ({
+                              ...current,
+                              title: event.target.value,
+                            }))
                           }
                           placeholder="F.eks. Høstferie uke"
                         />
                       </label>
 
                       <label className="grid gap-1.5 text-sm">
-                        <span className="font-medium text-slate-700">Startdato</span>
+                        <span className="font-medium text-slate-700">
+                          Startdato
+                        </span>
                         <input
                           className={inputClassName}
                           type="date"
@@ -494,7 +570,10 @@ export function MealPlannerPrototype() {
                           onChange={(event) =>
                             setWeekDraft((current) => {
                               let startDate = event.target.value;
-                              let maxEndDate = addDaysToDateString(startDate, 6);
+                              let maxEndDate = addDaysToDateString(
+                                startDate,
+                                6,
+                              );
                               let endDate = current.endDate;
                               if (endDate < startDate) endDate = startDate;
                               if (endDate > maxEndDate) endDate = maxEndDate;
@@ -510,7 +589,9 @@ export function MealPlannerPrototype() {
                       </label>
 
                       <label className="grid gap-1.5 text-sm">
-                        <span className="font-medium text-slate-700">Sluttdato</span>
+                        <span className="font-medium text-slate-700">
+                          Sluttdato
+                        </span>
                         <input
                           className={inputClassName}
                           type="date"
@@ -518,13 +599,18 @@ export function MealPlannerPrototype() {
                           max={addDaysToDateString(weekDraft.startDate, 6)}
                           value={weekDraft.endDate}
                           onChange={(event) =>
-                            setWeekDraft((current) => ({ ...current, endDate: event.target.value }))
+                            setWeekDraft((current) => ({
+                              ...current,
+                              endDate: event.target.value,
+                            }))
                           }
                         />
                       </label>
 
                       <div className="flex flex-col justify-end gap-2">
-                        <ActionButton onClick={createNextWeek}>Ny tom uke</ActionButton>
+                        <ActionButton onClick={createNextWeek}>
+                          Ny tom uke
+                        </ActionButton>
                         <ActionButton onClick={reuseSelectedWeek} tone="subtle">
                           Gjenbruk valgt uke
                         </ActionButton>
@@ -532,7 +618,8 @@ export function MealPlannerPrototype() {
                     </div>
 
                     <p className="mt-3 text-sm text-slate-600">
-                      Velg start- og sluttdato for planuken. Prototypen tillater opptil 7 dager per uke.
+                      Velg start- og sluttdato for planuken. Prototypen tillater
+                      opptil 7 dager per uke.
                     </p>
                   </article>
 
@@ -562,22 +649,33 @@ export function MealPlannerPrototype() {
                     }
                   >
                     <div className="flex flex-wrap gap-2">
-                      <InfoPill label="Periode" value={getWeekWindowLabel(selectedWeek)} dark={false} />
+                      <InfoPill
+                        label="Periode"
+                        value={getWeekWindowLabel(selectedWeek)}
+                        dark={false}
+                      />
                       <InfoPill
                         label="Datoer"
                         value={`${formatDateLabel(getDateForWeekDay(selectedWeek, visibleDays[0]))} - ${formatDateLabel(
-                          getDateForWeekDay(selectedWeek, visibleDays[visibleDays.length - 1]),
+                          getDateForWeekDay(
+                            selectedWeek,
+                            visibleDays[visibleDays.length - 1],
+                          ),
                         )}`}
                         dark={false}
                       />
                       <InfoPill
                         label="Handledag"
-                        value={capitalize(getDayLabel(selectedWeek.shoppingDay))}
+                        value={capitalize(
+                          getDayLabel(selectedWeek.shoppingDay),
+                        )}
                         dark={false}
                       />
                       <InfoPill
                         label="Status"
-                        value={selectedWeek.planApproved ? "Godkjent" : "Utkast"}
+                        value={
+                          selectedWeek.planApproved ? "Godkjent" : "Utkast"
+                        }
                         dark={false}
                       />
                     </div>
@@ -650,7 +748,8 @@ export function MealPlannerPrototype() {
                       onClick={() =>
                         updateState((current) => ({
                           ...current,
-                          shoppingFilter: filterOption.id as PrototypeState["shoppingFilter"],
+                          shoppingFilter:
+                            filterOption.id as PrototypeState["shoppingFilter"],
                         }))
                       }
                       className={
@@ -677,15 +776,22 @@ export function MealPlannerPrototype() {
               )}.`}
               actions={
                 <div className="flex flex-wrap gap-2">
-                  <ActionButton onClick={autoFillWeek}>Fyll perioden automatisk</ActionButton>
+                  <ActionButton onClick={autoFillWeek}>
+                    Fyll perioden automatisk
+                  </ActionButton>
                   <ActionButton onClick={exportWeekToCalendar} tone="subtle">
                     Eksporter uke til iCal
                   </ActionButton>
                   <ActionButton onClick={clearWeekPlan} tone="subtle">
                     Tom periode
                   </ActionButton>
-                  <ActionButton onClick={toggleApproved} tone={selectedWeek.planApproved ? "success" : "primary"}>
-                    {selectedWeek.planApproved ? "Godkjent av familien" : "Marker som godkjent"}
+                  <ActionButton
+                    onClick={toggleApproved}
+                    tone={selectedWeek.planApproved ? "success" : "primary"}
+                  >
+                    {selectedWeek.planApproved
+                      ? "Godkjent av familien"
+                      : "Marker som godkjent"}
                   </ActionButton>
                 </div>
               }
@@ -695,7 +801,9 @@ export function MealPlannerPrototype() {
                   <DayPlanCard
                     key={dayId}
                     dayLabel={capitalize(getDayLabel(dayId))}
-                    dateLabel={formatDateLabel(getDateForWeekDay(selectedWeek, dayId))}
+                    dateLabel={formatDateLabel(
+                      getDateForWeekDay(selectedWeek, dayId),
+                    )}
                     recipe={getRecipeById(selectedWeek.mealPlan[dayId])}
                     selectedRecipeId={selectedWeek.mealPlan[dayId] ?? ""}
                     onExport={() => exportDayToCalendar(dayId)}
@@ -736,7 +844,10 @@ export function MealPlannerPrototype() {
                       className={inputClassName}
                       value={manualDraft.name}
                       onChange={(event) =>
-                        setManualDraft((current) => ({ ...current, name: event.target.value }))
+                        setManualDraft((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
                       }
                       placeholder="F.eks. dopapir eller tacochips"
                     />
@@ -747,7 +858,10 @@ export function MealPlannerPrototype() {
                       className={inputClassName}
                       value={manualDraft.quantity}
                       onChange={(event) =>
-                        setManualDraft((current) => ({ ...current, quantity: event.target.value }))
+                        setManualDraft((current) => ({
+                          ...current,
+                          quantity: event.target.value,
+                        }))
                       }
                       placeholder="F.eks. 2 poser"
                     />
@@ -822,7 +936,10 @@ export function MealPlannerPrototype() {
                     className={inputClassName}
                     value={manualDraft.note}
                     onChange={(event) =>
-                      setManualDraft((current) => ({ ...current, note: event.target.value }))
+                      setManualDraft((current) => ({
+                        ...current,
+                        note: event.target.value,
+                      }))
                     }
                     placeholder="F.eks. kun hvis det er tilbud"
                   />
@@ -839,11 +956,31 @@ export function MealPlannerPrototype() {
               description="Generert fra den valgte planuken. Hver uke har sin egen handleliste og egne utsatte varer."
             >
               <div className="mb-4 flex flex-wrap gap-2 text-sm text-slate-600">
-                <InfoPill label="Butikk" value={activeStore.name} dark={false} />
-                <InfoPill label="Periode" value={getWeekWindowLabel(selectedWeek)} dark={false} />
-                <InfoPill label="Filter" value={filterLabel(state.shoppingFilter)} dark={false} />
-                <InfoPill label="Na" value={`${dueItems.length} varer`} dark={false} />
-                <InfoPill label="Senere" value={`${laterItems.length} varer`} dark={false} />
+                <InfoPill
+                  label="Butikk"
+                  value={activeStore.name}
+                  dark={false}
+                />
+                <InfoPill
+                  label="Periode"
+                  value={getWeekWindowLabel(selectedWeek)}
+                  dark={false}
+                />
+                <InfoPill
+                  label="Filter"
+                  value={filterLabel(state.shoppingFilter)}
+                  dark={false}
+                />
+                <InfoPill
+                  label="Na"
+                  value={`${dueItems.length} varer`}
+                  dark={false}
+                />
+                <InfoPill
+                  label="Senere"
+                  value={`${laterItems.length} varer`}
+                  dark={false}
+                />
               </div>
 
               <div className="space-y-4">
@@ -883,27 +1020,37 @@ export function MealPlannerPrototype() {
               </div>
               <div className="rounded-2xl bg-white/10 p-4">
                 <p className="text-sm text-slate-300">Handledag</p>
-                <p className="mt-1 text-lg font-semibold">{capitalize(getDayLabel(selectedWeek.shoppingDay))}</p>
+                <p className="mt-1 text-lg font-semibold">
+                  {capitalize(getDayLabel(selectedWeek.shoppingDay))}
+                </p>
               </div>
               <div className="rounded-2xl bg-emerald-500/20 p-4 ring-1 ring-emerald-400/30">
                 <p className="text-sm text-emerald-100">Fremdrift</p>
                 <p className="mt-1 text-lg font-semibold">
-                  {shoppingProgress.checkedCount}/{shoppingProgress.totalCount} krysset av
+                  {shoppingProgress.checkedCount}/{shoppingProgress.totalCount}{" "}
+                  krysset av
                 </p>
               </div>
             </div>
 
             <div className="space-y-5">
-              {groupItemsBySection(dueItems, activeStore, activeStoreOrder).length === 0 ? (
+              {groupItemsBySection(dueItems, activeStore, activeStoreOrder)
+                .length === 0 ? (
                 <EmptyState
                   title="Ingen varer ma handles na"
                   description="Alt er enten ferdig handlet eller utsatt til senere i den valgte uken."
                 />
               ) : (
-                groupItemsBySection(dueItems, activeStore, activeStoreOrder).map((group) => (
+                groupItemsBySection(
+                  dueItems,
+                  activeStore,
+                  activeStoreOrder,
+                ).map((group) => (
                   <div key={group.section} className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-slate-900">{group.section}</h3>
+                      <h3 className="text-lg font-semibold text-slate-900">
+                        {group.section}
+                      </h3>
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                         {group.items.length} varer
                       </span>
@@ -932,11 +1079,18 @@ export function MealPlannerPrototype() {
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-base font-semibold text-slate-900">{item.name}</p>
+                              <p className="text-base font-semibold text-slate-900">
+                                {item.name}
+                              </p>
                               <Badge>{item.quantity}</Badge>
-                              {item.source === "manual" ? <Badge tone="amber">Manuell</Badge> : null}
-                              {item.preferredStoreId && item.preferredStoreId !== activeStore.id ? (
-                                <Badge tone="sky">{getStoreById(item.preferredStoreId)?.name}</Badge>
+                              {item.source === "manual" ? (
+                                <Badge tone="amber">Manuell</Badge>
+                              ) : null}
+                              {item.preferredStoreId &&
+                              item.preferredStoreId !== activeStore.id ? (
+                                <Badge tone="sky">
+                                  {getStoreById(item.preferredStoreId)?.name}
+                                </Badge>
                               ) : null}
                             </div>
                             <p className="mt-1 text-sm text-slate-600">
@@ -953,10 +1107,14 @@ export function MealPlannerPrototype() {
               )}
 
               <div className="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 p-4">
-                <h3 className="text-sm font-semibold text-slate-900">Varer som er utsatt til senere</h3>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Varer som er utsatt til senere
+                </h3>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {laterItems.length === 0 ? (
-                    <p className="text-sm text-slate-500">Ingen utsatte varer akkurat na.</p>
+                    <p className="text-sm text-slate-500">
+                      Ingen utsatte varer akkurat na.
+                    </p>
                   ) : (
                     laterItems.map((item) => (
                       <span
@@ -1008,7 +1166,9 @@ export function MealPlannerPrototype() {
                     className="flex items-center justify-between rounded-[24px] border border-slate-200 bg-white px-4 py-3 shadow-sm"
                   >
                     <div>
-                      <p className="text-sm text-slate-500">Plass {index + 1}</p>
+                      <p className="text-sm text-slate-500">
+                        Plass {index + 1}
+                      </p>
                       <p className="font-medium text-slate-900">{category}</p>
                     </div>
                     <div className="flex gap-2">
@@ -1038,18 +1198,22 @@ export function MealPlannerPrototype() {
             >
               <div className="space-y-4 text-sm leading-6 text-slate-600">
                 <p>
-                  Dagens prototype tester kjerneverdien: planlegg flere uker, gjenbruk en uke som
-                  fungerte bra, og bruk en mobilvennlig butikkvisning for hver enkelt uke.
+                  Dagens prototype tester kjerneverdien: planlegg flere uker,
+                  gjenbruk en uke som fungerte bra, og bruk en mobilvennlig
+                  butikkvisning for hver enkelt uke.
                 </p>
                 <ul className="space-y-2">
                   <li className="rounded-2xl bg-slate-50 px-4 py-3">
-                    Neste naturlige steg er a koble pa ekte lagring med Prisma og PostgreSQL.
+                    Neste naturlige steg er a koble pa ekte lagring med Prisma
+                    og PostgreSQL.
                   </li>
                   <li className="rounded-2xl bg-slate-50 px-4 py-3">
-                    Deretter kan familiekontoer og godkjenning mellom flere brukere legges pa.
+                    Deretter kan familiekontoer og godkjenning mellom flere
+                    brukere legges pa.
                   </li>
                   <li className="rounded-2xl bg-slate-50 px-4 py-3">
-                    Notion-import kan passe inn som en mate a fylle oppskriftsbanken pa uten a endre UI-flyten.
+                    Notion-import kan passe inn som en mate a fylle
+                    oppskriftsbanken pa uten a endre UI-flyten.
                   </li>
                 </ul>
 
@@ -1082,8 +1246,12 @@ function SectionCard({
     <section className="rounded-[32px] bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
       <div className="mb-5 flex flex-col gap-4 border-b border-slate-100 pb-5">
         <div className="space-y-1">
-          <h2 className="text-xl font-semibold tracking-tight text-slate-950">{title}</h2>
-          <p className="max-w-2xl text-sm leading-6 text-slate-600">{description}</p>
+          <h2 className="text-xl font-semibold tracking-tight text-slate-950">
+            {title}
+          </h2>
+          <p className="max-w-2xl text-sm leading-6 text-slate-600">
+            {description}
+          </p>
         </div>
         {actions}
       </div>
@@ -1141,14 +1309,21 @@ function WeekCard({
         <div>
           <h3 className="text-lg font-semibold text-slate-950">{week.title}</h3>
           <p className="mt-1 text-sm leading-6 text-slate-600">
-            Aktiv periode: {getWeekWindowLabel(week)} · {plannedMealCount}/{visibleDays.length} middager planlagt
+            Aktiv periode: {getWeekWindowLabel(week)} · {plannedMealCount}/
+            {visibleDays.length} middager planlagt
           </p>
           <p className="mt-1 text-sm text-slate-500">
             {formatDateLabel(getDateForWeekDay(week, visibleDays[0]))} -{" "}
-            {formatDateLabel(getDateForWeekDay(week, visibleDays[visibleDays.length - 1]))}
+            {formatDateLabel(
+              getDateForWeekDay(week, visibleDays[visibleDays.length - 1]),
+            )}
           </p>
         </div>
-        {week.planApproved ? <Badge tone="success">Godkjent</Badge> : <Badge>Utkast</Badge>}
+        {week.planApproved ? (
+          <Badge tone="success">Godkjent</Badge>
+        ) : (
+          <Badge>Utkast</Badge>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -1185,7 +1360,15 @@ function StatCard({
   );
 }
 
-function InfoPill({ label, value, dark = true }: { label: string; value: string; dark?: boolean }) {
+function InfoPill({
+  label,
+  value,
+  dark = true,
+}: {
+  label: string;
+  value: string;
+  dark?: boolean;
+}) {
   return (
     <span
       className={
@@ -1194,7 +1377,9 @@ function InfoPill({ label, value, dark = true }: { label: string; value: string;
           : "inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
       }
     >
-      <span className={dark ? "text-slate-300" : "text-slate-500"}>{label}</span>
+      <span className={dark ? "text-slate-300" : "text-slate-500"}>
+        {label}
+      </span>
       <span>{value}</span>
     </span>
   );
@@ -1244,7 +1429,9 @@ function DayPlanCard({
     <article className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">Middag</p>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+            Middag
+          </p>
           <h3 className="text-lg font-semibold text-slate-950">{dayLabel}</h3>
           <p className="text-sm font-medium text-slate-500">{dateLabel}</p>
           <p className="text-sm leading-6 text-slate-600">
@@ -1301,8 +1488,12 @@ function RecipeCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-slate-950">{recipe.title}</h3>
-          <p className="mt-1 text-sm leading-6 text-slate-600">{recipe.description}</p>
+          <h3 className="text-lg font-semibold text-slate-950">
+            {recipe.title}
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            {recipe.description}
+          </p>
         </div>
         {selected ? <Badge tone="success">I ukeplanen</Badge> : null}
       </div>
@@ -1314,9 +1505,14 @@ function RecipeCard({
       </div>
 
       <div className="mt-4 rounded-[24px] bg-white p-3 ring-1 ring-slate-200">
-        <p className="text-sm font-medium text-slate-800">{recipe.ingredients.length} ingredienser</p>
+        <p className="text-sm font-medium text-slate-800">
+          {recipe.ingredients.length} ingredienser
+        </p>
         <p className="mt-1 text-sm text-slate-600">
-          {recipe.ingredients.slice(0, 3).map((ingredient) => ingredient.name).join(", ")}
+          {recipe.ingredients
+            .slice(0, 3)
+            .map((ingredient) => ingredient.name)
+            .join(", ")}
           {recipe.ingredients.length > 3 ? " og mer" : ""}
         </p>
       </div>
@@ -1372,12 +1568,20 @@ function ShoppingGroup({
                         : "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
                     }
                   >
-                    {checkedItemIds.has(item.id) ? "Kjopt" : "Marker som kjopt"}
+                    {checkedItemIds.has(item.id) ? "Kjopt" : "Marker som kjøpt"}
                   </button>
-                  <p className="text-base font-semibold text-slate-950">{item.name}</p>
+                  <p className="text-base font-semibold text-slate-950">
+                    {item.name}
+                  </p>
                   <Badge>{item.quantity}</Badge>
-                  {item.preferredStoreId ? <Badge tone="sky">{getStoreById(item.preferredStoreId)?.name}</Badge> : null}
-                  {item.source === "manual" ? <Badge tone="amber">Manuell</Badge> : null}
+                  {item.preferredStoreId ? (
+                    <Badge tone="sky">
+                      {getStoreById(item.preferredStoreId)?.name}
+                    </Badge>
+                  ) : null}
+                  {item.source === "manual" ? (
+                    <Badge tone="amber">Manuell</Badge>
+                  ) : null}
                 </div>
 
                 <p className="text-sm leading-6 text-slate-600">
@@ -1393,7 +1597,9 @@ function ShoppingGroup({
                   <select
                     className={inputClassName}
                     value={item.buyOnDay}
-                    onChange={(event) => onPostpone(item.id, event.target.value as BuyOnDay)}
+                    onChange={(event) =>
+                      onPostpone(item.id, event.target.value as BuyOnDay)
+                    }
                   >
                     <option value="now">Sa snart som mulig</option>
                     {availableDays.map((dayId) => (
@@ -1441,7 +1647,13 @@ function Badge({
   return <span className={className}>{children}</span>;
 }
 
-function EmptyState({ title, description }: { title: string; description: string }) {
+function EmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
     <div className="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
       <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
@@ -1450,12 +1662,18 @@ function EmptyState({ title, description }: { title: string; description: string
   );
 }
 
-function groupItemsBySection(items: ShoppingItem[], store: Store, order: IngredientCategory[]) {
+function groupItemsBySection(
+  items: ShoppingItem[],
+  store: Store,
+  order: IngredientCategory[],
+) {
   let sections = new Map<ShoppingSection, ShoppingItem[]>();
 
   for (let item of items) {
     let section: ShoppingSection =
-      item.preferredStoreId && item.preferredStoreId !== store.id ? "Annen butikk" : item.category;
+      item.preferredStoreId && item.preferredStoreId !== store.id
+        ? "Annen butikk"
+        : item.category;
     let existing = sections.get(section);
     if (existing) {
       existing.push(item);
@@ -1521,7 +1739,9 @@ function getNextWeekStartDate(weeks: MealPlanWeek[]) {
     return todayAsDateString();
   }
 
-  let sortedWeeks = [...weeks].sort((left, right) => left.startDate.localeCompare(right.startDate));
+  let sortedWeeks = [...weeks].sort((left, right) =>
+    left.startDate.localeCompare(right.startDate),
+  );
   let latestWeek = sortedWeeks[sortedWeeks.length - 1];
   let [year, month, day] = latestWeek.startDate.split("-").map(Number);
   let date = new Date(year, month - 1, day);
