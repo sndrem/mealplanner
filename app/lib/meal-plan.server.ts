@@ -1322,7 +1322,7 @@ function validateMealPlanEntries(entries: MealPlanEntryValues[], startDate: Date
   const visibleDateSet = new Set(getMealPlanDateRange(startDate, endDate));
 
   if (entries.length !== visibleDateSet.size) {
-    return "Noen dager mangler i ukeplanen. Last siden pa nytt og prov igjen.";
+    return "Noen dager mangler i ukeplanen. Last siden på nytt og prøv igjen.";
   }
 
   const seenDates = new Set<string>();

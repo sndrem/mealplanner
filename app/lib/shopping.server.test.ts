@@ -224,7 +224,7 @@ describe("shopping.server", () => {
         {
           checked: true,
           includeDespiteStock: false,
-          note: "Kjop pa tilbud",
+          note: "Kjøp på tilbud",
           postponedUntilDate: new Date("2026-05-16T00:00:00.000Z"),
           preferredStore: {
             id: "store-2",
@@ -390,7 +390,7 @@ describe("shopping.server", () => {
       expect.objectContaining({
         checked: true,
         name: "Tortillalefser",
-        note: "Kjop pa tilbud",
+        note: "Kjøp på tilbud",
         occurrenceCount: 2,
         postponedUntilDate: new Date("2026-05-16T00:00:00.000Z"),
         preferredStore: {

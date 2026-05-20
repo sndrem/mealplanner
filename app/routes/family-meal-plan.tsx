@@ -459,7 +459,7 @@ export default function FamilyMealPlanRoute({
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
                 Planlegg middager dag for dag i den aktive perioden. Oppskrifter
-                og notater lagres pa serveren for hele familien.
+                og notater lagres på serveren for hele familien.
               </p>
             </div>
 
@@ -758,7 +758,7 @@ export default function FamilyMealPlanRoute({
               <h2 className="text-lg font-semibold text-slate-950">Detaljer</h2>
               <p className="text-sm leading-6 text-slate-600">
                 Planen tilhører familien {loaderData.family.name} og bruker et
-                lagret datointervall pa maks 7 dager.
+                lagret datointervall på maks 7 dager.
               </p>
             </div>
 
@@ -812,8 +812,8 @@ export default function FamilyMealPlanRoute({
                 ) : null}
 
                 <p className="text-sm leading-6 text-slate-600">
-                  Godkjenning markerer ukeplanen som klar for neste steg uten a
-                  lase redigering enda.
+                  Godkjenning markerer ukeplanen som klar for neste steg uten å
+                  låse redigering ennå.
                 </p>
 
                 {(actionData?.intent === "approve-meal-plan" ||
@@ -842,7 +842,7 @@ export default function FamilyMealPlanRoute({
               </h2>
               <p className="text-sm leading-6 text-slate-600">
                 Du kan fortsatt endre navn og datointervall her. Datointervallet
-                kan vare maks 7 dager.
+                kan være maks 7 dager.
               </p>
             </div>
 
@@ -928,7 +928,7 @@ export default function FamilyMealPlanRoute({
 
 export function ErrorBoundary({ error }: { error: unknown }) {
   let title = "Noe gikk galt";
-  let description = "Vi klarte ikke a laste ukeplanen.";
+  let description = "Vi klarte ikke å laste ukeplanen.";
 
   if (isRouteErrorResponse(error)) {
     if (error.status === 403) {
@@ -936,7 +936,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
       description = "Du har ikke tilgang til denne familieukeplanen.";
     } else if (error.status === 404) {
       title = "Ukeplanen finnes ikke";
-      description = "Vi fant ikke ukeplanen du forsokte a Åpne.";
+      description = "Vi fant ikke ukeplanen du forsøkte å åpne.";
     }
   }
 

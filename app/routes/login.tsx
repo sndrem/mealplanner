@@ -7,7 +7,7 @@ import { getSafeRedirectTo, loginUser, requireAnonymous, signInUser } from "../l
 export const meta: Route.MetaFunction = () => {
   return [
     { title: "Logg inn | Mealplanner" },
-    { name: "description", content: "Logg inn for a bruke Mealplanner." },
+    { name: "description", content: "Logg inn for å bruke Mealplanner." },
   ];
 };
 
@@ -68,7 +68,7 @@ export default function LoginRoute({ actionData, loaderData }: Route.ComponentPr
   return (
     <AuthForm
       actionData={actionData}
-      description="Logg inn for a planlegge maltider sammen med familien din."
+      description="Logg inn for å planlegge måltider sammen med familien din."
       isSubmitting={navigation.state === "submitting"}
       mode="login"
       redirectTo={actionData?.redirectTo ?? loaderData.redirectTo}

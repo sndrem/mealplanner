@@ -16,6 +16,17 @@ async function main() {
   const ingredientSeeds = buildIngredientSeeds();
 
   await prisma.$transaction(async (tx) => {
+    await tx.recipe.deleteMany({
+      where: {
+        scope: RecipeScope.GLOBAL,
+      },
+    });
+    await tx.store.deleteMany({
+      where: {
+        familyId: null,
+      },
+    });
+
     const categoriesByKey = new Map<string, { id: string; displayName: string }>();
 
     for (let category of ingredientCategorySeeds) {

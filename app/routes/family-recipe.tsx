@@ -164,7 +164,7 @@ export async function action({
       return {
         formError: `«${result.title}» brukes i ${result.entryCount} ${
           result.entryCount === 1 ? "ukeplan" : "ukeplaner"
-        } og kan ikke slettes for du fjerner den fra planene.`,
+        } og kan ikke slettes før du fjerner den fra planene.`,
         intent,
       } satisfies RecipeDetailActionData;
     }
@@ -262,7 +262,7 @@ export default function FamilyRecipeRoute({
 
 export function ErrorBoundary({ error }: { error: unknown }) {
   let title = "Noe gikk galt";
-  let message = "Vi kunne ikke laste oppskriften akkurat na.";
+  let message = "Vi kunne ikke laste oppskriften akkurat nå.";
 
   if (isRouteErrorResponse(error)) {
     title = error.status === 404 ? "Fant ikke oppskriften" : title;

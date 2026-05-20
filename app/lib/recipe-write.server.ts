@@ -72,7 +72,7 @@ function parseOptionalPositiveInt(value: string, fieldLabel: string) {
 
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return {
-      error: `${fieldLabel} ma vare et positivt heltall.`,
+      error: `${fieldLabel} må være et positivt heltall.`,
       ok: false as const,
     };
   }
@@ -367,7 +367,7 @@ async function validateFamilyRecipeValues({
       !validFamilyStoreIds.has(ingredient.preferredStoreId)
     ) {
       ingredientCategories[index] =
-        "Foretrukket butikk ma tilhore familien.";
+        "Foretrukket butikk må tilhøre familien.";
     }
   });
 
@@ -397,7 +397,7 @@ async function validateFamilyRecipeValues({
   return {
     ok: true as const,
     parsed: {
-      defaultServings: servingsResult.ok ? servingsResult.value : null,
+      defaultServings: servingsResult.ok ? (servingsResult.value ?? 2) : null,
       description: normalizedValues.description || null,
       ingredients: normalizedValues.ingredients.map((ingredient) => ({
         amount: ingredient.amount || null,
@@ -406,7 +406,7 @@ async function validateFamilyRecipeValues({
         preferredStoreId: ingredient.preferredStoreId || null,
         unit: ingredient.unit || null,
       })),
-      prepMinutes: prepResult.ok ? prepResult.value : null,
+      prepMinutes: prepResult.ok ? (prepResult.value ?? 45) : null,
       tags: parseTags(normalizedValues.tags),
       title: normalizedValues.title,
     },

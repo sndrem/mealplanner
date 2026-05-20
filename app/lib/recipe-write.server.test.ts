@@ -259,7 +259,7 @@ describe("recipe-write.server", () => {
     expect(result).toMatchObject({
       fieldErrors: {
         ingredientCategories: {
-          0: "Foretrukket butikk ma tilhore familien.",
+          0: "Foretrukket butikk må tilhøre familien.",
         },
       },
     });

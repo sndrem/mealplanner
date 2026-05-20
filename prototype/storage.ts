@@ -15,7 +15,7 @@ export function usePrototypeState() {
         setState(mergePrototypeState(JSON.parse(raw)));
       }
     } catch (error) {
-      console.warn("Klarte ikke a laste prototype fra localStorage", error);
+      console.warn("Klarte ikke å laste prototype fra localStorage", error);
     } finally {
       setHydrated(true);
     }
@@ -29,7 +29,7 @@ export function usePrototypeState() {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (error) {
-      console.warn("Klarte ikke a lagre prototype til localStorage", error);
+      console.warn("Klarte ikke å lagre prototype til localStorage", error);
     }
   }, [hydrated, state]);
 

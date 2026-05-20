@@ -48,7 +48,7 @@ export const meta: MetaFunction = () => {
     {
       name: "description",
       content:
-        "Administrer familiebutikker og seksjonsrekkefolge i Mealplanner.",
+        "Administrer familiebutikker og seksjonsrekkefølge i Mealplanner.",
     },
   ];
 };
@@ -222,8 +222,8 @@ export default function FamilyStoresRoute({
                 {loaderData.family.name}
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                Administrer familiebutikker og bestem seksjonsrekkefolgen slik
-                at butikkmodus folger handleturen deres.
+                Administrer familiebutikker og bestem seksjonsrekkefølgen slik
+                at butikkmodus følger handleturen deres.
               </p>
             </div>
 
@@ -348,7 +348,7 @@ export default function FamilyStoresRoute({
                 Familiebutikker
               </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Gi butikkene egne navn og tilpass seksjonsrekkefolgen for
+                Gi butikkene egne navn og tilpass seksjonsrekkefølgen for
                 akkurat denne familien.
               </p>
             </div>
@@ -379,8 +379,8 @@ export default function FamilyStoresRoute({
               </DndProvider>
             ) : (
               <p className="mt-6 text-sm leading-6 text-slate-600">
-                Familien har ingen egne butikker ennå. Opprett en butikk for a
-                fa en egen seksjonsrekkefolge.
+                Familien har ingen egne butikker ennå. Opprett en butikk for å
+                få en egen seksjonsrekkefølge.
               </p>
             )}
           </article>
@@ -392,7 +392,7 @@ export default function FamilyStoresRoute({
 
 export function ErrorBoundary({ error }: { error: unknown }) {
   let title = "Noe gikk galt";
-  let message = "Vi klarte ikke a laste butikkoppsettet akkurat na.";
+  let message = "Vi klarte ikke å laste butikkoppsettet akkurat nå.";
 
   if (isRouteErrorResponse(error)) {
     title = error.status === 404 ? "Fant ikke familien" : title;
@@ -450,7 +450,7 @@ function getStoresNoticeContent(notice: StoresNotice) {
     case "store-deleted":
       return {
         description:
-          "Butikken ble slettet. Eventuelle preferanser peker na ikke lenger til denne butikken.",
+          "Butikken ble slettet. Eventuelle preferanser peker nå ikke lenger til denne butikken.",
         title: "Butikken er slettet",
       };
   }

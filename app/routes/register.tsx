@@ -13,7 +13,7 @@ import {
 export const meta: Route.MetaFunction = () => {
   return [
     { title: "Opprett konto | Mealplanner" },
-    { name: "description", content: "Opprett en konto for a bruke Mealplanner." },
+    { name: "description", content: "Opprett en konto for å bruke Mealplanner." },
   ];
 };
 
@@ -50,7 +50,7 @@ export async function action({ request }: Route.ActionArgs) {
     password:
       password.length >= PASSWORD_MIN_LENGTH
         ? undefined
-        : `Passordet ma ha minst ${PASSWORD_MIN_LENGTH} tegn.`,
+        : `Passordet må ha minst ${PASSWORD_MIN_LENGTH} tegn.`,
   };
 
   if (fieldErrors.displayName || fieldErrors.email || fieldErrors.password) {
@@ -82,7 +82,7 @@ export default function RegisterRoute({ actionData, loaderData }: Route.Componen
   return (
     <AuthForm
       actionData={actionData}
-      description="Opprett en konto for a komme i gang med ukeplan, handleliste og familiesamarbeid."
+      description="Opprett en konto for å komme i gang med ukeplan, handleliste og familiesamarbeid."
       isSubmitting={navigation.state === "submitting"}
       mode="register"
       redirectTo={actionData?.redirectTo ?? loaderData.redirectTo}

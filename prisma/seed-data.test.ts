@@ -6,9 +6,9 @@ describe("seed-data", () => {
   it("validates the starter seed fixtures", () => {
     expect(validateSeedData()).toEqual({
       categoryCount: 9,
-      ingredientCount: 38,
-      recipeCount: 7,
-      storeCount: 3,
+      ingredientCount: 0,
+      recipeCount: 0,
+      storeCount: 0,
     });
   });
 

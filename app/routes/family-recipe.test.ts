@@ -106,7 +106,7 @@ describe("family recipe route", () => {
 
     expect(result).toEqual({
       formError:
-        "«Test» brukes i 2 ukeplaner og kan ikke slettes for du fjerner den fra planene.",
+        "«Test» brukes i 2 ukeplaner og kan ikke slettes før du fjerner den fra planene.",
       intent: "delete-recipe",
     });
   });

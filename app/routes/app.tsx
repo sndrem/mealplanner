@@ -181,7 +181,7 @@ export default function AppRoute({
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
                 {hasFamilies
                   ? "Dette er den beskyttede familieoversikten din, klar for videre arbeid med ukeplaner og handlelister."
-                  : "Dette er den beskyttede inngangen til appen. Opprett en familie eller bli med i en eksisterende familie for a komme videre."}
+                  : "Dette er den beskyttede inngangen til appen. Opprett en familie eller bli med i en eksisterende familie for å komme videre."}
               </p>
             </div>
 
@@ -220,7 +220,7 @@ export default function AppRoute({
                 Familier du har tilgang til
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Dette er den forste beskyttede familieflaten i produksjonsappen.
+                Dette er den første beskyttede familieflaten i produksjonsappen.
                 Hver familie er klar som utgangspunkt for neste steg med
                 ukeplaner, handlelister og samarbeid.
               </p>
@@ -244,7 +244,7 @@ export default function AppRoute({
                     <p className="mt-3 text-sm leading-6 text-slate-600">
                       {membership.role === "ADMIN"
                         ? "Du er administrator for denne familien og kan administrere medlemmer fra familieoversikten."
-                        : "Du har tilgang til denne familien og kan Åpne familieoversikten for videre arbeid."}
+                        : "Du har tilgang til denne familien og kan åpne familieoversikten for videre arbeid."}
                     </p>
                     <Link
                       className="mt-5 inline-flex rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
@@ -259,12 +259,12 @@ export default function AppRoute({
 
             <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
               <h2 className="text-lg font-semibold text-slate-950">
-                Hva kommer na
+                Hva kommer nå
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Familieonboarding, auth, session og beskyttede ruter er pa
-                plass. Neste steg er a bygge familievisning, ukeplaner og
-                handleliste pa toppen av ekte serverdata.
+                Familieonboarding, auth, session og beskyttede ruter er på
+                plass. Neste steg er å bygge familievisning, ukeplaner og
+                handleliste på toppen av ekte serverdata.
               </p>
             </section>
           </>

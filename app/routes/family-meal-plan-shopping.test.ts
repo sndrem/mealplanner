@@ -584,11 +584,11 @@ describe("family meal plan shopping route", () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(updateGeneratedShoppingItemOverride).mockResolvedValue({
       fieldErrors: {
-        postponedUntilDate: "Datoen ma ligge innenfor ukeplanens aktive periode.",
+        postponedUntilDate: "Datoen må ligge innenfor ukeplanens aktive periode.",
       },
       status: "VALIDATION_ERROR",
       values: {
-        note: "Kjop senere",
+        note: "Kjøp senere",
         postponedUntilDate: "2026-05-21",
         preferredStoreId: "store-1",
       },
@@ -597,7 +597,7 @@ describe("family meal plan shopping route", () => {
     const formData = new FormData();
     formData.set("intent", "update-generated-shopping-item");
     formData.set("sourceKey", "entry-1:ingredient-1");
-    formData.set("note", "Kjop senere");
+    formData.set("note", "Kjøp senere");
     formData.set("postponedUntilDate", "2026-05-21");
     formData.set("preferredStoreId", "store-1");
 
@@ -616,14 +616,14 @@ describe("family meal plan shopping route", () => {
       sourceKey: "entry-1:ingredient-1",
       userId: "user-1",
       values: {
-        note: "Kjop senere",
+        note: "Kjøp senere",
         postponedUntilDate: "2026-05-21",
         preferredStoreId: "store-1",
       },
     });
     expect(result).toEqual({
       generatedOverrideFieldErrors: {
-        postponedUntilDate: "Datoen ma ligge innenfor ukeplanens aktive periode.",
+        postponedUntilDate: "Datoen må ligge innenfor ukeplanens aktive periode.",
       },
       intent: "update-generated-shopping-item",
       itemTarget: {
@@ -631,7 +631,7 @@ describe("family meal plan shopping route", () => {
         sourceType: "GENERATED",
       },
       overrideValues: {
-        note: "Kjop senere",
+        note: "Kjøp senere",
         postponedUntilDate: "2026-05-21",
         preferredStoreId: "store-1",
       },

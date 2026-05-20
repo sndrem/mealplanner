@@ -1561,7 +1561,7 @@ function validateOptionalDateInRange(
 
   if (parsedDate.getTime() < startDate.getTime() || parsedDate.getTime() > endDate.getTime()) {
     return {
-      fieldError: "Datoen ma ligge innenfor ukeplanens aktive periode.",
+      fieldError: "Datoen må ligge innenfor ukeplanens aktive periode.",
       ok: false as const,
     };
   }

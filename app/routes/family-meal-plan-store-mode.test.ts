@@ -172,7 +172,7 @@ describe("family meal plan store mode route", () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(updateActiveShoppingDate).mockResolvedValue({
       fieldErrors: {
-        activeShoppingDate: "Datoen ma ligge innenfor ukeplanens aktive periode.",
+        activeShoppingDate: "Datoen må ligge innenfor ukeplanens aktive periode.",
       },
       status: "VALIDATION_ERROR",
       values: {
@@ -201,7 +201,7 @@ describe("family meal plan store mode route", () => {
     });
     expect(result).toEqual({
       activeShoppingDateFieldErrors: {
-        activeShoppingDate: "Datoen ma ligge innenfor ukeplanens aktive periode.",
+        activeShoppingDate: "Datoen må ligge innenfor ukeplanens aktive periode.",
       },
       activeShoppingDateValue: "2026-05-20",
       intent: "update-active-shopping-date",

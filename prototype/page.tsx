@@ -395,11 +395,11 @@ export function MealPlannerPrototype() {
                 <p className="max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
                   Denne versjonen tester flere planuker, gjenbruk av tidligere
                   uker og aktive uker som kan starte midt i kalenderuken, for
-                  eksempel pa torsdag.
+                  eksempel på torsdag.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3 text-sm text-slate-200">
-                <InfoPill label="Sprak" value="Norsk" />
+                <InfoPill label="Språk" value="Norsk" />
                 <InfoPill
                   label="Oppsett"
                   value={`${state.weeks.length} planuker`}
@@ -465,7 +465,7 @@ export function MealPlannerPrototype() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-slate-500">
-                  Klar til a handle
+                  Klar til å handle
                 </p>
                 <h2 className="text-xl font-semibold tracking-tight text-slate-950">
                   Sjekk butikk og uke, sa er du klar.
@@ -636,7 +636,7 @@ export function MealPlannerPrototype() {
 
               <SectionCard
                 title="Aktiv periode"
-                description="Viser hvilken del av uken som fortsatt er relevant a planlegge og handle for."
+                description="Viser hvilken del av uken som fortsatt er relevant å planlegge og handle for."
               >
                 <div className="grid gap-4">
                   <SelectorCard
@@ -644,8 +644,8 @@ export function MealPlannerPrototype() {
                     value={selectedWeek.title}
                     description={
                       selectedWeek.copiedFromWeekId
-                        ? "Denne uken er laget ved a gjenbruke en tidligere uke."
-                        : "Bytt uke over for a se plan, handleliste og butikkmodus."
+                        ? "Denne uken er laget ved å gjenbruke en tidligere uke."
+                        : "Bytt uke over for å se plan, handleliste og butikkmodus."
                     }
                   >
                     <div className="flex flex-wrap gap-2">
@@ -711,7 +711,7 @@ export function MealPlannerPrototype() {
               <SelectorCard
                 label="Butikk"
                 value={activeStore.name}
-                description="Sorter handlelisten etter rekkefolgen dere gar i butikken."
+                description="Sorter handlelisten etter rekkefølgen dere går i butikken."
               >
                 <select
                   className={inputClassName}
@@ -738,7 +738,7 @@ export function MealPlannerPrototype() {
               >
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: "today", label: "Na" },
+                    { id: "today", label: "Nå" },
                     { id: "later", label: "Senere" },
                     { id: "all", label: "Alle" },
                   ].map((filterOption) => (
@@ -815,7 +815,7 @@ export function MealPlannerPrototype() {
 
             <SectionCard
               title="Oppskriftsbank"
-              description="Seedede oppskrifter for a teste flyten. Gjenbrukte uker kan kopiere kombinasjoner som fungerer bra."
+              description="Seedede oppskrifter for å teste flyten. Gjenbrukte uker kan kopiere kombinasjoner som fungerer bra."
             >
               <div className="grid gap-3">
                 {recipes.map((recipe) => (
@@ -972,7 +972,7 @@ export function MealPlannerPrototype() {
                   dark={false}
                 />
                 <InfoPill
-                  label="Na"
+                  label="Nå"
                   value={`${dueItems.length} varer`}
                   dark={false}
                 />
@@ -987,7 +987,7 @@ export function MealPlannerPrototype() {
                 {groupedItems.length === 0 ? (
                   <EmptyState
                     title="Ingen varer i dette filteret"
-                    description="Velg flere middager eller legg til egne varer for a se handlelisten her."
+                    description="Velg flere middager eller legg til egne varer for å se handlelisten her."
                   />
                 ) : (
                   groupedItems.map((group) => (
@@ -1011,7 +1011,7 @@ export function MealPlannerPrototype() {
         {state.activeTab === "butikk" ? (
           <SectionCard
             title={`Butikkmodus: ${selectedWeek.title}`}
-            description="Store trykkflater, tydelig progresjon og fokus pa varene som skal handles akkurat na for den valgte uken."
+            description="Store trykkflater, tydelig progresjon og fokus på varene som skal handles akkurat nå for den valgte uken."
           >
             <div className="mb-5 grid gap-3 rounded-[28px] bg-slate-950 p-4 text-white sm:grid-cols-3">
               <div className="rounded-2xl bg-white/10 p-4">
@@ -1037,7 +1037,7 @@ export function MealPlannerPrototype() {
               {groupItemsBySection(dueItems, activeStore, activeStoreOrder)
                 .length === 0 ? (
                 <EmptyState
-                  title="Ingen varer ma handles na"
+                  title="Ingen varer må handles nå"
                   description="Alt er enten ferdig handlet eller utsatt til senere i den valgte uken."
                 />
               ) : (
@@ -1095,7 +1095,7 @@ export function MealPlannerPrototype() {
                             </div>
                             <p className="mt-1 text-sm text-slate-600">
                               {item.recipeName
-                                ? `Fra ${item.recipeName} pa ${getDayLabel(item.dayId!)}`
+                                ? `Fra ${item.recipeName} på ${getDayLabel(item.dayId!)}`
                                 : item.note || "Egen vare lagt til av familien"}
                             </p>
                           </div>
@@ -1113,7 +1113,7 @@ export function MealPlannerPrototype() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   {laterItems.length === 0 ? (
                     <p className="text-sm text-slate-500">
-                      Ingen utsatte varer akkurat na.
+                      Ingen utsatte varer akkurat nå.
                     </p>
                   ) : (
                     laterItems.map((item) => (
@@ -1135,7 +1135,7 @@ export function MealPlannerPrototype() {
           <div className="grid gap-6 lg:grid-cols-[1fr_0.8fr]">
             <SectionCard
               title="Butikkoppsett"
-              description="Tilpass rekkefolgen sa listen folger gangmønsteret deres i butikken."
+              description="Tilpass rekkefølgen så listen følger gangmønsteret deres i butikken."
             >
               <div className="mb-4 flex flex-wrap gap-2">
                 {stores.map((store) => (
@@ -1194,7 +1194,7 @@ export function MealPlannerPrototype() {
 
             <SectionCard
               title="Neste steg"
-              description="Denne prototypen modellerer na flere planuker og gjenbruk, men bruker fortsatt lokal demo-data."
+              description="Denne prototypen modellerer nå flere ukeplaner og gjenbruk, men bruker fortsatt lokal demo-data."
             >
               <div className="space-y-4 text-sm leading-6 text-slate-600">
                 <p>
@@ -1204,16 +1204,16 @@ export function MealPlannerPrototype() {
                 </p>
                 <ul className="space-y-2">
                   <li className="rounded-2xl bg-slate-50 px-4 py-3">
-                    Neste naturlige steg er a koble pa ekte lagring med Prisma
+                    Neste naturlige steg er å koble på ekte lagring med Prisma
                     og PostgreSQL.
                   </li>
                   <li className="rounded-2xl bg-slate-50 px-4 py-3">
                     Deretter kan familiekontoer og godkjenning mellom flere
-                    brukere legges pa.
+                    brukere legges på.
                   </li>
                   <li className="rounded-2xl bg-slate-50 px-4 py-3">
-                    Notion-import kan passe inn som en mate a fylle
-                    oppskriftsbanken pa uten a endre UI-flyten.
+                    Notion-import kan passe inn som en måte å fylle
+                    oppskriftsbanken på uten å endre UI-flyten.
                   </li>
                 </ul>
 
@@ -1586,7 +1586,7 @@ function ShoppingGroup({
 
                 <p className="text-sm leading-6 text-slate-600">
                   {item.recipeName
-                    ? `Fra ${item.recipeName} pa ${getDayLabel(item.dayId!)}`
+                    ? `Fra ${item.recipeName} på ${getDayLabel(item.dayId!)}`
                     : item.note || "Lagt til manuelt"}
                 </p>
               </div>
@@ -1703,13 +1703,13 @@ function groupItemsBySection(
 }
 
 function filterLabel(filter: PrototypeState["shoppingFilter"]) {
-  if (filter === "today") return "Na";
+  if (filter === "today") return "Nå";
   if (filter === "later") return "Senere";
   return "Alle";
 }
 
 function buyOnLabel(value: BuyOnDay) {
-  return value === "now" ? "Na" : capitalize(getDayLabel(value));
+  return value === "now" ? "Nå" : capitalize(getDayLabel(value));
 }
 
 function capitalize(value: string) {

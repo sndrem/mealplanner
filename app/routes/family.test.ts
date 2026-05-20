@@ -241,7 +241,7 @@ describe("family route", () => {
   it("rethrows forbidden admin-only action errors", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(removeFamilyMember).mockRejectedValue(
-      new Response("Du har ikke tilgang til a administrere denne familien.", {
+      new Response("Du har ikke tilgang til å administrere denne familien.", {
         status: 403,
         statusText: "Forbidden",
       }),
