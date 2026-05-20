@@ -73,5 +73,4 @@ if (!parsedEnv.success) {
   throw new Error(`Invalid server environment configuration:\n${issues}`);
 }
 
-console.log("parsedEnv", parsedEnv.data);
 export const env = parsedEnv.data;

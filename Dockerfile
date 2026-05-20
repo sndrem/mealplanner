@@ -1,22 +1,22 @@
-FROM node:20-alpine AS development-dependencies-env
-COPY . /app
+FROM node:20-alpine AS build
 WORKDIR /app
+COPY package.json package-lock.json ./
 RUN npm ci
-
-FROM node:20-alpine AS production-dependencies-env
-COPY ./package.json package-lock.json /app/
-WORKDIR /app
-RUN npm ci --omit=dev
-
-FROM node:20-alpine AS build-env
-COPY . /app/
-COPY --from=development-dependencies-env /app/node_modules /app/node_modules
-WORKDIR /app
+COPY . .
+# Dummy URL for image build only; production uses Fly secrets at runtime.
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
+RUN npm run prisma:generate
 RUN npm run build
 
 FROM node:20-alpine
-COPY ./package.json package-lock.json /app/
-COPY --from=production-dependencies-env /app/node_modules /app/node_modules
-COPY --from=build-env /app/build /app/build
 WORKDIR /app
+COPY package.json package-lock.json prisma.config.ts ./
+COPY prisma ./prisma
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/build ./build
+ENV NODE_ENV=production
+# Prisma client is generated in the build stage; install CLI for Fly release_command migrations.
+RUN npm prune --omit=dev \
+  && npm install prisma@6.19.3 --no-save
+EXPOSE 3000
 CMD ["npm", "run", "start"]

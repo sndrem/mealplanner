@@ -83,16 +83,21 @@ The Prisma seed script populates reusable global starter data for ingredient cat
 
 ## Environment Variables
 
-Two environment variables are required right now:
+Copy [`.env.example`](.env.example) to `.env` and set all required values. The server validates these at startup in `app/lib/env.server.ts`:
 
 ```bash
 DATABASE_URL="postgresql://mealplanner:mealplanner@localhost:5466/mealplanner?schema=public"
 SESSION_SECRET="replace-this-with-a-long-random-string-of-at-least-32-characters"
+NOTION_API_TOKEN="secret_xxx"
+NOTION_INGREDIENTS_DATABASE_ID="notion_ingredients_database_id"
+NOTION_RECIPES_DATABASE_ID="notion_recipes_database_id"
 ```
 
-`SESSION_SECRET` should be a long random string used to sign the login session cookie.
+`SESSION_SECRET` must be at least 32 characters and is used to sign the login session cookie.
 
-If either environment variable is missing or invalid, the server fails fast during startup instead of waiting until the first database access.
+`NOTION_*` variables are required for startup validation today. Use real values for Notion import, or placeholders locally if you are not using import (a follow-up task will make them optional).
+
+If any variable is missing or invalid, the server fails fast during startup instead of waiting until the first database access.
 
 ## Authentication
 
@@ -135,7 +140,7 @@ npm run typecheck
 npm run build
 ```
 
-CI sets placeholder values for `DATABASE_URL` and `SESSION_SECRET` so server-side environment validation can complete without requiring a live database connection.
+CI sets placeholder values for all required server environment variables so validation can complete without a live database or Notion connection.
 
 ## Backlog Issue Generation
 
@@ -169,29 +174,37 @@ When creating issues, the script auto-creates any missing labels in the target r
 
 ## Deployment
 
-### Docker Deployment
+### Fly.io (production)
 
-To build and run using Docker:
+See **[docs/deploy-fly.md](docs/deploy-fly.md)** for the full workflow: secrets, `fly deploy`, migrations on release, rollback, and smoke checks.
+
+Quick reference:
 
 ```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
+fly deploy -a mealplanner
+fly open -a mealplanner
 ```
+
+Configuration lives in [`fly.toml`](fly.toml). The Docker image runs `npm run start` (React Router serve on port 3000).
+
+### Docker (local production image)
+
+```bash
+docker build -t mealplanner .
+docker run --rm -p 3000:3000 --env-file .env mealplanner
+```
+
+Pass all required environment variables (see Environment Variables above).
 
 ### DIY Deployment
 
 If you're familiar with deploying Node applications, the built-in app server is production-ready.
 
-Make sure to deploy the output of `npm run build`
+Deploy the output of `npm run build` plus `node_modules`, `prisma/`, and `prisma.config.ts`. Run migrations before serving traffic:
 
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
+```bash
+npm run prisma:migrate:deploy
+npm run start
 ```
 
 ## Styling

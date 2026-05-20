@@ -171,6 +171,7 @@ export async function runNotionImport(input: NotionImportInput) {
 }
 
 async function fetchAllNotionPages(client: Client, databaseId: string) {
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pages: Array<Record<string, any>> = [];
   let cursor: string | undefined = undefined;
   const queryApi:
@@ -218,6 +219,7 @@ async function fetchAllNotionPages(client: Client, databaseId: string) {
 
     for (const result of response.results) {
       if (result.object === "page") {
+        //eslint-disable-next-line @typescript-eslint/no-explicit-any
         pages.push(result as Record<string, any>);
       }
     }
@@ -231,6 +233,7 @@ async function fetchAllNotionPages(client: Client, databaseId: string) {
 }
 
 function normalizeIngredients(
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
   pages: Array<Record<string, any>>,
   summary: NotionImportSummary,
 ) {
@@ -306,6 +309,7 @@ function buildIngredientLookupByPageId(
 }
 
 function normalizeRecipes(
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
   pages: Array<Record<string, any>>,
   ingredientLookupByPageId: Map<string, NormalizedNotionIngredient>,
   summary: NotionImportSummary,
@@ -767,7 +771,12 @@ function parseRecipeIngredientRelations(
   return rows;
 }
 
-function getProperty(page: Record<string, any>, candidateNames: string[]) {
+function getProperty(
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  page: Record<string, any>,
+  candidateNames: string[],
+) {
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
   const properties = (page.properties ?? {}) as Record<string, any>;
 
   for (const candidate of candidateNames) {
@@ -779,7 +788,11 @@ function getProperty(page: Record<string, any>, candidateNames: string[]) {
   return null;
 }
 
-function getTitleProperty(page: Record<string, any>, candidateNames: string[]) {
+function getTitleProperty(
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  page: Record<string, any>,
+  candidateNames: string[],
+) {
   const property = getProperty(page, candidateNames);
 
   if (!property || property.type !== "title") {
@@ -790,6 +803,7 @@ function getTitleProperty(page: Record<string, any>, candidateNames: string[]) {
 }
 
 function getRichTextProperty(
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
   page: Record<string, any>,
   candidateNames: string[],
 ) {
@@ -811,6 +825,7 @@ function getRichTextProperty(
 }
 
 function getSelectProperty(
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
   page: Record<string, any>,
   candidateNames: string[],
 ) {
@@ -823,10 +838,18 @@ function getSelectProperty(
   return String(property.select.name ?? "").trim() || null;
 }
 
-function getRelationProperty(page: Record<string, any>, candidateNames: string[]) {
+function getRelationProperty(
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  page: Record<string, any>,
+  candidateNames: string[],
+) {
   const property = getProperty(page, candidateNames);
 
-  if (!property || property.type !== "relation" || !Array.isArray(property.relation)) {
+  if (
+    !property ||
+    property.type !== "relation" ||
+    !Array.isArray(property.relation)
+  ) {
     return [];
   }
 
@@ -836,6 +859,7 @@ function getRelationProperty(page: Record<string, any>, candidateNames: string[]
 }
 
 function getNumberProperty(
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
   page: Record<string, any>,
   candidateNames: string[],
 ) {
@@ -855,6 +879,7 @@ function getNumberProperty(
 }
 
 function getNumberPropertyAsString(
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
   page: Record<string, any>,
   candidateNames: string[],
 ) {
@@ -868,6 +893,7 @@ function getNumberPropertyAsString(
 }
 
 function getMultiSelectProperty(
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
   page: Record<string, any>,
   candidateNames: string[],
 ) {
