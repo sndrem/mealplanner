@@ -17,6 +17,9 @@ jobs:
       CI: true
       DATABASE_URL: postgresql://mealplanner:mealplanner@localhost:5466/mealplanner?schema=public
       SESSION_SECRET: ci-session-secret-that-is-at-least-thirty-two-characters
+      NOTION_API_TOKEN: ci-notion-api-token
+      NOTION_INGREDIENTS_DATABASE_ID: ci-notion-ingredients-database-id
+      NOTION_RECIPES_DATABASE_ID: ci-notion-recipes-database-id
 
     steps:
       - name: Check out repository

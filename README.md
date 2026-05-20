@@ -140,7 +140,7 @@ npm run typecheck
 npm run build
 ```
 
-CI sets placeholder values for `DATABASE_URL` and `SESSION_SECRET` so server-side environment validation can complete without requiring a live database connection.
+CI sets placeholder values for all required server environment variables so validation can complete without a live database or Notion connection.
 
 ## Backlog Issue Generation
 
