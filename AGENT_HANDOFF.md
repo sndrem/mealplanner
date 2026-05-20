@@ -2,34 +2,34 @@
 
 ## Current Objective
 
-Issue `#36` stock ingredients (basisvarer) is implemented: family registry, shopping projection skip, weekly opt-in via overrides, and UI on Handleliste / Butikkmodus / family settings.
+Issue #41 Fly.io deployment: production Docker image, `fly.toml`, and deploy documentation are implemented on branch `deploy-app`. Awaiting first `fly deploy` by operator.
 
 ## Completed
 
-- Added `FamilyStockIngredient` model and `ShoppingItemOverride.includeDespiteStock` (migration `20260516173423_add_family_stock_ingredients`).
-- Added `app/lib/stock.server.ts`, `app/lib/stock-write.server.ts`, and `app/lib/ingredient-normalize.ts`.
-- Updated `app/lib/shopping.server.ts` to skip stock items in generated projection and expose `getStockIngredientsForMealPlan`.
-- Added `optInStockShoppingItems` in `app/lib/shopping-write.server.ts`.
-- Added route `families/:familyId/stock-ingredients` and family dashboard link.
-- Handleliste shows expandable basisvarer notice with per-item and bulk opt-in; Butikkmodus links to Handleliste when stock items are in play.
+- Reworked [`Dockerfile`](Dockerfile) for Prisma generate, production prune, and Prisma CLI for release migrations.
+- Added [`fly.toml`](fly.toml) for app `mealplanner` with `release_command` migrate deploy.
+- Added [`docs/deploy-fly.md`](docs/deploy-fly.md) (secrets, deploy, rollback, smoke checks).
+- Updated [`README.md`](README.md) env vars and deployment sections.
+- Excluded `.env` from Docker context in [`.dockerignore`](.dockerignore).
+- Removed debug log from [`app/lib/env.server.ts`](app/lib/env.server.ts).
 
 ## Files To Read First
 
-- `app/lib/shopping.server.ts` — projection skip + stock summary.
-- `app/lib/shopping-write.server.ts` — `optInStockShoppingItems`.
-- `app/routes/family-stock-ingredients.tsx` — admin basisvarer management.
-- `app/routes/family-meal-plan-shopping.tsx` — opt-in UI on Handleliste.
+- `docs/deploy-fly.md` — operator deploy workflow.
+- `fly.toml` — Fly app config.
+- `Dockerfile` — production image build.
 
 ## Validation
 
-- `npm run test:run -- app/lib/stock.server.test.ts app/lib/stock-write.server.test.ts app/lib/shopping.server.test.ts app/lib/shopping-write.server.test.ts app/routes/family-stock-ingredients.test.ts app/routes/family-meal-plan-shopping.test.ts app/routes/family-meal-plan-store-mode.test.ts`
-- `./node_modules/.bin/tsc --noEmit`
+- `npm run test:run` — 161 tests passed.
+- `docker build -t mealplanner .` — succeeded.
 
 ## Open Items
 
-- Manual smoke: configure basisvarer, plan meals with staples, confirm Handleliste exclusion, opt in one item, verify store mode and persistence after reload.
-- Display-name matching requires exact normalized names (documented in UI copy).
+- Operator: set Fly secrets and run `fly deploy -a mealplanner`.
+- Post-deploy smoke checklist in `docs/deploy-fly.md`.
+- Separate follow-up: make Notion env vars optional.
 
 ## Next Step
 
-Manual QA in browser, then open PR for issue #36 if satisfied.
+Merge PR, deploy to Fly, run smoke checks on `https://mealplanner.fly.dev`.
