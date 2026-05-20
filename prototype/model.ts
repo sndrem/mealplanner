@@ -11,18 +11,39 @@ export const weekDays = [
 export type DayId = (typeof weekDays)[number];
 
 export const ingredientCategories = [
-  "Frukt og gront",
-  "Kjott og fisk",
+  "Frukt og grønt",
+  "Kjøtt og fisk",
   "Meieri",
   "Torrvarer",
   "Frys",
-  "Bakst og brod",
+  "Bakst og brød",
   "Drikke",
   "Husholdning",
   "Annet",
 ] as const;
 
 export type IngredientCategory = (typeof ingredientCategories)[number];
+
+const legacyIngredientCategoryMap = {
+  "Frukt og gront": "Frukt og grønt",
+  "Kjott og fisk": "Kjøtt og fisk",
+  "Bakst og brod": "Bakst og brød",
+} satisfies Record<string, IngredientCategory>;
+
+function coerceIngredientCategory(value: unknown): IngredientCategory | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  if ((ingredientCategories as readonly string[]).includes(value)) {
+    return value as IngredientCategory;
+  }
+
+  let mapped =
+    legacyIngredientCategoryMap[value as keyof typeof legacyIngredientCategoryMap];
+  return mapped ?? null;
+}
+
 export type PrototypeTab = "plan" | "liste" | "butikk" | "butikker";
 export type ShoppingFilter = "today" | "later" | "all";
 export type BuyOnDay = DayId | "now";
@@ -103,9 +124,9 @@ export const stores: Store[] = [
     id: "rema",
     name: "Rema 1000",
     sectionOrder: [
-      "Frukt og gront",
-      "Bakst og brod",
-      "Kjott og fisk",
+      "Frukt og grønt",
+      "Bakst og brød",
+      "Kjøtt og fisk",
       "Meieri",
       "Torrvarer",
       "Frys",
@@ -118,10 +139,10 @@ export const stores: Store[] = [
     id: "coop",
     name: "Coop Mega",
     sectionOrder: [
-      "Frukt og gront",
-      "Kjott og fisk",
+      "Frukt og grønt",
+      "Kjøtt og fisk",
       "Meieri",
-      "Bakst og brod",
+      "Bakst og brød",
       "Torrvarer",
       "Frys",
       "Drikke",
@@ -133,9 +154,9 @@ export const stores: Store[] = [
     id: "meny",
     name: "Meny",
     sectionOrder: [
-      "Frukt og gront",
-      "Kjott og fisk",
-      "Bakst og brod",
+      "Frukt og grønt",
+      "Kjøtt og fisk",
+      "Bakst og brød",
       "Meieri",
       "Torrvarer",
       "Drikke",
@@ -155,11 +176,11 @@ export const recipes: Recipe[] = [
     servings: 4,
     tags: ["rask", "barnevennlig", "fredag"],
     ingredients: [
-      { id: "chicken", name: "Kyllingfilet", amount: "600 g", category: "Kjott og fisk" },
-      { id: "tortillas", name: "Tortillalefser", amount: "2 pk", category: "Bakst og brod" },
+      { id: "chicken", name: "Kyllingfilet", amount: "600 g", category: "Kjøtt og fisk" },
+      { id: "tortillas", name: "Tortillalefser", amount: "2 pk", category: "Bakst og brød" },
       { id: "corn", name: "Mais", amount: "1 boks", category: "Torrvarer" },
-      { id: "lettuce", name: "Hjertesalat", amount: "2 stk", category: "Frukt og gront" },
-      { id: "tomato", name: "Tomater", amount: "4 stk", category: "Frukt og gront" },
+      { id: "lettuce", name: "Hjertesalat", amount: "2 stk", category: "Frukt og grønt" },
+      { id: "tomato", name: "Tomater", amount: "4 stk", category: "Frukt og grønt" },
       { id: "creme", name: "Lettrømme", amount: "1 beger", category: "Meieri" },
       { id: "cheese", name: "Revet ost", amount: "250 g", category: "Meieri" },
     ],
@@ -167,7 +188,7 @@ export const recipes: Recipe[] = [
   {
     id: "tomatsuppe",
     title: "Tomatsuppe med egg",
-    description: "Enkel hverdagsmiddag som passer fint pa travle dager.",
+    description: "Enkel hverdagsmiddag som passer fint på travle dager.",
     prepMinutes: 20,
     servings: 4,
     tags: ["rask", "rimelig", "vegetar"],
@@ -175,20 +196,20 @@ export const recipes: Recipe[] = [
       { id: "soup", name: "Tomatsuppe", amount: "2 poser", category: "Torrvarer" },
       { id: "macaroni", name: "Makaroni", amount: "250 g", category: "Torrvarer" },
       { id: "eggs", name: "Egg", amount: "6 stk", category: "Meieri" },
-      { id: "bread", name: "Grovt brod", amount: "1 stk", category: "Bakst og brod" },
+      { id: "bread", name: "Grovt brød", amount: "1 stk", category: "Bakst og brød" },
     ],
   },
   {
     id: "pasta-kjottsaus",
-    title: "Pasta med kjottsaus",
+    title: "Pasta med kjøttsaus",
     description: "Klassiker som gir gode rester til lunsj dagen etter.",
     prepMinutes: 35,
     servings: 4,
     tags: ["familie", "restevennlig"],
     ingredients: [
-      { id: "mince", name: "Karbonadedeig", amount: "400 g", category: "Kjott og fisk" },
-      { id: "onion", name: "Gul lok", amount: "1 stk", category: "Frukt og gront" },
-      { id: "garlic", name: "Hvitlok", amount: "2 fedd", category: "Frukt og gront" },
+      { id: "mince", name: "Karbonadedeig", amount: "400 g", category: "Kjøtt og fisk" },
+      { id: "onion", name: "Gul løk", amount: "1 stk", category: "Frukt og grønt" },
+      { id: "garlic", name: "Hvitløk", amount: "2 fedd", category: "Frukt og grønt" },
       { id: "passata", name: "Passata", amount: "2 flasker", category: "Torrvarer" },
       { id: "spaghetti", name: "Spaghetti", amount: "500 g", category: "Torrvarer" },
       { id: "parmesan", name: "Parmesan", amount: "1 bit", category: "Meieri", preferredStoreId: "meny" },
@@ -197,16 +218,16 @@ export const recipes: Recipe[] = [
   {
     id: "chili-sin-carne",
     title: "Chili sin carne",
-    description: "Billig og mettende vegetarrett som er lett a lage mye av.",
+    description: "Billig og mettende vegetarrett som er lett å lage mye av.",
     prepMinutes: 30,
     servings: 4,
     tags: ["vegetar", "frysevennlig", "rimelig"],
     ingredients: [
       { id: "beans", name: "Kidneybonner", amount: "2 bokser", category: "Torrvarer" },
       { id: "tomatoes", name: "Hakkede tomater", amount: "2 bokser", category: "Torrvarer" },
-      { id: "pepper", name: "Paprika", amount: "2 stk", category: "Frukt og gront" },
+      { id: "pepper", name: "Paprika", amount: "2 stk", category: "Frukt og grønt" },
       { id: "rice", name: "Basmatiris", amount: "400 g", category: "Torrvarer" },
-      { id: "avocado", name: "Avokado", amount: "2 stk", category: "Frukt og gront" },
+      { id: "avocado", name: "Avokado", amount: "2 stk", category: "Frukt og grønt" },
       { id: "yoghurt", name: "Gresk yoghurt", amount: "1 beger", category: "Meieri" },
     ],
   },
@@ -218,39 +239,39 @@ export const recipes: Recipe[] = [
     servings: 4,
     tags: ["rask", "fisk", "helg"],
     ingredients: [
-      { id: "salmon", name: "Laksefilet", amount: "600 g", category: "Kjott og fisk" },
-      { id: "wraps", name: "Wraps", amount: "1 pk", category: "Bakst og brod" },
-      { id: "cucumber", name: "Agurk", amount: "1 stk", category: "Frukt og gront" },
-      { id: "mango", name: "Mango", amount: "1 stk", category: "Frukt og gront", preferredStoreId: "meny" },
+      { id: "salmon", name: "Laksefilet", amount: "600 g", category: "Kjøtt og fisk" },
+      { id: "wraps", name: "Wraps", amount: "1 pk", category: "Bakst og brød" },
+      { id: "cucumber", name: "Agurk", amount: "1 stk", category: "Frukt og grønt" },
+      { id: "mango", name: "Mango", amount: "1 stk", category: "Frukt og grønt", preferredStoreId: "meny" },
       { id: "cream-cheese", name: "Kremost", amount: "1 beger", category: "Meieri" },
     ],
   },
   {
     id: "ovnsbakt-laks",
     title: "Ovnsbakt laks med poteter",
-    description: "Lett helgemiddag med fa komponenter og lite oppvask.",
+    description: "Lett helgemiddag med få komponenter og lite oppvask.",
     prepMinutes: 35,
     servings: 4,
     tags: ["fisk", "helg", "enkel"],
     ingredients: [
-      { id: "salmon-portions", name: "Lakseporsjoner", amount: "4 stk", category: "Kjott og fisk" },
-      { id: "potatoes", name: "Smapoteter", amount: "1 pose", category: "Frukt og gront" },
-      { id: "broccoli", name: "Brokkoli", amount: "2 stk", category: "Frukt og gront" },
+      { id: "salmon-portions", name: "Lakseporsjoner", amount: "4 stk", category: "Kjøtt og fisk" },
+      { id: "potatoes", name: "Småpoteter", amount: "1 pose", category: "Frukt og grønt" },
+      { id: "broccoli", name: "Brokkoli", amount: "2 stk", category: "Frukt og grønt" },
       { id: "creme-fraiche", name: "Creme fraiche", amount: "1 beger", category: "Meieri" },
     ],
   },
   {
     id: "kyllinggryte",
     title: "Kremet kyllinggryte",
-    description: "God sondagmiddag som ogsa fungerer som restemat mandag.",
+    description: "God søndagsmiddag som også fungerer som restemat mandag.",
     prepMinutes: 40,
     servings: 4,
     tags: ["familie", "helg", "restevennlig"],
     ingredients: [
-      { id: "chicken-thigh", name: "Kyllinglar", amount: "800 g", category: "Kjott og fisk" },
-      { id: "carrots", name: "Gulrot", amount: "4 stk", category: "Frukt og gront" },
-      { id: "mushrooms", name: "Sjampinjong", amount: "250 g", category: "Frukt og gront" },
-      { id: "cream", name: "Matflote", amount: "3 dl", category: "Meieri" },
+      { id: "chicken-thigh", name: "Kyllinglar", amount: "800 g", category: "Kjøtt og fisk" },
+      { id: "carrots", name: "Gulrot", amount: "4 stk", category: "Frukt og grønt" },
+      { id: "mushrooms", name: "Sjampinjong", amount: "250 g", category: "Frukt og grønt" },
+      { id: "cream", name: "Matfløte", amount: "3 dl", category: "Meieri" },
       { id: "bouillon", name: "Kyllingbuljong", amount: "1 pk", category: "Torrvarer" },
       { id: "mashed", name: "Potetmos", amount: "1 pk", category: "Torrvarer" },
     ],
@@ -365,12 +386,12 @@ export function createDefaultPrototypeState(): PrototypeState {
       },
       {
         id: "manual-jordbar",
-        name: "Jordbar til helg",
+        name: "Jordbær til helg",
         quantity: "2 bokser",
-        category: "Frukt og gront",
+        category: "Frukt og grønt",
         buyOnDay: "fredag",
         preferredStoreId: "meny",
-        note: "Ekstra til dessert pa lordag",
+        note: "Ekstra til dessert på lørdag",
       },
     ],
   });
@@ -501,7 +522,15 @@ export function getWeekById(state: PrototypeState, weekId: string | null | undef
 }
 
 export function getDayLabel(dayId: DayId): string {
-  return dayId === "lordag" ? "lordag" : dayId === "sondag" ? "sondag" : dayId;
+  if (dayId === "lordag") {
+    return "lørdag";
+  }
+
+  if (dayId === "sondag") {
+    return "søndag";
+  }
+
+  return dayId;
 }
 
 export function getVisibleDays(week: MealPlanWeek): DayId[] {
@@ -606,7 +635,12 @@ function sanitizeWeek(value: unknown): MealPlanWeek | null {
       : undefined,
     postponedItemDays: sanitizePostponedItemDays(week.postponedItemDays),
     manualItems: Array.isArray(week.manualItems)
-      ? week.manualItems.filter(isManualItemLike).map((item) => ({ ...item }))
+      ? week.manualItems
+          .filter(isManualItemLike)
+          .map((item) => ({
+            ...item,
+            category: coerceIngredientCategory(item.category)!,
+          }))
       : undefined,
     copiedFromWeekId: typeof week.copiedFromWeekId === "string" ? week.copiedFromWeekId : undefined,
   });
@@ -635,10 +669,9 @@ function sanitizeStoreOrders(input: unknown): Record<string, IngredientCategory[
         return [];
       }
 
-      let filteredOrder = order.filter(
-        (item): item is IngredientCategory =>
-          typeof item === "string" && ingredientCategories.includes(item as IngredientCategory),
-      );
+      let filteredOrder = order
+        .map((item) => (typeof item === "string" ? coerceIngredientCategory(item) : null))
+        .filter((item): item is IngredientCategory => item !== null);
 
       if (filteredOrder.length === 0) {
         return [];
@@ -662,8 +695,7 @@ function isManualItemLike(value: unknown): value is ManualItem {
     typeof item.id === "string" &&
     typeof item.name === "string" &&
     typeof item.quantity === "string" &&
-    typeof item.category === "string" &&
-    ingredientCategories.includes(item.category as IngredientCategory) &&
+    coerceIngredientCategory(item.category) !== null &&
     isBuyOnDay(item.buyOnDay)
   );
 }

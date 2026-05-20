@@ -721,7 +721,7 @@ describe("meal-plan.server", () => {
     });
 
     expect(result).toEqual({
-      formError: "Noen dager mangler i ukeplanen. Last siden pa nytt og prov igjen.",
+      formError: "Noen dager mangler i ukeplanen. Last siden på nytt og prøv igjen.",
       status: "VALIDATION_ERROR",
       values: [
         {

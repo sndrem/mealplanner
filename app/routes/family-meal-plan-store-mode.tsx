@@ -272,7 +272,7 @@ export default function FamilyMealPlanStoreModeRoute({
                   {loaderData.mealPlan.title}
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                  Storflatevisning for handleturen med seksjonsrekkefolge fra
+                  Storflatevisning for handleturen med seksjonsrekkefølge fra
                   valgt butikk og bare varer som er relevante innen
                   handledatoen.
                 </p>
@@ -590,7 +590,7 @@ export default function FamilyMealPlanStoreModeRoute({
         ) : (
           <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <h2 className="text-lg font-semibold text-slate-950">
-              Ingen varer ma handles na
+              Ingen varer må handles nå
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               Alt er enten ferdig handlet eller planlagt for senere i den aktive
@@ -621,7 +621,7 @@ export default function FamilyMealPlanStoreModeRoute({
               ))
             ) : (
               <p className="text-sm leading-6 text-slate-600">
-                Ingen senere varer akkurat na.
+                Ingen senere varer akkurat nå.
               </p>
             )}
           </div>
@@ -633,7 +633,7 @@ export default function FamilyMealPlanStoreModeRoute({
 
 export function ErrorBoundary({ error }: { error: unknown }) {
   let title = "Noe gikk galt";
-  let message = "Vi klarte ikke a laste butikkmodus akkurat na.";
+  let message = "Vi klarte ikke å laste butikkmodus akkurat nå.";
 
   if (isRouteErrorResponse(error)) {
     title = error.status === 404 ? "Fant ikke ukeplanen" : title;

@@ -322,7 +322,7 @@ async function validateFamilyStoreValues({
     uniqueCategoryIds.size !== categories.length ||
     submittedCategoryIds.some((categoryId) => !expectedCategoryIds.has(categoryId))
   ) {
-    fieldErrors.sections = "Butikken ma ha en seksjon for hver kategori i familien.";
+    fieldErrors.sections = "Butikken må ha en seksjon for hver kategori i familien.";
   }
 
   for (const section of normalizedValues.sections) {

@@ -35,7 +35,7 @@ describe("register route action", () => {
       fieldErrors: {
         displayName: "Skriv inn navnet ditt.",
         email: "Skriv inn e-postadressen din.",
-        password: "Passordet ma ha minst 8 tegn.",
+        password: "Passordet må ha minst 8 tegn.",
       },
     });
     expect(registerUser).not.toHaveBeenCalled();

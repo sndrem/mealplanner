@@ -307,7 +307,7 @@ describe("family meal plans route", () => {
     });
 
     expect(result).toEqual({
-      formError: "Fant ikke ukeplanen du ville gjenbruke. Velg en annen ukeplan og prov igjen.",
+      formError: "Fant ikke ukeplanen du ville gjenbruke. Velg en annen ukeplan og prøv igjen.",
       intent: "create-meal-plan",
       values: {
         endDate: "2026-05-22",

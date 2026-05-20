@@ -144,7 +144,7 @@ describe("shopping-write.server", () => {
 
     expect(result).toEqual({
       fieldErrors: {
-        buyOnDate: "Datoen ma ligge innenfor ukeplanens aktive periode.",
+        buyOnDate: "Datoen må ligge innenfor ukeplanens aktive periode.",
         categoryId: "Velg en kategori.",
         name: "Skriv inn et varenavn.",
       },

@@ -128,7 +128,7 @@ export async function action({
     if (result.status === "NOT_FOUND") {
       return {
         formError:
-          "Fant ikke ukeplanen du ville gjenbruke. Velg en annen ukeplan og prov igjen.",
+          "Fant ikke ukeplanen du ville gjenbruke. Velg en annen ukeplan og prøv igjen.",
         intent,
         values,
       } satisfies MealPlanActionData;
@@ -244,7 +244,7 @@ export default function FamilyMealPlansRoute({
                 Opprett ukeplan
               </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Velg et navn og et datointervall pa maks 7 dager. Du kan starte
+                Velg et navn og et datointervall på maks 7 dager. Du kan starte
                 fra en tom ukeplan eller gjenbruke middager og notater fra en
                 tidligere plan.
               </p>
@@ -297,7 +297,7 @@ export default function FamilyMealPlansRoute({
               </label>
 
               <p className="text-sm leading-6 text-slate-500">
-                Velg en tidligere ukeplan for a kopiere middager og notater til
+                Velg en tidligere ukeplan for å kopiere middager og notater til
                 samme relative dager i den nye perioden.
               </p>
 
@@ -365,7 +365,7 @@ export default function FamilyMealPlansRoute({
                 Lagrede ukeplaner
               </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Velg en ukeplan for a redigere navn og datoer, eller slett
+                Velg en ukeplan for å redigere navn og datoer, eller slett
                 planer familien ikke trenger lenger.
               </p>
             </div>
@@ -450,7 +450,7 @@ export default function FamilyMealPlansRoute({
                   Ingen ukeplaner ennå
                 </h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Opprett familiens forste ukeplan for a komme i gang med
+                  Opprett familiens første ukeplan for å komme i gang med
                   serverlagret planlegging.
                 </p>
               </div>

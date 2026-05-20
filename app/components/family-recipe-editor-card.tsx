@@ -260,7 +260,7 @@ export function FamilyRecipeEditorCard({
             <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
               Oppskriften brukes i {mealPlanEntryCount}{" "}
               {mealPlanEntryCount === 1 ? "ukeplan" : "ukeplaner"} og kan ikke
-              slettes for du fjerner den fra planene.
+              slettes før du fjerner den fra planene.
             </p>
           ) : null}
           <Form method="post">
@@ -359,7 +359,7 @@ function RecipeFields({
                 defaultServings: event.target.value,
               }))
             }
-            placeholder="4"
+            placeholder="2"
             type="text"
             value={draftValues.defaultServings}
           />
@@ -382,7 +382,7 @@ function RecipeFields({
                 prepMinutes: event.target.value,
               }))
             }
-            placeholder="30"
+            placeholder="45"
             type="text"
             value={draftValues.prepMinutes}
           />

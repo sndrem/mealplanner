@@ -119,7 +119,7 @@ export default function FamilyRecipesRoute({
     actionData?.intent === "create-recipe" && actionData.createValues
       ? actionData.createValues
       : {
-          defaultServings: "",
+          defaultServings: "2",
           description: "",
           ingredients: [
             {
@@ -130,7 +130,7 @@ export default function FamilyRecipesRoute({
               unit: "",
             },
           ],
-          prepMinutes: "",
+          prepMinutes: "45",
           tags: "",
           title: "",
         };
@@ -154,6 +154,14 @@ export default function FamilyRecipesRoute({
             </div>
 
             <div className="flex flex-wrap gap-3">
+              {canManageRecipes ? (
+                <Link
+                  className="rounded-2xl bg-indigo-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-indigo-600"
+                  to={`/families/${loaderData.family.id}/recipes/import`}
+                >
+                  Importer fra Notion
+                </Link>
+              ) : null}
               <Link
                 className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
                 to={`/families/${loaderData.family.id}/meal-plans`}
@@ -309,8 +317,8 @@ export default function FamilyRecipesRoute({
           {loaderData.familyRecipes.length === 0 ? (
             <p className="mt-6 rounded-[24px] border border-dashed border-emerald-200 bg-emerald-50/50 px-5 py-8 text-center text-sm leading-6 text-slate-600">
               {canManageRecipes
-                ? "Ingen familieoppskrifter enna. Opprett den forste oppskriften over."
-                : "Familien har ingen egne oppskrifter enna."}
+                ? "Ingen familieoppskrifter ennå. Opprett den første oppskriften over."
+                : "Familien har ingen egne oppskrifter ennå."}
             </p>
           ) : (
             <div className="mt-6 grid gap-3">
@@ -458,7 +466,7 @@ function RecipeListCard({
 
 export function ErrorBoundary({ error }: { error: unknown }) {
   let title = "Noe gikk galt";
-  let message = "Vi kunne ikke laste oppskriftene akkurat na.";
+  let message = "Vi kunne ikke laste oppskriftene akkurat nå.";
 
   if (isRouteErrorResponse(error)) {
     title = error.status === 404 ? "Fant ikke siden" : title;

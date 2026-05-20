@@ -1,10 +1,10 @@
 import type { MealType } from "@prisma/client";
 
 export const COLLABORATION_CONFLICT_MESSAGE =
-  "Noen andre har oppdatert dette. Last siden pa nytt og prov igjen.";
+  "Noen andre har oppdatert dette. Last siden på nytt og prøv igjen.";
 
 export const COLLABORATION_APPROVAL_CONFLICT_MESSAGE =
-  "Ukeplanen ble endret etter at siden ble lastet. Last siden pa nytt for du godkjenner.";
+  "Ukeplanen ble endret etter at siden ble lastet. Last siden på nytt før du godkjenner.";
 
 export function buildActorUpdate(userId: string) {
   return {

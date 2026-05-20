@@ -509,7 +509,7 @@ export default function FamilyMealPlanShoppingRoute({
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
                 Handlelisten kombinerer deterministisk genererte ingredienser
                 fra ukeplanen med manuelle varelinjer. Avkryssing, notater,
-                handledato og butikkvalg lagres pa serveren.
+                handledato og butikkvalg lagres på serveren.
               </p>
             </div>
 
@@ -656,7 +656,7 @@ export default function FamilyMealPlanShoppingRoute({
               <div className="mt-4 space-y-4">
                 <p className="text-sm leading-6 text-slate-600">
                   Disse varene er skjult fra handlelisten, men ligger fortsatt i
-                  ukeplanen. Du kan legge dem tilbake nar du trenger dem.
+                  ukeplanen. Du kan legge dem tilbake når du trenger dem.
                 </p>
                 <ul className="grid gap-3">
                   {loaderData.excludedGeneratedItems.map((item) => {
@@ -888,7 +888,7 @@ export default function FamilyMealPlanShoppingRoute({
                   className="mt-2 min-h-28 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                   defaultValue={addManualValues.note}
                   name="note"
-                  placeholder="F.eks. husk kampanjepris eller at varen skal kjopes senere i uken"
+                  placeholder="F.eks. husk kampanjepris eller at varen skal kjøpes senere i uken"
                 />
               </label>
 
@@ -915,10 +915,10 @@ export default function FamilyMealPlanShoppingRoute({
               Hvordan dette bygges
             </h2>
             <p className="text-sm leading-6 text-slate-600">
-              Genererte linjer bygger pa lagrede oppskriftsingredienser. Like
-              ingredienser slas bare sammen nar navn, mengde, enhet, kategori og
+              Genererte linjer bygger på lagrede oppskriftsingredienser. Like
+              ingredienser slås bare sammen når navn, mengde, enhet, kategori og
               foretrukket butikk matcher eksakt. Manuelle linjer blir lagt oppa
-              samme sortering uten a endre den deterministiske projeksjonen.
+              samme sortering uten å endre den deterministiske projeksjonen.
             </p>
           </div>
         </section>
@@ -1043,7 +1043,7 @@ export default function FamilyMealPlanShoppingRoute({
                                 {item.sourceType === "MANUAL" &&
                                 item.buyOnDate ? (
                                   <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-                                    Kjopes {formatDateLabel(item.buyOnDate)}
+                                    Kjøpes {formatDateLabel(item.buyOnDate)}
                                   </span>
                                 ) : null}
                               </div>
@@ -1511,7 +1511,7 @@ export default function FamilyMealPlanShoppingRoute({
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
               Legg til middager i ukeplanen eller opprett en manuell varelinje
-              for a starte handlelisten.
+              for å starte handlelisten.
             </p>
           </section>
         )}
@@ -1522,7 +1522,7 @@ export default function FamilyMealPlanShoppingRoute({
 
 export function ErrorBoundary({ error }: { error: unknown }) {
   let title = "Noe gikk galt";
-  let description = "Vi klarte ikke a laste handlelisten.";
+  let description = "Vi klarte ikke å laste handlelisten.";
 
   if (isRouteErrorResponse(error)) {
     if (error.status === 403) {
@@ -1531,7 +1531,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
     } else if (error.status === 404) {
       title = "Handlelisten finnes ikke";
       description =
-        "Vi fant ikke ukeplanen du forsokte a hente handlelisten for.";
+        "Vi fant ikke ukeplanen du forsøkte å hente handlelisten for.";
     }
   }
 

@@ -23,7 +23,7 @@ export default function Home() {
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
             Prototypen ligger i sin egen mappe slik at vi kan utforske flyten
-            uten a blande den sammen med den framtidige produksjonsappen.
+            uten å blande den sammen med den framtidige produksjonsappen.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -52,7 +52,7 @@ export default function Home() {
             {
               title: "Ukeplan",
               description:
-                "Velg middager for hver dag og marker nar menyen er klar for godkjenning.",
+                "Velg middager for hver dag og marker når menyen er klar for godkjenning.",
             },
             {
               title: "Handleliste",

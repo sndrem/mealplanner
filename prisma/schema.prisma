@@ -108,13 +108,17 @@ model Ingredient {
   id                String              @id @default(cuid())
   canonicalName     String              @unique
   defaultCategoryId String?
+  source            String?
+  sourceExternalId  String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   defaultCategory      IngredientCategory?     @relation(fields: [defaultCategoryId], references: [id], onDelete: SetNull)
   recipeIngredients    RecipeIngredient[]
   familyStockIngredients FamilyStockIngredient[]
 
+  @@unique([source, sourceExternalId])
   @@index([defaultCategoryId])
+  @@index([source])
 }
 
 model FamilyStockIngredient {
@@ -138,6 +142,8 @@ model Recipe {
   scope           RecipeScope
   familyId        String?
   createdByUserId String?
+  source          String?
+  sourceExternalId String?
   title           String
   description     String?
   defaultServings Int?
@@ -154,6 +160,8 @@ model Recipe {
   @@index([createdByUserId])
   @@index([scope])
   @@index([title])
+  @@index([source])
+  @@unique([familyId, source, sourceExternalId])
 }
 
 model RecipeIngredient {

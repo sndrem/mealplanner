@@ -87,7 +87,7 @@ export async function requireFamilyAdmin(input: { familyId: string; userId: stri
   const membership = await requireFamilyMembership(input);
 
   if (membership.role !== "ADMIN") {
-    throw new Response("Du har ikke tilgang til a administrere denne familien.", {
+    throw new Response("Du har ikke tilgang til å administrere denne familien.", {
       status: 403,
       statusText: "Forbidden",
     });
@@ -269,5 +269,5 @@ async function generateUniqueJoinCode() {
     }
   }
 
-  throw new Error("Klarte ikke a opprette en unik familiekode.");
+  throw new Error("Klarte ikke å opprette en unik familiekode.");
 }

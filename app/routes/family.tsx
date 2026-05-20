@@ -379,15 +379,15 @@ export default function FamilyRoute({
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let title = "Noe gikk galt";
-  let description = "Vi klarte ikke a laste familieoversikten.";
+  let description = "Vi klarte ikke å laste familieoversikten.";
 
   if (isRouteErrorResponse(error)) {
     if (error.status === 403) {
       title = "Ingen tilgang";
-      description = "Du har ikke tilgang til a administrere denne familien.";
+      description = "Du har ikke tilgang til å administrere denne familien.";
     } else if (error.status === 404) {
       title = "Familien finnes ikke";
-      description = "Vi fant ikke familien du forsokte a Åpne.";
+      description = "Vi fant ikke familien du forsøkte å åpne.";
     }
   }
 
