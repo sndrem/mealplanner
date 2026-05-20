@@ -61,6 +61,7 @@ const generatedShoppingMealPlanEntrySelect =
 const shoppingOverrideSelect =
   Prisma.validator<Prisma.ShoppingItemOverrideSelect>()({
     checked: true,
+    excludedFromList: true,
     id: true,
     includeDespiteStock: true,
     note: true,
@@ -331,12 +332,18 @@ export async function getMealPlanShoppingData({
     mealPlan,
     stores,
   });
+  const excludedGeneratedItems = projectExcludedGeneratedShoppingItems({
+    mealPlan,
+    stores,
+  });
   const projectedItems = [...generatedItems, ...manualItems].sort(
     compareProjectedItems,
   );
 
   return {
     categories,
+    excludedGeneratedCount: excludedGeneratedItems.length,
+    excludedGeneratedItems,
     family: {
       id: membership.family.id,
       name: membership.family.name,
@@ -522,7 +529,6 @@ function projectGeneratedShoppingItems({
   stockMatchSet: FamilyStockMatchSet;
   stores: ShoppingStore[];
 }) {
-  const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
   const overrideBySourceKey = buildOverrideMap(
     mealPlan.shoppingOverrides,
     ShoppingItemSource.GENERATED,
@@ -531,43 +537,94 @@ function projectGeneratedShoppingItems({
   return buildGeneratedProjectionBuckets(mealPlan)
     .filter((bucket) => {
       const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
+      const override = overrideBySourceKey.get(sourceKey);
+
+      if (override?.excludedFromList) {
+        return false;
+      }
+
       const isStock = isStockIngredientMatch(bucket, stockMatchSet);
 
       return !isStock || includeDespiteStockKeys.has(sourceKey);
     })
-    .map((bucket) => {
+    .map((bucket) =>
+      mapGeneratedProjectionBucketToItem({
+        bucket,
+        overrideBySourceKey,
+        stores,
+      }),
+    );
+}
+
+function projectExcludedGeneratedShoppingItems({
+  mealPlan,
+  stores,
+}: {
+  mealPlan: ShoppingMealPlan;
+  stores: ShoppingStore[];
+}) {
+  const overrideBySourceKey = buildOverrideMap(
+    mealPlan.shoppingOverrides,
+    ShoppingItemSource.GENERATED,
+  );
+
+  return buildGeneratedProjectionBuckets(mealPlan).flatMap((bucket) => {
     const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
     const override = overrideBySourceKey.get(sourceKey);
-    const preferredStore = override?.preferredStore ?? bucket.preferredStore;
-    const section = resolveStoreSection({
-      category: bucket.category,
-      preferredStore,
-      storeSectionsByStoreId,
-    });
-    const occurrences = [...bucket.occurrences].sort(
-      compareProjectedOccurrences,
-    );
 
-    return {
-      amount: bucket.amount,
-      category: bucket.category,
-      checked: override?.checked ?? false,
-      firstDate: occurrences[0]!.date,
-      lastDate: occurrences[occurrences.length - 1]!.date,
-      name: bucket.name,
-      note: override?.note ?? null,
-      occurrenceCount: occurrences.length,
-      occurrences,
-      collaborationVersion: override?.updatedAt?.toISOString() ?? "",
-      postponedUntilDate: override?.postponedUntilDate ?? null,
-      preferredStore,
-      quantityLabel: buildQuantityLabel(bucket.amount, bucket.unit),
-      section,
-      sourceKey,
-      sourceType: ShoppingItemSource.GENERATED,
-      unit: bucket.unit,
-    } satisfies ProjectedGeneratedShoppingItem;
-    });
+    if (!override?.excludedFromList) {
+      return [];
+    }
+
+    return [
+      mapGeneratedProjectionBucketToItem({
+        bucket,
+        overrideBySourceKey,
+        stores,
+      }),
+    ];
+  });
+}
+
+function mapGeneratedProjectionBucketToItem({
+  bucket,
+  overrideBySourceKey,
+  stores,
+}: {
+  bucket: GeneratedProjectionBucket;
+  overrideBySourceKey: Map<string, ShoppingOverride>;
+  stores: ShoppingStore[];
+}) {
+  const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
+  const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
+  const override = overrideBySourceKey.get(sourceKey);
+  const preferredStore = override?.preferredStore ?? bucket.preferredStore;
+  const section = resolveStoreSection({
+    category: bucket.category,
+    preferredStore,
+    storeSectionsByStoreId,
+  });
+  const occurrences = [...bucket.occurrences].sort(compareProjectedOccurrences);
+
+  return {
+    amount: bucket.amount,
+    category: bucket.category,
+    checked: override?.checked ?? false,
+    firstDate: occurrences[0]!.date,
+    lastDate: occurrences[occurrences.length - 1]!.date,
+    name: bucket.name,
+    note: override?.note ?? null,
+    occurrenceCount: occurrences.length,
+    occurrences,
+    collaborationVersion: override?.updatedAt?.toISOString() ?? "",
+    postponedUntilDate: override?.postponedUntilDate ?? null,
+    preferredStore,
+    quantityLabel: buildQuantityLabel(bucket.amount, bucket.unit),
+    section,
+    sourceKey,
+    sourceType: ShoppingItemSource.GENERATED,
+    unit: bucket.unit,
+  } satisfies ProjectedGeneratedShoppingItem;
 }
 
 function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {

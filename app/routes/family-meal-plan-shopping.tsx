@@ -12,7 +12,9 @@ import { getMealPlanShoppingData } from "../lib/shopping.server";
 import {
   createManualShoppingItem,
   deleteManualShoppingItem,
+  excludeGeneratedShoppingItem,
   optInStockShoppingItems,
+  restoreGeneratedShoppingItem,
   toggleShoppingItemChecked,
   updateGeneratedShoppingItemOverride,
   updateManualShoppingItem,
@@ -23,6 +25,8 @@ import {
 } from "../lib/shopping-write.server";
 
 type ShoppingNotice =
+  | "generated-shopping-item-excluded"
+  | "generated-shopping-item-restored"
   | "generated-shopping-item-updated"
   | "manual-shopping-item-added"
   | "manual-shopping-item-deleted"
@@ -33,7 +37,9 @@ type ShoppingNotice =
 type ShoppingIntent =
   | "add-manual-shopping-item"
   | "delete-manual-shopping-item"
+  | "exclude-generated-shopping-item"
   | "opt-in-stock-shopping-item"
+  | "restore-generated-shopping-item"
   | "opt-in-stock-shopping-items"
   | "toggle-shopping-item-checked"
   | "update-generated-shopping-item"
@@ -115,6 +121,10 @@ export async function loader({
       startDate: formatDateOnly(result.mealPlan.startDate),
       updatedAt: result.mealPlan.updatedAt.toISOString(),
     },
+    excludedGeneratedCount: result.excludedGeneratedCount,
+    excludedGeneratedItems: result.excludedGeneratedItems.map(
+      serializeProjectedShoppingItem,
+    ),
     notice: getShoppingNotice(request),
     storeGroups: result.storeGroups.map((group) => ({
       sections: group.sections.map((section) => ({
@@ -124,13 +134,15 @@ export async function loader({
       store: group.store,
     })),
     stockIngredientCount: result.stockIngredientCount,
-    stockIngredientsForPlan: result.stockIngredientsForPlan.map((ingredient) => ({
-      ...ingredient,
-      occurrences: ingredient.occurrences.map((occurrence) => ({
-        ...occurrence,
-        date: formatDateOnly(occurrence.date),
-      })),
-    })),
+    stockIngredientsForPlan: result.stockIngredientsForPlan.map(
+      (ingredient) => ({
+        ...ingredient,
+        occurrences: ingredient.occurrences.map((occurrence) => ({
+          ...occurrence,
+          date: formatDateOnly(occurrence.date),
+        })),
+      }),
+    ),
     stores: result.stores,
     userRole: result.userRole,
     visibleDates: result.visibleDates,
@@ -251,6 +263,87 @@ export async function action({
       familyId,
       mealPlanId,
       notice: "manual-shopping-item-deleted",
+      request,
+    });
+  }
+
+  if (intent === "exclude-generated-shopping-item") {
+    const sourceKey = String(formData.get("sourceKey") ?? "").trim();
+
+    if (!sourceKey) {
+      return {
+        formError: "Vi fant ikke handlelinjen som skulle fjernes.",
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    const result = await excludeGeneratedShoppingItem({
+      expectedUpdatedAt: parseExpectedUpdatedAt(formData),
+      familyId,
+      mealPlanId,
+      sourceKey,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    return buildShoppingRedirect({
+      familyId,
+      mealPlanId,
+      notice: "generated-shopping-item-excluded",
+      request,
+    });
+  }
+
+  if (intent === "restore-generated-shopping-item") {
+    const sourceKey = String(formData.get("sourceKey") ?? "").trim();
+
+    if (!sourceKey) {
+      return {
+        formError: "Vi fant ikke handlelinjen som skulle legges tilbake.",
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    const result = await restoreGeneratedShoppingItem({
+      expectedUpdatedAt: parseExpectedUpdatedAt(formData),
+      familyId,
+      mealPlanId,
+      sourceKey,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "NOT_EXCLUDED") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    return buildShoppingRedirect({
+      familyId,
+      mealPlanId,
+      notice: "generated-shopping-item-restored",
       request,
     });
   }
@@ -553,6 +646,82 @@ export default function FamilyMealPlanShoppingRoute({
           </section>
         ) : null}
 
+        {loaderData.excludedGeneratedCount > 0 ? (
+          <section className="rounded-[28px] border border-slate-200 bg-slate-50 px-6 py-5 text-slate-950 shadow-sm">
+            <details open>
+              <summary className="cursor-pointer text-base font-semibold">
+                {loaderData.excludedGeneratedCount} varelinjer fjernet fra
+                listen
+              </summary>
+              <div className="mt-4 space-y-4">
+                <p className="text-sm leading-6 text-slate-600">
+                  Disse varene er skjult fra handlelisten, men ligger fortsatt i
+                  ukeplanen. Du kan legge dem tilbake nar du trenger dem.
+                </p>
+                <ul className="grid gap-3">
+                  {loaderData.excludedGeneratedItems.map((item) => {
+                    const isPendingRestore =
+                      navigation.state === "submitting" &&
+                      pendingIntent === "restore-generated-shopping-item" &&
+                      pendingSourceKey === item.sourceKey;
+
+                    return (
+                      <li
+                        key={item.sourceKey}
+                        className="rounded-[20px] border border-slate-200 bg-white px-4 py-4"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                          <p className="text-sm font-semibold text-slate-950">
+                            {item.name}
+                            {item.quantityLabel
+                              ? ` · ${item.quantityLabel}`
+                              : ""}
+                          </p>
+                          {item.sourceType === "GENERATED" ? (
+                            <p className="mt-1 text-xs leading-5 text-slate-600">
+                              {item.occurrenceCount === 1
+                                ? `Fra ${item.occurrences[0]?.recipeTitle}`
+                                : `Fra ${item.occurrenceCount} planlagte middager`}
+                            </p>
+                          ) : null}
+                          </div>
+                          <Form method="post">
+                          <input
+                            name="intent"
+                            type="hidden"
+                            value="restore-generated-shopping-item"
+                          />
+                          <input
+                            name="sourceKey"
+                            type="hidden"
+                            value={item.sourceKey}
+                          />
+                          <input
+                            name="expectedUpdatedAt"
+                            type="hidden"
+                            value={item.collaborationVersion}
+                          />
+                          <button
+                            className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={isPendingRestore}
+                            type="submit"
+                          >
+                            {isPendingRestore
+                              ? "Legger tilbake..."
+                              : "Legg tilbake i handlelisten"}
+                          </button>
+                        </Form>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </details>
+          </section>
+        ) : null}
+
         <section className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2">
@@ -800,6 +969,11 @@ export default function FamilyMealPlanShoppingRoute({
                             pendingIntent ===
                               "update-generated-shopping-item" &&
                             pendingSourceKey === item.sourceKey;
+                          const isPendingGeneratedExclude =
+                            navigation.state === "submitting" &&
+                            pendingIntent ===
+                              "exclude-generated-shopping-item" &&
+                            pendingSourceKey === item.sourceKey;
                           const manualValues =
                             actionData?.intent ===
                               "update-manual-shopping-item" &&
@@ -961,7 +1135,7 @@ export default function FamilyMealPlanShoppingRoute({
                                           : "Krysser av..."
                                         : item.checked
                                           ? "Fjern avkryssing"
-                                          : "Marker som kjopt"}
+                                          : "Marker som kjøpt"}
                                     </button>
                                   </Form>
 
@@ -1061,12 +1235,47 @@ export default function FamilyMealPlanShoppingRoute({
 
                                       <button
                                         className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
-                                        disabled={isPendingGeneratedSave}
+                                        disabled={
+                                          isPendingGeneratedSave ||
+                                          isPendingGeneratedExclude
+                                        }
                                         type="submit"
                                       >
                                         {isPendingGeneratedSave
                                           ? "Lagrer tilpasninger..."
                                           : "Lagre tilpasninger"}
+                                      </button>
+                                    </Form>
+                                  ) : null}
+
+                                  {item.sourceType === "GENERATED" ? (
+                                    <Form method="post">
+                                      <input
+                                        name="intent"
+                                        type="hidden"
+                                        value="exclude-generated-shopping-item"
+                                      />
+                                      <input
+                                        name="sourceKey"
+                                        type="hidden"
+                                        value={item.sourceKey}
+                                      />
+                                      <input
+                                        name="expectedUpdatedAt"
+                                        type="hidden"
+                                        value={item.collaborationVersion}
+                                      />
+                                      <button
+                                        className="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:bg-rose-100 disabled:text-rose-400"
+                                        disabled={
+                                          isPendingGeneratedExclude ||
+                                          isPendingGeneratedSave
+                                        }
+                                        type="submit"
+                                      >
+                                        {isPendingGeneratedExclude
+                                          ? "Fjerner varelinje..."
+                                          : "Fjern fra handlelisten"}
                                       </button>
                                     </Form>
                                   ) : null}
@@ -1460,6 +1669,8 @@ function getShoppingNotice(request: Request): ShoppingNotice | null {
   const notice = new URL(request.url).searchParams.get("notice");
 
   if (
+    notice === "generated-shopping-item-excluded" ||
+    notice === "generated-shopping-item-restored" ||
     notice === "generated-shopping-item-updated" ||
     notice === "manual-shopping-item-added" ||
     notice === "manual-shopping-item-deleted" ||
@@ -1511,6 +1722,18 @@ function getShoppingNoticeContent(notice: ShoppingNotice) {
         description:
           "Den manuelle varelinjen og eventuell avkryssing ble fjernet fra handlelisten.",
         title: "Varelinje slettet",
+      };
+    case "generated-shopping-item-excluded":
+      return {
+        description:
+          "Varelinjen ble fjernet fra handlelisten. Du kan legge den tilbake i seksjonen for fjernede varer.",
+        title: "Varelinje fjernet",
+      };
+    case "generated-shopping-item-restored":
+      return {
+        description:
+          "Varelinjen vises igjen i handlelisten med eventuelle tilpasninger du hadde lagret.",
+        title: "Varelinje lagt tilbake",
       };
     case "generated-shopping-item-updated":
       return {

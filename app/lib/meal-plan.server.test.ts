@@ -50,12 +50,14 @@ vi.mock("./write-observability.server", () => {
 
 import {
   approveMealPlan,
+  autoFillMealPlanEntries,
   copyMealPlan,
   createMealPlan,
   deleteMealPlan,
   formatDateOnly,
   getMealPlanForFamily,
   getMealPlanPlanningData,
+  getRecentlyUsedRecipeIds,
   listMealPlansForFamily,
   reopenMealPlan,
   saveMealPlanEntries,
@@ -936,6 +938,281 @@ describe("meal-plan.server", () => {
         title: "Uke 20",
       },
       status: "DELETED",
+    });
+  });
+
+  it("collects recipe ids from the two most recent other meal plans", async () => {
+    dbMock.mealPlan.findMany.mockResolvedValue([
+      {
+        entries: [{ recipeId: "recipe-a" }, { recipeId: "recipe-b" }],
+      },
+      {
+        entries: [{ recipeId: "recipe-c" }],
+      },
+    ]);
+
+    const result = await getRecentlyUsedRecipeIds({
+      currentMealPlanId: "meal-plan-3",
+      familyId: "family-1",
+    });
+
+    expect(result).toEqual(new Set(["recipe-a", "recipe-b", "recipe-c"]));
+    expect(dbMock.mealPlan.findMany).toHaveBeenCalledWith({
+      orderBy: {
+        endDate: "desc",
+      },
+      select: {
+        entries: {
+          select: {
+            recipeId: true,
+          },
+          where: {
+            mealType: "DINNER",
+            recipeId: {
+              not: null,
+            },
+          },
+        },
+      },
+      take: 2,
+      where: {
+        familyId: "family-1",
+        id: {
+          not: "meal-plan-3",
+        },
+      },
+    });
+  });
+
+  it("rejects auto-fill for approved meal plans", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      approvedAt: new Date("2026-05-16T09:30:00.000Z"),
+      approvedByUserId: "user-1",
+      copiedFromMealPlanId: null,
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [],
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "APPROVED",
+      title: "Langhelg",
+      updatedAt: new Date("2026-05-16T09:30:00.000Z"),
+    });
+
+    const result = await autoFillMealPlanEntries({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      formError: "Godkjente ukeplaner kan ikke fylles automatisk.",
+      status: "NOT_DRAFT",
+    });
+    expect(dbMock.recipe.findMany).not.toHaveBeenCalled();
+  });
+
+  it("returns NOTHING_TO_FILL when all days already have content", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      approvedAt: null,
+      approvedByUserId: null,
+      copiedFromMealPlanId: null,
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-16T00:00:00.000Z"),
+      entries: [
+        {
+          createdAt: new Date("2026-05-01T12:00:00.000Z"),
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          locked: false,
+          mealType: "DINNER",
+          note: "",
+          recipe: null,
+          recipeId: "kylling-taco",
+          updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+        },
+        {
+          createdAt: new Date("2026-05-01T12:00:00.000Z"),
+          date: new Date("2026-05-16T00:00:00.000Z"),
+          id: "entry-2",
+          locked: false,
+          mealType: "DINNER",
+          note: "Bruk rester",
+          recipe: null,
+          recipeId: null,
+          updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+        },
+      ],
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    });
+
+    const result = await autoFillMealPlanEntries({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      filledCount: 0,
+      status: "NOTHING_TO_FILL",
+    });
+    expect(dbMock.mealPlanEntry.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects auto-fill when every recipe was used in recent meal plans", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      approvedAt: null,
+      approvedByUserId: null,
+      copiedFromMealPlanId: null,
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-16T00:00:00.000Z"),
+      entries: [],
+      id: "meal-plan-3",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Uke 22",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    });
+    dbMock.mealPlan.findMany.mockResolvedValue([
+      {
+        entries: [{ recipeId: "kylling-taco" }],
+      },
+    ]);
+    dbMock.recipe.findMany.mockResolvedValue([{ id: "kylling-taco" }]);
+
+    const result = await autoFillMealPlanEntries({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-3",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      formError:
+        "Ingen tilgjengelige oppskrifter etter a ha utelatt middager fra de to forrige ukeplanene.",
+      status: "NO_ELIGIBLE_RECIPES",
+    });
+    expect(dbMock.mealPlanEntry.upsert).not.toHaveBeenCalled();
+  });
+
+  it("auto-fills only empty days while excluding recent recipes", async () => {
+    const planningMealPlan = {
+      approvedAt: null,
+      approvedByUserId: null,
+      copiedFromMealPlanId: null,
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-24T00:00:00.000Z"),
+      entries: [
+        {
+          createdAt: new Date("2026-05-01T12:00:00.000Z"),
+          date: new Date("2026-05-22T00:00:00.000Z"),
+          id: "entry-1",
+          locked: false,
+          mealType: "DINNER",
+          note: "",
+          recipe: null,
+          recipeId: "recipe-d",
+          updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+        },
+      ],
+      id: "meal-plan-3",
+      startDate: new Date("2026-05-22T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Uke 22",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    };
+
+    dbMock.mealPlan.findFirst
+      .mockResolvedValueOnce(planningMealPlan)
+      .mockResolvedValueOnce({
+        endDate: planningMealPlan.endDate,
+        id: planningMealPlan.id,
+        startDate: planningMealPlan.startDate,
+      });
+    dbMock.mealPlan.findMany.mockResolvedValue([
+      {
+        entries: [{ recipeId: "recipe-a" }],
+      },
+    ]);
+    dbMock.recipe.findMany
+      .mockResolvedValueOnce([
+        { id: "recipe-a" },
+        { id: "recipe-b" },
+        { id: "recipe-c" },
+      ])
+      .mockResolvedValueOnce([{ id: "recipe-b" }, { id: "recipe-c" }, { id: "recipe-d" }]);
+    dbMock.mealPlanEntry.findMany.mockResolvedValue([
+      {
+        date: new Date("2026-05-22T00:00:00.000Z"),
+        updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+      },
+    ]);
+
+    const result = await autoFillMealPlanEntries({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-3",
+      userId: "user-1",
+    });
+
+    expect(result.status).toBe("AUTO_FILLED");
+    expect(result).toMatchObject({
+      excludedCount: 1,
+      filledCount: 2,
+    });
+    expect(dbMock.mealPlanEntry.upsert).toHaveBeenCalledTimes(3);
+    expect(dbMock.mealPlanEntry.deleteMany).not.toHaveBeenCalled();
+
+    const upsertedRecipeIds = dbMock.mealPlanEntry.upsert.mock.calls.map(
+      (call) => call[0].create.recipeId,
+    );
+
+    expect(upsertedRecipeIds).toContain("recipe-d");
+    expect(upsertedRecipeIds).not.toContain("recipe-a");
+    expect(new Set(upsertedRecipeIds).size).toBe(3);
+  });
+
+  it("warns when repeats are required because the eligible pool is too small", async () => {
+    const planningMealPlan = {
+      approvedAt: null,
+      approvedByUserId: null,
+      copiedFromMealPlanId: null,
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-24T00:00:00.000Z"),
+      entries: [],
+      id: "meal-plan-3",
+      startDate: new Date("2026-05-22T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Uke 22",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    };
+
+    dbMock.mealPlan.findFirst
+      .mockResolvedValueOnce(planningMealPlan)
+      .mockResolvedValueOnce({
+        endDate: planningMealPlan.endDate,
+        id: planningMealPlan.id,
+        startDate: planningMealPlan.startDate,
+      });
+    dbMock.mealPlan.findMany.mockResolvedValue([]);
+    dbMock.recipe.findMany
+      .mockResolvedValueOnce([{ id: "recipe-b" }])
+      .mockResolvedValueOnce([{ id: "recipe-b" }]);
+
+    const result = await autoFillMealPlanEntries({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-3",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      excludedCount: 0,
+      filledCount: 3,
+      status: "AUTO_FILLED",
+      warning:
+        "Noen middager ble valgt flere ganger fordi det var for fa oppskrifter igjen.",
     });
   });
 });

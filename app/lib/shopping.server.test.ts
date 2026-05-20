@@ -852,6 +852,7 @@ describe("shopping.server", () => {
       shoppingOverrides: [
         {
           checked: false,
+          excludedFromList: false,
           includeDespiteStock: true,
           note: null,
           postponedUntilDate: null,
@@ -884,6 +885,100 @@ describe("shopping.server", () => {
     expect(result.itemCounts.generated).toBe(1);
     expect(result.projectedItems[0]?.name).toBe("Lime");
     expect(result.stockIngredientCount).toBe(0);
+  });
+
+  it("omits generated shopping items marked as excluded from the list", async () => {
+    getFamilyStockMatchSetMock.mockResolvedValue({
+      displayNameNormalized: new Set(),
+      ingredientIds: new Set(),
+    });
+
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  displayName: "Frukt og gront",
+                  id: "category-produce",
+                },
+                categoryId: "category-produce",
+                displayName: "Lime",
+                id: "ingredient-1",
+                ingredientId: "canonical-lime",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+              {
+                amount: "1",
+                category: {
+                  displayName: "Brod",
+                  id: "category-bakery",
+                },
+                categoryId: "category-bakery",
+                displayName: "Tortillalefser",
+                id: "ingredient-2",
+                ingredientId: "canonical-tortilla",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 2,
+                unit: "pk",
+              },
+            ],
+            title: "Taco",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [
+        {
+          checked: false,
+          excludedFromList: true,
+          includeDespiteStock: false,
+          note: null,
+          postponedUntilDate: null,
+          preferredStore: null,
+          preferredStoreId: null,
+          sourceKey: "entry-1:ingredient-1",
+          sourceType: "GENERATED",
+          updatedAt: new Date("2026-05-15T10:00:00.000Z"),
+        },
+      ],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Uke 20",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [],
+      },
+    ]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.itemCounts.generated).toBe(1);
+    expect(result.projectedItems.map((item) => item.name)).toEqual(["Tortillalefser"]);
+    expect(result.excludedGeneratedItems.map((item) => item.name)).toEqual(["Lime"]);
+    expect(result.excludedGeneratedCount).toBe(1);
   });
 
   it("throws a not-found response when the meal plan is outside the family scope", async () => {

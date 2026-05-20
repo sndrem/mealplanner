@@ -132,6 +132,7 @@ describe("family meal plan route", () => {
       entriesSnapshot:
         "2026-05-15T00:00:00.000Z:DINNER:2026-05-01T12:00:00.000Z",
       notice: "meal-plan-created",
+      noticeMeta: null,
       recipes: [
         {
           defaultServings: 4,

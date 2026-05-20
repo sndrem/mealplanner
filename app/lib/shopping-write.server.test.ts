@@ -92,7 +92,9 @@ vi.mock("./stock.server", () => {
 import {
   createManualShoppingItem,
   deleteManualShoppingItem,
+  excludeGeneratedShoppingItem,
   optInStockShoppingItems,
+  restoreGeneratedShoppingItem,
   toggleShoppingItemChecked,
   updateActiveShoppingDate,
   updateGeneratedShoppingItemOverride,
@@ -273,15 +275,12 @@ describe("shopping-write.server", () => {
     });
     dbMock.shoppingItemOverride.findUnique.mockResolvedValue({
       checked: true,
-      createdAt: new Date("2026-05-15T00:00:00.000Z"),
+      excludedFromList: false,
       id: "override-1",
       includeDespiteStock: false,
-      mealPlanId: "meal-plan-1",
       note: null,
       postponedUntilDate: null,
       preferredStoreId: null,
-      sourceKey: "entry-1:ingredient-1",
-      sourceType: ShoppingItemSource.GENERATED,
       updatedAt: new Date("2026-05-15T00:00:00.000Z"),
     });
 
@@ -304,6 +303,7 @@ describe("shopping-write.server", () => {
     expect(dbMock.shoppingItemOverride.updateMany).toHaveBeenCalledWith({
       data: {
         checked: true,
+        excludedFromList: false,
         includeDespiteStock: false,
         note: "Husk tilbud",
         postponedUntilDate: new Date("2026-05-17T00:00:00.000Z"),
@@ -315,6 +315,68 @@ describe("shopping-write.server", () => {
         updatedAt: new Date("2026-05-15T00:00:00.000Z"),
       },
     });
+  });
+
+  it("marks a generated shopping item as excluded from the list", async () => {
+    dbMock.shoppingItemOverride.findUnique.mockResolvedValue(null);
+
+    const result = await excludeGeneratedShoppingItem({
+      expectedUpdatedAt: "",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      sourceKey: "entry-1:ingredient-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "EXCLUDED",
+    });
+    expect(dbMock.shoppingItemOverride.create).toHaveBeenCalledWith({
+      data: {
+        checked: false,
+        excludedFromList: true,
+        includeDespiteStock: false,
+        mealPlanId: "meal-plan-1",
+        note: null,
+        postponedUntilDate: null,
+        preferredStoreId: null,
+        sourceKey: "entry-1:ingredient-1",
+        sourceType: ShoppingItemSource.GENERATED,
+        updatedByUserId: "user-1",
+      },
+    });
+  });
+
+  it("restores a generated shopping item by clearing excludedFromList", async () => {
+    dbMock.shoppingItemOverride.findUnique.mockResolvedValue({
+      checked: false,
+      excludedFromList: true,
+      id: "override-1",
+      includeDespiteStock: false,
+      note: null,
+      postponedUntilDate: null,
+      preferredStoreId: null,
+      updatedAt: new Date("2026-05-15T00:00:00.000Z"),
+    });
+
+    const result = await restoreGeneratedShoppingItem({
+      expectedUpdatedAt: new Date("2026-05-15T00:00:00.000Z").toISOString(),
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      sourceKey: "entry-1:ingredient-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "RESTORED",
+    });
+    expect(dbMock.shoppingItemOverride.deleteMany).toHaveBeenCalledWith({
+      where: {
+        id: "override-1",
+        updatedAt: new Date("2026-05-15T00:00:00.000Z"),
+      },
+    });
+    expect(dbMock.shoppingItemOverride.updateMany).not.toHaveBeenCalled();
   });
 
   it("opts stock ingredients into the generated shopping list", async () => {

@@ -68,6 +68,8 @@ describe("family meal plan shopping route", () => {
         id: "family-1",
         name: "Solberg",
       },
+      excludedGeneratedCount: 0,
+      excludedGeneratedItems: [],
       itemCounts: {
         generated: 1,
         manual: 1,
@@ -252,6 +254,8 @@ describe("family meal plan shopping route", () => {
       userId: "user-1",
     });
     expect(result).toEqual({
+      excludedGeneratedCount: 0,
+      excludedGeneratedItems: [],
       family: {
         id: "family-1",
         name: "Solberg",
@@ -380,6 +384,8 @@ describe("family meal plan shopping route", () => {
         id: "family-1",
         name: "Solberg",
       },
+      excludedGeneratedCount: 0,
+      excludedGeneratedItems: [],
       itemCounts: {
         generated: 1,
         manual: 0,
