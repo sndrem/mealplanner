@@ -34,32 +34,14 @@ const sessionSecretSchema = z
   .string()
   .trim()
   .min(32, "SESSION_SECRET must be at least 32 characters long");
-const notionTokenSchema = z
-  .string()
-  .trim()
-  .min(1, "NOTION_API_TOKEN is required");
-const notionDatabaseIdSchema = z
-  .string()
-  .trim()
-  .min(1, "NOTION_RECIPES_DATABASE_ID is required");
-const notionIngredientsDatabaseIdSchema = z
-  .string()
-  .trim()
-  .min(1, "NOTION_INGREDIENTS_DATABASE_ID is required");
 
 const envSchema = z.object({
   DATABASE_URL: databaseUrlSchema,
-  NOTION_API_TOKEN: notionTokenSchema,
-  NOTION_INGREDIENTS_DATABASE_ID: notionIngredientsDatabaseIdSchema,
-  NOTION_RECIPES_DATABASE_ID: notionDatabaseIdSchema,
   SESSION_SECRET: sessionSecretSchema,
 });
 
 const parsedEnv = envSchema.safeParse({
   DATABASE_URL: process.env.DATABASE_URL,
-  NOTION_API_TOKEN: process.env.NOTION_API_TOKEN,
-  NOTION_INGREDIENTS_DATABASE_ID: process.env.NOTION_INGREDIENTS_DATABASE_ID,
-  NOTION_RECIPES_DATABASE_ID: process.env.NOTION_RECIPES_DATABASE_ID,
   SESSION_SECRET: process.env.SESSION_SECRET,
 });
 

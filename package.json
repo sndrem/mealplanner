@@ -20,7 +20,6 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
-    "@notionhq/client": "^5.22.0",
     "@prisma/client": "^6.19.3",
     "@react-router/node": "7.15.0",
     "@react-router/serve": "7.15.0",

@@ -88,14 +88,9 @@ Copy [`.env.example`](.env.example) to `.env` and set all required values. The s
 ```bash
 DATABASE_URL="postgresql://mealplanner:mealplanner@localhost:5466/mealplanner?schema=public"
 SESSION_SECRET="replace-this-with-a-long-random-string-of-at-least-32-characters"
-NOTION_API_TOKEN="secret_xxx"
-NOTION_INGREDIENTS_DATABASE_ID="notion_ingredients_database_id"
-NOTION_RECIPES_DATABASE_ID="notion_recipes_database_id"
 ```
 
 `SESSION_SECRET` must be at least 32 characters and is used to sign the login session cookie.
-
-`NOTION_*` variables are required for startup validation today. Use real values for Notion import, or placeholders locally if you are not using import (a follow-up task will make them optional).
 
 If any variable is missing or invalid, the server fails fast during startup instead of waiting until the first database access.
 
@@ -140,7 +135,7 @@ npm run typecheck
 npm run build
 ```
 
-CI sets placeholder values for all required server environment variables so validation can complete without a live database or Notion connection.
+CI sets placeholder values for all required server environment variables so validation can complete without a live database connection.
 
 ## Backlog Issue Generation
 
