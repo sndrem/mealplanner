@@ -2,32 +2,31 @@
 
 ## Current Objective
 
-Remove the local-only Mealplanner prototype from the running app (issue #47) so production auth and family flows are the only entry points.
+Fix butikkmodus handledato-filter (issue #54): show shopping items from handledato through end of meal plan, exclude past meals, and auto-save store/date selects.
 
 ## Completed
 
-- Deleted `prototype/` module and `app/routes/prototype.tsx`; removed route from `app/routes.ts`.
-- Refocused landing (`home.tsx`), auth sidebar (`auth-form.tsx`), and app shell (`app.tsx`) on production CTAs.
-- Updated `home.test.tsx` and README intro/styling copy.
+- Replaced inverted `isProjectedItemDueBy` with trip/before-shopping/past filters in `getMealPlanStoreModeData`.
+- Added unit tests for multi-day trips, before-shopping-date chips, and past-meal exclusion.
+- Updated butikkmodus copy («fra handledato og utover», «Før handledato»).
+- Auto-submit store and shopping-date selects on change (removed save buttons).
 
 ## Files To Read First
 
-- `app/routes/home.tsx` — production landing copy and CTAs.
-- `app/routes.ts` — route table (no `/prototype`).
+- `app/lib/shopping.server.ts` — store-mode date filtering helpers
+- `app/routes/family-meal-plan-store-mode.tsx` — UI, auto-submit selects
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 157 tests passed (31 files)
+- `npm run test:run` — 159 tests passed (31 files)
 - `npm run typecheck` — passed
-- `npm run build` — passed (earlier in session)
 
 ## Open Items
 
-- Merge PR and confirm `/prototype` returns 404 in deployed app.
-- `ideas/prototype-1-summary.md` still references removed paths (archival; acceptable per issue).
+- PR merge and manual smoke-test in butikkmodus (Monday shop trip shows full week; past days hidden).
 
 ## Next Step
 
-Merge PR for issue #47; smoke-test `/`, `/login`, `/register`, logged-in `/app`, and `/prototype` 404.
+Merge PR; verify store/date dropdowns save on change and item list matches handledato range.
