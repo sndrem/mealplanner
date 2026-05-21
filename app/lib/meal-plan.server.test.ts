@@ -539,7 +539,7 @@ describe("meal-plan.server", () => {
     expect(dbMock.mealPlan.update).not.toHaveBeenCalled();
   });
 
-  it("approves a draft meal plan as an admin", async () => {
+  it("approves a draft meal plan as a family member", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue({
       entries: [],
       id: "meal-plan-1",
@@ -567,7 +567,7 @@ describe("meal-plan.server", () => {
       userId: "user-1",
     });
 
-    expect(requireFamilyAdminMock).toHaveBeenCalledWith({
+    expect(requireFamilyMembershipMock).toHaveBeenCalledWith({
       familyId: "family-1",
       userId: "user-1",
     });
@@ -626,6 +626,10 @@ describe("meal-plan.server", () => {
       userId: "user-1",
     });
 
+    expect(requireFamilyMembershipMock).toHaveBeenCalledWith({
+      familyId: "family-1",
+      userId: "user-1",
+    });
     expect(dbMock.mealPlan.update).toHaveBeenCalledWith({
       data: {
         approvedAt: null,
@@ -676,8 +680,48 @@ describe("meal-plan.server", () => {
     expect(dbMock.mealPlan.update).not.toHaveBeenCalled();
   });
 
-  it("rethrows the admin authorization failure for approval changes", async () => {
-    requireFamilyAdminMock.mockRejectedValue(
+  it("approves a draft meal plan as a non-admin family member", async () => {
+    requireFamilyMembershipMock.mockResolvedValue({
+      ...mockMembership,
+      role: "MEMBER",
+      userId: "user-2",
+    });
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      entries: [],
+      id: "meal-plan-1",
+      status: "DRAFT",
+      updatedAt: new Date("2026-05-16T09:00:00.000Z"),
+    });
+    dbMock.mealPlan.update.mockResolvedValue({
+      approvedAt: new Date("2026-05-16T09:30:00.000Z"),
+      approvedByUserId: "user-2",
+      copiedFromMealPlanId: null,
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "APPROVED",
+      title: "Langhelg",
+      updatedAt: new Date("2026-05-16T09:30:00.000Z"),
+    });
+
+    const result = await approveMealPlan({
+      entriesSnapshot: "",
+      expectedMealPlanUpdatedAt: new Date("2026-05-16T09:00:00.000Z").toISOString(),
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-2",
+    });
+
+    expect(requireFamilyMembershipMock).toHaveBeenCalledWith({
+      familyId: "family-1",
+      userId: "user-2",
+    });
+    expect(result.status).toBe("APPROVED");
+  });
+
+  it("rethrows the membership authorization failure for approval changes", async () => {
+    requireFamilyMembershipMock.mockRejectedValue(
       new Response("Forbidden", {
         status: 403,
         statusText: "Forbidden",

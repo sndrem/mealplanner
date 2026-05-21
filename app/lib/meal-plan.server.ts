@@ -10,7 +10,7 @@ import {
   matchesExpectedUpdatedAt,
 } from "./collaboration.server";
 import { db } from "./db.server";
-import { requireFamilyAdmin, requireFamilyMembership } from "./family.server";
+import { requireFamilyMembership } from "./family.server";
 import { logCollaborationFailure, logCollaborationWrite } from "./write-observability.server";
 
 const MEAL_PLAN_MAX_SPAN_DAYS = 7;
@@ -1080,7 +1080,7 @@ async function updateMealPlanApprovalState(
   { entriesSnapshot, expectedMealPlanUpdatedAt, familyId, mealPlanId, userId }: MealPlanApprovalInput,
   action: MealPlanApprovalAction,
 ) {
-  await requireFamilyAdmin({
+  await requireFamilyMembership({
     familyId,
     userId,
   });

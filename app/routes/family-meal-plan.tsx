@@ -398,7 +398,6 @@ export default function FamilyMealPlanRoute({
     pendingIntent === "save-meal-plan-entries";
   const isUpdatingMetadata =
     navigation.state === "submitting" && pendingIntent === "update-meal-plan";
-  const canManageApproval = loaderData.userRole === "ADMIN";
   const noticeContent = loaderData.notice
     ? getMealPlanNoticeContent(loaderData.notice, loaderData.noticeMeta)
     : null;
@@ -439,7 +438,7 @@ export default function FamilyMealPlanRoute({
   const hasMealPlanCalendarExport = calendarExportDateSet.size > 0;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-slate-100 px-4 py-6 text-slate-900 md:py-12">
       <iframe
         aria-hidden="true"
         className="hidden"
@@ -448,22 +447,29 @@ export default function FamilyMealPlanRoute({
         title="Kalendernedlasting"
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
-                Middagsplanlegging
-              </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-                {loaderData.mealPlan.title}
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                Planlegg middager dag for dag i den aktive perioden. Oppskrifter
-                og notater lagres på serveren for hele familien.
-              </p>
-            </div>
+        <section className="rounded-[32px] bg-slate-950 px-5 py-6 text-white shadow-xl sm:px-8 sm:py-8">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0 flex-1">
+                <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
+                  Middagsplanlegging
+                </span>
+                <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+                  {loaderData.mealPlan.title}
+                </h1>
+                <p className="mt-2 text-sm font-medium text-emerald-200/90">
+                  {formatMealPlanWindow(
+                    loaderData.mealPlan.startDate,
+                    loaderData.mealPlan.endDate,
+                  )}
+                </p>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
+                  Se hele uken med ett blikk. Trykk på en dag for å planlegge
+                  middag og notater.
+                </p>
+              </div>
 
-            <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2 sm:gap-3 md:max-w-md md:justify-end">
               <Link
                 className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
                 to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
@@ -495,7 +501,21 @@ export default function FamilyMealPlanRoute({
               >
                 Tilbake til ukeplaner
               </Link>
+              </div>
             </div>
+
+            <MealPlanApprovalSection
+              actionData={actionData}
+              approvalButtonLabel={approvalButtonLabel}
+              approvalIntent={approvalIntent}
+              approvedAt={loaderData.mealPlan.approvedAt}
+              entriesSnapshot={loaderData.entriesSnapshot}
+              isApprovingMealPlan={isApprovingMealPlan}
+              isReopeningMealPlan={isReopeningMealPlan}
+              mealPlanStatus={loaderData.mealPlan.status}
+              mealPlanUpdatedAt={loaderData.mealPlan.updatedAt}
+              variant="hero"
+            />
           </div>
         </section>
 
@@ -509,20 +529,19 @@ export default function FamilyMealPlanRoute({
         ) : null}
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <article className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">
-                Middager for aktiv periode
+                Ukeoversikt
               </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Hver dag kan ha en middag, et notat eller begge deler. Tomme
-                dager blir lagret som up planlagt.
+                Trykk på en dag for å velge oppskrift eller legge til notat.
               </p>
             </div>
 
             <Form
               key={loaderData.entriesSnapshot}
-              className="mt-6 space-y-4"
+              className="mt-4 space-y-3"
               method="post"
             >
               <input
@@ -531,108 +550,25 @@ export default function FamilyMealPlanRoute({
                 value="save-meal-plan-entries"
               />
 
-              <div className="grid gap-4">
+              <div className="grid gap-2">
                 {loaderData.visibleDates.map((date) => {
                   const entry = entryValues[date] ?? {
                     note: "",
                     recipeId: "",
                     updatedAt: "",
                   };
-                  const canExportDay = calendarExportDateSet.has(date);
-                  const selectedRecipe =
-                    loaderData.recipes.find(
-                      (recipe) => recipe.id === entry.recipeId,
-                    ) ?? null;
 
                   return (
-                    <article
+                    <MealPlanDayRow
                       key={date}
-                      className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
-                    >
-                      <input name="entryDate" type="hidden" value={date} />
-                      <input
-                        name={`entryUpdatedAt:${date}`}
-                        type="hidden"
-                        value={entry.updatedAt}
-                      />
-
-                      <div className="flex flex-col gap-4">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
-                              Middag
-                            </p>
-                            <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                              {formatWeekdayLabel(date)}
-                            </h3>
-                            <p className="mt-1 text-sm font-medium text-slate-500">
-                              {formatDateLabel(date)}
-                            </p>
-                          </div>
-
-                          <div className="flex w-full flex-col gap-3 sm:max-w-sm">
-                            {canExportDay ? (
-                              <a
-                                className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
-                                href={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/days/${date}/calendar.ics`}
-                                target={CALENDAR_DOWNLOAD_TARGET}
-                              >
-                                Eksporter dag (.ics)
-                              </a>
-                            ) : null}
-
-                            <label className="block text-sm font-medium text-slate-700">
-                              Oppskrift
-                              <select
-                                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                                defaultValue={entry.recipeId}
-                                name={`recipeId:${date}`}
-                              >
-                                <option value="">Velg middag</option>
-                                {loaderData.recipes.map((recipe) => (
-                                  <option key={recipe.id} value={recipe.id}>
-                                    {recipe.title}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                          </div>
-                        </div>
-
-                        <label className="block text-sm font-medium text-slate-700">
-                          Notat
-                          <textarea
-                            className="mt-2 min-h-28 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                            defaultValue={entry.note}
-                            name={`note:${date}`}
-                            placeholder="F.eks. bytt ut ris med pasta eller husk rester til dagen etter"
-                          />
-                        </label>
-
-                        <div className="rounded-[20px] bg-white p-4 ring-1 ring-slate-200">
-                          <p className="text-sm leading-6 text-slate-600">
-                            {selectedRecipe
-                              ? `${selectedRecipe.description ?? "Ingen beskrivelse."} · ${selectedRecipe.prepMinutes ?? "?"} min · ${selectedRecipe.defaultServings ?? "?"} personer`
-                              : entry.note
-                                ? "Bare notat lagres for denne dagen."
-                                : "Ingen rett valgt enda."}
-                          </p>
-
-                          {selectedRecipe?.tags.length ? (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {selectedRecipe.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    </article>
+                      calendarDownloadTarget={CALENDAR_DOWNLOAD_TARGET}
+                      canExportDay={calendarExportDateSet.has(date)}
+                      date={date}
+                      entry={entry}
+                      familyId={loaderData.family.id}
+                      mealPlanId={loaderData.mealPlan.id}
+                      recipes={loaderData.recipes}
+                    />
                   );
                 })}
               </div>
@@ -687,7 +623,7 @@ export default function FamilyMealPlanRoute({
             </Form>
           </article>
 
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <article className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">
                 Oppskriftsbank
@@ -697,14 +633,14 @@ export default function FamilyMealPlanRoute({
                 planen.
               </p>
               <Link
-                className="mt-2 inline-flex w-fit items-center justify-center rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
+                className="mt-1 inline-flex w-fit items-center justify-center rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
                 to={`/families/${loaderData.family.id}/recipes`}
               >
                 Administrer oppskrifter
               </Link>
             </div>
 
-            <div className="mt-6 grid gap-3">
+            <div className="mt-4 grid gap-2 lg:mt-6 lg:gap-3">
               {loaderData.recipes.map((recipe) => (
                 <article
                   key={recipe.id}
@@ -753,34 +689,17 @@ export default function FamilyMealPlanRoute({
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <article className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">Detaljer</h2>
               <p className="text-sm leading-6 text-slate-600">
-                Planen tilhører familien {loaderData.family.name} og bruker et
-                lagret datointervall på maks 7 dager.
+                Planen tilhører familien {loaderData.family.name}. Godkjenning
+                skjer øverst på siden og kan gjøres av alle i familien.
               </p>
             </div>
 
-            <dl className="mt-6 grid gap-4">
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
-                  Status
-                </dt>
-                <dd className="mt-2 text-base font-semibold text-slate-950">
-                  {loaderData.mealPlan.status === "APPROVED"
-                    ? "Godkjent"
-                    : "Utkast"}
-                </dd>
-                {loaderData.mealPlan.approvedAt ? (
-                  <dd className="mt-2 text-sm leading-6 text-slate-600">
-                    Godkjent{" "}
-                    {formatApprovalTimestamp(loaderData.mealPlan.approvedAt)}
-                  </dd>
-                ) : null}
-              </div>
-
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <dl className="mt-4 grid gap-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
                   Aktiv periode
                 </dt>
@@ -792,47 +711,6 @@ export default function FamilyMealPlanRoute({
                 </dd>
               </div>
             </dl>
-
-            {canManageApproval ? (
-              <Form className="mt-6 space-y-4" method="post">
-                <input name="intent" type="hidden" value={approvalIntent} />
-                {approvalIntent === "approve-meal-plan" ? (
-                  <>
-                    <input
-                      name="entriesSnapshot"
-                      type="hidden"
-                      value={loaderData.entriesSnapshot}
-                    />
-                    <input
-                      name="mealPlanUpdatedAt"
-                      type="hidden"
-                      value={loaderData.mealPlan.updatedAt}
-                    />
-                  </>
-                ) : null}
-
-                <p className="text-sm leading-6 text-slate-600">
-                  Godkjenning markerer ukeplanen som klar for neste steg uten å
-                  låse redigering ennå.
-                </p>
-
-                {(actionData?.intent === "approve-meal-plan" ||
-                  actionData?.intent === "reopen-meal-plan") &&
-                actionData.statusFormError ? (
-                  <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {actionData.statusFormError}
-                  </p>
-                ) : null}
-
-                <button
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                  disabled={isApprovingMealPlan || isReopeningMealPlan}
-                  type="submit"
-                >
-                  {approvalButtonLabel}
-                </button>
-              </Form>
-            ) : null}
           </article>
 
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -1081,6 +959,267 @@ function getMealPlanNoticeContent(
         title: "Ukeplan oppdatert",
       };
   }
+}
+
+interface MealPlanRecipeOption {
+  defaultServings: number | null;
+  description: string | null;
+  id: string;
+  prepMinutes: number | null;
+  tags: string[];
+  title: string;
+}
+
+function MealPlanApprovalSection({
+  actionData,
+  approvalButtonLabel,
+  approvalIntent,
+  approvedAt,
+  entriesSnapshot,
+  isApprovingMealPlan,
+  isReopeningMealPlan,
+  mealPlanStatus,
+  mealPlanUpdatedAt,
+  variant,
+}: {
+  actionData?: MealPlanActionData;
+  approvalButtonLabel: string;
+  approvalIntent: MealPlanIntent;
+  approvedAt: string | null;
+  entriesSnapshot: string;
+  isApprovingMealPlan: boolean;
+  isReopeningMealPlan: boolean;
+  mealPlanStatus: "APPROVED" | "DRAFT";
+  mealPlanUpdatedAt: string;
+  variant: "hero";
+}) {
+  const isHero = variant === "hero";
+  const statusLabel = mealPlanStatus === "APPROVED" ? "Godkjent" : "Utkast";
+
+  return (
+    <div
+      className={
+        isHero
+          ? "rounded-2xl border border-white/15 bg-white/10 p-4 sm:p-5"
+          : "rounded-2xl border border-slate-200 bg-slate-50 p-4"
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={
+            isHero
+              ? mealPlanStatus === "APPROVED"
+                ? "rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-100 ring-1 ring-emerald-400/30"
+                : "rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/15"
+              : mealPlanStatus === "APPROVED"
+                ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800"
+                : "rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700"
+          }
+        >
+          {statusLabel}
+        </span>
+        {approvedAt ? (
+          <span
+            className={
+              isHero
+                ? "text-xs text-slate-300"
+                : "text-xs text-slate-600"
+            }
+          >
+            {formatApprovalTimestamp(approvedAt)}
+          </span>
+        ) : null}
+      </div>
+
+      <Form className="mt-4 space-y-3" method="post">
+        <input name="intent" type="hidden" value={approvalIntent} />
+        {approvalIntent === "approve-meal-plan" ? (
+          <>
+            <input name="entriesSnapshot" type="hidden" value={entriesSnapshot} />
+            <input
+              name="mealPlanUpdatedAt"
+              type="hidden"
+              value={mealPlanUpdatedAt}
+            />
+          </>
+        ) : null}
+
+        <p
+          className={
+            isHero
+              ? "text-sm leading-6 text-slate-300"
+              : "text-sm leading-6 text-slate-600"
+          }
+        >
+          Alle i familien kan godkjenne ukeplanen når middagene er klare. Det
+          låser ikke redigering.
+        </p>
+
+        {(actionData?.intent === "approve-meal-plan" ||
+          actionData?.intent === "reopen-meal-plan") &&
+        actionData.statusFormError ? (
+          <p
+            className={
+              isHero
+                ? "rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100"
+                : "rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+            }
+          >
+            {actionData.statusFormError}
+          </p>
+        ) : null}
+
+        <button
+          className={
+            isHero
+              ? "inline-flex w-full items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-500/50 sm:w-auto"
+              : "inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+          }
+          disabled={isApprovingMealPlan || isReopeningMealPlan}
+          type="submit"
+        >
+          {approvalButtonLabel}
+        </button>
+      </Form>
+    </div>
+  );
+}
+
+function MealPlanDayRow({
+  calendarDownloadTarget,
+  canExportDay,
+  date,
+  entry,
+  familyId,
+  mealPlanId,
+  recipes,
+}: {
+  calendarDownloadTarget: string;
+  canExportDay: boolean;
+  date: string;
+  entry: MealPlanEntryFormState;
+  familyId: string;
+  mealPlanId: string;
+  recipes: MealPlanRecipeOption[];
+}) {
+  const selectedRecipe =
+    recipes.find((recipe) => recipe.id === entry.recipeId) ?? null;
+  const mealLabel = getMealDaySummaryLabel(entry, selectedRecipe);
+  const hasNoteOnly = !entry.recipeId && Boolean(entry.note.trim());
+
+  return (
+    <details className="group rounded-2xl border border-slate-200 bg-slate-50">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+            {formatWeekdayLabel(date)}
+          </p>
+          <p className="truncate text-base font-semibold text-slate-950">
+            {mealLabel}
+          </p>
+          <p className="text-xs text-slate-500">{formatDateLabel(date)}</p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {hasNoteOnly ? (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+              Notat
+            </span>
+          ) : null}
+          <span className="text-xs text-slate-400 group-open:hidden">Åpne</span>
+          <span className="hidden text-xs text-slate-400 group-open:inline">
+            Lukk
+          </span>
+        </div>
+      </summary>
+
+      <div className="space-y-3 border-t border-slate-200 px-3 pb-3 pt-3">
+        <input name="entryDate" type="hidden" value={date} />
+        <input
+          name={`entryUpdatedAt:${date}`}
+          type="hidden"
+          value={entry.updatedAt}
+        />
+
+        {canExportDay ? (
+          <a
+            className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+            href={`/families/${familyId}/meal-plans/${mealPlanId}/days/${date}/calendar.ics`}
+            target={calendarDownloadTarget}
+          >
+            Eksporter dag (.ics)
+          </a>
+        ) : null}
+
+        <label className="block text-sm font-medium text-slate-700">
+          Oppskrift
+          <select
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            defaultValue={entry.recipeId}
+            name={`recipeId:${date}`}
+          >
+            <option value="">Velg middag</option>
+            {recipes.map((recipe) => (
+              <option key={recipe.id} value={recipe.id}>
+                {recipe.title}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block text-sm font-medium text-slate-700">
+          Notat
+          <textarea
+            className="mt-2 min-h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            defaultValue={entry.note}
+            name={`note:${date}`}
+            placeholder="F.eks. bytt ut ris med pasta eller husk rester til dagen etter"
+          />
+        </label>
+
+        <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+          <p className="text-sm leading-6 text-slate-600">
+            {selectedRecipe
+              ? `${selectedRecipe.description ?? "Ingen beskrivelse."} · ${selectedRecipe.prepMinutes ?? "?"} min · ${selectedRecipe.defaultServings ?? "?"} personer`
+              : entry.note
+                ? "Bare notat lagres for denne dagen."
+                : "Ingen rett valgt enda."}
+          </p>
+
+          {selectedRecipe?.tags.length ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {selectedRecipe.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function getMealDaySummaryLabel(
+  entry: MealPlanEntryFormState,
+  selectedRecipe: MealPlanRecipeOption | null,
+) {
+  if (selectedRecipe) {
+    return selectedRecipe.title;
+  }
+
+  const trimmedNote = entry.note.trim();
+
+  if (trimmedNote) {
+    return trimmedNote.length > 48
+      ? `${trimmedNote.slice(0, 48)}…`
+      : trimmedNote;
+  }
+
+  return "Ikke planlagt";
 }
 
 function formatMealPlanWindow(startDate: string, endDate: string) {
