@@ -17,9 +17,6 @@ The server validates these at startup ([`app/lib/env.server.ts`](../app/lib/env.
 | -------- | ------- |
 | `DATABASE_URL` | PostgreSQL connection string (`postgresql://` or `postgres://`) |
 | `SESSION_SECRET` | Cookie session signing (min 32 characters) |
-| `NOTION_API_TOKEN` | Required by validation today; use placeholders if import is unused |
-| `NOTION_INGREDIENTS_DATABASE_ID` | Placeholder until Notion is removed in a follow-up task |
-| `NOTION_RECIPES_DATABASE_ID` | Placeholder until Notion is removed in a follow-up task |
 
 Set secrets on Fly (never commit production values):
 
@@ -27,9 +24,6 @@ Set secrets on Fly (never commit production values):
 fly secrets set \
   DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?schema=public" \
   SESSION_SECRET="<generate-a-long-random-string>" \
-  NOTION_API_TOKEN="placeholder" \
-  NOTION_INGREDIENTS_DATABASE_ID="placeholder" \
-  NOTION_RECIPES_DATABASE_ID="placeholder" \
   -a mealplanner
 ```
 
@@ -128,13 +122,18 @@ docker build -t mealplanner .
 docker run --rm -p 3000:3000 \
   -e DATABASE_URL="postgresql://mealplanner:mealplanner@host.docker.internal:5466/mealplanner?schema=public" \
   -e SESSION_SECRET="local-docker-secret-at-least-thirty-two-chars" \
-  -e NOTION_API_TOKEN="placeholder" \
-  -e NOTION_INGREDIENTS_DATABASE_ID="placeholder" \
-  -e NOTION_RECIPES_DATABASE_ID="placeholder" \
   mealplanner
 ```
 
 Ensure local Postgres is running (`docker compose up -d`) if using the example URL.
+
+## Remove legacy Notion secrets
+
+If the app was deployed before Notion import was removed, unset obsolete secrets:
+
+```bash
+fly secrets unset NOTION_API_TOKEN NOTION_INGREDIENTS_DATABASE_ID NOTION_RECIPES_DATABASE_ID -a mealplanner
+```
 
 ## Troubleshooting
 

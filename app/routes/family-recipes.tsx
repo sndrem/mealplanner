@@ -154,14 +154,6 @@ export default function FamilyRecipesRoute({
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {canManageRecipes ? (
-                <Link
-                  className="rounded-2xl bg-indigo-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-indigo-600"
-                  to={`/families/${loaderData.family.id}/recipes/import`}
-                >
-                  Importer fra Notion
-                </Link>
-              ) : null}
               <Link
                 className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
                 to={`/families/${loaderData.family.id}/meal-plans`}

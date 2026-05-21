@@ -16,7 +16,6 @@ export default [
   route("families/:familyId/stores", "routes/family-stores.tsx"),
   route("families/:familyId/stock-ingredients", "routes/family-stock-ingredients.tsx"),
   route("families/:familyId/recipes", "routes/family-recipes.tsx"),
-  route("families/:familyId/recipes/import", "routes/family-recipe-import.tsx"),
   route("families/:familyId/recipes/:recipeId", "routes/family-recipe.tsx"),
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
