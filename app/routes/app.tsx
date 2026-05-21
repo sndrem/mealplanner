@@ -179,9 +179,7 @@ export default function AppRoute({
                 Hei, {loaderData.user.displayName}
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                {hasFamilies
-                  ? "Dette er den beskyttede familieoversikten din, klar for videre arbeid med ukeplaner og handlelister."
-                  : "Dette er den beskyttede inngangen til appen. Opprett en familie eller bli med i en eksisterende familie for å komme videre."}
+                Kom i gang med middagsplanlegging for deg og din familie
               </p>
             </div>
 
@@ -209,17 +207,6 @@ export default function AppRoute({
 
         {hasFamilies ? (
           <>
-            <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-lg font-semibold text-slate-950">
-                Familier du har tilgang til
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Dette er den første beskyttede familieflaten i produksjonsappen.
-                Hver familie er klar som utgangspunkt for neste steg med
-                ukeplaner, handlelister og samarbeid.
-              </p>
-            </section>
-
             <section className="grid gap-4 md:grid-cols-3">
               {loaderData.memberships.map(
                 (membership: (typeof loaderData.memberships)[number]) => (
@@ -229,7 +216,7 @@ export default function AppRoute({
                   >
                     <div className="flex items-center justify-between gap-3">
                       <h2 className="text-lg font-semibold text-slate-950">
-                        {membership.family.name}
+                        Familie: {membership.family.name}
                       </h2>
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600">
                         {membership.role === "ADMIN" ? "Admin" : "Medlem"}
@@ -249,17 +236,6 @@ export default function AppRoute({
                   </article>
                 ),
               )}
-            </section>
-
-            <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-lg font-semibold text-slate-950">
-                Hva kommer nå
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Familieonboarding, auth, session og beskyttede ruter er på
-                plass. Neste steg er å bygge familievisning, ukeplaner og
-                handleliste på toppen av ekte serverdata.
-              </p>
             </section>
           </>
         ) : (
