@@ -438,7 +438,7 @@ export default function FamilyMealPlanRoute({
   const hasMealPlanCalendarExport = calendarExportDateSet.size > 0;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-6 text-slate-900 md:py-12">
+    <main className="min-h-screen overflow-x-hidden bg-slate-100 px-4 py-6 text-slate-900 md:py-12">
       <iframe
         aria-hidden="true"
         className="hidden"
@@ -446,7 +446,7 @@ export default function FamilyMealPlanRoute({
         tabIndex={-1}
         title="Kalendernedlasting"
       />
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-5 py-6 text-white shadow-xl sm:px-8 sm:py-8">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -528,8 +528,8 @@ export default function FamilyMealPlanRoute({
           </section>
         ) : null}
 
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <article className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
+        <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <article className="min-w-0 w-full rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">
                 Ukeoversikt
@@ -541,7 +541,7 @@ export default function FamilyMealPlanRoute({
 
             <Form
               key={loaderData.entriesSnapshot}
-              className="mt-4 space-y-3"
+              className="mt-4 min-w-0 space-y-3"
               method="post"
             >
               <input
@@ -550,7 +550,7 @@ export default function FamilyMealPlanRoute({
                 value="save-meal-plan-entries"
               />
 
-              <div className="grid gap-2">
+              <div className="grid min-w-0 gap-2">
                 {loaderData.visibleDates.map((date) => {
                   const entry = entryValues[date] ?? {
                     note: "",
@@ -623,7 +623,7 @@ export default function FamilyMealPlanRoute({
             </Form>
           </article>
 
-          <article className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
+          <article className="min-w-0 w-full rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">
                 Oppskriftsbank
@@ -1108,8 +1108,8 @@ function MealPlanDayRow({
   const hasNoteOnly = !entry.recipeId && Boolean(entry.note.trim());
 
   return (
-    <details className="group rounded-2xl border border-slate-200 bg-slate-50">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
+    <details className="group min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
             {formatWeekdayLabel(date)}
@@ -1132,7 +1132,7 @@ function MealPlanDayRow({
         </div>
       </summary>
 
-      <div className="space-y-3 border-t border-slate-200 px-3 pb-3 pt-3">
+      <div className="min-w-0 space-y-3 border-t border-slate-200 px-3 pb-3 pt-3">
         <input name="entryDate" type="hidden" value={date} />
         <input
           name={`entryUpdatedAt:${date}`}
@@ -1150,10 +1150,10 @@ function MealPlanDayRow({
           </a>
         ) : null}
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block min-w-0 text-sm font-medium text-slate-700">
           Oppskrift
           <select
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             defaultValue={entry.recipeId}
             name={`recipeId:${date}`}
           >
@@ -1166,18 +1166,18 @@ function MealPlanDayRow({
           </select>
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block min-w-0 text-sm font-medium text-slate-700">
           Notat
           <textarea
-            className="mt-2 min-h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 box-border min-h-24 w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             defaultValue={entry.note}
             name={`note:${date}`}
             placeholder="F.eks. bytt ut ris med pasta eller husk rester til dagen etter"
           />
         </label>
 
-        <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-          <p className="text-sm leading-6 text-slate-600">
+        <div className="min-w-0 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+          <p className="break-words text-sm leading-6 text-slate-600">
             {selectedRecipe
               ? `${selectedRecipe.description ?? "Ingen beskrivelse."} · ${selectedRecipe.prepMinutes ?? "?"} min · ${selectedRecipe.defaultServings ?? "?"} personer`
               : entry.note

@@ -2,18 +2,18 @@
 
 ## Current Objective
 
-Issue #56: mobile-first week overview on the meal plan page, expandable day editing, approval hoisted to the hero, and family-wide approve/reopen.
+Issue #56 shipped on branch `issue/56-mobile-meal-plan-calendar` — mobile week overview, hero approval, family-wide approve/reopen, plus mobile overflow fix for Ukeoversikt.
 
 ## Completed
 
-- `approveMealPlan` / `reopenMealPlan` now use `requireFamilyMembership` instead of admin-only checks.
-- Meal plan route: compact week rows with `<details>` per day; approval section in hero; removed duplicate approval form from Detaljer.
-- Added `MealPlanApprovalSection` and `MealPlanDayRow` helpers in the route file.
+- Mobile-first meal plan week view with collapsible day rows and hero approval.
+- Family-wide `approveMealPlan` / `reopenMealPlan` via `requireFamilyMembership`.
+- Fixed horizontal scroll on mobile: `min-w-0` chain, constrained inputs, `overflow-x-hidden` on main.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan.tsx` — week overview UI, hero approval, day accordion
-- `app/lib/meal-plan.server.ts` — approval authorization change
+- `app/routes/family-meal-plan.tsx` — week overview, approval hero, overflow constraints
+- `app/lib/meal-plan.server.ts` — approval authorization
 
 ## Validation
 
@@ -24,9 +24,8 @@ Issue #56: mobile-first week overview on the meal plan page, expandable day edit
 
 ## Open Items
 
-- Manual smoke-test on mobile viewport (~390px): week visible at a glance, expand day, approve as non-admin member.
-- PR merge.
+- PR #57 merge and manual mobile smoke-test.
 
 ## Next Step
 
-Merge PR; verify approval and day expand/save on a real device or narrow browser window.
+Merge PR #57; confirm no horizontal scroll on Ukeoversikt at ~390px width.
