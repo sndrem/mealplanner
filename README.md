@@ -1,6 +1,6 @@
 # Mealplanner
 
-Mealplanner is a React Router 7 app that currently contains a validated planning prototype and the first production backend foundation for PostgreSQL + Prisma.
+Mealplanner is a React Router 7 app for family meal planning, with a production backend on PostgreSQL + Prisma.
 
 ## Requirements
 
@@ -206,4 +206,4 @@ npm run start
 
 ## Styling
 
-[Tailwind CSS](https://tailwindcss.com/) is already configured for the app and prototype UI.
+[Tailwind CSS](https://tailwindcss.com/) is already configured for the app.

@@ -19,6 +19,5 @@ export default [
   route("families/:familyId/recipes/:recipeId", "routes/family-recipe.tsx"),
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
-  route("prototype", "routes/prototype.tsx"),
   route("register", "routes/register.tsx"),
 ] satisfies RouteConfig;
