@@ -624,66 +624,44 @@ export default function FamilyMealPlanRoute({
           </article>
 
           <article className="min-w-0 w-full rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
-            <div className="flex flex-col gap-2">
+            <details className="group min-w-0 lg:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-semibold text-slate-950">
+                    Oppskriftsbank
+                  </h2>
+                  <p className="text-sm text-slate-600">
+                    {formatRecipeCount(loaderData.recipes.length)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="text-xs text-slate-400 group-open:hidden">
+                    Åpne
+                  </span>
+                  <span className="hidden text-xs text-slate-400 group-open:inline">
+                    Lukk
+                  </span>
+                </div>
+              </summary>
+
+              <div className="mt-4 min-w-0 border-t border-slate-200 pt-4">
+                <RecipeBankContent
+                  familyId={loaderData.family.id}
+                  recipes={loaderData.recipes}
+                  selectedRecipeIds={selectedRecipeIds}
+                />
+              </div>
+            </details>
+
+            <div className="hidden min-w-0 lg:block">
               <h2 className="text-lg font-semibold text-slate-950">
                 Oppskriftsbank
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
-                Standard- og familieoppskrifter du kan velge til middagene i
-                planen.
-              </p>
-              <Link
-                className="mt-1 inline-flex w-fit items-center justify-center rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
-                to={`/families/${loaderData.family.id}/recipes`}
-              >
-                Administrer oppskrifter
-              </Link>
-            </div>
-
-            <div className="mt-4 grid gap-2 lg:mt-6 lg:gap-3">
-              {loaderData.recipes.map((recipe) => (
-                <article
-                  key={recipe.id}
-                  className={
-                    selectedRecipeIds.has(recipe.id)
-                      ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-5"
-                      : "rounded-[24px] border border-slate-200 bg-slate-50 p-5"
-                  }
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-base font-semibold text-slate-950">
-                        {recipe.title}
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
-                        {recipe.description}
-                      </p>
-                    </div>
-                    {selectedRecipeIds.has(recipe.id) ? (
-                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                        I planen
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                      {recipe.prepMinutes ?? "?"} min
-                    </span>
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                      {recipe.defaultServings ?? "?"} personer
-                    </span>
-                    {recipe.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </article>
-              ))}
+              <RecipeBankContent
+                familyId={loaderData.family.id}
+                recipes={loaderData.recipes}
+                selectedRecipeIds={selectedRecipeIds}
+              />
             </div>
           </article>
         </section>
@@ -1082,6 +1060,80 @@ function MealPlanApprovalSection({
         </button>
       </Form>
     </div>
+  );
+}
+
+function formatRecipeCount(count: number) {
+  return count === 1 ? "1 oppskrift" : `${count} oppskrifter`;
+}
+
+function RecipeBankContent({
+  familyId,
+  recipes,
+  selectedRecipeIds,
+}: {
+  familyId: string;
+  recipes: MealPlanRecipeOption[];
+  selectedRecipeIds: Set<string>;
+}) {
+  return (
+    <>
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        Standard- og familieoppskrifter du kan velge til middagene i planen.
+      </p>
+      <Link
+        className="mt-1 inline-flex w-fit items-center justify-center rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
+        to={`/families/${familyId}/recipes`}
+      >
+        Administrer oppskrifter
+      </Link>
+
+      <div className="mt-4 grid gap-2 lg:mt-6 lg:gap-3">
+        {recipes.map((recipe) => (
+          <article
+            key={recipe.id}
+            className={
+              selectedRecipeIds.has(recipe.id)
+                ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-5"
+                : "rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+            }
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-slate-950">
+                  {recipe.title}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {recipe.description}
+                </p>
+              </div>
+              {selectedRecipeIds.has(recipe.id) ? (
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                  I planen
+                </span>
+              ) : null}
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                {recipe.prepMinutes ?? "?"} min
+              </span>
+              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                {recipe.defaultServings ?? "?"} personer
+              </span>
+              {recipe.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+    </>
   );
 }
 

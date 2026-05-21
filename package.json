@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "analyze:dead-code": "fallow dead-code --format json --quiet",
+    "analyze:dupes": "fallow dupes --format json --quiet --top 20",
+    "analyze:health": "fallow health --format json --quiet --score --top 15",
     "backlog:issues": "node ./scripts/create-github-issues-from-brief.mjs",
     "build": "react-router build",
     "dev": "react-router dev",
@@ -43,6 +46,7 @@
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "fallow": "^2.76.0",
     "globals": "^17.6.0",
     "jsdom": "^26.1.0",
     "prisma": "^6.19.3",

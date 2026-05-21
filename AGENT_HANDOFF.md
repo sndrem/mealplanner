@@ -2,18 +2,17 @@
 
 ## Current Objective
 
-Issue #56 shipped on branch `issue/56-mobile-meal-plan-calendar` — mobile week overview, hero approval, family-wide approve/reopen, plus mobile overflow fix for Ukeoversikt.
+Issue #58 on branch `issue/58-collapse-recipe-bank-mobile` — collapse Oppskriftsbank on mobile to cut vertical scrolling on the meal plan page.
 
 ## Completed
 
-- Mobile-first meal plan week view with collapsible day rows and hero approval.
-- Family-wide `approveMealPlan` / `reopenMealPlan` via `requireFamilyMembership`.
-- Fixed horizontal scroll on mobile: `min-w-0` chain, constrained inputs, `overflow-x-hidden` on main.
+- Mobile-only `<details>` for Oppskriftsbank (collapsed by default) with title, recipe count, and Åpne/Lukk affordance.
+- Desktop `lg+` block stays always visible via `hidden lg:block`.
+- Shared `RecipeBankContent` component to avoid duplicating recipe cards and admin link.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan.tsx` — week overview, approval hero, overflow constraints
-- `app/lib/meal-plan.server.ts` — approval authorization
+- `app/routes/family-meal-plan.tsx` — Oppskriftsbank article, `RecipeBankContent`, `formatRecipeCount`
 
 ## Validation
 
@@ -24,8 +23,9 @@ Issue #56 shipped on branch `issue/56-mobile-meal-plan-calendar` — mobile week
 
 ## Open Items
 
-- PR #57 merge and manual mobile smoke-test.
+- PR merge and manual mobile smoke-test (~390px): collapsed on load, expand/collapse, «I planen» badges when expanded.
+- Unrelated local changes (README, package.json, vite.config) were not included in the commit.
 
 ## Next Step
 
-Merge PR #57; confirm no horizontal scroll on Ukeoversikt at ~390px width.
+Merge PR when CI is green; confirm Oppskriftsbank behavior at mobile and desktop breakpoints.
