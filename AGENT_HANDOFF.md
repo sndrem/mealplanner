@@ -2,31 +2,30 @@
 
 ## Current Objective
 
-Fix butikkmodus handledato-filter (issue #54): show shopping items from handledato through end of meal plan, exclude past meals, and auto-save store/date selects.
+Issue #56 shipped on branch `issue/56-mobile-meal-plan-calendar` — mobile week overview, hero approval, family-wide approve/reopen, plus mobile overflow fix for Ukeoversikt.
 
 ## Completed
 
-- Replaced inverted `isProjectedItemDueBy` with trip/before-shopping/past filters in `getMealPlanStoreModeData`.
-- Added unit tests for multi-day trips, before-shopping-date chips, and past-meal exclusion.
-- Updated butikkmodus copy («fra handledato og utover», «Før handledato»).
-- Auto-submit store and shopping-date selects on change (removed save buttons).
+- Mobile-first meal plan week view with collapsible day rows and hero approval.
+- Family-wide `approveMealPlan` / `reopenMealPlan` via `requireFamilyMembership`.
+- Fixed horizontal scroll on mobile: `min-w-0` chain, constrained inputs, `overflow-x-hidden` on main.
 
 ## Files To Read First
 
-- `app/lib/shopping.server.ts` — store-mode date filtering helpers
-- `app/routes/family-meal-plan-store-mode.tsx` — UI, auto-submit selects
+- `app/routes/family-meal-plan.tsx` — week overview, approval hero, overflow constraints
+- `app/lib/meal-plan.server.ts` — approval authorization
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 159 tests passed (31 files)
+- `npm run test:run` — 160 tests passed (31 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- PR merge and manual smoke-test in butikkmodus (Monday shop trip shows full week; past days hidden).
+- PR #57 merge and manual mobile smoke-test.
 
 ## Next Step
 
-Merge PR; verify store/date dropdowns save on change and item list matches handledato range.
+Merge PR #57; confirm no horizontal scroll on Ukeoversikt at ~390px width.
