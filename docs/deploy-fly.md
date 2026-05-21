@@ -125,7 +125,7 @@ npm run build
 
 ### What deploy does
 
-1. Builds the production image on Fly remote builders (`fly deploy --remote-only`).
+1. Builds the production image on Fly remote builders (`flyctl deploy --remote-only`).
 2. Runs `release_command` from [`fly.toml`](../fly.toml) (`npx prisma migrate deploy`).
 3. Routes traffic to the new release when the release machine succeeds.
 
