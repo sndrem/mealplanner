@@ -22,12 +22,13 @@ Use this skill when:
 Follow this sequence:
 
 1. Resolve the repository context from git@github.com:sndrem/mealplanner.git
-2. Fetch the GitHub issue.
-3. Summarize the issue in your own words.
-4. Have a look at the file AGENT_HANDOFF.md for context of the previous issue resolved
-5. Inspect the codebase areas likely affected.
-6. Produce a detailed implementation plan.
-7. Stop and wait for approval before editing code.
+2. Ensure a feature branch (not `main` / `master`).
+3. Fetch the GitHub issue.
+4. Summarize the issue in your own words.
+5. Have a look at the file AGENT_HANDOFF.md for context of the previous issue resolved
+6. Inspect the codebase areas likely affected.
+7. Produce a detailed implementation plan.
+8. Stop and wait for approval before editing code.
 
 Do not start implementation as part of this skill unless the user explicitly asks for it after reviewing the plan.
 
@@ -40,7 +41,32 @@ If the repository is not obvious from the current workspace:
 
 If the repository is known, use that repository with the issue number directly.
 
-## Step 2: Fetch The Issue
+## Step 2: Ensure Feature Branch
+
+Before fetching the issue or editing code, check the current branch:
+
+```bash
+git branch --show-current
+```
+
+If the branch is `main` or `master`, create and check out a feature branch:
+
+```bash
+git checkout -b issue/<number>-<short-slug>
+```
+
+Branch naming:
+
+- Prefix with `issue/<number>-` (e.g. `issue/42-fly-deploy`)
+- `<short-slug>`: a few lowercase words from the issue title (drop filler words, use hyphens, max ~40 chars)
+
+If you already know the issue number from the user, you may create the branch after a quick `gh issue view` for the title. Otherwise use a temporary slug like `issue/<number>-plan` and rename only if the team prefers that workflow.
+
+If already on a feature branch, stay on it — do not branch from `main` again.
+
+Do not commit or push as part of this step unless the user explicitly asks.
+
+## Step 3: Fetch The Issue
 
 Prefer the GitHub CLI.
 
@@ -64,7 +90,7 @@ Capture:
 - Constraints
 - Linked context from comments, if relevant
 
-## Step 3: Summarize Before Planning
+## Step 4: Summarize Before Planning
 
 Write a short summary that covers:
 
@@ -74,7 +100,7 @@ Write a short summary that covers:
 
 If the issue is ambiguous, call that out clearly before making the plan.
 
-## Step 4: Inspect Relevant Code
+## Step 5: Inspect Relevant Code
 
 Read only the parts of the codebase needed to plan the work well.
 
@@ -86,7 +112,7 @@ Look for:
 
 Prefer reusing existing patterns over proposing brand new abstractions unless the issue clearly requires them.
 
-## Step 5: Produce The Plan
+## Step 6: Produce The Plan
 
 Use this structure:
 
@@ -129,7 +155,7 @@ Plan quality bar:
 - Include edge cases and migration concerns when relevant
 - Keep the plan implementation-focused, not generic project-management filler
 
-## Step 6: Stop Before Coding
+## Step 7: Stop Before Coding
 
 After presenting the plan:
 
@@ -142,6 +168,7 @@ After presenting the plan:
 - Prefer actionable steps over broad recommendations
 - Highlight uncertainty instead of guessing
 - If repository context is missing, ask for it immediately instead of assuming
+- When a new branch was created in Step 2, mention its name in the plan so implementation starts on the right branch
 
 ## Example Triggers
 
