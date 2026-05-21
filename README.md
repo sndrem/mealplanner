@@ -122,9 +122,11 @@ docker compose down
 
 ## Pull Request Validation
 
-Pull requests now run [`.github/workflows/pr-validation.yml`](.github/workflows/pr-validation.yml) automatically when they are opened, updated, or reopened.
+Pull requests run [`.github/workflows/pr-validation.yml`](.github/workflows/pr-validation.yml) when they are opened, updated, or reopened.
 
-The workflow uses Node.js `20.19.0` and runs the same baseline validation commands used locally:
+Pushes to `main` run [`.github/workflows/fly-deploy.yml`](.github/workflows/fly-deploy.yml): the same validation suite, then deploy to Fly.io. You can also trigger a deploy manually from the Actions tab (`workflow_dispatch`). Requires the `FLY_API_TOKEN` repository secret — see [docs/deploy-fly.md](docs/deploy-fly.md#continuous-deployment-github-actions).
+
+The validation workflow uses Node.js `20.19.0` and runs the same baseline validation commands used locally:
 
 ```bash
 npm ci
@@ -171,13 +173,13 @@ When creating issues, the script auto-creates any missing labels in the target r
 
 ### Fly.io (production)
 
-See **[docs/deploy-fly.md](docs/deploy-fly.md)** for the full workflow: secrets, `fly deploy`, migrations on release, rollback, and smoke checks.
+See **[docs/deploy-fly.md](docs/deploy-fly.md)** for secrets, automated GitHub Actions deploys, manual fallback, migrations on release, rollback, and smoke checks.
 
-Quick reference:
+**Routine releases:** merge to `main` (or run **Deploy to Fly.io** from Actions). **Manual fallback:**
 
 ```bash
-fly deploy -a mealplanner
-fly open -a mealplanner
+fly deploy -a mealplanner-xzvzow
+fly open -a mealplanner-xzvzow
 ```
 
 Configuration lives in [`fly.toml`](fly.toml). The Docker image runs `npm run start` (React Router serve on port 3000).
