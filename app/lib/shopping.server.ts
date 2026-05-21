@@ -443,8 +443,16 @@ export async function getMealPlanStoreModeData({
     selectedStorePreference?.selectedStoreId ?? null,
   );
   const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
+  const todayAtUtcMidnight = getUtcToday();
   const dueItems = projectedItems
-    .filter((item) => isProjectedItemDueBy(item, activeShoppingDate))
+    .filter((item) =>
+      isProjectedItemInStoreModeTrip(
+        item,
+        activeShoppingDate,
+        mealPlan.endDate,
+        todayAtUtcMidnight,
+      ),
+    )
     .sort((left, right) =>
       compareProjectedItemsForStoreMode(
         left,
@@ -454,7 +462,13 @@ export async function getMealPlanStoreModeData({
       ),
     );
   const laterItems = projectedItems
-    .filter((item) => !isProjectedItemDueBy(item, activeShoppingDate))
+    .filter((item) =>
+      isProjectedItemBeforeShoppingDate(
+        item,
+        activeShoppingDate,
+        todayAtUtcMidnight,
+      ),
+    )
     .sort(compareProjectedItemsByRelevantDate);
 
   return {
@@ -1016,14 +1030,67 @@ function resolveSelectedStoreSummary(
   };
 }
 
-function isProjectedItemDueBy(item: ProjectedShoppingItem, activeShoppingDate: Date) {
+function getUtcToday(referenceDate = new Date()) {
+  return new Date(
+    Date.UTC(
+      referenceDate.getUTCFullYear(),
+      referenceDate.getUTCMonth(),
+      referenceDate.getUTCDate(),
+    ),
+  );
+}
+
+function isProjectedItemPast(
+  item: ProjectedShoppingItem,
+  todayAtUtcMidnight: Date,
+) {
+  const relevantDate = getProjectedItemRelevantDate(item);
+
+  if (!relevantDate) {
+    return false;
+  }
+
+  return relevantDate.getTime() < todayAtUtcMidnight.getTime();
+}
+
+function isProjectedItemInStoreModeTrip(
+  item: ProjectedShoppingItem,
+  activeShoppingDate: Date,
+  endDate: Date,
+  todayAtUtcMidnight: Date,
+) {
+  if (isProjectedItemPast(item, todayAtUtcMidnight)) {
+    return false;
+  }
+
   const relevantDate = getProjectedItemRelevantDate(item);
 
   if (!relevantDate) {
     return true;
   }
 
-  return relevantDate.getTime() <= activeShoppingDate.getTime();
+  return (
+    relevantDate.getTime() >= activeShoppingDate.getTime() &&
+    relevantDate.getTime() <= endDate.getTime()
+  );
+}
+
+function isProjectedItemBeforeShoppingDate(
+  item: ProjectedShoppingItem,
+  activeShoppingDate: Date,
+  todayAtUtcMidnight: Date,
+) {
+  if (isProjectedItemPast(item, todayAtUtcMidnight)) {
+    return false;
+  }
+
+  const relevantDate = getProjectedItemRelevantDate(item);
+
+  if (!relevantDate) {
+    return false;
+  }
+
+  return relevantDate.getTime() < activeShoppingDate.getTime();
 }
 
 function getProjectedItemRelevantDate(item: ProjectedShoppingItem) {

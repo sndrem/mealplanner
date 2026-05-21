@@ -1,10 +1,12 @@
 import { ShoppingItemSource } from "@prisma/client";
+import type { ChangeEvent } from "react";
 import {
   Form,
   Link,
   isRouteErrorResponse,
   useFetcher,
   useNavigation,
+  useSubmit,
   type MetaFunction,
 } from "react-router";
 
@@ -236,8 +238,15 @@ export default function FamilyMealPlanStoreModeRoute({
   loaderData,
 }: FamilyMealPlanStoreModeRouteProps) {
   const navigation = useNavigation();
+  const submit = useSubmit();
   const toggleFetcher = useFetcher<StoreModeActionData>();
   const pendingIntent = navigation.formData?.get("intent");
+  const isSavingStore =
+    navigation.state === "submitting" &&
+    pendingIntent === "update-selected-store";
+  const isSavingShoppingDate =
+    navigation.state === "submitting" &&
+    pendingIntent === "update-active-shopping-date";
   const pendingSourceKey = getPendingSourceKey(toggleFetcher.formData);
   const toggleFormError =
     toggleFetcher.data?.intent === "toggle-shopping-item-checked" &&
@@ -273,8 +282,7 @@ export default function FamilyMealPlanStoreModeRoute({
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
                   Storflatevisning for handleturen med seksjonsrekkefølge fra
-                  valgt butikk og bare varer som er relevante innen
-                  handledatoen.
+                  valgt butikk og varer fra handledato og utover i ukeplanen.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -367,9 +375,14 @@ export default function FamilyMealPlanStoreModeRoute({
                 value="update-selected-store"
               />
               <select
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                aria-busy={isSavingStore}
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:cursor-wait disabled:bg-slate-50"
                 defaultValue={selectedStoreValue}
+                disabled={isSavingStore}
                 name="selectedStoreId"
+                onChange={(event) => {
+                  submitSelectForm(event, selectedStoreValue, submit);
+                }}
               >
                 {loaderData.stores.map((store) => (
                   <option key={store.id} value={store.id}>
@@ -383,19 +396,6 @@ export default function FamilyMealPlanStoreModeRoute({
                   {actionData.selectedStoreFieldErrors.selectedStoreId}
                 </p>
               ) : null}
-              <button
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={
-                  navigation.state === "submitting" &&
-                  pendingIntent === "update-selected-store"
-                }
-                type="submit"
-              >
-                {navigation.state === "submitting" &&
-                pendingIntent === "update-selected-store"
-                  ? "Lagrer butikk..."
-                  : "Lagre butikkvalg"}
-              </button>
             </Form>
           </article>
 
@@ -415,9 +415,14 @@ export default function FamilyMealPlanStoreModeRoute({
                 value={loaderData.mealPlan.updatedAt}
               />
               <select
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                aria-busy={isSavingShoppingDate}
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:cursor-wait disabled:bg-slate-50"
                 defaultValue={activeShoppingDateValue}
+                disabled={isSavingShoppingDate}
                 name="activeShoppingDate"
+                onChange={(event) => {
+                  submitSelectForm(event, activeShoppingDateValue, submit);
+                }}
               >
                 {loaderData.visibleDates.map((date) => (
                   <option key={date} value={date}>
@@ -431,19 +436,6 @@ export default function FamilyMealPlanStoreModeRoute({
                   {actionData.activeShoppingDateFieldErrors.activeShoppingDate}
                 </p>
               ) : null}
-              <button
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={
-                  navigation.state === "submitting" &&
-                  pendingIntent === "update-active-shopping-date"
-                }
-                type="submit"
-              >
-                {navigation.state === "submitting" &&
-                pendingIntent === "update-active-shopping-date"
-                  ? "Lagrer dato..."
-                  : "Lagre handledato"}
-              </button>
             </Form>
           </article>
         </section>
@@ -593,15 +585,15 @@ export default function FamilyMealPlanStoreModeRoute({
               Ingen varer må handles nå
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Alt er enten ferdig handlet eller planlagt for senere i den aktive
-              ukeplanen.
+              Alt er enten ferdig handlet, utenfor denne handleturen, eller
+              allerede passert.
             </p>
           </section>
         )}
 
         <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-lg font-semibold text-slate-950">
-            Senere i perioden
+            Før handledato
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {loaderData.laterItems.length > 0 ? (
@@ -621,7 +613,7 @@ export default function FamilyMealPlanStoreModeRoute({
               ))
             ) : (
               <p className="text-sm leading-6 text-slate-600">
-                Ingen senere varer akkurat nå.
+                Ingen varer ligger før handledato akkurat nå.
               </p>
             )}
           </div>
@@ -739,6 +731,24 @@ function buildStoreModeRedirect({
   url.searchParams.set("notice", notice);
 
   return Response.redirect(url, 302);
+}
+
+function submitSelectForm(
+  event: ChangeEvent<HTMLSelectElement>,
+  currentValue: string,
+  submit: ReturnType<typeof useSubmit>,
+) {
+  const nextValue = event.currentTarget.value;
+
+  if (nextValue === currentValue) {
+    return;
+  }
+
+  const form = event.currentTarget.form;
+
+  if (form) {
+    void submit(form);
+  }
 }
 
 function parseShoppingItemSource(value: FormDataEntryValue | null) {
