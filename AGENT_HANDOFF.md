@@ -2,20 +2,18 @@
 
 ## Current Objective
 
-Issue #46 shipped on branch `issue/46-remove-notion-import`: Notion import removed; env requires only `DATABASE_URL` and `SESSION_SECRET`.
+Issue #42: GitHub Actions Fly deploy workflow ready for PR merge to `main`.
 
 ## Completed
 
-- Deleted Notion import service, admin import route, and tests.
-- Removed import route registration and "Importer fra Notion" UI link.
-- Simplified `app/lib/env.server.ts`; updated `.env.example`, Vitest, and CI env.
-- Updated `README.md` and `docs/deploy-fly.md` (including legacy `fly secrets unset`).
-- Removed `@notionhq/client` dependency.
+- Added [`.github/workflows/fly-deploy.yml`](.github/workflows/fly-deploy.yml) — validate (mirrors PR CI) then `fly deploy --remote-only` to `mealplanner-xzvzow` on `main` and `workflow_dispatch`.
+- Extended [`docs/deploy-fly.md`](docs/deploy-fly.md) — CI/CD triggers, `FLY_API_TOKEN` setup, pre-deploy checks, failure handling, rollback notes, correct Fly app name.
+- Updated [`README.md`](README.md) — deploy workflow links and automated vs manual release paths.
 
 ## Files To Read First
 
-- `app/lib/env.server.ts` — required env vars.
-- `docs/deploy-fly.md` — deploy and legacy Notion secret cleanup.
+- `.github/workflows/fly-deploy.yml` — deploy pipeline.
+- `docs/deploy-fly.md` — operator setup and smoke checks.
 
 ## Validation
 
@@ -26,9 +24,9 @@ Issue #46 shipped on branch `issue/46-remove-notion-import`: Notion import remov
 
 ## Open Items
 
-- After merge/deploy: `fly secrets unset NOTION_API_TOKEN NOTION_INGREDIENTS_DATABASE_ID NOTION_RECIPES_DATABASE_ID -a mealplanner` if those secrets still exist on Fly.
-- Optional: reword Notion mention in `prototype/page.tsx` (non-blocking).
+- Operator: `fly tokens create deploy -a mealplanner-xzvzow` → GitHub repo secret `FLY_API_TOKEN`.
+- Operator: after merge, confirm Actions run on `main`, run post-deploy smoke checks in `docs/deploy-fly.md`.
 
 ## Next Step
 
-Merge PR; operator unsets Fly Notion secrets post-deploy if needed.
+Merge PR; add `FLY_API_TOKEN` if not set; verify first automated deploy and smoke checklist.

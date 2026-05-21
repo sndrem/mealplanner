@@ -5,7 +5,7 @@ This guide covers deploying the **mealplanner** app to [Fly.io](https://fly.io) 
 ## Prerequisites
 
 - [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/) installed and authenticated (`fly auth login`)
-- Access to the Fly org where the `mealplanner` app will run
+- Access to the Fly org where the `mealplanner-xzvzow` app will run
 - A production PostgreSQL `DATABASE_URL` reachable from Fly machines
 - Required secrets ready to set on Fly (see below)
 
@@ -24,7 +24,7 @@ Set secrets on Fly (never commit production values):
 fly secrets set \
   DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?schema=public" \
   SESSION_SECRET="<generate-a-long-random-string>" \
-  -a mealplanner
+  -a mealplanner-xzvzow
 ```
 
 Generate a strong `SESSION_SECRET`, for example:
@@ -38,7 +38,7 @@ openssl rand -base64 32
 If the app does not exist yet:
 
 ```bash
-fly apps create mealplanner
+fly apps create mealplanner-xzvzow
 ```
 
 Or launch from the repo (uses [`fly.toml`](../fly.toml) and [`Dockerfile`](../Dockerfile)):
@@ -58,51 +58,116 @@ Adjust `primary_region` in `fly.toml` if needed (default: `ams`).
 Check migration status on a running machine:
 
 ```bash
-fly ssh console -a mealplanner -C "npx prisma migrate status"
+fly ssh console -a mealplanner-xzvzow -C "npx prisma migrate status"
 ```
 
 ## Deploy
 
+### Automated (recommended)
+
+Merges to `main` deploy automatically via GitHub Actions after validation. See [Continuous deployment (GitHub Actions)](#continuous-deployment-github-actions).
+
+### Manual (fallback)
+
 From the repository root:
 
 ```bash
-fly deploy -a mealplanner
+fly deploy -a mealplanner-xzvzow
 ```
 
 Useful follow-up commands:
 
 ```bash
-fly status -a mealplanner
-fly logs -a mealplanner
-fly open -a mealplanner
+fly status -a mealplanner-xzvzow
+fly logs -a mealplanner-xzvzow
+fly open -a mealplanner-xzvzow
 ```
 
 Each deploy runs migrations in a release machine before routing traffic to the new image.
+
+## Continuous deployment (GitHub Actions)
+
+Routine production releases use [`.github/workflows/fly-deploy.yml`](../.github/workflows/fly-deploy.yml) (issue #42). The manual `fly deploy` flow from issue #41 remains available as a fallback.
+
+### Triggers
+
+| Trigger | When it runs |
+| ------- | ------------- |
+| Push to `main` | Automatically after validation passes |
+| `workflow_dispatch` | Manually from **Actions → Deploy to Fly.io → Run workflow** (must run on the `main` branch) |
+
+Pull request branches do not trigger this workflow.
+
+### GitHub secret (one-time setup)
+
+Create a deploy token and add it as a **repository** secret (Settings → Secrets and variables → Actions), not only an environment secret:
+
+```bash
+fly tokens create deploy -a mealplanner-xzvzow
+```
+
+Add the token value as `FLY_API_TOKEN`.
+
+Runtime secrets (`DATABASE_URL`, `SESSION_SECRET`, etc.) stay on Fly via `fly secrets set`; they are not stored in GitHub.
+
+### Pre-deploy checks
+
+The workflow `validate` job mirrors PR CI before deploy:
+
+```bash
+npm ci
+npm run prisma:generate
+npm run lint
+npm run test:run
+npm run typecheck
+npm run build
+```
+
+### What deploy does
+
+1. Builds the production image on Fly remote builders (`fly deploy --remote-only`).
+2. Runs `release_command` from [`fly.toml`](../fly.toml) (`npx prisma migrate deploy`).
+3. Routes traffic to the new release when the release machine succeeds.
+
+### Failure handling
+
+| Failure | What to check |
+| ------- | ------------- |
+| `validate` job fails | Fix lint, tests, typecheck, or build locally; merge a fix to `main` |
+| Auth error on deploy | `FLY_API_TOKEN` missing, expired, or stored in the wrong secret scope |
+| Deploy / build fails | GitHub Actions logs for the run; `fly logs -a mealplanner-xzvzow` |
+| `release_command` fails | Database URL, connectivity, or pending migrations; previous release keeps serving traffic |
+
+After fixing the root cause, push to `main` or re-run the workflow via `workflow_dispatch`.
+
+### Rollback after an automated deploy
+
+Automated deploys use the same rollback steps as manual deploys (see below). Redeploying an older image does **not** undo database migrations already applied by a failed or bad release; treat schema rollback as a separate, careful operation.
 
 ## Rollback
 
 List recent releases:
 
 ```bash
-fly releases list -a mealplanner
+fly releases list -a mealplanner-xzvzow
 ```
 
 Redeploy a previous image (replace `<image-ref>` from the releases list):
 
 ```bash
-fly deploy --image <image-ref> -a mealplanner
+fly deploy --image <image-ref> -a mealplanner-xzvzow
 ```
 
 See [Fly rollback docs](https://fly.io/docs/blueprint/rollback/) for machine-level options.
 
 ## Post-deploy smoke checks
 
-Replace `<app>` with your Fly hostname (e.g. `mealplanner.fly.dev`).
+Replace `<app>` with your Fly hostname (e.g. `mealplanner-xzvzow.fly.dev`).
 
 | Check | Command | Expected |
 | ----- | ------- | -------- |
-| App boots | `fly logs -a mealplanner` | No `Invalid server environment configuration` |
-| Migrations | `fly ssh console -a mealplanner -C "npx prisma migrate status"` | All migrations applied |
+| App boots | `fly logs -a mealplanner-xzvzow` | No `Invalid server environment configuration` |
+| Migrations | `fly ssh console -a mealplanner-xzvzow -C "npx prisma migrate status"` | All migrations applied |
 | Home | `curl -sfI https://<app>/` | HTTP `200` |
 | Login | `curl -sfI https://<app>/login` | HTTP `200` |
 | Protected redirect | `curl -sfI https://<app>/app` | HTTP `302` to `/login` when logged out |
@@ -132,7 +197,7 @@ Ensure local Postgres is running (`docker compose up -d`) if using the example U
 If the app was deployed before Notion import was removed, unset obsolete secrets:
 
 ```bash
-fly secrets unset NOTION_API_TOKEN NOTION_INGREDIENTS_DATABASE_ID NOTION_RECIPES_DATABASE_ID -a mealplanner
+fly secrets unset NOTION_API_TOKEN NOTION_INGREDIENTS_DATABASE_ID NOTION_RECIPES_DATABASE_ID -a mealplanner-xzvzow
 ```
 
 ## Troubleshooting
@@ -147,6 +212,7 @@ fly secrets unset NOTION_API_TOKEN NOTION_INGREDIENTS_DATABASE_ID NOTION_RECIPES
 
 ## Related files
 
+- [`.github/workflows/fly-deploy.yml`](../.github/workflows/fly-deploy.yml) — CI validation and Fly deploy on `main`
 - [`fly.toml`](../fly.toml) — Fly app config and `release_command`
 - [`Dockerfile`](../Dockerfile) — production image build
 - [`prisma/migrations/`](../prisma/migrations/) — schema migrations applied on deploy
