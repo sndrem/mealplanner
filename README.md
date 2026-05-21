@@ -110,6 +110,9 @@ npm run lint
 npm run test -- --run
 npm run build
 npm run typecheck
+npm run analyze:dead-code
+npm run analyze:dupes
+npm run analyze:health
 npm run prisma:migrate:dev -- --name <migration_name>
 npm run prisma:migrate:deploy
 npm run prisma:migrate:status
