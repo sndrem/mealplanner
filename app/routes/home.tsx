@@ -5,7 +5,7 @@ export const meta: MetaFunction = () => {
     { title: "Mealplanner" },
     {
       name: "description",
-      content: "Prototype og videre arbeid for Mealplanner.",
+      content: "Familievennlig ukeplan og handleliste med Mealplanner.",
     },
   ];
 };
@@ -19,11 +19,11 @@ export default function Home() {
             Mealplanner
           </span>
           <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight">
-            Prototype for familievennlig ukeplan og handleliste
+            Familievennlig ukeplan og handleliste
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-            Prototypen ligger i sin egen mappe slik at vi kan utforske flyten
-            uten å blande den sammen med den framtidige produksjonsappen.
+            Planlegg middager for familien, generer handlelister og bruk
+            butikkmodus — med konto, familier og data lagret på serveren.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -37,12 +37,6 @@ export default function Home() {
               to="/login"
             >
               Logg inn
-            </Link>
-            <Link
-              className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/15"
-              to="/prototype"
-            >
-              Åpne prototype
             </Link>
           </div>
         </section>

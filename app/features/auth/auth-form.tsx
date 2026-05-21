@@ -41,18 +41,12 @@ export function AuthForm({ actionData, description, isSubmitting, mode, redirect
           </span>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight">{heading}</h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-slate-300">{description}</p>
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6">
             <Link
-              className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+              className="inline-flex rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
               to="/"
             >
               Til forsiden
-            </Link>
-            <Link
-              className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/15"
-              to="/prototype"
-            >
-              Se prototype
             </Link>
           </div>
         </section>

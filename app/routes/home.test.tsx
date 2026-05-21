@@ -7,16 +7,19 @@ import Home from "./home";
 import { renderWithRouter } from "../test/render-with-router";
 
 describe("Home", () => {
-  it("renders the landing page and prototype entry point", () => {
+  it("renders the landing page and auth entry points", () => {
     renderWithRouter(<Home />);
 
     expect(
       screen.getByRole("heading", {
-        name: /Prototype for familievennlig ukeplan og handleliste/i,
+        name: /Familievennlig ukeplan og handleliste/i,
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /Åpne prototype/i }),
-    ).toHaveAttribute("href", "/prototype");
+    expect(screen.getByRole("link", { name: /Opprett konto/i })).toHaveAttribute(
+      "href",
+      "/register",
+    );
+    expect(screen.getByRole("link", { name: /Logg inn/i })).toHaveAttribute("href", "/login");
+    expect(screen.queryByRole("link", { name: /prototype/i })).not.toBeInTheDocument();
   });
 });

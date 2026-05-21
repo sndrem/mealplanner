@@ -186,12 +186,6 @@ export default function AppRoute({
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Link
-                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
-                to="/prototype"
-              >
-                Se prototype
-              </Link>
               <Form action="/logout" method="post">
                 <button
                   className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"

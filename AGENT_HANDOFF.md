@@ -2,16 +2,18 @@
 
 ## Current Objective
 
-Hotfix: GitHub Actions Fly deploy uses `flyctl` (not `fly`) on CI runners.
+Remove the local-only Mealplanner prototype from the running app (issue #47) so production auth and family flows are the only entry points.
 
 ## Completed
 
-- Fixed [`.github/workflows/fly-deploy.yml`](.github/workflows/fly-deploy.yml) deploy step: `flyctl deploy --remote-only`.
-- Updated [`docs/deploy-fly.md`](docs/deploy-fly.md) CI section to reference `flyctl`.
+- Deleted `prototype/` module and `app/routes/prototype.tsx`; removed route from `app/routes.ts`.
+- Refocused landing (`home.tsx`), auth sidebar (`auth-form.tsx`), and app shell (`app.tsx`) on production CTAs.
+- Updated `home.test.tsx` and README intro/styling copy.
 
 ## Files To Read First
 
-- `.github/workflows/fly-deploy.yml` — deploy pipeline.
+- `app/routes/home.tsx` — production landing copy and CTAs.
+- `app/routes.ts` — route table (no `/prototype`).
 
 ## Validation
 
@@ -19,11 +21,13 @@ Hotfix: GitHub Actions Fly deploy uses `flyctl` (not `fly`) on CI runners.
 - `npm run lint` — passed
 - `npm run test:run` — 157 tests passed (31 files)
 - `npm run typecheck` — passed
+- `npm run build` — passed (earlier in session)
 
 ## Open Items
 
-- Merge `bugfix` to `main` and re-run **Deploy to Fly.io** workflow.
+- Merge PR and confirm `/prototype` returns 404 in deployed app.
+- `ideas/prototype-1-summary.md` still references removed paths (archival; acceptable per issue).
 
 ## Next Step
 
-Merge PR; confirm deploy job completes on `main`.
+Merge PR for issue #47; smoke-test `/`, `/login`, `/register`, logged-in `/app`, and `/prototype` 404.
