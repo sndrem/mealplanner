@@ -2,35 +2,35 @@
 
 ## Current Objective
 
-Issue #64 — seed a global ingredient catalog (181 items) so manual shopping typeahead works before first use. PR ready on branch `issue/64-ingredient-catalog-seed`.
+Issue #67 — global top navigation bar shipped on branch `issue/67-global-top-nav`; PR ready for review.
 
 ## Completed
 
-- Added `prisma/data/catalog-ingredient-seeds.csv` with 181 grocery/household items.
-- CSV parser and merge into `buildIngredientSeeds()` in `prisma/seed-data.ts` (catalog display casing preserved).
-- Case-insensitive ingredient upsert in `prisma/seed.ts` to avoid duplicate case variants on re-seed.
-- Tests in `prisma/seed-data.test.ts`; README and `docs/deploy-fly.md` updated for catalog seeding.
+- Added `app-layout.tsx` layout route wrapping `/app` and all `/families/*` routes with a loader that resolves `familyId` from params or single membership on `/app`.
+- Added `AppTopNav` with logo placeholder (links to `/`), family nav links, active `NavLink` states, and mobile hamburger menu.
+- Restructured `app/routes.ts` so public/auth routes stay outside the layout.
+- Removed duplicate nav button row from `family.tsx` (now covered by top nav).
+- Tests: `app-top-nav.test.tsx` (5), `app-layout.test.ts` (3).
 
 ## Files To Read First
 
-- `prisma/seed-data.ts` — catalog loader, `buildIngredientSeeds`, validation
-- `prisma/data/catalog-ingredient-seeds.csv` — maintained catalog list
-- `prisma/seed.ts` — DB upsert including case-insensitive merge
+- `app/routes/app-layout.tsx` — layout loader and `familyId` resolution
+- `app/components/app-top-nav.tsx` — top nav UI and link config
+- `app/routes.ts` — layout route nesting
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 178 tests passed (33 files)
+- `npm run test:run` — 186 tests passed (35 files)
 - `npm run typecheck` — passed
-- `npm run prisma:seed` — passed (181 ingredients)
 
 ## Open Items
 
 - PR review and merge.
-- Production: run `DATABASE_URL=<prod> npm run prisma:seed` once for typeahead (see `docs/deploy-fly.md`).
-- Manual smoke-test: shopping quick-add type `toale` → Toalettpapir with household category.
+- Uncommitted local change in `app/routes/family-stores.tsx` (column reorder / rename) — not part of issue #67 commit.
+- Manual smoke: multi-family `/app`, mobile hamburger, meal-plan sub-nav unchanged.
 
 ## Next Step
 
-Merge PR when CI is green; seed production DB if typeahead is needed there.
+Merge PR when CI is green; optionally commit or discard `family-stores.tsx` layout tweak separately.
