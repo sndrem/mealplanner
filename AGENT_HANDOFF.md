@@ -2,34 +2,32 @@
 
 ## Current Objective
 
-Issue #72 — compact mobile shopping list shipped on branch `issue/72-compact-shopping-mobile`; PR opened.
+Issue #74 — live client-side search on the family recipes list page; branch `issue/74-recipe-list-search`, PR pending merge.
 
 ## Completed
 
-- Added `formatCompactShoppingSourceLine` in `app/lib/shopping-display.ts` with unit tests.
-- Extracted `ShoppingListItemExpanded` component with shared date input styling.
-- Refactored shopping list item cards: compact header + source on mobile, `<details>` for actions; desktop layout unchanged at `xl+`.
-- Auto-open details when update returns field errors for that row.
-- Fixed date input overflow on narrow viewports.
+- Added `recipe-list-search` helpers with unit tests (title, description, tags; case-insensitive).
+- Wired search input with clear button on `/families/:familyId/recipes`.
+- Filter both family and global recipe sections as the user types.
+- Distinct empty states for “no recipes yet” vs “no search matches”.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan-shopping.tsx` — mobile/desktop item card structure
-- `app/components/shopping-list-item-expanded.tsx` — forms and Kilder panel
-- `app/lib/shopping-display.ts` — compact source line formatter
+- `app/routes/family-recipes.tsx` — search UI, filtered lists, empty states
+- `app/lib/recipe-list-search.ts` — filter/match helpers
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 204 tests passed (38 files)
+- `npm run test:run` — 209 tests passed (39 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
 - PR review and merge.
-- Manual smoke on 320px / 390px / 1280px+ before merge if not done in review.
+- Manual smoke on recipes page: empty search, partial match, no-match messages, clear button.
 
 ## Next Step
 
-Merge PR when CI is green; closes #72.
+Merge PR when CI is green; closes #74.

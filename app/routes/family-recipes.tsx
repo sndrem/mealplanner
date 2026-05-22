@@ -1,6 +1,11 @@
+import { useMemo, useState } from "react";
 import { Form, Link, isRouteErrorResponse, useNavigation } from "react-router";
 
 import { requireUser } from "../lib/auth.server";
+import {
+  filterRecipeList,
+  hasActiveRecipeSearch,
+} from "../lib/recipe-list-search";
 import { getRecipeManagementData } from "../lib/recipe.server";
 import {
   createFamilyRecipe,
@@ -110,11 +115,21 @@ export default function FamilyRecipesRoute({
   loaderData,
 }: FamilyRecipesRouteProps) {
   const navigation = useNavigation();
+  const [searchQuery, setSearchQuery] = useState("");
   const noticeContent = loaderData.notice
     ? getRecipesNoticeContent(loaderData.notice)
     : null;
   const pendingIntent = navigation.formData?.get("intent");
   const canManageRecipes = loaderData.userRole === "ADMIN";
+  const isSearchActive = hasActiveRecipeSearch(searchQuery);
+  const filteredFamilyRecipes = useMemo(
+    () => filterRecipeList(loaderData.familyRecipes, searchQuery),
+    [loaderData.familyRecipes, searchQuery],
+  );
+  const filteredGlobalRecipes = useMemo(
+    () => filterRecipeList(loaderData.globalRecipes, searchQuery),
+    [loaderData.globalRecipes, searchQuery],
+  );
   const createValues =
     actionData?.intent === "create-recipe" && actionData.createValues
       ? actionData.createValues
@@ -290,6 +305,35 @@ export default function FamilyRecipesRoute({
           </section>
         ) : null}
 
+        <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+          <label
+            className="block text-sm font-medium text-slate-700"
+            htmlFor="recipe-search"
+          >
+            Søk oppskrifter
+            <div className="mt-2 flex gap-2">
+              <input
+                autoComplete="off"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                id="recipe-search"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="For eksempel tomatsuppe"
+                type="search"
+                value={searchQuery}
+              />
+              {isSearchActive ? (
+                <button
+                  className="shrink-0 rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  onClick={() => setSearchQuery("")}
+                  type="button"
+                >
+                  Nullstill
+                </button>
+              ) : null}
+            </div>
+          </label>
+        </section>
+
         <section className="rounded-[28px] border-2 border-emerald-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-2">
             <span className="inline-flex w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
@@ -298,12 +342,6 @@ export default function FamilyRecipesRoute({
             <h2 className="text-xl font-semibold text-slate-950">
               Familieoppskrifter
             </h2>
-            <p className="text-sm leading-6 text-slate-600">
-              Oppskrifter som tilhører {loaderData.family.name}.{" "}
-              {canManageRecipes
-                ? "Som administrator kan du opprette, redigere og slette disse."
-                : "Du kan apne og lese oppskriftene, men ikke endre dem."}
-            </p>
           </div>
 
           {loaderData.familyRecipes.length === 0 ? (
@@ -312,9 +350,13 @@ export default function FamilyRecipesRoute({
                 ? "Ingen familieoppskrifter ennå. Opprett den første oppskriften over."
                 : "Familien har ingen egne oppskrifter ennå."}
             </p>
+          ) : filteredFamilyRecipes.length === 0 && isSearchActive ? (
+            <p className="mt-6 rounded-[24px] border border-dashed border-emerald-200 bg-emerald-50/50 px-5 py-8 text-center text-sm leading-6 text-slate-600">
+              Ingen familieoppskrifter matcher søket.
+            </p>
           ) : (
             <div className="mt-6 grid gap-3">
-              {loaderData.familyRecipes.map((recipe) => (
+              {filteredFamilyRecipes.map((recipe) => (
                 <RecipeListCard
                   key={recipe.id}
                   recipe={recipe}
@@ -341,17 +383,24 @@ export default function FamilyRecipesRoute({
             </p>
           </div>
 
-          <div className="mt-6 grid gap-3">
-            {loaderData.globalRecipes.map((recipe) => (
-              <RecipeListCard
-                key={recipe.id}
-                readOnly
-                recipe={recipe}
-                scopeLabel="Standard"
-                scopeTone="global"
-              />
-            ))}
-          </div>
+          {loaderData.globalRecipes.length ===
+          0 ? null : filteredGlobalRecipes.length === 0 && isSearchActive ? (
+            <p className="mt-6 rounded-[24px] border border-dashed border-slate-200 bg-white px-5 py-8 text-center text-sm leading-6 text-slate-600">
+              Ingen standardoppskrifter matcher søket.
+            </p>
+          ) : (
+            <div className="mt-6 grid gap-3">
+              {filteredGlobalRecipes.map((recipe) => (
+                <RecipeListCard
+                  key={recipe.id}
+                  readOnly
+                  recipe={recipe}
+                  scopeLabel="Standard"
+                  scopeTone="global"
+                />
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </main>
