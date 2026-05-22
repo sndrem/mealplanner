@@ -8,6 +8,11 @@ import {
 } from "react-router";
 
 import { requireUser } from "../lib/auth.server";
+import {
+  formatGeneratedItemSummary,
+  formatGeneratedQuantityBadge,
+  formatOccurrenceSourceLine,
+} from "../lib/shopping-display";
 import { getMealPlanShoppingData } from "../lib/shopping.server";
 import {
   createManualShoppingItem,
@@ -604,14 +609,30 @@ export default function FamilyMealPlanShoppingRoute({
                               ? ` · ${ingredient.quantityLabel}`
                               : ""}
                           </p>
-                          <p className="mt-1 text-xs leading-5 text-slate-600">
-                            {ingredient.occurrenceCount === 1
-                              ? `Brukt i ${ingredient.occurrences[0]?.recipeTitle}`
-                              : `Brukt i ${ingredient.occurrenceCount} oppskrifter`}
-                            {ingredient.occurrences[0]?.date
-                              ? ` · ${formatDateLabel(ingredient.occurrences[0].date)}`
-                              : ""}
-                          </p>
+                          {ingredient.occurrenceCount > 1 ? (
+                            <ul className="mt-1 space-y-1 text-xs leading-5 text-slate-600">
+                              {ingredient.occurrences.map((occurrence) => (
+                                <li
+                                  key={`${occurrence.mealPlanEntryId}:${occurrence.recipeIngredientId}`}
+                                >
+                                  {occurrence.recipeTitle}
+                                  {occurrence.quantityLabel
+                                    ? ` · ${occurrence.quantityLabel}`
+                                    : ""}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-1 text-xs leading-5 text-slate-600">
+                              {`Brukt i ${ingredient.occurrences[0]?.recipeTitle ?? "oppskrift"}`}
+                              {ingredient.occurrences[0]?.date
+                                ? ` · ${formatDateLabel(ingredient.occurrences[0].date)}`
+                                : ""}
+                              {ingredient.occurrences[0]?.quantityLabel
+                                ? ` · ${ingredient.occurrences[0].quantityLabel}`
+                                : ""}
+                            </p>
+                          )}
                         </div>
                         <Form method="post">
                           <input
@@ -915,10 +936,12 @@ export default function FamilyMealPlanShoppingRoute({
               Hvordan dette bygges
             </h2>
             <p className="text-sm leading-6 text-slate-600">
-              Genererte linjer bygger på lagrede oppskriftsingredienser. Like
-              ingredienser slås bare sammen når navn, mengde, enhet, kategori og
-              foretrukket butikk matcher eksakt. Manuelle linjer blir lagt oppa
-              samme sortering uten å endre den deterministiske projeksjonen.
+              Genererte linjer bygger på lagrede oppskriftsingredienser. Samme
+              ingrediens slås sammen på tvers av oppskrifter når kanonisk
+              ingrediens eller navn og kategori matcher, selv om mengde eller
+              foretrukket butikk varierer. Mengde vises per oppskrift under
+              Kilder. Manuelle linjer blir lagt oppa samme sortering uten å
+              endre den deterministiske projeksjonen.
             </p>
           </div>
         </section>
@@ -1008,6 +1031,7 @@ export default function FamilyMealPlanShoppingRoute({
                                       item.preferredStore?.id ?? "",
                                   }
                                 : null;
+                          const quantityBadge = formatGeneratedQuantityBadge(item);
 
                           return (
                             <article
@@ -1018,9 +1042,23 @@ export default function FamilyMealPlanShoppingRoute({
                                 <h4 className="text-base font-semibold text-slate-950">
                                   {item.name}
                                 </h4>
-                                {item.quantityLabel ? (
-                                  <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                                    {item.quantityLabel}
+                                {quantityBadge ? (
+                                  <span
+                                    className={
+                                      item.sourceType === "GENERATED" &&
+                                      !item.quantityLabel &&
+                                      item.occurrenceCount > 1
+                                        ? "rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800"
+                                        : "rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                                    }
+                                  >
+                                    {quantityBadge}
+                                  </span>
+                                ) : null}
+                                {item.sourceType === "GENERATED" &&
+                                item.preferredStoreConflict ? (
+                                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                                    Ulike foretrukne butikker
                                   </span>
                                 ) : null}
                                 {item.sourceType === "MANUAL" ? (
@@ -1050,11 +1088,7 @@ export default function FamilyMealPlanShoppingRoute({
 
                               <p className="mt-3 text-sm leading-6 text-slate-600">
                                 {item.sourceType === "GENERATED"
-                                  ? `Fra ${item.occurrenceCount} planlagte ${
-                                      item.occurrenceCount === 1
-                                        ? "middag"
-                                        : "middager"
-                                    } mellom ${formatDateLabel(item.firstDate)} og ${formatDateLabel(item.lastDate)}.`
+                                  ? formatGeneratedItemSummary(item)
                                   : item.buyOnDate
                                     ? `Lagt til manuelt og planlagt for ${formatDateLabel(item.buyOnDate)}.`
                                     : "Lagt til manuelt uten spesifikk handledato."}
@@ -1077,8 +1111,9 @@ export default function FamilyMealPlanShoppingRoute({
                                           <li
                                             key={`${occurrence.mealPlanEntryId}:${occurrence.recipeIngredientId}`}
                                           >
-                                            {formatDateLabel(occurrence.date)}:{" "}
-                                            {occurrence.recipeTitle}
+                                            {formatOccurrenceSourceLine(
+                                              occurrence,
+                                            )}
                                           </li>
                                         ))}
                                       </ul>

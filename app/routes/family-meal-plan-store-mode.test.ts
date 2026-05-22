@@ -82,11 +82,14 @@ describe("family meal plan store mode route", () => {
               occurrenceCount: 1,
               occurrences: [
                 {
+                  amount: "1",
                   date: new Date("2026-05-15T00:00:00.000Z"),
                   mealPlanEntryId: "entry-1",
+                  quantityLabel: "1 stk",
                   recipeId: "recipe-1",
                   recipeIngredientId: "ingredient-1",
                   recipeTitle: "Taco",
+                  unit: "stk",
                 },
               ],
               postponedUntilDate: null,
@@ -101,6 +104,7 @@ describe("family meal plan store mode route", () => {
               },
               sourceKey: "entry-1:ingredient-1",
               collaborationVersion: "",
+              preferredStoreConflict: false,
         sourceType: "GENERATED",
               unit: "stk",
             },

@@ -11,6 +11,10 @@ import {
 } from "react-router";
 
 import { requireUser } from "../lib/auth.server";
+import {
+  formatGeneratedOccurrenceAttribution,
+  formatGeneratedQuantityBadge,
+} from "../lib/shopping-display";
 import { getMealPlanStoreModeData } from "../lib/shopping.server";
 import {
   toggleShoppingItemChecked,
@@ -132,7 +136,9 @@ export async function action({
     const activeShoppingDate = String(formData.get("activeShoppingDate") ?? "");
     const result = await updateActiveShoppingDate({
       activeShoppingDate,
-      expectedMealPlanUpdatedAt: String(formData.get("mealPlanUpdatedAt") ?? ""),
+      expectedMealPlanUpdatedAt: String(
+        formData.get("mealPlanUpdatedAt") ?? "",
+      ),
       familyId,
       mealPlanId,
       userId: user.id,
@@ -463,6 +469,15 @@ export default function FamilyMealPlanStoreModeRoute({
                       toggleFetcher.formData?.get("intent") ===
                         "toggle-shopping-item-checked" &&
                       pendingSourceKey === item.sourceKey;
+                    const quantityBadge = formatGeneratedQuantityBadge(item);
+                    const recipeAttribution =
+                      item.sourceType === "GENERATED"
+                        ? item.occurrenceCount === 1
+                          ? (item.occurrences[0]?.recipeTitle ?? null)
+                          : formatGeneratedOccurrenceAttribution(
+                              item.occurrences,
+                            )
+                        : null;
 
                     return (
                       <toggleFetcher.Form
@@ -471,31 +486,31 @@ export default function FamilyMealPlanStoreModeRoute({
                         method="post"
                         preventScrollReset
                       >
-                            <input
-                              name="intent"
-                              type="hidden"
-                              value="toggle-shopping-item-checked"
-                            />
-                            <input
-                              name="sourceKey"
-                              type="hidden"
-                              value={item.sourceKey}
-                            />
-                            <input
-                              name="sourceType"
-                              type="hidden"
-                              value={item.sourceType}
-                            />
-                            <input
-                              name="checked"
-                              type="hidden"
-                              value={item.checked ? "false" : "true"}
-                            />
-                            <input
-                              name="expectedUpdatedAt"
-                              type="hidden"
-                              value={getToggleExpectedVersion(item)}
-                            />
+                        <input
+                          name="intent"
+                          type="hidden"
+                          value="toggle-shopping-item-checked"
+                        />
+                        <input
+                          name="sourceKey"
+                          type="hidden"
+                          value={item.sourceKey}
+                        />
+                        <input
+                          name="sourceType"
+                          type="hidden"
+                          value={item.sourceType}
+                        />
+                        <input
+                          name="checked"
+                          type="hidden"
+                          value={item.checked ? "false" : "true"}
+                        />
+                        <input
+                          name="expectedUpdatedAt"
+                          type="hidden"
+                          value={getToggleExpectedVersion(item)}
+                        />
                         <button
                           aria-label={
                             item.checked
@@ -527,14 +542,28 @@ export default function FamilyMealPlanStoreModeRoute({
                               <span className="text-base font-semibold text-slate-950">
                                 {item.name}
                               </span>
-                              {item.quantityLabel ? (
-                                <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                                  {item.quantityLabel}
+                              {quantityBadge ? (
+                                <span
+                                  className={
+                                    item.sourceType === "GENERATED" &&
+                                    !item.quantityLabel &&
+                                    item.occurrenceCount > 1
+                                      ? "rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800"
+                                      : "rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                                  }
+                                >
+                                  {quantityBadge}
                                 </span>
                               ) : null}
                               {item.sourceType === "MANUAL" ? (
                                 <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700">
                                   Manuell
+                                </span>
+                              ) : null}
+                              {item.sourceType === "GENERATED" &&
+                              item.preferredStoreConflict ? (
+                                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                                  Ulike foretrukne butikker
                                 </span>
                               ) : null}
                               {item.preferredStore &&
@@ -548,11 +577,9 @@ export default function FamilyMealPlanStoreModeRoute({
 
                             <span className="mt-2 block text-sm leading-6 text-slate-600">
                               {item.sourceType === "GENERATED"
-                                ? `Fra ${item.occurrenceCount} planlagte ${
-                                    item.occurrenceCount === 1
-                                      ? "middag"
-                                      : "middager"
-                                  } fram til ${formatDateLabel(item.lastDate)}.`
+                                ? item.occurrenceCount === 1
+                                  ? `Fra ${recipeAttribution} fram til ${formatDateLabel(item.lastDate)}.`
+                                  : `Brukt i ${recipeAttribution}.`
                                 : item.buyOnDate
                                   ? `Manuell vare planlagt for ${formatDateLabel(item.buyOnDate)}.`
                                   : "Manuell vare uten spesifikk handledato."}
