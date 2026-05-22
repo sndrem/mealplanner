@@ -313,38 +313,6 @@ export default function FamilyStoresRoute({
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">
-                Seedede standardbutikker
-              </h2>
-              <p className="text-sm leading-6 text-slate-600">
-                Disse butikkene er tilgjengelige for familien som faste
-                utgangspunkt og kan ikke redigeres.
-              </p>
-            </div>
-
-            <div className="mt-6 grid gap-4">
-              {loaderData.globalStores.map((store) => (
-                <article
-                  key={store.id}
-                  className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
-                >
-                  <h3 className="text-base font-semibold text-slate-950">
-                    {store.name}
-                  </h3>
-                  <ol className="mt-4 grid gap-2 text-sm leading-6 text-slate-700">
-                    {store.sections.map((section, index) => (
-                      <li key={section.id}>
-                        {index + 1}. {section.displayName}
-                      </li>
-                    ))}
-                  </ol>
-                </article>
-              ))}
-            </div>
-          </article>
-
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
                 Familiebutikker
               </h2>
               <p className="text-sm leading-6 text-slate-600">
@@ -383,6 +351,37 @@ export default function FamilyStoresRoute({
                 få en egen seksjonsrekkefølge.
               </p>
             )}
+          </article>
+          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-lg font-semibold text-slate-950">
+                Standardbutikker
+              </h2>
+              <p className="text-sm leading-6 text-slate-600">
+                Disse butikkene er tilgjengelige for familien som faste
+                utgangspunkt og kan ikke redigeres.
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-4">
+              {loaderData.globalStores.map((store) => (
+                <article
+                  key={store.id}
+                  className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                >
+                  <h3 className="text-base font-semibold text-slate-950">
+                    {store.name}
+                  </h3>
+                  <ol className="mt-4 grid gap-2 text-sm leading-6 text-slate-700">
+                    {store.sections.map((section, index) => (
+                      <li key={section.id}>
+                        {index + 1}. {section.displayName}
+                      </li>
+                    ))}
+                  </ol>
+                </article>
+              ))}
+            </div>
           </article>
         </section>
       </div>
