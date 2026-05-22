@@ -1,11 +1,13 @@
 import { ShoppingItemSource } from "@prisma/client";
 import type { ChangeEvent } from "react";
+import { useMemo } from "react";
 import {
   Form,
   Link,
   isRouteErrorResponse,
   useFetcher,
   useNavigation,
+  useRevalidator,
   useSubmit,
   type MetaFunction,
 } from "react-router";
@@ -15,12 +17,17 @@ import {
   formatGeneratedOccurrenceAttribution,
   formatGeneratedQuantityBadge,
 } from "../lib/shopping-display";
+import { computeStoreModeProgress } from "../lib/shopping-store-mode-client";
 import { getMealPlanStoreModeData } from "../lib/shopping.server";
 import {
   toggleShoppingItemChecked,
   updateActiveShoppingDate,
 } from "../lib/shopping-write.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
+import {
+  STORE_MODE_SYNC_PROGRESS_MESSAGE,
+  useStoreModeToggleSync,
+} from "../lib/use-store-mode-toggle-sync";
 
 type StoreModeNotice =
   | "active-shopping-date-updated"
@@ -245,6 +252,7 @@ export default function FamilyMealPlanStoreModeRoute({
 }: FamilyMealPlanStoreModeRouteProps) {
   const navigation = useNavigation();
   const submit = useSubmit();
+  const revalidator = useRevalidator();
   const toggleFetcher = useFetcher<StoreModeActionData>();
   const pendingIntent = navigation.formData?.get("intent");
   const isSavingStore =
@@ -253,12 +261,43 @@ export default function FamilyMealPlanStoreModeRoute({
   const isSavingShoppingDate =
     navigation.state === "submitting" &&
     pendingIntent === "update-active-shopping-date";
-  const pendingSourceKey = getPendingSourceKey(toggleFetcher.formData);
-  const toggleFormError =
-    toggleFetcher.data?.intent === "toggle-shopping-item-checked" &&
-    toggleFetcher.data.formError
-      ? toggleFetcher.data.formError
-      : null;
+  const loaderDueItems = useMemo(
+    () => loaderData.dueSectionGroups.flatMap((section) => section.items),
+    [loaderData.dueSectionGroups],
+  );
+  const {
+    displayItemsBySourceKey,
+    handleToggle,
+    syncBannerMessage,
+  } = useStoreModeToggleSync({
+    activeShoppingDate: loaderData.activeShoppingDate,
+    familyId: loaderData.family.id,
+    loaderItems: loaderDueItems,
+    mealPlanId: loaderData.mealPlan.id,
+    revalidate: revalidator.revalidate,
+    toggleFetcher,
+  });
+  const displayDueItems = useMemo(
+    () =>
+      loaderDueItems.map(
+        (item) => displayItemsBySourceKey.get(item.sourceKey) ?? item,
+      ),
+    [displayItemsBySourceKey, loaderDueItems],
+  );
+  const displayProgress = useMemo(
+    () => computeStoreModeProgress(displayDueItems),
+    [displayDueItems],
+  );
+  const displaySectionGroups = useMemo(
+    () =>
+      loaderData.dueSectionGroups.map((section) => ({
+        ...section,
+        items: section.items.map(
+          (item) => displayItemsBySourceKey.get(item.sourceKey) ?? item,
+        ),
+      })),
+    [displayItemsBySourceKey, loaderData.dueSectionGroups],
+  );
   const noticeContent = loaderData.notice
     ? getStoreModeNoticeContent(loaderData.notice)
     : null;
@@ -323,8 +362,8 @@ export default function FamilyMealPlanStoreModeRoute({
               <div className="rounded-[24px] bg-emerald-500/20 p-4 ring-1 ring-emerald-400/30">
                 <p className="text-sm text-emerald-100">Fremdrift</p>
                 <p className="mt-1 text-lg font-semibold">
-                  {loaderData.progress.checkedCount}/
-                  {loaderData.progress.totalCount} varer krysset av
+                  {displayProgress.checkedCount}/{displayProgress.totalCount}{" "}
+                  varer krysset av
                 </p>
               </div>
             </div>
@@ -340,14 +379,29 @@ export default function FamilyMealPlanStoreModeRoute({
           </section>
         ) : null}
 
-        {actionData?.formError || toggleFormError ? (
+        {syncBannerMessage ? (
+          <section
+            className={
+              syncBannerMessage === STORE_MODE_SYNC_PROGRESS_MESSAGE
+                ? "rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-5 text-amber-950 shadow-sm"
+                : "rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm"
+            }
+          >
+            <h2 className="text-base font-semibold">
+              {syncBannerMessage === STORE_MODE_SYNC_PROGRESS_MESSAGE
+                ? "Synkroniserer"
+                : "Kunne ikke synkronisere"}
+            </h2>
+            <p className="mt-2 text-sm leading-6">{syncBannerMessage}</p>
+          </section>
+        ) : null}
+
+        {actionData?.formError ? (
           <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
             <h2 className="text-base font-semibold">
               Kunne ikke oppdatere butikkmodus
             </h2>
-            <p className="mt-2 text-sm leading-6">
-              {actionData?.formError ?? toggleFormError}
-            </p>
+            <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
           </section>
         ) : null}
 
@@ -446,9 +500,9 @@ export default function FamilyMealPlanStoreModeRoute({
           </article>
         </section>
 
-        {loaderData.dueSectionGroups.length > 0 ? (
+        {displaySectionGroups.length > 0 ? (
           <section className="grid gap-4">
-            {loaderData.dueSectionGroups.map((section) => (
+            {displaySectionGroups.map((section) => (
               <article
                 key={`${loaderData.selectedStore?.id ?? "no-store"}:${section.category.id}`}
                 className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
@@ -464,11 +518,6 @@ export default function FamilyMealPlanStoreModeRoute({
 
                 <div className="mt-4 grid gap-3">
                   {section.items.map((item) => {
-                    const isPendingToggle =
-                      toggleFetcher.state !== "idle" &&
-                      toggleFetcher.formData?.get("intent") ===
-                        "toggle-shopping-item-checked" &&
-                      pendingSourceKey === item.sourceKey;
                     const quantityBadge = formatGeneratedQuantityBadge(item);
                     const recipeAttribution =
                       item.sourceType === "GENERATED"
@@ -480,37 +529,7 @@ export default function FamilyMealPlanStoreModeRoute({
                         : null;
 
                     return (
-                      <toggleFetcher.Form
-                        key={item.sourceKey}
-                        className="block"
-                        method="post"
-                        preventScrollReset
-                      >
-                        <input
-                          name="intent"
-                          type="hidden"
-                          value="toggle-shopping-item-checked"
-                        />
-                        <input
-                          name="sourceKey"
-                          type="hidden"
-                          value={item.sourceKey}
-                        />
-                        <input
-                          name="sourceType"
-                          type="hidden"
-                          value={item.sourceType}
-                        />
-                        <input
-                          name="checked"
-                          type="hidden"
-                          value={item.checked ? "false" : "true"}
-                        />
-                        <input
-                          name="expectedUpdatedAt"
-                          type="hidden"
-                          value={getToggleExpectedVersion(item)}
-                        />
+                      <div key={item.sourceKey} className="block">
                         <button
                           aria-label={
                             item.checked
@@ -520,11 +539,11 @@ export default function FamilyMealPlanStoreModeRoute({
                           aria-pressed={item.checked}
                           className={
                             item.checked
-                              ? "flex w-full cursor-pointer touch-manipulation items-start gap-4 rounded-[24px] border border-emerald-200 bg-emerald-50 p-4 text-left transition hover:bg-emerald-100 active:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-70"
-                              : "flex w-full cursor-pointer touch-manipulation items-start gap-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4 text-left transition hover:bg-slate-100 active:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                              ? "flex w-full cursor-pointer touch-manipulation items-start gap-4 rounded-[24px] border border-emerald-200 bg-emerald-50 p-4 text-left transition hover:bg-emerald-100 active:bg-emerald-200"
+                              : "flex w-full cursor-pointer touch-manipulation items-start gap-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4 text-left transition hover:bg-slate-100 active:bg-slate-200"
                           }
-                          disabled={isPendingToggle}
-                          type="submit"
+                          onClick={() => handleToggle(item)}
+                          type="button"
                         >
                           <span
                             aria-hidden="true"
@@ -599,7 +618,7 @@ export default function FamilyMealPlanStoreModeRoute({
                             ) : null}
                           </span>
                         </button>
-                      </toggleFetcher.Form>
+                      </div>
                     );
                   })}
                 </div>
@@ -789,20 +808,6 @@ function parseShoppingItemSource(value: FormDataEntryValue | null) {
   return null;
 }
 
-function getPendingSourceKey(formData: FormData | undefined) {
-  if (!formData) {
-    return null;
-  }
-
-  const sourceKey = formData.get("sourceKey");
-
-  if (typeof sourceKey === "string" && sourceKey.trim()) {
-    return sourceKey;
-  }
-
-  return null;
-}
-
 function buildMealPlanNotFoundResponse() {
   return new Response("Fant ikke ukeplanen.", {
     status: 404,
@@ -819,18 +824,6 @@ function requireRouteParam(value: string | undefined, message: string) {
   }
 
   return value;
-}
-
-function getToggleExpectedVersion(item: {
-  collaborationVersion: string;
-  overrideVersion?: string;
-  sourceType: ShoppingItemSource;
-}) {
-  if (item.sourceType === ShoppingItemSource.MANUAL) {
-    return item.overrideVersion ?? "";
-  }
-
-  return item.collaborationVersion;
 }
 
 function formatDateOnly(date: Date) {

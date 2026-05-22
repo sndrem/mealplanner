@@ -2,34 +2,34 @@
 
 ## Current Objective
 
-Issue #75 — sharer can open the same meal-plan review list and detail view as recipients; branch `issue/75-sharer-review-preview`, ready to merge via PR.
+Issue #78 — store mode optimistic check-off with localStorage sync; branch `issue/78-store-mode-offline-sync`, ready for PR.
 
 ## Completed
 
-- Auto-include sharer as `MealPlanShareRecipient` when creating a share (still requires at least one other recipient).
-- Backfill missing sharer recipient rows on open shares when listing or opening review.
-- Exclude self-initiated shares from `countPendingReviewsForUser` nav badge.
-- Initiator-aware copy on reviews list, review detail, and meal plan share links.
-- Unit tests for create, backfill, badge filter, and review route mock.
+- Client queue module (`shopping-store-mode-client.ts`) with localStorage persistence, merge, reconcile, and progress helpers.
+- `useStoreModeToggleSync` hook: optimistic toggles, serial background sync, delayed sync banner (800ms), stable fetcher refs to avoid request loops.
+- Store mode route uses button toggles (always interactive), merged progress/sections, separate sync vs form error banners.
+- Shared `getToggleExpectedVersion` moved to client module; shopping route imports it.
+- Unit tests for queue client (9 tests).
 
 ## Files To Read First
 
-- `app/lib/meal-plan-share.server.ts` — recipient logic, backfill, badge filter
-- `app/routes/family-meal-plan-reviews.tsx` — list UI copy for sharer vs recipient
-- `app/routes/family-meal-plan-review.tsx` — detail UI with `isSharedByCurrentUser`
+- `app/lib/use-store-mode-toggle-sync.ts` — queue drain, revalidate when queue empty, loop fixes
+- `app/lib/shopping-store-mode-client.ts` — storage key, reconcile, merge
+- `app/routes/family-meal-plan-store-mode.tsx` — UI wiring and banners
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 212 tests passed (39 files)
+- `npm run test:run` — 221 tests passed (40 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
 - PR review and merge.
-- Manual smoke: admin shares plan → sees item on `/meal-plans/reviews` → opens review with full actions; spouse sees incoming badge; admin nav badge unchanged for own share.
+- Manual smoke: fast connection (no sync banner flash), offline tick + reload + reconnect, stale localStorage queue clears after sync.
 
 ## Next Step
 
-Merge PR when CI is green; closes #75.
+Merge PR when CI is green; closes #78.
