@@ -18,6 +18,7 @@ import {
   ShoppingListItemExpanded,
   shoppingDateInputClassName,
 } from "../components/shopping-list-item-expanded";
+import { getToggleExpectedVersion } from "../lib/shopping-store-mode-client";
 import {
   getMealPlanShoppingData,
   listRecentManualShoppingItemsForFamily,
@@ -1330,18 +1331,6 @@ function serializeProjectedShoppingItem(
 
 function parseExpectedUpdatedAt(formData: FormData) {
   return String(formData.get("expectedUpdatedAt") ?? "");
-}
-
-function getToggleExpectedVersion(item: {
-  collaborationVersion: string;
-  overrideVersion?: string;
-  sourceType: ShoppingItemSource;
-}) {
-  if (item.sourceType === ShoppingItemSource.MANUAL) {
-    return item.overrideVersion ?? "";
-  }
-
-  return item.collaborationVersion;
 }
 
 function shouldAutoOpenShoppingItemDetails(
