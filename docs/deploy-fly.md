@@ -53,7 +53,8 @@ Adjust `primary_region` in `fly.toml` if needed (default: `ams`).
 
 - Provision PostgreSQL yourself (managed provider, Fly Postgres, etc.) and set `DATABASE_URL` as a Fly secret.
 - **First deploy** applies schema via `release_command` (`npx prisma migrate deploy`) against an **empty** database.
-- **Do not** run `prisma:seed` in production unless you intentionally want starter data; populate the app manually (register, create family, etc.).
+- **Do not** run full `prisma:seed` in production unless you intentionally want starter data; populate the app manually (register, create family, etc.).
+- The ingredient catalog in `prisma/data/catalog-ingredient-seeds.csv` is upserted idempotently by `prisma:seed` (safe to run once) if you want manual-shopping typeahead for common items in production.
 
 Check migration status on a running machine:
 

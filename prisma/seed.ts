@@ -43,19 +43,54 @@ async function main() {
     const ingredientsByCanonicalName = new Map<string, { id: string }>();
 
     for (let ingredient of ingredientSeeds) {
-      const record = await tx.ingredient.upsert({
-        where: { canonicalName: ingredient.canonicalName },
-        update: {
-          defaultCategoryId: requireMapValue(categoriesByKey, ingredient.defaultCategoryKey, "ingredient category")
-            .id,
+      const defaultCategoryId = requireMapValue(
+        categoriesByKey,
+        ingredient.defaultCategoryKey,
+        "ingredient category",
+      ).id;
+      const matchingIngredients = await tx.ingredient.findMany({
+        select: { id: true, canonicalName: true },
+        where: {
+          canonicalName: {
+            equals: ingredient.canonicalName,
+            mode: "insensitive",
+          },
         },
-        create: {
-          canonicalName: ingredient.canonicalName,
-          defaultCategoryId: requireMapValue(categoriesByKey, ingredient.defaultCategoryKey, "ingredient category")
-            .id,
-        },
-        select: { id: true },
       });
+      const keeper =
+        matchingIngredients.find(
+          (row) => row.canonicalName === ingredient.canonicalName,
+        ) ?? matchingIngredients[0];
+      const duplicateIds = matchingIngredients
+        .filter((row) => row.id !== keeper?.id)
+        .map((row) => row.id);
+
+      if (duplicateIds.length > 0) {
+        await tx.ingredient.deleteMany({
+          where: {
+            id: {
+              in: duplicateIds,
+            },
+          },
+        });
+      }
+
+      const record = keeper
+        ? await tx.ingredient.update({
+            data: {
+              canonicalName: ingredient.canonicalName,
+              defaultCategoryId,
+            },
+            select: { id: true },
+            where: { id: keeper.id },
+          })
+        : await tx.ingredient.create({
+            data: {
+              canonicalName: ingredient.canonicalName,
+              defaultCategoryId,
+            },
+            select: { id: true },
+          });
 
       ingredientsByCanonicalName.set(ingredient.canonicalName, record);
     }
