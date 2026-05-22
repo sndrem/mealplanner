@@ -187,39 +187,6 @@ export default function FamilyRoute({
                   : "Du har tilgang til familien og kan bruke den videre beskyttede appen."}
               </p>
             </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Link
-                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
-                to={`/families/${loaderData.family.id}/meal-plans`}
-              >
-                Åpne ukeplaner
-              </Link>
-              <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                to={`/families/${loaderData.family.id}/stores`}
-              >
-                Administrer butikker
-              </Link>
-              <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                to={`/families/${loaderData.family.id}/recipes`}
-              >
-                Administrer oppskrifter
-              </Link>
-              <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                to={`/families/${loaderData.family.id}/stock-ingredients`}
-              >
-                Basisvarer
-              </Link>
-              <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                to="/app"
-              >
-                Tilbake til oversikten
-              </Link>
-            </div>
           </div>
         </section>
 
@@ -271,8 +238,8 @@ export default function FamilyRoute({
                 Ukeplaner
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Gå videre til familiens serverlagrede ukeplaner for å opprette,
-                velge og oppdatere planer med start- og sluttdato.
+                Gå videre til familiens ukeplaner for å opprette, velge og
+                oppdatere planer med start- og sluttdato.
               </p>
             </div>
 
