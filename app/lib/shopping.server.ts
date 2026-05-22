@@ -171,6 +171,7 @@ interface GeneratedProjectionBucket {
   occurrences: ProjectedShoppingOccurrence[];
   occurrenceKeys: string[];
   preferredStore: StoreSummary;
+  preferredStoreConflict: boolean;
   sortAnchor: {
     date: Date;
     ingredientSortOrder: number;
@@ -209,11 +210,14 @@ interface ProjectedShoppingItemBase {
 }
 
 export interface ProjectedShoppingOccurrence {
+  amount: string | null;
   date: Date;
   mealPlanEntryId: string;
+  quantityLabel: string | null;
   recipeId: string;
   recipeIngredientId: string;
   recipeTitle: string;
+  unit: string | null;
 }
 
 export interface ProjectedGeneratedShoppingItem extends ProjectedShoppingItemBase {
@@ -223,6 +227,7 @@ export interface ProjectedGeneratedShoppingItem extends ProjectedShoppingItemBas
   occurrenceCount: number;
   occurrences: ProjectedShoppingOccurrence[];
   postponedUntilDate: Date | null;
+  preferredStoreConflict: boolean;
   sourceType: "GENERATED";
   unit: string | null;
 }
@@ -512,7 +517,7 @@ export function getStockIngredientsForMealPlan({
     const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
     const isStock = isStockIngredientMatch(bucket, stockMatchSet);
 
-    if (!isStock || includeDespiteStockKeys.has(sourceKey)) {
+    if (!isStock || hasIncludeDespiteStockKey(bucket, includeDespiteStockKeys)) {
       continue;
     }
 
@@ -524,7 +529,7 @@ export function getStockIngredientsForMealPlan({
       name: bucket.name,
       occurrenceCount: occurrences.length,
       occurrences,
-      quantityLabel: buildQuantityLabel(bucket.amount, bucket.unit),
+      quantityLabel: buildMergedQuantityLabel(occurrences),
       sourceKey,
     });
   }
@@ -550,8 +555,7 @@ function projectGeneratedShoppingItems({
 
   return buildGeneratedProjectionBuckets(mealPlan)
     .filter((bucket) => {
-      const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
-      const override = overrideBySourceKey.get(sourceKey);
+      const override = resolveGeneratedOverride(bucket, overrideBySourceKey);
 
       if (override?.excludedFromList) {
         return false;
@@ -559,7 +563,7 @@ function projectGeneratedShoppingItems({
 
       const isStock = isStockIngredientMatch(bucket, stockMatchSet);
 
-      return !isStock || includeDespiteStockKeys.has(sourceKey);
+      return !isStock || hasIncludeDespiteStockKey(bucket, includeDespiteStockKeys);
     })
     .map((bucket) =>
       mapGeneratedProjectionBucketToItem({
@@ -583,8 +587,7 @@ function projectExcludedGeneratedShoppingItems({
   );
 
   return buildGeneratedProjectionBuckets(mealPlan).flatMap((bucket) => {
-    const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
-    const override = overrideBySourceKey.get(sourceKey);
+    const override = resolveGeneratedOverride(bucket, overrideBySourceKey);
 
     if (!override?.excludedFromList) {
       return [];
@@ -611,7 +614,7 @@ function mapGeneratedProjectionBucketToItem({
 }) {
   const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
   const sourceKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
-  const override = overrideBySourceKey.get(sourceKey);
+  const override = resolveGeneratedOverride(bucket, overrideBySourceKey);
   const preferredStore = override?.preferredStore ?? bucket.preferredStore;
   const section = resolveStoreSection({
     category: bucket.category,
@@ -633,7 +636,8 @@ function mapGeneratedProjectionBucketToItem({
     collaborationVersion: override?.updatedAt?.toISOString() ?? "",
     postponedUntilDate: override?.postponedUntilDate ?? null,
     preferredStore,
-    quantityLabel: buildQuantityLabel(bucket.amount, bucket.unit),
+    preferredStoreConflict: bucket.preferredStoreConflict,
+    quantityLabel: buildMergedQuantityLabel(occurrences),
     section,
     sourceKey,
     sourceType: ShoppingItemSource.GENERATED,
@@ -653,29 +657,36 @@ function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {
 
     for (const ingredient of recipe.ingredients) {
       const occurrence: ProjectedShoppingOccurrence = {
+        amount: ingredient.amount,
         date: entry.date,
         mealPlanEntryId: entry.id,
+        quantityLabel: buildQuantityLabel(ingredient.amount, ingredient.unit),
         recipeId: recipe.id,
         recipeIngredientId: ingredient.id,
         recipeTitle: recipe.title,
+        unit: ingredient.unit,
       };
       const occurrenceKey = buildGeneratedOccurrenceKey({
         mealPlanEntryId: entry.id,
         recipeIngredientId: ingredient.id,
       });
       const mergeKey = buildGeneratedMergeKey({
-        amount: ingredient.amount,
         categoryId: ingredient.categoryId,
         displayName: ingredient.displayName,
         ingredientId: ingredient.ingredientId,
-        preferredStoreId: ingredient.preferredStoreId,
-        unit: ingredient.unit,
       });
       const existingBucket = buckets.get(mergeKey);
+      const incomingStoreId = ingredient.preferredStoreId ?? null;
 
       if (existingBucket) {
         existingBucket.occurrenceKeys.push(occurrenceKey);
         existingBucket.occurrences.push(occurrence);
+
+        const bucketStoreId = existingBucket.preferredStore?.id ?? null;
+
+        if (incomingStoreId !== bucketStoreId) {
+          existingBucket.preferredStoreConflict = true;
+        }
 
         if (
           compareProjectionAnchors(existingBucket.sortAnchor, {
@@ -706,6 +717,7 @@ function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {
         occurrences: [occurrence],
         occurrenceKeys: [occurrenceKey],
         preferredStore: ingredient.preferredStore,
+        preferredStoreConflict: false,
         sortAnchor: {
           date: entry.date,
           ingredientSortOrder: ingredient.sortOrder,
@@ -947,28 +959,157 @@ function buildMergedGeneratedSourceKey(occurrenceKeys: string[]) {
 }
 
 function buildGeneratedMergeKey({
-  amount,
   categoryId,
   displayName,
   ingredientId,
-  preferredStoreId,
-  unit,
 }: {
-  amount: string | null;
   categoryId: string;
   displayName: string;
   ingredientId: string | null;
-  preferredStoreId: string | null;
-  unit: string | null;
 }) {
   return JSON.stringify({
-    amount: amount ?? null,
     categoryId,
     displayName: ingredientId ? null : displayName,
     ingredientId,
-    preferredStoreId: preferredStoreId ?? null,
-    unit: unit ?? null,
   });
+}
+
+function resolveGeneratedOverride(
+  bucket: GeneratedProjectionBucket,
+  overrideBySourceKey: Map<string, ShoppingOverride>,
+) {
+  const mergedKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
+  const directOverride = overrideBySourceKey.get(mergedKey);
+
+  if (directOverride) {
+    return directOverride;
+  }
+
+  // Legacy overrides may still be keyed by a single occurrence before merge.
+  let fallbackOverride: ShoppingOverride | undefined;
+
+  for (const occurrenceKey of bucket.occurrenceKeys) {
+    const candidate = overrideBySourceKey.get(occurrenceKey);
+
+    if (!candidate) {
+      continue;
+    }
+
+    if (
+      !fallbackOverride ||
+      candidate.updatedAt.getTime() > fallbackOverride.updatedAt.getTime()
+    ) {
+      fallbackOverride = candidate;
+    }
+  }
+
+  return fallbackOverride;
+}
+
+function hasIncludeDespiteStockKey(
+  bucket: GeneratedProjectionBucket,
+  includeDespiteStockKeys: Set<string>,
+) {
+  const mergedKey = buildMergedGeneratedSourceKey(bucket.occurrenceKeys);
+
+  if (includeDespiteStockKeys.has(mergedKey)) {
+    return true;
+  }
+
+  return bucket.occurrenceKeys.some((occurrenceKey) =>
+    includeDespiteStockKeys.has(occurrenceKey),
+  );
+}
+
+function buildMergedQuantityLabel(occurrences: ProjectedShoppingOccurrence[]) {
+  if (occurrences.length === 0) {
+    return null;
+  }
+
+  if (occurrences.length === 1) {
+    return occurrences[0]!.quantityLabel;
+  }
+
+  const summedLabel = buildSummedQuantityLabel(occurrences);
+
+  if (summedLabel) {
+    return summedLabel;
+  }
+
+  const labels = occurrences.map((occurrence) => occurrence.quantityLabel);
+  const definedLabels = labels.filter(
+    (label): label is string => label !== null,
+  );
+
+  if (definedLabels.length === 0) {
+    return null;
+  }
+
+  const firstLabel = definedLabels[0]!;
+
+  if (definedLabels.every((label) => label === firstLabel)) {
+    return `${occurrences.length} × ${firstLabel}`;
+  }
+
+  return null;
+}
+
+function buildSummedQuantityLabel(occurrences: ProjectedShoppingOccurrence[]) {
+  const unit = occurrences[0]?.unit?.trim() ?? "";
+
+  if (!unit || !occurrences.every((occurrence) => (occurrence.unit?.trim() ?? "") === unit)) {
+    return null;
+  }
+
+  let total = 0;
+
+  for (const occurrence of occurrences) {
+    const parsedAmount = parseIngredientAmount(occurrence.amount);
+
+    if (parsedAmount === null) {
+      return null;
+    }
+
+    total += parsedAmount;
+  }
+
+  return buildQuantityLabel(formatSummedAmount(total), unit);
+}
+
+function parseIngredientAmount(amount: string | null) {
+  if (!amount) {
+    return null;
+  }
+
+  const trimmed = amount.trim().replace(",", ".");
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed === "½" || trimmed === "1/2") {
+    return 0.5;
+  }
+
+  if (trimmed === "¼" || trimmed === "1/4") {
+    return 0.25;
+  }
+
+  if (trimmed === "¾" || trimmed === "3/4") {
+    return 0.75;
+  }
+
+  const parsed = Number(trimmed);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatSummedAmount(total: number) {
+  if (Number.isInteger(total)) {
+    return String(total);
+  }
+
+  return String(total).replace(".", ",");
 }
 
 function resolveStoreSection({

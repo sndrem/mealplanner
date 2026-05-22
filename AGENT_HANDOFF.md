@@ -2,30 +2,36 @@
 
 ## Current Objective
 
-Issue #58 on branch `issue/58-collapse-recipe-bank-mobile` — collapse Oppskriftsbank on mobile to cut vertical scrolling on the meal plan page.
+Issue #60 — PR ready on branch `issue/60-dedupe-shopping-ingredients`: deduplicate shopping list ingredients across recipes and days, with clear per-meal attribution.
 
 ## Completed
 
-- Mobile-only `<details>` for Oppskriftsbank (collapsed by default) with title, recipe count, and Åpne/Lukk affordance.
-- Desktop `lg+` block stays always visible via `hidden lg:block`.
-- Shared `RecipeBankContent` component to avoid duplicating recipe cards and admin link.
+- Merge generated shopping lines by canonical ingredient / name + category (not amount or preferred store).
+- Sum quantities when the same unit appears across multiple planned meals (e.g. Lasagne Mon + Tue → 2 stk).
+- Per-occurrence amounts in Kilder; `preferredStoreConflict` badge when stores differ.
+- Legacy `shoppingOverrides` fallback for old single-occurrence `sourceKey`s.
+- Store mode and shopping list show every planned meal (e.g. `Lasagne mandag 11. mai og Lasagne tirsdag 12. mai`).
+- Shared helpers in `app/lib/shopping-display.ts` + tests.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan.tsx` — Oppskriftsbank article, `RecipeBankContent`, `formatRecipeCount`
+- `app/lib/shopping.server.ts` — merge, sum, overrides
+- `app/lib/shopping-display.ts` — occurrence attribution copy
+- `app/routes/family-meal-plan-shopping.tsx` — list UI
+- `app/routes/family-meal-plan-store-mode.tsx` — store mode UI
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 160 tests passed (31 files)
+- `npm run test:run` — 167 tests passed (32 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- PR merge and manual mobile smoke-test (~390px): collapsed on load, expand/collapse, «I planen» badges when expanded.
-- Unrelated local changes (README, package.json, vite.config) were not included in the commit.
+- PR review and merge.
+- Manual smoke-test: shared ingredient across recipes, same recipe on two days, store mode attribution.
 
 ## Next Step
 
-Merge PR when CI is green; confirm Oppskriftsbank behavior at mobile and desktop breakpoints.
+Merge PR when CI is green.

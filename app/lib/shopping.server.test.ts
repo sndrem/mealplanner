@@ -397,7 +397,7 @@ describe("shopping.server", () => {
           id: "store-2",
           name: "Meny",
         },
-        quantityLabel: "1 pk",
+        quantityLabel: "2 pk",
         section: {
           displayName: "Brod",
           sortOrder: 2,
@@ -411,20 +411,27 @@ describe("shopping.server", () => {
     }
     expect(mergedItem.occurrences).toEqual([
       {
+        amount: "1",
         date: new Date("2026-05-15T00:00:00.000Z"),
         mealPlanEntryId: "entry-1",
+        quantityLabel: "1 pk",
         recipeId: "recipe-1",
         recipeIngredientId: "ingredient-1",
         recipeTitle: "Taco",
+        unit: "pk",
       },
       {
+        amount: "1",
         date: new Date("2026-05-16T00:00:00.000Z"),
         mealPlanEntryId: "entry-2",
+        quantityLabel: "1 pk",
         recipeId: "recipe-2",
         recipeIngredientId: "ingredient-3",
         recipeTitle: "Quesadilla",
+        unit: "pk",
       },
     ]);
+    expect(mergedItem.preferredStoreConflict).toBe(false);
     expect(result.storeGroups).toHaveLength(3);
     expect(result.storeGroups.map((group) => group.store?.name ?? "Ingen valgt butikk")).toEqual([
       "Coop Mega",
@@ -445,7 +452,7 @@ describe("shopping.server", () => {
     ]);
   });
 
-  it("keeps generated items separate when exact-match fields differ", async () => {
+  it("merges canonical ingredients across recipes with different amounts", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue({
       activeShoppingDate: null,
       endDate: new Date("2026-05-18T00:00:00.000Z"),
@@ -541,16 +548,497 @@ describe("shopping.server", () => {
     });
 
     expect(result.itemCounts).toEqual({
-      generated: 2,
+      generated: 1,
       manual: 0,
-      total: 2,
+      total: 1,
     });
-    expect(result.projectedItems).toHaveLength(2);
-    expect(result.projectedItems.map((item) => item.sourceKey)).toEqual([
-      "entry-1:ingredient-1",
-      "entry-2:ingredient-2",
+    expect(result.projectedItems).toHaveLength(1);
+
+    const mergedYoghurt = result.projectedItems[0];
+
+    if (mergedYoghurt.sourceType !== "GENERATED") {
+      throw new Error("Expected a generated shopping item.");
+    }
+
+    expect(mergedYoghurt).toEqual(
+      expect.objectContaining({
+        name: "Yoghurt",
+        occurrenceCount: 2,
+        quantityLabel: "3 beger",
+        sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2",
+        sourceType: "GENERATED",
+      }),
+    );
+    expect(mergedYoghurt.occurrences.map((occurrence) => occurrence.quantityLabel)).toEqual([
+      "1 beger",
+      "2 beger",
     ]);
-    expect(result.projectedItems.map((item) => item.quantityLabel)).toEqual(["1 beger", "2 beger"]);
+  });
+
+  it("sums identical units when the same recipe is planned on multiple days", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  displayName: "Frukt og gront",
+                  id: "category-produce",
+                },
+                categoryId: "category-produce",
+                displayName: "Løk",
+                id: "ingredient-1",
+                ingredientId: "canonical-onion",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Lapskaus",
+          },
+          recipeId: "recipe-1",
+        },
+        {
+          date: new Date("2026-05-16T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  displayName: "Frukt og gront",
+                  id: "category-produce",
+                },
+                categoryId: "category-produce",
+                displayName: "Løk",
+                id: "ingredient-2",
+                ingredientId: "canonical-onion",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Lapskaus",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+    });
+    dbMock.store.findMany.mockResolvedValue([]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.projectedItems).toHaveLength(1);
+    expect(result.projectedItems[0]).toEqual(
+      expect.objectContaining({
+        name: "Løk",
+        occurrenceCount: 2,
+        quantityLabel: "2 stk",
+      }),
+    );
+  });
+
+  it("merges canonical ingredients with different preferred stores and flags conflict", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  id: "category-produce",
+                  name: "Frukt og gront",
+                },
+                categoryId: "category-produce",
+                displayName: "Agurk",
+                id: "ingredient-1",
+                ingredientId: "canonical-cucumber",
+                preferredStore: {
+                  id: "store-1",
+                  name: "Coop Mega",
+                },
+                preferredStoreId: "store-1",
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Taco",
+          },
+          recipeId: "recipe-1",
+        },
+        {
+          date: new Date("2026-05-16T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  id: "category-produce",
+                  name: "Frukt og gront",
+                },
+                categoryId: "category-produce",
+                displayName: "Agurk",
+                id: "ingredient-2",
+                ingredientId: "canonical-cucumber",
+                preferredStore: {
+                  id: "store-2",
+                  name: "Meny",
+                },
+                preferredStoreId: "store-2",
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Salat",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [],
+      },
+      {
+        familyId: null,
+        id: "store-2",
+        name: "Meny",
+        sections: [],
+      },
+    ]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.projectedItems).toHaveLength(1);
+
+    const mergedCucumber = result.projectedItems[0];
+
+    if (mergedCucumber.sourceType !== "GENERATED") {
+      throw new Error("Expected a generated shopping item.");
+    }
+
+    expect(mergedCucumber).toEqual(
+      expect.objectContaining({
+        name: "Agurk",
+        occurrenceCount: 2,
+        preferredStoreConflict: true,
+        sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2",
+      }),
+    );
+  });
+
+  it("merges free-text ingredients with the same display name across recipes", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  id: "category-produce",
+                  name: "Frukt og gront",
+                },
+                categoryId: "category-produce",
+                displayName: "Persille",
+                id: "ingredient-1",
+                ingredientId: null,
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Suppe",
+          },
+          recipeId: "recipe-1",
+        },
+        {
+          date: new Date("2026-05-16T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "2",
+                category: {
+                  id: "category-produce",
+                  name: "Frukt og gront",
+                },
+                categoryId: "category-produce",
+                displayName: "Persille",
+                id: "ingredient-2",
+                ingredientId: null,
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Salat",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+    });
+    dbMock.store.findMany.mockResolvedValue([]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.projectedItems).toHaveLength(1);
+    expect(result.projectedItems[0]).toEqual(
+      expect.objectContaining({
+        name: "Persille",
+        occurrenceCount: 2,
+        quantityLabel: "3 stk",
+      }),
+    );
+  });
+
+  it("keeps free-text ingredients separate when display names differ", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  displayName: "Frukt og gront",
+                  id: "category-produce",
+                },
+                categoryId: "category-produce",
+                displayName: "Agurk",
+                id: "ingredient-1",
+                ingredientId: null,
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Taco",
+          },
+          recipeId: "recipe-1",
+        },
+        {
+          date: new Date("2026-05-16T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  displayName: "Frukt og gront",
+                  id: "category-produce",
+                },
+                categoryId: "category-produce",
+                displayName: "Tomat",
+                id: "ingredient-2",
+                ingredientId: null,
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Salat",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+    });
+    dbMock.store.findMany.mockResolvedValue([]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.projectedItems).toHaveLength(2);
+    expect(result.projectedItems.map((item) => item.name)).toEqual(["Agurk", "Tomat"]);
+  });
+
+  it("applies legacy single-occurrence overrides after merge", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  id: "category-dairy",
+                  name: "Meieri",
+                },
+                categoryId: "category-dairy",
+                displayName: "Yoghurt",
+                id: "ingredient-1",
+                ingredientId: "canonical-yoghurt",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "beger",
+              },
+            ],
+            title: "Frokostbolle",
+          },
+          recipeId: "recipe-1",
+        },
+        {
+          date: new Date("2026-05-16T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "2",
+                category: {
+                  id: "category-dairy",
+                  name: "Meieri",
+                },
+                categoryId: "category-dairy",
+                displayName: "Yoghurt",
+                id: "ingredient-2",
+                ingredientId: "canonical-yoghurt",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "beger",
+              },
+            ],
+            title: "Parfait",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [
+        {
+          checked: true,
+          excludedFromList: false,
+          includeDespiteStock: false,
+          note: "Kjøp ekstra",
+          postponedUntilDate: null,
+          preferredStore: null,
+          preferredStoreId: null,
+          sourceKey: "entry-2:ingredient-2",
+          sourceType: "GENERATED",
+          updatedAt: new Date("2026-05-16T12:00:00.000Z"),
+        },
+      ],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+    });
+    dbMock.store.findMany.mockResolvedValue([]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.projectedItems).toHaveLength(1);
+
+    const mergedYoghurt = result.projectedItems[0];
+
+    if (mergedYoghurt.sourceType !== "GENERATED") {
+      throw new Error("Expected a generated shopping item.");
+    }
+
+    expect(mergedYoghurt).toEqual(
+      expect.objectContaining({
+        checked: true,
+        note: "Kjøp ekstra",
+        sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2",
+      }),
+    );
   });
 
   describe("getMealPlanStoreModeData", () => {
