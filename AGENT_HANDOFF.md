@@ -2,32 +2,34 @@
 
 ## Current Objective
 
-Issue #74 — live client-side search on the family recipes list page; branch `issue/74-recipe-list-search`, PR pending merge.
+Issue #75 — sharer can open the same meal-plan review list and detail view as recipients; branch `issue/75-sharer-review-preview`, ready to merge via PR.
 
 ## Completed
 
-- Added `recipe-list-search` helpers with unit tests (title, description, tags; case-insensitive).
-- Wired search input with clear button on `/families/:familyId/recipes`.
-- Filter both family and global recipe sections as the user types.
-- Distinct empty states for “no recipes yet” vs “no search matches”.
+- Auto-include sharer as `MealPlanShareRecipient` when creating a share (still requires at least one other recipient).
+- Backfill missing sharer recipient rows on open shares when listing or opening review.
+- Exclude self-initiated shares from `countPendingReviewsForUser` nav badge.
+- Initiator-aware copy on reviews list, review detail, and meal plan share links.
+- Unit tests for create, backfill, badge filter, and review route mock.
 
 ## Files To Read First
 
-- `app/routes/family-recipes.tsx` — search UI, filtered lists, empty states
-- `app/lib/recipe-list-search.ts` — filter/match helpers
+- `app/lib/meal-plan-share.server.ts` — recipient logic, backfill, badge filter
+- `app/routes/family-meal-plan-reviews.tsx` — list UI copy for sharer vs recipient
+- `app/routes/family-meal-plan-review.tsx` — detail UI with `isSharedByCurrentUser`
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 209 tests passed (39 files)
+- `npm run test:run` — 212 tests passed (39 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
 - PR review and merge.
-- Manual smoke on recipes page: empty search, partial match, no-match messages, clear button.
+- Manual smoke: admin shares plan → sees item on `/meal-plans/reviews` → opens review with full actions; spouse sees incoming badge; admin nav badge unchanged for own share.
 
 ## Next Step
 
-Merge PR when CI is green; closes #74.
+Merge PR when CI is green; closes #75.

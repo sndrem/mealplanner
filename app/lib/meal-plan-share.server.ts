@@ -138,6 +138,9 @@ export async function countPendingReviewsForUser({
           familyId,
           status: MEAL_PLAN_STATUS_DRAFT,
         },
+        sharedByUserId: {
+          not: userId,
+        },
         status: SHARE_STATUS_OPEN,
       },
       userId,
@@ -150,6 +153,11 @@ export async function listPendingReviewsForUser({
   userId,
 }: FamilyScopedInput) {
   const membership = await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  await backfillSharerRecipientsForUser({
     familyId,
     userId,
   });
@@ -201,6 +209,7 @@ export async function listPendingReviewsForUser({
     },
     reviews: recipients.map((recipient) => ({
       id: recipient.id,
+      isSharedByCurrentUser: recipient.share.sharedByUser.id === userId,
       mealPlan: {
         endDate: formatDateOnly(recipient.share.mealPlan.endDate),
         id: recipient.share.mealPlan.id,
@@ -213,6 +222,7 @@ export async function listPendingReviewsForUser({
         id: recipient.share.id,
         message: recipient.share.message,
         sharedByDisplayName: recipient.share.sharedByUser.displayName,
+        sharedByUserId: recipient.share.sharedByUser.id,
         wholeFamily: recipient.share.wholeFamily,
       },
       status: recipient.status,
@@ -317,19 +327,24 @@ export async function createMealPlanShare(input: CreateMealPlanShareInput) {
   });
 
   const message = input.message?.trim() ?? "";
-  const recipientUserIds = await resolveRecipientUserIds({
+  const resolvedRecipientUserIds = await resolveRecipientUserIds({
     familyId: input.familyId,
     recipientUserIds: input.recipientUserIds,
     sharerUserId: input.userId,
     wholeFamily: input.wholeFamily,
   });
 
-  if (recipientUserIds.length === 0) {
+  if (resolvedRecipientUserIds.length === 0) {
     return {
       formError: INVALID_RECIPIENT_MESSAGE,
       status: "VALIDATION_ERROR" as const,
     };
   }
+
+  const recipientUserIds = withSharerAsRecipient(
+    resolvedRecipientUserIds,
+    input.userId,
+  );
 
   const existingOpenShare = await db.mealPlanShare.findFirst({
     select: {
@@ -468,6 +483,7 @@ export async function getMealPlanShareReviewData({
       status: mealPlan.status,
       title: mealPlan.title,
     },
+    isSharedByCurrentUser: share.sharedByUser.id === userId,
     recipientStatus: share.recipient.status,
     share: {
       createdAt: share.createdAt.toISOString(),
@@ -839,6 +855,93 @@ async function getDraftMealPlanOrThrow({
   return mealPlan;
 }
 
+function withSharerAsRecipient(recipientUserIds: string[], sharerUserId: string) {
+  return [...new Set([...recipientUserIds, sharerUserId])];
+}
+
+async function backfillSharerRecipientsForUser({
+  familyId,
+  userId,
+}: FamilyScopedInput) {
+  const sharesMissingSharerRecipient = await db.mealPlanShare.findMany({
+    select: {
+      id: true,
+    },
+    where: {
+      mealPlan: {
+        familyId,
+        status: MEAL_PLAN_STATUS_DRAFT,
+      },
+      recipients: {
+        none: {
+          userId,
+        },
+      },
+      sharedByUserId: userId,
+      status: SHARE_STATUS_OPEN,
+    },
+  });
+
+  await Promise.all(
+    sharesMissingSharerRecipient.map((share) =>
+      ensureSharerRecipientForOpenShare({
+        shareId: share.id,
+        sharerUserId: userId,
+      }),
+    ),
+  );
+}
+
+async function ensureSharerRecipientForOpenShare({
+  shareId,
+  sharerUserId,
+}: {
+  shareId: string;
+  sharerUserId: string;
+}) {
+  const existingRecipient = await db.mealPlanShareRecipient.findFirst({
+    select: {
+      id: true,
+    },
+    where: {
+      shareId,
+      userId: sharerUserId,
+    },
+  });
+
+  if (existingRecipient) {
+    return existingRecipient;
+  }
+
+  const share = await db.mealPlanShare.findFirst({
+    select: {
+      id: true,
+      sharedByUserId: true,
+      status: true,
+    },
+    where: {
+      id: shareId,
+      sharedByUserId: sharerUserId,
+      status: SHARE_STATUS_OPEN,
+    },
+  });
+
+  if (!share) {
+    return null;
+  }
+
+  return db.mealPlanShareRecipient.create({
+    data: {
+      shareId: share.id,
+      status: RECIPIENT_STATUS_PENDING,
+      userId: sharerUserId,
+    },
+    select: {
+      id: true,
+    },
+  });
+}
+
 async function resolveRecipientUserIds({
   familyId,
   recipientUserIds,
@@ -959,6 +1062,37 @@ async function getShareForRecipientReviewOrThrow({
   });
 
   if (!recipient) {
+    const share = await db.mealPlanShare.findFirst({
+      select: {
+        id: true,
+        sharedByUserId: true,
+        status: true,
+      },
+      where: {
+        id: shareId,
+        mealPlan: {
+          familyId,
+          id: mealPlanId,
+        },
+        sharedByUserId: userId,
+        status: SHARE_STATUS_OPEN,
+      },
+    });
+
+    if (share) {
+      await ensureSharerRecipientForOpenShare({
+        shareId: share.id,
+        sharerUserId: userId,
+      });
+
+      return getShareForRecipientReviewOrThrow({
+        familyId,
+        mealPlanId,
+        shareId,
+        userId,
+      });
+    }
+
     throw new Response(SHARE_NOT_RECIPIENT_MESSAGE, {
       status: 403,
       statusText: "Forbidden",
