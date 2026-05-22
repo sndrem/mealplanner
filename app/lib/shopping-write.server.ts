@@ -7,6 +7,7 @@ import {
 } from "./collaboration.server";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
+import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import {
   getStockIngredientsForMealPlan,
   loadShoppingMealPlan,
@@ -30,6 +31,15 @@ export interface ManualShoppingItemFieldErrors {
   preferredStoreId?: string;
 }
 
+export interface QuickAddManualShoppingItemInput {
+  ingredientId?: string;
+  name?: string;
+  recentNameNormalized?: string;
+}
+
+const OTHER_INGREDIENT_CATEGORY_KEY = "other";
+const QUICK_ADD_DEFAULT_QUANTITY = "1";
+
 export interface GeneratedShoppingItemOverrideValues {
   note: string;
   postponedUntilDate: string;
@@ -43,6 +53,39 @@ export interface GeneratedShoppingItemOverrideFieldErrors {
 
 export interface ActiveShoppingDateFieldErrors {
   activeShoppingDate?: string;
+}
+
+export async function createQuickManualShoppingItem({
+  familyId,
+  input,
+  mealPlanId,
+  userId,
+}: {
+  familyId: string;
+  input: QuickAddManualShoppingItemInput;
+  mealPlanId: string;
+  userId: string;
+}) {
+  const resolvedValues = await resolveQuickAddManualShoppingItemValues({
+    familyId,
+    input,
+  });
+
+  if (!resolvedValues.ok) {
+    return {
+      fieldErrors: resolvedValues.fieldErrors,
+      formError: resolvedValues.formError,
+      status: "VALIDATION_ERROR" as const,
+      values: resolvedValues.values,
+    };
+  }
+
+  return createManualShoppingItem({
+    familyId,
+    mealPlanId,
+    userId,
+    values: resolvedValues.values,
+  });
 }
 
 export async function createManualShoppingItem({
@@ -1506,6 +1549,169 @@ function normalizeManualShoppingItemValues(values: ManualShoppingItemValues): Ma
     note: values.note.trim(),
     preferredStoreId: values.preferredStoreId.trim(),
     quantity: values.quantity.trim(),
+  };
+}
+
+function buildEmptyManualShoppingItemValues(): ManualShoppingItemValues {
+  return {
+    buyOnDate: "",
+    categoryId: "",
+    name: "",
+    note: "",
+    preferredStoreId: "",
+    quantity: "",
+  };
+}
+
+function buildQuickAddManualShoppingItemValues({
+  categoryId,
+  name,
+  quantity = QUICK_ADD_DEFAULT_QUANTITY,
+}: {
+  categoryId: string;
+  name: string;
+  quantity?: string;
+}): ManualShoppingItemValues {
+  return {
+    buyOnDate: "",
+    categoryId,
+    name,
+    note: "",
+    preferredStoreId: "",
+    quantity,
+  };
+}
+
+export async function resolveOtherCategoryId() {
+  const category = await db.ingredientCategory.findUnique({
+    select: {
+      id: true,
+    },
+    where: {
+      key: OTHER_INGREDIENT_CATEGORY_KEY,
+    },
+  });
+
+  return category?.id ?? null;
+}
+
+async function findLatestManualShoppingItemForFamilyByNormalizedName({
+  familyId,
+  nameNormalized,
+}: {
+  familyId: string;
+  nameNormalized: string;
+}) {
+  const rows = await db.manualShoppingItem.findMany({
+    orderBy: [{ updatedAt: "desc" }],
+    select: {
+      categoryId: true,
+      name: true,
+      quantity: true,
+    },
+    take: 50,
+    where: {
+      mealPlan: {
+        familyId,
+      },
+    },
+  });
+
+  return (
+    rows.find(
+      (row) => normalizeIngredientCanonicalName(row.name) === nameNormalized,
+    ) ?? null
+  );
+}
+
+export async function resolveQuickAddManualShoppingItemValues({
+  familyId,
+  input,
+}: {
+  familyId: string;
+  input: QuickAddManualShoppingItemInput;
+}) {
+  const otherCategoryId = await resolveOtherCategoryId();
+
+  if (!otherCategoryId) {
+    return {
+      fieldErrors: {
+        categoryId: "Standardkategorien Annet mangler i systemet.",
+      },
+      formError: "Kunne ikke legge til varelinjen.",
+      ok: false as const,
+      values: buildEmptyManualShoppingItemValues(),
+    };
+  }
+
+  const ingredientId = input.ingredientId?.trim();
+
+  if (ingredientId) {
+    const ingredient = await db.ingredient.findUnique({
+      select: {
+        canonicalName: true,
+        defaultCategoryId: true,
+      },
+      where: {
+        id: ingredientId,
+      },
+    });
+
+    if (ingredient) {
+      return {
+        ok: true as const,
+        values: buildQuickAddManualShoppingItemValues({
+          categoryId: ingredient.defaultCategoryId ?? otherCategoryId,
+          name: ingredient.canonicalName,
+        }),
+      };
+    }
+  }
+
+  const recentNameNormalized = input.recentNameNormalized?.trim().toLowerCase();
+
+  if (recentNameNormalized) {
+    const recentItem = await findLatestManualShoppingItemForFamilyByNormalizedName({
+      familyId,
+      nameNormalized: recentNameNormalized,
+    });
+
+    if (recentItem) {
+      return {
+        ok: true as const,
+        values: buildQuickAddManualShoppingItemValues({
+          categoryId: recentItem.categoryId,
+          name: recentItem.name.trim(),
+          quantity: recentItem.quantity?.trim() || QUICK_ADD_DEFAULT_QUANTITY,
+        }),
+      };
+    }
+  }
+
+  const name = input.name?.trim() ?? "";
+  const fieldErrors: ManualShoppingItemFieldErrors = {};
+
+  if (!name) {
+    fieldErrors.name = "Skriv inn et varenavn.";
+  }
+
+  if (fieldErrors.name) {
+    return {
+      fieldErrors,
+      ok: false as const,
+      values: buildQuickAddManualShoppingItemValues({
+        categoryId: otherCategoryId,
+        name,
+      }),
+    };
+  }
+
+  return {
+    ok: true as const,
+    values: buildQuickAddManualShoppingItemValues({
+      categoryId: otherCategoryId,
+      name,
+    }),
   };
 }
 

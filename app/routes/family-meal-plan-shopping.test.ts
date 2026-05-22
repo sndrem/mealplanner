@@ -12,12 +12,14 @@ vi.mock("../lib/auth.server", async () => {
 vi.mock("../lib/shopping.server", () => {
   return {
     getMealPlanShoppingData: vi.fn(),
+    listRecentManualShoppingItemsForFamily: vi.fn(),
   };
 });
 
 vi.mock("../lib/shopping-write.server", () => {
   return {
     createManualShoppingItem: vi.fn(),
+    createQuickManualShoppingItem: vi.fn(),
     deleteManualShoppingItem: vi.fn(),
     optInStockShoppingItems: vi.fn(),
     toggleShoppingItemChecked: vi.fn(),
@@ -27,9 +29,10 @@ vi.mock("../lib/shopping-write.server", () => {
 });
 
 import { requireUser } from "../lib/auth.server";
-import { getMealPlanShoppingData } from "../lib/shopping.server";
+import { getMealPlanShoppingData, listRecentManualShoppingItemsForFamily } from "../lib/shopping.server";
 import {
   createManualShoppingItem,
+  createQuickManualShoppingItem,
   optInStockShoppingItems,
   toggleShoppingItemChecked,
   updateGeneratedShoppingItemOverride,
@@ -57,6 +60,14 @@ describe("family meal plan shopping route", () => {
 
   it("loads and serializes generated and manual shopping data", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([
+      {
+        categoryId: "category-dairy",
+        displayName: "Melk",
+        nameNormalized: "melk",
+        quantity: "1",
+      },
+    ]);
     vi.mocked(getMealPlanShoppingData).mockResolvedValue({
       categories: [
         {
@@ -261,6 +272,9 @@ describe("family meal plan shopping route", () => {
       mealPlanId: "meal-plan-1",
       userId: "user-1",
     });
+    expect(listRecentManualShoppingItemsForFamily).toHaveBeenCalledWith({
+      familyId: "family-1",
+    });
     expect(result).toEqual({
       excludedGeneratedCount: 0,
       excludedGeneratedItems: [],
@@ -286,6 +300,14 @@ describe("family meal plan shopping route", () => {
         updatedAt: "2026-05-01T12:00:00.000Z",
       },
       notice: null,
+      recentManualItems: [
+        {
+          categoryId: "category-dairy",
+          displayName: "Melk",
+          nameNormalized: "melk",
+          quantity: "1",
+        },
+      ],
       categories: [
         {
           displayName: "Frukt og gront",
@@ -390,6 +412,7 @@ describe("family meal plan shopping route", () => {
 
   it("serializes stock ingredients for the active meal plan", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([]);
     vi.mocked(getMealPlanShoppingData).mockResolvedValue({
       categories: [],
       family: {
@@ -488,6 +511,41 @@ describe("family meal plan shopping route", () => {
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
       sourceKeys: ["entry-1:ingredient-1"],
+      userId: "user-1",
+    });
+    expect(response).toBeInstanceOf(Response);
+    expect((response as Response).status).toBe(302);
+  });
+
+  it("redirects after a quick-add manual shopping item", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(createQuickManualShoppingItem).mockResolvedValue({
+      status: "CREATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "quick-add-manual-shopping-item");
+    formData.set("name", "Tannkrem");
+
+    const response = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(
+        "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping",
+        formData,
+      ),
+    });
+
+    expect(createQuickManualShoppingItem).toHaveBeenCalledWith({
+      familyId: "family-1",
+      input: {
+        ingredientId: "",
+        name: "Tannkrem",
+        recentNameNormalized: "",
+      },
+      mealPlanId: "meal-plan-1",
       userId: "user-1",
     });
     expect(response).toBeInstanceOf(Response);

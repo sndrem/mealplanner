@@ -2,6 +2,7 @@ import { MealType, Prisma, ShoppingItemSource } from "@prisma/client";
 
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
+import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import { getMealPlanDateRange } from "./meal-plan.server";
 import {
   getFamilyStockMatchSet,
@@ -370,6 +371,69 @@ export async function getMealPlanShoppingData({
     userRole: membership.role,
     visibleDates: getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate),
   };
+}
+
+export const RECENT_MANUAL_SHOPPING_ITEM_LIMIT = 10;
+
+export interface RecentManualShoppingItem {
+  categoryId: string;
+  displayName: string;
+  nameNormalized: string;
+  quantity: string;
+}
+
+export async function listRecentManualShoppingItemsForFamily({
+  familyId,
+  limit = RECENT_MANUAL_SHOPPING_ITEM_LIMIT,
+}: {
+  familyId: string;
+  limit?: number;
+}) {
+  const rows = await db.manualShoppingItem.findMany({
+    orderBy: [{ updatedAt: "desc" }],
+    select: {
+      categoryId: true,
+      name: true,
+      quantity: true,
+    },
+    take: 100,
+    where: {
+      mealPlan: {
+        familyId,
+      },
+    },
+  });
+
+  const seen = new Set<string>();
+  const recentItems: RecentManualShoppingItem[] = [];
+
+  for (const row of rows) {
+    const displayName = row.name.trim();
+
+    if (!displayName) {
+      continue;
+    }
+
+    const nameNormalized = normalizeIngredientCanonicalName(displayName);
+
+    if (seen.has(nameNormalized)) {
+      continue;
+    }
+
+    seen.add(nameNormalized);
+    recentItems.push({
+      categoryId: row.categoryId,
+      displayName,
+      nameNormalized,
+      quantity: row.quantity?.trim() || "1",
+    });
+
+    if (recentItems.length >= limit) {
+      break;
+    }
+  }
+
+  return recentItems;
 }
 
 export async function getMealPlanStoreModeData({

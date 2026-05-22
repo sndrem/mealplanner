@@ -12,6 +12,10 @@ export default [
     "routes/family-meal-plan-day-calendar.ts",
   ),
   route("families/:familyId/meal-plans/:mealPlanId/shopping", "routes/family-meal-plan-shopping.tsx"),
+  route(
+    "families/:familyId/meal-plans/:mealPlanId/shopping/ingredient-search",
+    "routes/family-meal-plan-shopping-ingredient-search.ts",
+  ),
   route("families/:familyId/meal-plans/:mealPlanId/store-mode", "routes/family-meal-plan-store-mode.tsx"),
   route("families/:familyId/stores", "routes/family-stores.tsx"),
   route("families/:familyId/stock-ingredients", "routes/family-stock-ingredients.tsx"),

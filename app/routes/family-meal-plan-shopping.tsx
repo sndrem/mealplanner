@@ -13,9 +13,14 @@ import {
   formatGeneratedQuantityBadge,
   formatOccurrenceSourceLine,
 } from "../lib/shopping-display";
-import { getMealPlanShoppingData } from "../lib/shopping.server";
+import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
+import {
+  getMealPlanShoppingData,
+  listRecentManualShoppingItemsForFamily,
+} from "../lib/shopping.server";
 import {
   createManualShoppingItem,
+  createQuickManualShoppingItem,
   deleteManualShoppingItem,
   excludeGeneratedShoppingItem,
   optInStockShoppingItems,
@@ -41,6 +46,7 @@ type ShoppingNotice =
 
 type ShoppingIntent =
   | "add-manual-shopping-item"
+  | "quick-add-manual-shopping-item"
   | "delete-manual-shopping-item"
   | "exclude-generated-shopping-item"
   | "opt-in-stock-shopping-item"
@@ -104,11 +110,16 @@ export async function loader({
     params.mealPlanId,
     "Fant ikke ukeplanen.",
   );
-  const result = await getMealPlanShoppingData({
-    familyId,
-    mealPlanId,
-    userId: user.id,
-  });
+  const [result, recentManualItems] = await Promise.all([
+    getMealPlanShoppingData({
+      familyId,
+      mealPlanId,
+      userId: user.id,
+    }),
+    listRecentManualShoppingItemsForFamily({
+      familyId,
+    }),
+  ]);
 
   return {
     categories: result.categories,
@@ -131,6 +142,7 @@ export async function loader({
       serializeProjectedShoppingItem,
     ),
     notice: getShoppingNotice(request),
+    recentManualItems,
     storeGroups: result.storeGroups.map((group) => ({
       sections: group.sections.map((section) => ({
         ...section,
@@ -187,6 +199,35 @@ export async function action({
 
     if (result.status === "VALIDATION_ERROR") {
       return {
+        intent,
+        manualFieldErrors: result.fieldErrors,
+        manualValues: result.values,
+      } satisfies ShoppingActionData;
+    }
+
+    return buildShoppingRedirect({
+      familyId,
+      mealPlanId,
+      notice: "manual-shopping-item-added",
+      request,
+    });
+  }
+
+  if (intent === "quick-add-manual-shopping-item") {
+    const result = await createQuickManualShoppingItem({
+      familyId,
+      input: parseQuickAddManualShoppingItemInput(formData),
+      mealPlanId,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: "formError" in result ? result.formError : undefined,
         intent,
         manualFieldErrors: result.fieldErrors,
         manualValues: result.values,
@@ -492,9 +533,12 @@ export default function FamilyMealPlanShoppingRoute({
   const pendingIntent = navigation.formData?.get("intent");
   const pendingSourceKey = getPendingSourceKey(navigation.formData);
   const addManualValues =
-    actionData?.intent === "add-manual-shopping-item" && actionData.manualValues
+    (actionData?.intent === "add-manual-shopping-item" ||
+      actionData?.intent === "quick-add-manual-shopping-item") &&
+    actionData.manualValues
       ? actionData.manualValues
       : defaultManualShoppingItemValues;
+  const ingredientSearchPath = `/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping/ingredient-search`;
   const noticeContent = loaderData.notice
     ? getShoppingNoticeContent(loaderData.notice)
     : null;
@@ -801,7 +845,30 @@ export default function FamilyMealPlanShoppingRoute({
               </p>
             </div>
 
-            <Form className="mt-6 space-y-4" method="post">
+            {actionData?.intent === "quick-add-manual-shopping-item" &&
+            actionData.formError ? (
+              <p className="mt-4 text-sm text-rose-600">{actionData.formError}</p>
+            ) : null}
+            {actionData?.intent === "quick-add-manual-shopping-item" &&
+            actionData.manualFieldErrors?.name ? (
+              <p className="mt-2 text-sm text-rose-600">
+                {actionData.manualFieldErrors.name}
+              </p>
+            ) : null}
+
+            <div className="mt-6">
+              <ManualShoppingQuickAdd
+                ingredientSearchPath={ingredientSearchPath}
+                recentManualItems={loaderData.recentManualItems}
+              />
+            </div>
+
+            <details className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+              <summary className="cursor-pointer text-sm font-medium text-slate-800">
+                Avansert: legg til med alle felt
+              </summary>
+
+            <Form className="mt-4 space-y-4" method="post">
               <input
                 name="intent"
                 type="hidden"
@@ -927,6 +994,7 @@ export default function FamilyMealPlanShoppingRoute({
                   : "Legg til varelinje"}
               </button>
             </Form>
+            </details>
           </article>
         </section>
 
@@ -1644,6 +1712,14 @@ function getToggleExpectedVersion(item: {
   }
 
   return item.collaborationVersion;
+}
+
+function parseQuickAddManualShoppingItemInput(formData: FormData) {
+  return {
+    ingredientId: String(formData.get("ingredientId") ?? ""),
+    name: String(formData.get("name") ?? ""),
+    recentNameNormalized: String(formData.get("recentNameNormalized") ?? ""),
+  };
 }
 
 function parseManualShoppingItemValues(
