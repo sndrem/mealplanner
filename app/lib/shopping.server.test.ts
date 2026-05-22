@@ -7,6 +7,9 @@ const { dbMock, getFamilyStockMatchSetMock, requireFamilyMembershipMock } =
         ingredientCategory: {
           findMany: vi.fn(),
         },
+        manualShoppingItem: {
+          findMany: vi.fn(),
+        },
         mealPlan: {
           findFirst: vi.fn(),
         },
@@ -43,7 +46,11 @@ vi.mock("./stock.server", async (importOriginal) => {
   };
 });
 
-import { getMealPlanShoppingData, getMealPlanStoreModeData } from "./shopping.server";
+import {
+  getMealPlanShoppingData,
+  getMealPlanStoreModeData,
+  listRecentManualShoppingItemsForFamily,
+} from "./shopping.server";
 
 const mockMembership = {
   family: {
@@ -1719,5 +1726,59 @@ describe("shopping.server", () => {
 
     expect(dbMock.store.findMany).not.toHaveBeenCalled();
     expect(dbMock.ingredientCategory.findMany).not.toHaveBeenCalled();
+  });
+
+  it("lists recent manual shopping items deduped by normalized name", async () => {
+    dbMock.manualShoppingItem.findMany.mockResolvedValue([
+      {
+        categoryId: "category-dairy",
+        name: "Melk",
+        quantity: "2 liter",
+      },
+      {
+        categoryId: "category-other",
+        name: "melk",
+        quantity: "1 liter",
+      },
+      {
+        categoryId: "category-bakery",
+        name: "Brød",
+        quantity: null,
+      },
+    ]);
+
+    const result = await listRecentManualShoppingItemsForFamily({
+      familyId: "family-1",
+      limit: 5,
+    });
+
+    expect(dbMock.manualShoppingItem.findMany).toHaveBeenCalledWith({
+      orderBy: [{ updatedAt: "desc" }],
+      select: {
+        categoryId: true,
+        name: true,
+        quantity: true,
+      },
+      take: 100,
+      where: {
+        mealPlan: {
+          familyId: "family-1",
+        },
+      },
+    });
+    expect(result).toEqual([
+      {
+        categoryId: "category-dairy",
+        displayName: "Melk",
+        nameNormalized: "melk",
+        quantity: "2 liter",
+      },
+      {
+        categoryId: "category-bakery",
+        displayName: "Brød",
+        nameNormalized: "brød",
+        quantity: "1",
+      },
+    ]);
   });
 });

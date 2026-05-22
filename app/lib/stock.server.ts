@@ -126,6 +126,7 @@ export async function searchCanonicalIngredients(query: string) {
     orderBy: [{ canonicalName: "asc" }],
     select: {
       canonicalName: true,
+      defaultCategoryId: true,
       id: true,
     },
     take: 20,
