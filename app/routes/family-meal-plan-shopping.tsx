@@ -737,46 +737,46 @@ export default function FamilyMealPlanShoppingRoute({
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
-                          <p className="text-sm font-semibold text-slate-950">
-                            {item.name}
-                            {item.quantityLabel
-                              ? ` · ${item.quantityLabel}`
-                              : ""}
-                          </p>
-                          {item.sourceType === "GENERATED" ? (
-                            <p className="mt-1 text-xs leading-5 text-slate-600">
-                              {item.occurrenceCount === 1
-                                ? `Fra ${item.occurrences[0]?.recipeTitle}`
-                                : `Fra ${item.occurrenceCount} planlagte middager`}
+                            <p className="text-sm font-semibold text-slate-950">
+                              {item.name}
+                              {item.quantityLabel
+                                ? ` · ${item.quantityLabel}`
+                                : ""}
                             </p>
-                          ) : null}
+                            {item.sourceType === "GENERATED" ? (
+                              <p className="mt-1 text-xs leading-5 text-slate-600">
+                                {item.occurrenceCount === 1
+                                  ? `Fra ${item.occurrences[0]?.recipeTitle}`
+                                  : `Fra ${item.occurrenceCount} planlagte middager`}
+                              </p>
+                            ) : null}
                           </div>
                           <Form method="post">
-                          <input
-                            name="intent"
-                            type="hidden"
-                            value="restore-generated-shopping-item"
-                          />
-                          <input
-                            name="sourceKey"
-                            type="hidden"
-                            value={item.sourceKey}
-                          />
-                          <input
-                            name="expectedUpdatedAt"
-                            type="hidden"
-                            value={item.collaborationVersion}
-                          />
-                          <button
-                            className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                            disabled={isPendingRestore}
-                            type="submit"
-                          >
-                            {isPendingRestore
-                              ? "Legger tilbake..."
-                              : "Legg tilbake i handlelisten"}
-                          </button>
-                        </Form>
+                            <input
+                              name="intent"
+                              type="hidden"
+                              value="restore-generated-shopping-item"
+                            />
+                            <input
+                              name="sourceKey"
+                              type="hidden"
+                              value={item.sourceKey}
+                            />
+                            <input
+                              name="expectedUpdatedAt"
+                              type="hidden"
+                              value={item.collaborationVersion}
+                            />
+                            <button
+                              className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={isPendingRestore}
+                              type="submit"
+                            >
+                              {isPendingRestore
+                                ? "Legger tilbake..."
+                                : "Legg tilbake i handlelisten"}
+                            </button>
+                          </Form>
                         </div>
                       </li>
                     );
@@ -847,7 +847,9 @@ export default function FamilyMealPlanShoppingRoute({
 
             {actionData?.intent === "quick-add-manual-shopping-item" &&
             actionData.formError ? (
-              <p className="mt-4 text-sm text-rose-600">{actionData.formError}</p>
+              <p className="mt-4 text-sm text-rose-600">
+                {actionData.formError}
+              </p>
             ) : null}
             {actionData?.intent === "quick-add-manual-shopping-item" &&
             actionData.manualFieldErrors?.name ? (
@@ -868,150 +870,134 @@ export default function FamilyMealPlanShoppingRoute({
                 Avansert: legg til med alle felt
               </summary>
 
-            <Form className="mt-4 space-y-4" method="post">
-              <input
-                name="intent"
-                type="hidden"
-                value="add-manual-shopping-item"
-              />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-medium text-slate-700">
-                  Varenavn
-                  <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={addManualValues.name}
-                    name="name"
-                    type="text"
-                  />
-                </label>
-
-                <label className="block text-sm font-medium text-slate-700">
-                  Mengde
-                  <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={addManualValues.quantity}
-                    name="quantity"
-                    placeholder="F.eks. 2 poser"
-                    type="text"
-                  />
-                </label>
-              </div>
-
-              {actionData?.intent === "add-manual-shopping-item" &&
-              actionData.manualFieldErrors?.name ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.manualFieldErrors.name}
-                </p>
-              ) : null}
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <label className="block text-sm font-medium text-slate-700">
-                  Kategori
-                  <select
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={addManualValues.categoryId}
-                    name="categoryId"
-                  >
-                    <option value="">Velg kategori</option>
-                    {loaderData.categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.displayName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block text-sm font-medium text-slate-700">
-                  Foretrukket butikk
-                  <select
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={addManualValues.preferredStoreId}
-                    name="preferredStoreId"
-                  >
-                    <option value="">Ingen valgt butikk</option>
-                    {loaderData.stores.map((store) => (
-                      <option key={store.id} value={store.id}>
-                        {store.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block text-sm font-medium text-slate-700">
-                  Handledato
-                  <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={addManualValues.buyOnDate}
-                    max={loaderData.mealPlan.endDate}
-                    min={loaderData.mealPlan.startDate}
-                    name="buyOnDate"
-                    type="date"
-                  />
-                </label>
-              </div>
-
-              {actionData?.intent === "add-manual-shopping-item" &&
-              actionData.manualFieldErrors?.categoryId ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.manualFieldErrors.categoryId}
-                </p>
-              ) : null}
-              {actionData?.intent === "add-manual-shopping-item" &&
-              actionData.manualFieldErrors?.preferredStoreId ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.manualFieldErrors.preferredStoreId}
-                </p>
-              ) : null}
-              {actionData?.intent === "add-manual-shopping-item" &&
-              actionData.manualFieldErrors?.buyOnDate ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.manualFieldErrors.buyOnDate}
-                </p>
-              ) : null}
-
-              <label className="block text-sm font-medium text-slate-700">
-                Notat
-                <textarea
-                  className="mt-2 min-h-28 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                  defaultValue={addManualValues.note}
-                  name="note"
-                  placeholder="F.eks. husk kampanjepris eller at varen skal kjøpes senere i uken"
+              <Form className="mt-4 space-y-4" method="post">
+                <input
+                  name="intent"
+                  type="hidden"
+                  value="add-manual-shopping-item"
                 />
-              </label>
 
-              <button
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={
-                  navigation.state === "submitting" &&
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Varenavn
+                    <input
+                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      defaultValue={addManualValues.name}
+                      name="name"
+                      type="text"
+                    />
+                  </label>
+
+                  <label className="block text-sm font-medium text-slate-700">
+                    Mengde
+                    <input
+                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      defaultValue={addManualValues.quantity}
+                      name="quantity"
+                      placeholder="F.eks. 2 poser"
+                      type="text"
+                    />
+                  </label>
+                </div>
+
+                {actionData?.intent === "add-manual-shopping-item" &&
+                actionData.manualFieldErrors?.name ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.manualFieldErrors.name}
+                  </p>
+                ) : null}
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Kategori
+                    <select
+                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      defaultValue={addManualValues.categoryId}
+                      name="categoryId"
+                    >
+                      <option value="">Velg kategori</option>
+                      {loaderData.categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block text-sm font-medium text-slate-700">
+                    Foretrukket butikk
+                    <select
+                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      defaultValue={addManualValues.preferredStoreId}
+                      name="preferredStoreId"
+                    >
+                      <option value="">Ingen valgt butikk</option>
+                      {loaderData.stores.map((store) => (
+                        <option key={store.id} value={store.id}>
+                          {store.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block text-sm font-medium text-slate-700">
+                    Handledato
+                    <input
+                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      defaultValue={addManualValues.buyOnDate}
+                      max={loaderData.mealPlan.endDate}
+                      min={loaderData.mealPlan.startDate}
+                      name="buyOnDate"
+                      type="date"
+                    />
+                  </label>
+                </div>
+
+                {actionData?.intent === "add-manual-shopping-item" &&
+                actionData.manualFieldErrors?.categoryId ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.manualFieldErrors.categoryId}
+                  </p>
+                ) : null}
+                {actionData?.intent === "add-manual-shopping-item" &&
+                actionData.manualFieldErrors?.preferredStoreId ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.manualFieldErrors.preferredStoreId}
+                  </p>
+                ) : null}
+                {actionData?.intent === "add-manual-shopping-item" &&
+                actionData.manualFieldErrors?.buyOnDate ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.manualFieldErrors.buyOnDate}
+                  </p>
+                ) : null}
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Notat
+                  <textarea
+                    className="mt-2 min-h-28 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    defaultValue={addManualValues.note}
+                    name="note"
+                    placeholder="F.eks. husk kampanjepris eller at varen skal kjøpes senere i uken"
+                  />
+                </label>
+
+                <button
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  disabled={
+                    navigation.state === "submitting" &&
+                    pendingIntent === "add-manual-shopping-item"
+                  }
+                  type="submit"
+                >
+                  {navigation.state === "submitting" &&
                   pendingIntent === "add-manual-shopping-item"
-                }
-                type="submit"
-              >
-                {navigation.state === "submitting" &&
-                pendingIntent === "add-manual-shopping-item"
-                  ? "Legger til..."
-                  : "Legg til varelinje"}
-              </button>
-            </Form>
+                    ? "Legger til..."
+                    : "Legg til varelinje"}
+                </button>
+              </Form>
             </details>
           </article>
-        </section>
-
-        <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Hvordan dette bygges
-            </h2>
-            <p className="text-sm leading-6 text-slate-600">
-              Genererte linjer bygger på lagrede oppskriftsingredienser. Samme
-              ingrediens slås sammen på tvers av oppskrifter når kanonisk
-              ingrediens eller navn og kategori matcher, selv om mengde eller
-              foretrukket butikk varierer. Mengde vises per oppskrift under
-              Kilder. Manuelle linjer blir lagt oppa samme sortering uten å
-              endre den deterministiske projeksjonen.
-            </p>
-          </div>
         </section>
 
         {loaderData.storeGroups.length ? (
@@ -1099,7 +1085,8 @@ export default function FamilyMealPlanShoppingRoute({
                                       item.preferredStore?.id ?? "",
                                   }
                                 : null;
-                          const quantityBadge = formatGeneratedQuantityBadge(item);
+                          const quantityBadge =
+                            formatGeneratedQuantityBadge(item);
 
                           return (
                             <article

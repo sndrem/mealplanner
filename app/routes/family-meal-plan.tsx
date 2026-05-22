@@ -205,7 +205,8 @@ export async function action({
 
     if (result.status === "NOTHING_TO_FILL") {
       return {
-        autoFillFormError: "Alle dagene har allerede en oppskrift eller et notat.",
+        autoFillFormError:
+          "Alle dagene har allerede en oppskrift eller et notat.",
         intent,
       } satisfies MealPlanActionData;
     }
@@ -470,37 +471,37 @@ export default function FamilyMealPlanRoute({
               </div>
 
               <div className="flex flex-wrap gap-2 sm:gap-3 md:max-w-md md:justify-end">
-              <Link
-                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
-                to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
-              >
-                Åpne handleliste
-              </Link>
-              <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/store-mode`}
-              >
-                Åpne butikkmodus
-              </Link>
-              {hasMealPlanCalendarExport ? (
-                <a
-                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                  href={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/calendar.ics`}
-                  target={CALENDAR_DOWNLOAD_TARGET}
+                <Link
+                  className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+                  to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
                 >
-                  Eksporter ukeplan (.ics)
-                </a>
-              ) : (
-                <span className="rounded-2xl bg-white/5 px-5 py-3 text-sm font-medium text-slate-400 ring-1 ring-white/10">
-                  Eksporter ukeplan (.ics)
-                </span>
-              )}
-              <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                to={`/families/${loaderData.family.id}/meal-plans`}
-              >
-                Tilbake til ukeplaner
-              </Link>
+                  Åpne handleliste
+                </Link>
+                <Link
+                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                  to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/store-mode`}
+                >
+                  Åpne butikkmodus
+                </Link>
+                {hasMealPlanCalendarExport ? (
+                  <a
+                    className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                    href={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/calendar.ics`}
+                    target={CALENDAR_DOWNLOAD_TARGET}
+                  >
+                    Eksporter ukeplan (.ics)
+                  </a>
+                ) : (
+                  <span className="rounded-2xl bg-white/5 px-5 py-3 text-sm font-medium text-slate-400 ring-1 ring-white/10">
+                    Eksporter ukeplan (.ics)
+                  </span>
+                )}
+                <Link
+                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                  to={`/families/${loaderData.family.id}/meal-plans`}
+                >
+                  Tilbake til ukeplaner
+                </Link>
               </div>
             </div>
 
@@ -667,30 +668,6 @@ export default function FamilyMealPlanRoute({
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-          <article className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
-            <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">Detaljer</h2>
-              <p className="text-sm leading-6 text-slate-600">
-                Planen tilhører familien {loaderData.family.name}. Godkjenning
-                skjer øverst på siden og kan gjøres av alle i familien.
-              </p>
-            </div>
-
-            <dl className="mt-4 grid gap-3">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
-                  Aktiv periode
-                </dt>
-                <dd className="mt-2 text-base font-semibold text-slate-950">
-                  {formatMealPlanWindow(
-                    loaderData.mealPlan.startDate,
-                    loaderData.mealPlan.endDate,
-                  )}
-                </dd>
-              </div>
-            </dl>
-          </article>
-
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-slate-950">
@@ -850,7 +827,9 @@ function getMealPlanNoticeMeta(request: Request): MealPlanNoticeMeta | null {
   const filledCount = Number(params.get("filled") ?? "0");
 
   const warningMessage =
-    params.get("warning") === "1" ? params.get("warningMessage") ?? undefined : undefined;
+    params.get("warning") === "1"
+      ? (params.get("warningMessage") ?? undefined)
+      : undefined;
 
   return {
     filledCount: Number.isFinite(filledCount) ? filledCount : 0,
@@ -999,9 +978,7 @@ function MealPlanApprovalSection({
         {approvedAt ? (
           <span
             className={
-              isHero
-                ? "text-xs text-slate-300"
-                : "text-xs text-slate-600"
+              isHero ? "text-xs text-slate-300" : "text-xs text-slate-600"
             }
           >
             {formatApprovalTimestamp(approvedAt)}
@@ -1013,7 +990,11 @@ function MealPlanApprovalSection({
         <input name="intent" type="hidden" value={approvalIntent} />
         {approvalIntent === "approve-meal-plan" ? (
           <>
-            <input name="entriesSnapshot" type="hidden" value={entriesSnapshot} />
+            <input
+              name="entriesSnapshot"
+              type="hidden"
+              value={entriesSnapshot}
+            />
             <input
               name="mealPlanUpdatedAt"
               type="hidden"
