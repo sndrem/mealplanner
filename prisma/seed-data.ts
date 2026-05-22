@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 export interface IngredientCategorySeed {
   key: string;
   displayName: string;
@@ -28,6 +32,11 @@ export interface RecipeSeed {
   ingredients: RecipeIngredientSeed[];
 }
 
+export interface CatalogIngredientSeed {
+  name: string;
+  categoryKey: IngredientCategoryKey;
+}
+
 export interface IngredientSeed {
   canonicalName: string;
   defaultCategoryKey: IngredientCategoryKey;
@@ -48,6 +57,15 @@ export const ingredientCategorySeeds = [
 export type IngredientCategoryKey =
   (typeof ingredientCategorySeeds)[number]["key"];
 
+const ingredientCategoryKeys = new Set<IngredientCategoryKey>(
+  ingredientCategorySeeds.map((category) => category.key),
+);
+
+const catalogCsvPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "data/catalog-ingredient-seeds.csv",
+);
+
 export const storeSeeds: readonly StoreSeed[] = [];
 
 export type StoreKey = string;
@@ -58,31 +76,94 @@ export function normalizeIngredientCanonicalName(displayName: string) {
   return displayName.trim().toLowerCase();
 }
 
+export function loadCatalogIngredientSeeds(
+  csvPath: string = catalogCsvPath,
+): CatalogIngredientSeed[] {
+  return parseCatalogIngredientCsv(readFileSync(csvPath, "utf8"));
+}
+
+export function parseCatalogIngredientCsv(content: string): CatalogIngredientSeed[] {
+  const lines = content.split(/\r?\n/).filter((line) => line.trim());
+
+  if (lines.length === 0) {
+    throw new Error("Catalog ingredient seed file is empty.");
+  }
+
+  const header = lines[0]?.trim();
+
+  if (header !== "name,categoryKey") {
+    throw new Error(
+      `Catalog ingredient seed file must start with "name,categoryKey", got "${header ?? ""}".`,
+    );
+  }
+
+  const catalog: CatalogIngredientSeed[] = [];
+  const normalizedNames = new Set<string>();
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    const commaIndex = line.lastIndexOf(",");
+
+    if (commaIndex <= 0) {
+      throw new Error(`Invalid catalog ingredient row on line ${index + 1}: "${line}".`);
+    }
+
+    const name = line.slice(0, commaIndex).trim();
+    const categoryKey = line.slice(commaIndex + 1).trim();
+
+    if (!name || !categoryKey) {
+      throw new Error(`Invalid catalog ingredient row on line ${index + 1}: "${line}".`);
+    }
+
+    if (!isIngredientCategoryKey(categoryKey)) {
+      throw new Error(
+        `Catalog ingredient "${name}" references unknown category "${categoryKey}".`,
+      );
+    }
+
+    const normalizedName = normalizeIngredientCanonicalName(name);
+
+    if (normalizedNames.has(normalizedName)) {
+      throw new Error(`Catalog ingredient "${name}" is duplicated after normalization.`);
+    }
+
+    normalizedNames.add(normalizedName);
+    catalog.push({
+      name,
+      categoryKey,
+    });
+  }
+
+  return catalog;
+}
+
+export const catalogIngredientSeeds = loadCatalogIngredientSeeds();
+
 export function buildIngredientSeeds(
   recipes: readonly RecipeSeed[] = recipeSeeds,
+  catalog: readonly CatalogIngredientSeed[] = catalogIngredientSeeds,
 ): IngredientSeed[] {
-  let ingredientsByCanonicalName = new Map<string, IngredientSeed>();
+  const ingredientsByCanonicalName = new Map<string, IngredientSeed>();
+
+  for (let item of catalog) {
+    addIngredientSeed(ingredientsByCanonicalName, {
+      canonicalName: item.name.trim(),
+      defaultCategoryKey: item.categoryKey,
+      normalizedKey: normalizeIngredientCanonicalName(item.name),
+      sourceLabel: item.name,
+    });
+  }
 
   for (let recipe of recipes) {
     for (let ingredient of recipe.ingredients) {
-      let canonicalName = normalizeIngredientCanonicalName(
-        ingredient.displayName,
-      );
-      let existing = ingredientsByCanonicalName.get(canonicalName);
+      const normalizedKey = normalizeIngredientCanonicalName(ingredient.displayName);
 
-      if (existing && existing.defaultCategoryKey !== ingredient.categoryKey) {
-        throw new Error(
-          `Ingredient "${ingredient.displayName}" is assigned to multiple categories: ` +
-            `"${existing.defaultCategoryKey}" and "${ingredient.categoryKey}".`,
-        );
-      }
-
-      if (!existing) {
-        ingredientsByCanonicalName.set(canonicalName, {
-          canonicalName,
-          defaultCategoryKey: ingredient.categoryKey,
-        });
-      }
+      addIngredientSeed(ingredientsByCanonicalName, {
+        canonicalName: normalizedKey,
+        defaultCategoryKey: ingredient.categoryKey,
+        normalizedKey,
+        sourceLabel: ingredient.displayName,
+      });
     }
   }
 
@@ -159,7 +240,45 @@ export function validateSeedData() {
     ingredientCount: buildIngredientSeeds().length,
     recipeCount: recipeSeeds.length,
     storeCount: storeSeeds.length,
+    catalogIngredientCount: catalogIngredientSeeds.length,
   };
+}
+
+function addIngredientSeed(
+  ingredientsByCanonicalName: Map<string, IngredientSeed>,
+  {
+    canonicalName,
+    defaultCategoryKey,
+    normalizedKey,
+    sourceLabel,
+  }: {
+    canonicalName: string;
+    defaultCategoryKey: IngredientCategoryKey;
+    normalizedKey: string;
+    sourceLabel: string;
+  },
+) {
+  const existing = ingredientsByCanonicalName.get(normalizedKey);
+
+  if (existing && existing.defaultCategoryKey !== defaultCategoryKey) {
+    throw new Error(
+      `Ingredient "${sourceLabel}" is assigned to multiple categories: ` +
+        `"${existing.defaultCategoryKey}" and "${defaultCategoryKey}".`,
+    );
+  }
+
+  if (!existing) {
+    ingredientsByCanonicalName.set(normalizedKey, {
+      canonicalName,
+      defaultCategoryKey,
+    });
+  }
+}
+
+function isIngredientCategoryKey(
+  categoryKey: string,
+): categoryKey is IngredientCategoryKey {
+  return ingredientCategoryKeys.has(categoryKey as IngredientCategoryKey);
 }
 
 function assertUniqueCount(

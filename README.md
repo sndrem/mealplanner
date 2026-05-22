@@ -40,7 +40,7 @@ For applying existing migrations to another database without creating a new one:
 npm run prisma:migrate:deploy
 ```
 
-5. Seed the development database with starter categories, stores, and recipes:
+5. Seed the development database with starter categories, stores, recipes, and the manual-shopping ingredient catalog (`prisma/data/catalog-ingredient-seeds.csv`):
 
 ```bash
 npm run prisma:seed

@@ -2,36 +2,35 @@
 
 ## Current Objective
 
-Issue #62 — PR ready on branch `issue/62-faster-manual-shopping`: faster manual shopping items with recents, autocomplete, and quick-add defaults.
+Issue #64 — seed a global ingredient catalog (181 items) so manual shopping typeahead works before first use. PR ready on branch `issue/64-ingredient-catalog-seed`.
 
 ## Completed
 
-- Quick-add bar on the shopping list: one-click recents, ingredient typeahead, and add-new with Annet / qty 1 defaults.
-- Server quick-add path resolves category server-side (`other` / Annet, ingredient default, or recent quantity+category).
-- Lightweight `shopping/ingredient-search` route for typeahead (avoids refetching full shopping loader).
-- `ManualShoppingQuickAdd` client component with debounced `useFetcher` search and `useSubmit` for reliable adds.
-- Collapsible advanced form retained for full-field manual entry.
-- Fixed layout jump on search and cancelled typeahead submits (unmount-before-POST).
+- Added `prisma/data/catalog-ingredient-seeds.csv` with 181 grocery/household items.
+- CSV parser and merge into `buildIngredientSeeds()` in `prisma/seed-data.ts` (catalog display casing preserved).
+- Case-insensitive ingredient upsert in `prisma/seed.ts` to avoid duplicate case variants on re-seed.
+- Tests in `prisma/seed-data.test.ts`; README and `docs/deploy-fly.md` updated for catalog seeding.
 
 ## Files To Read First
 
-- `app/components/manual-shopping-quick-add.tsx` — quick-add UI, search fetcher, submit flow
-- `app/lib/shopping-write.server.ts` — `createQuickManualShoppingItem`, value resolution
-- `app/routes/family-meal-plan-shopping.tsx` — loader/action integration
-- `app/routes/family-meal-plan-shopping-ingredient-search.ts` — typeahead loader
+- `prisma/seed-data.ts` — catalog loader, `buildIngredientSeeds`, validation
+- `prisma/data/catalog-ingredient-seeds.csv` — maintained catalog list
+- `prisma/seed.ts` — DB upsert including case-insensitive merge
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 174 tests passed (33 files)
+- `npm run test:run` — 178 tests passed (33 files)
 - `npm run typecheck` — passed
+- `npm run prisma:seed` — passed (181 ingredients)
 
 ## Open Items
 
 - PR review and merge.
-- Manual smoke-test: recent chip, typeahead pick, new name quick-add, edit line after add.
+- Production: run `DATABASE_URL=<prod> npm run prisma:seed` once for typeahead (see `docs/deploy-fly.md`).
+- Manual smoke-test: shopping quick-add type `toale` → Toalettpapir with household category.
 
 ## Next Step
 
-Merge PR when CI is green.
+Merge PR when CI is green; seed production DB if typeahead is needed there.
