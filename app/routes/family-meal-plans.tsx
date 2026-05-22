@@ -1,6 +1,7 @@
 import { Form, Link, useNavigation, type MetaFunction } from "react-router";
 
 import { requireUser } from "../lib/auth.server";
+import { countPendingReviewsForUser } from "../lib/meal-plan-share.server";
 import {
   copyMealPlan,
   createMealPlan,
@@ -57,13 +58,20 @@ export async function loader({
 }) {
   const user = await requireUser(request);
   const familyId = requireFamilyId(params.familyId);
-  const result = await listMealPlansForFamily({
-    familyId,
-    userId: user.id,
-  });
+  const [result, pendingReviewCount] = await Promise.all([
+    listMealPlansForFamily({
+      familyId,
+      userId: user.id,
+    }),
+    countPendingReviewsForUser({
+      familyId,
+      userId: user.id,
+    }),
+  ]);
 
   return {
     family: result.family,
+    pendingReviewCount,
     mealPlans: result.mealPlans.map((mealPlan) => ({
       ...mealPlan,
       activeShoppingDate: mealPlan.activeShoppingDate
@@ -237,6 +245,25 @@ export default function FamilyMealPlansRoute({
           </section>
         ) : null}
 
+        {loaderData.pendingReviewCount > 0 ? (
+          <section className="rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-5 text-amber-950 shadow-sm">
+            <h2 className="text-base font-semibold">
+              {loaderData.pendingReviewCount === 1
+                ? "1 ukeplan venter på deg"
+                : `${loaderData.pendingReviewCount} ukeplaner venter på deg`}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-amber-900">
+              Gi tilbakemelding på delte ukeplaner før de godkjennes.
+            </p>
+            <Link
+              className="mt-4 inline-flex rounded-2xl bg-amber-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-amber-950"
+              to={`/families/${loaderData.family.id}/meal-plans/reviews`}
+            >
+              Åpne gjennomgang
+            </Link>
+          </section>
+        ) : null}
+
         <section className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2">
@@ -391,7 +418,13 @@ export default function FamilyMealPlansRoute({
                             <h3 className="text-base font-semibold text-slate-950">
                               {mealPlan.title}
                             </h3>
-                            <span className="rounded-full bg-white px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600 ring-1 ring-slate-200">
+                            <span
+                              className={
+                                mealPlan.status === "APPROVED"
+                                  ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200"
+                                  : "rounded-full bg-white px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600 ring-1 ring-slate-200"
+                              }
+                            >
                               {mealPlan.status === "APPROVED"
                                 ? "Godkjent"
                                 : "Utkast"}

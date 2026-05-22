@@ -9,6 +9,11 @@ export default [
     route("app", "routes/app.tsx"),
     route("families/:familyId", "routes/family.tsx"),
     route("families/:familyId/meal-plans", "routes/family-meal-plans.tsx"),
+    route("families/:familyId/meal-plans/reviews", "routes/family-meal-plan-reviews.tsx"),
+    route(
+      "families/:familyId/meal-plans/:mealPlanId/review",
+      "routes/family-meal-plan-review.tsx",
+    ),
     route("families/:familyId/meal-plans/:mealPlanId", "routes/family-meal-plan.tsx"),
     route(
       "families/:familyId/meal-plans/:mealPlanId/calendar.ics",

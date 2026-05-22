@@ -22,6 +22,23 @@ enum MealPlanStatus {
   APPROVED
 }
 
+enum MealPlanShareStatus {
+  OPEN
+  CLOSED
+}
+
+enum MealPlanShareRecipientStatus {
+  PENDING
+  VIEWED
+  RESPONDED
+}
+
+enum MealPlanReviewQuickResponse {
+  RECENTLY_HAD
+  FISH_AGAIN
+  YES
+}
+
 enum MealType {
   BREAKFAST
   LUNCH
@@ -52,6 +69,10 @@ model User {
   updatedManualShoppingItems   ManualShoppingItem[]   @relation("ManualShoppingItemUpdatedBy")
   updatedShoppingItemOverrides ShoppingItemOverride[] @relation("ShoppingItemOverrideUpdatedBy")
   storePreferences             UserStorePreference[]
+  sharedMealPlans              MealPlanShare[]        @relation("MealPlanShareSharedBy")
+  mealPlanShareRecipients      MealPlanShareRecipient[]
+  mealPlanReviewComments       MealPlanReviewComment[] @relation("MealPlanReviewCommentAuthor")
+  addressedMealPlanReviewComments MealPlanReviewComment[] @relation("MealPlanReviewCommentAddressedBy")
 
   @@index([displayName])
 }
@@ -209,6 +230,8 @@ model MealPlan {
   entries              MealPlanEntry[]
   manualShoppingItems  ManualShoppingItem[]
   shoppingOverrides    ShoppingItemOverride[]
+  shares               MealPlanShare[]
+  reviewComments       MealPlanReviewComment[]
 
   @@index([familyId, startDate, endDate])
   @@index([approvedByUserId])
@@ -236,6 +259,63 @@ model MealPlanEntry {
   @@index([updatedByUserId])
   @@index([mealPlanId, date])
   @@index([recipeId])
+}
+
+model MealPlanShare {
+  id             String               @id @default(cuid())
+  mealPlanId     String
+  sharedByUserId String
+  message        String?
+  status         MealPlanShareStatus  @default(OPEN)
+  wholeFamily    Boolean              @default(false)
+  closedAt       DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  mealPlan       MealPlan             @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  sharedByUser   User                 @relation("MealPlanShareSharedBy", fields: [sharedByUserId], references: [id], onDelete: Cascade)
+  recipients     MealPlanShareRecipient[]
+  comments       MealPlanReviewComment[]
+
+  @@index([mealPlanId, status])
+  @@index([sharedByUserId])
+}
+
+model MealPlanShareRecipient {
+  id          String                     @id @default(cuid())
+  shareId     String
+  userId      String
+  status      MealPlanShareRecipientStatus @default(PENDING)
+  viewedAt    DateTime?
+  respondedAt DateTime?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  share       MealPlanShare              @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([shareId, userId])
+  @@index([userId, status])
+}
+
+model MealPlanReviewComment {
+  id                String                      @id @default(cuid())
+  shareId           String
+  mealPlanId        String
+  date              DateTime                    @db.Date
+  authorUserId      String
+  quickResponse     MealPlanReviewQuickResponse?
+  body              String?
+  addressedAt       DateTime?
+  addressedByUserId String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  share             MealPlanShare               @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  mealPlan          MealPlan                    @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  authorUser        User                        @relation("MealPlanReviewCommentAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  addressedByUser   User?                       @relation("MealPlanReviewCommentAddressedBy", fields: [addressedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([shareId, authorUserId, date])
+  @@index([mealPlanId, date])
+  @@index([shareId])
 }
 
 model ManualShoppingItem {

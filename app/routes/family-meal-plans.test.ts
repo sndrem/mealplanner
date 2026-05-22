@@ -19,7 +19,12 @@ vi.mock("../lib/meal-plan.server", () => {
   };
 });
 
+vi.mock("../lib/meal-plan-share.server", () => ({
+  countPendingReviewsForUser: vi.fn(),
+}));
+
 import { requireUser } from "../lib/auth.server";
+import { countPendingReviewsForUser } from "../lib/meal-plan-share.server";
 import { copyMealPlan, createMealPlan, deleteMealPlan, listMealPlansForFamily } from "../lib/meal-plan.server";
 import { action, loader } from "./family-meal-plans";
 
@@ -63,6 +68,7 @@ describe("family meal plans route", () => {
       ],
       userRole: "ADMIN",
     });
+    vi.mocked(countPendingReviewsForUser).mockResolvedValue(0);
 
     const result = await loader({
       params: {
@@ -93,6 +99,7 @@ describe("family meal plans route", () => {
         },
       ],
       notice: "meal-plan-created",
+      pendingReviewCount: 0,
     });
   });
 

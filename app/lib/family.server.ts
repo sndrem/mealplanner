@@ -104,6 +104,10 @@ export async function listFamilyMembers(familyId: string) {
   });
 }
 
+export async function listFamilyMembersForCollaboration(familyId: string) {
+  return listFamilyMembers(familyId);
+}
+
 export async function createFamilyForUser({
   userId,
   name,
