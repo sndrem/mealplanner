@@ -1123,7 +1123,7 @@ function MealPlanShareSection({
           className="mt-4 inline-flex text-sm font-medium text-emerald-700 hover:text-emerald-800"
           to={`/families/${familyId}/meal-plans/reviews`}
         >
-          Se det du skal gjennomgå
+          Se delt ukeplan
         </Link>
       </article>
     );
@@ -1142,7 +1142,7 @@ function MealPlanShareSection({
         className="mt-3 inline-flex text-sm font-medium text-emerald-700 hover:text-emerald-800"
         to={`/families/${familyId}/meal-plans/reviews`}
       >
-        Se det du skal gjennomgå
+        Til gjennomgang
       </Link>
 
       <Form className="mt-4 space-y-4" method="post">

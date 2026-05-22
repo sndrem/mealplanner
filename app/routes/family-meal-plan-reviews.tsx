@@ -92,6 +92,13 @@ export default function FamilyMealPlanReviewsRoute({
             {loaderData.reviews.map((review) => {
               const needsResponse =
                 review.status === "PENDING" || review.status === "VIEWED";
+              const statusLabel = review.isSharedByCurrentUser
+                ? needsResponse
+                  ? "Venter på familien"
+                  : "Du har svart"
+                : needsResponse
+                  ? "Venter på deg"
+                  : "Du har svart";
 
               return (
                 <article
@@ -109,7 +116,7 @@ export default function FamilyMealPlanReviewsRoute({
                           : "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800"
                       }
                     >
-                      {needsResponse ? "Venter på deg" : "Du har svart"}
+                      {statusLabel}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-slate-600">
@@ -119,7 +126,9 @@ export default function FamilyMealPlanReviewsRoute({
                     )}
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    Delt av {review.share.sharedByDisplayName}
+                    {review.isSharedByCurrentUser
+                      ? "Delt av deg"
+                      : `Delt av ${review.share.sharedByDisplayName}`}
                     {review.share.message
                       ? ` — «${review.share.message}»`
                       : null}
@@ -128,7 +137,13 @@ export default function FamilyMealPlanReviewsRoute({
                     className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
                     to={`/families/${loaderData.family.id}/meal-plans/${review.mealPlan.id}/review?shareId=${review.share.id}`}
                   >
-                    {needsResponse ? "Gi tilbakemelding" : "Se tilbakemelding"}
+                    {review.isSharedByCurrentUser
+                      ? needsResponse
+                        ? "Se delt ukeplan"
+                        : "Se tilbakemelding"
+                      : needsResponse
+                        ? "Gi tilbakemelding"
+                        : "Se tilbakemelding"}
                   </Link>
                 </article>
               );

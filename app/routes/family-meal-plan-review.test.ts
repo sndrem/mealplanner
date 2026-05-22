@@ -46,6 +46,7 @@ describe("family meal plan review route", () => {
       canApprove: true,
       days: [],
       family: { id: "family-1", name: "Solberg" },
+      isSharedByCurrentUser: false,
       mealPlan: {
         endDate: "2026-05-18",
         id: "meal-plan-1",

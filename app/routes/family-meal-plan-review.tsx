@@ -198,7 +198,9 @@ export default function FamilyMealPlanReviewRoute({
       ? "Godkjent"
       : loaderData.recipientStatus === "RESPONDED"
         ? "Du har svart"
-        : "Venter på deg";
+        : loaderData.isSharedByCurrentUser
+          ? "Delt av deg"
+          : "Venter på deg";
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-slate-100 px-4 py-6 text-slate-900">
@@ -219,7 +221,9 @@ export default function FamilyMealPlanReviewRoute({
                 )}
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                Delt av {loaderData.share.sharedByDisplayName}
+                {loaderData.isSharedByCurrentUser
+                  ? "Delt av deg"
+                  : `Delt av ${loaderData.share.sharedByDisplayName}`}
               </p>
             </div>
             <span className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-100">
@@ -229,6 +233,12 @@ export default function FamilyMealPlanReviewRoute({
           {loaderData.share.message ? (
             <p className="mt-3 rounded-2xl bg-white/10 px-3 py-2 text-sm text-slate-200">
               {loaderData.share.message}
+            </p>
+          ) : null}
+          {loaderData.isSharedByCurrentUser && loaderData.canApprove ? (
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Familien kan gi tilbakemelding. Du kan også godkjenne her når
+              planen er klar.
             </p>
           ) : null}
         </section>

@@ -22,6 +22,7 @@ const { dbMock, listFamilyMembersForCollaborationMock, requireFamilyMembershipMo
         },
         mealPlanShareRecipient: {
           count: vi.fn(),
+          create: vi.fn(),
           findFirst: vi.fn(),
           findMany: vi.fn(),
           update: vi.fn(),
@@ -56,7 +57,9 @@ import { approveMealPlan } from "./meal-plan.server";
 import {
   approveMealPlanFromShareReview,
   closeSharesForMealPlan,
+  countPendingReviewsForUser,
   createMealPlanShare,
+  listPendingReviewsForUser,
   markReviewCommentAddressed,
   upsertDayReviewComment,
 } from "./meal-plan-share.server";
@@ -95,7 +98,7 @@ describe("meal-plan-share.server", () => {
     ]);
   });
 
-  it("creates a whole-family share excluding the sharer", async () => {
+  it("creates a whole-family share including the sharer as recipient", async () => {
     dbMock.mealPlanShare.findFirst.mockResolvedValue(null);
     dbMock.mealPlanShare.create.mockResolvedValue({
       closedAt: null,
@@ -122,9 +125,48 @@ describe("meal-plan-share.server", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           recipients: {
-            create: [{ userId: "user-2" }],
+            create: expect.arrayContaining([
+              { userId: "user-1" },
+              { userId: "user-2" },
+            ]),
           },
           wholeFamily: true,
+        }),
+      }),
+    );
+  });
+
+  it("includes the sharer when sharing with selected members", async () => {
+    dbMock.mealPlanShare.findFirst.mockResolvedValue(null);
+    dbMock.mealPlanShare.create.mockResolvedValue({
+      closedAt: null,
+      createdAt: new Date("2026-05-20T10:00:00.000Z"),
+      id: "share-1",
+      mealPlanId: "meal-plan-1",
+      message: null,
+      sharedByUser: { displayName: "Ola", id: "user-1" },
+      status: "OPEN",
+      wholeFamily: false,
+    });
+
+    const result = await createMealPlanShare({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      recipientUserIds: ["user-2"],
+      userId: "user-1",
+      wholeFamily: false,
+    });
+
+    expect(result.status).toBe("CREATED");
+    expect(dbMock.mealPlanShare.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          recipients: {
+            create: expect.arrayContaining([
+              { userId: "user-1" },
+              { userId: "user-2" },
+            ]),
+          },
         }),
       }),
     );
@@ -274,6 +316,79 @@ describe("meal-plan-share.server", () => {
     expect(result.status).toBe("APPROVED");
     expect(approveMealPlan).toHaveBeenCalled();
     expect(dbMock.mealPlanShareRecipient.update).toHaveBeenCalled();
+  });
+
+  it("excludes self-initiated shares from pending review count", async () => {
+    dbMock.mealPlanShareRecipient.count.mockResolvedValue(1);
+
+    await countPendingReviewsForUser({
+      familyId: "family-1",
+      userId: "user-1",
+    });
+
+    expect(dbMock.mealPlanShareRecipient.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          share: expect.objectContaining({
+            sharedByUserId: {
+              not: "user-1",
+            },
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("backfills sharer recipient rows when listing reviews", async () => {
+    dbMock.mealPlanShare.findMany.mockResolvedValue([{ id: "share-1" }]);
+    dbMock.mealPlanShareRecipient.findFirst.mockResolvedValue(null);
+    dbMock.mealPlanShare.findFirst.mockResolvedValue({
+      id: "share-1",
+      sharedByUserId: "user-1",
+      status: "OPEN",
+    });
+    dbMock.mealPlanShareRecipient.create.mockResolvedValue({ id: "recipient-1" });
+    dbMock.mealPlanShareRecipient.findMany.mockResolvedValue([
+      {
+        id: "recipient-1",
+        respondedAt: null,
+        share: {
+          closedAt: null,
+          createdAt: new Date("2026-05-20T10:00:00.000Z"),
+          id: "share-1",
+          mealPlan: {
+            endDate: draftMealPlan.endDate,
+            id: "meal-plan-1",
+            startDate: draftMealPlan.startDate,
+            title: "Uke 20",
+          },
+          mealPlanId: "meal-plan-1",
+          message: "Sjekk middagene",
+          sharedByUser: { displayName: "Ola", id: "user-1" },
+          status: "OPEN",
+          wholeFamily: true,
+        },
+        status: "PENDING",
+        viewedAt: null,
+      },
+    ]);
+
+    const result = await listPendingReviewsForUser({
+      familyId: "family-1",
+      userId: "user-1",
+    });
+
+    expect(dbMock.mealPlanShareRecipient.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          shareId: "share-1",
+          status: "PENDING",
+          userId: "user-1",
+        },
+      }),
+    );
+    expect(result.reviews).toHaveLength(1);
+    expect(result.reviews[0]?.isSharedByCurrentUser).toBe(true);
   });
 
   it("closes open shares for a meal plan", async () => {
