@@ -85,6 +85,41 @@ export function formatOccurrenceSourceLine(occurrence: {
     : base;
 }
 
+export function formatCompactShoppingSourceLine(item: {
+  buyOnDate?: string | null;
+  occurrenceCount?: number;
+  occurrences?: Array<{ date: string; recipeTitle: string }>;
+  sourceType: string;
+}) {
+  if (item.sourceType === "GENERATED") {
+    const occurrences = item.occurrences ?? [];
+
+    if (item.occurrenceCount === 1) {
+      const recipeTitle = occurrences[0]?.recipeTitle;
+      return recipeTitle ? `Fra ${recipeTitle}` : null;
+    }
+
+    const occurrenceAttribution =
+      formatGeneratedOccurrenceAttribution(occurrences);
+
+    return occurrenceAttribution ? `Brukt i ${occurrenceAttribution}` : null;
+  }
+
+  if (item.buyOnDate) {
+    return `Manuell · Kjøpes ${formatCompactDateLabel(item.buyOnDate)}`;
+  }
+
+  return "Manuell";
+}
+
+function formatCompactDateLabel(value: string) {
+  return new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00.000Z`));
+}
+
 function formatDateLabelInSummary(value: string) {
   return new Intl.DateTimeFormat("nb-NO", {
     weekday: "long",
