@@ -17,8 +17,15 @@ vi.mock("../lib/family.server", () => {
   };
 });
 
+vi.mock("../lib/meal-plan-share.server", () => {
+  return {
+    countPendingReviewsForUser: vi.fn(),
+  };
+});
+
 import { requireUser } from "../lib/auth.server";
 import { getFamilyMembershipsForUser } from "../lib/family.server";
+import { countPendingReviewsForUser } from "../lib/meal-plan-share.server";
 import { loader } from "./app-layout";
 
 const mockUser = {
@@ -39,18 +46,20 @@ describe("app-layout loader", () => {
 
   it("returns familyId from route params on family routes", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(countPendingReviewsForUser).mockResolvedValue(2);
 
     const result = await loader({
       params: { familyId: "family-1" },
       request: buildRequest("http://localhost/families/family-1/stores"),
     } as never);
 
-    expect(result).toEqual({ familyId: "family-1" });
+    expect(result).toEqual({ familyId: "family-1", pendingReviewCount: 2 });
     expect(getFamilyMembershipsForUser).not.toHaveBeenCalled();
   });
 
   it("returns the only family on /app when the user has one membership", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(countPendingReviewsForUser).mockResolvedValue(0);
     vi.mocked(getFamilyMembershipsForUser).mockResolvedValue([
       {
         id: "membership-1",
@@ -64,7 +73,7 @@ describe("app-layout loader", () => {
       request: buildRequest("http://localhost/app"),
     } as never);
 
-    expect(result).toEqual({ familyId: "family-1" });
+    expect(result).toEqual({ familyId: "family-1", pendingReviewCount: 0 });
   });
 
   it("returns null familyId on /app when the user has multiple memberships", async () => {
@@ -87,6 +96,6 @@ describe("app-layout loader", () => {
       request: buildRequest("http://localhost/app"),
     } as never);
 
-    expect(result).toEqual({ familyId: null });
+    expect(result).toEqual({ familyId: null, pendingReviewCount: 0 });
   });
 });

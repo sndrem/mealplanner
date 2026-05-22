@@ -7,10 +7,23 @@ interface NavItem {
   to: string;
 }
 
-function buildFamilyNavItems(familyId: string): NavItem[] {
+function buildFamilyNavItems(
+  familyId: string,
+  pendingReviewCount: number,
+): NavItem[] {
+  const reviewLabel =
+    pendingReviewCount > 0
+      ? `Gjennomgang (${pendingReviewCount})`
+      : "Gjennomgang";
+
   return [
     { end: true, label: "Familie", to: `/families/${familyId}` },
     { end: false, label: "Ukeplaner", to: `/families/${familyId}/meal-plans` },
+    {
+      end: true,
+      label: reviewLabel,
+      to: `/families/${familyId}/meal-plans/reviews`,
+    },
     { end: true, label: "Butikker", to: `/families/${familyId}/stores` },
     { end: false, label: "Oppskrifter", to: `/families/${familyId}/recipes` },
     {
@@ -55,10 +68,18 @@ function NavLinks({
   );
 }
 
-export function AppTopNav({ familyId }: { familyId: string | null }) {
+export function AppTopNav({
+  familyId,
+  pendingReviewCount = 0,
+}: {
+  familyId: string | null;
+  pendingReviewCount?: number;
+}) {
   const menuId = useId();
   const [menuOpen, setMenuOpen] = useState(false);
-  const navItems = familyId ? buildFamilyNavItems(familyId) : [{ end: true, label: "Oversikt", to: "/app" }];
+  const navItems = familyId
+    ? buildFamilyNavItems(familyId, pendingReviewCount)
+    : [{ end: true, label: "Oversikt", to: "/app" }];
 
   useEffect(() => {
     if (!menuOpen) {

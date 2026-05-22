@@ -11,7 +11,10 @@ import {
 } from "./collaboration.server";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
-import { logCollaborationFailure, logCollaborationWrite } from "./write-observability.server";
+import {
+  logCollaborationFailure,
+  logCollaborationWrite,
+} from "./write-observability.server";
 
 const MEAL_PLAN_MAX_SPAN_DAYS = 7;
 const MEAL_PLAN_MAX_DAY_OFFSET = MEAL_PLAN_MAX_SPAN_DAYS - 1;
@@ -155,7 +158,8 @@ type AutoFillMealPlanEntriesInput = DeleteMealPlanInput;
 
 type MealPlanApprovalAction = "APPROVE" | "REOPEN";
 
-const AUTO_FILL_NOT_DRAFT_MESSAGE = "Godkjente ukeplaner kan ikke fylles automatisk.";
+const AUTO_FILL_NOT_DRAFT_MESSAGE =
+  "Godkjente ukeplaner kan ikke fylles automatisk.";
 const AUTO_FILL_NO_ELIGIBLE_RECIPES_MESSAGE =
   "Ingen tilgjengelige oppskrifter etter a ha utelatt middager fra de to forrige ukeplanene.";
 const AUTO_FILL_REPEAT_WARNING_MESSAGE =
@@ -181,7 +185,10 @@ export function getMealPlanDateRange(startDate: Date, endDate: Date) {
   return dates;
 }
 
-export function validateMealPlanRange(startDate: string, endDate: string): MealPlanValidationResult {
+export function validateMealPlanRange(
+  startDate: string,
+  endDate: string,
+): MealPlanValidationResult {
   const values = {
     endDate: endDate.trim(),
     startDate: startDate.trim(),
@@ -260,7 +267,10 @@ export function validateMealPlanRange(startDate: string, endDate: string): MealP
   };
 }
 
-export async function listMealPlansForFamily({ familyId, userId }: MealPlanListInput) {
+export async function listMealPlansForFamily({
+  familyId,
+  userId,
+}: MealPlanListInput) {
   const membership = await requireFamilyMembership({
     familyId,
     userId,
@@ -284,7 +294,11 @@ export async function listMealPlansForFamily({ familyId, userId }: MealPlanListI
   };
 }
 
-export async function getMealPlanForFamily({ familyId, mealPlanId, userId }: GetMealPlanInput) {
+export async function getMealPlanForFamily({
+  familyId,
+  mealPlanId,
+  userId,
+}: GetMealPlanInput) {
   const membership = await requireFamilyMembership({
     familyId,
     userId,
@@ -344,7 +358,10 @@ export async function getMealPlanPlanningData({
     orderBy: [{ title: "asc" }],
     select: recipeOptionSelect,
     where: {
-      OR: [{ scope: RecipeScope.GLOBAL }, { familyId, scope: RecipeScope.FAMILY }],
+      OR: [
+        { scope: RecipeScope.GLOBAL },
+        { familyId, scope: RecipeScope.FAMILY },
+      ],
     },
   });
 
@@ -460,7 +477,10 @@ export async function copyMealPlan(input: CopyMealPlanInput) {
         return [];
       }
 
-      const dayOffset = differenceInUtcDays(sourceMealPlan.startDate, entry.date);
+      const dayOffset = differenceInUtcDays(
+        sourceMealPlan.startDate,
+        entry.date,
+      );
       const targetDate = addUtcDays(startDate, dayOffset);
 
       if (targetDate.getTime() > endDate.getTime()) {
@@ -537,7 +557,10 @@ export async function updateMealPlan(input: UpdateMealPlanInput) {
   }
 
   if (
-    !matchesExpectedUpdatedAt(input.expectedMealPlanUpdatedAt, existingMealPlan.updatedAt)
+    !matchesExpectedUpdatedAt(
+      input.expectedMealPlanUpdatedAt,
+      existingMealPlan.updatedAt,
+    )
   ) {
     logCollaborationWrite({
       action: "update-meal-plan",
@@ -656,7 +679,11 @@ export async function updateMealPlan(input: UpdateMealPlanInput) {
   }
 }
 
-export async function deleteMealPlan({ familyId, mealPlanId, userId }: DeleteMealPlanInput) {
+export async function deleteMealPlan({
+  familyId,
+  mealPlanId,
+  userId,
+}: DeleteMealPlanInput) {
   await requireFamilyMembership({
     familyId,
     userId,
@@ -764,7 +791,10 @@ export async function autoFillMealPlanEntries({
     };
   }
 
-  const visibleDates = getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate);
+  const visibleDates = getMealPlanDateRange(
+    mealPlan.startDate,
+    mealPlan.endDate,
+  );
   const dinnerEntriesByDate = new Map(
     mealPlan.entries
       .filter((entry) => entry.mealType === PLANNING_MEAL_TYPE)
@@ -789,7 +819,10 @@ export async function autoFillMealPlanEntries({
       id: true,
     },
     where: {
-      OR: [{ scope: RecipeScope.GLOBAL }, { familyId, scope: RecipeScope.FAMILY }],
+      OR: [
+        { scope: RecipeScope.GLOBAL },
+        { familyId, scope: RecipeScope.FAMILY },
+      ],
     },
   });
   const excludedRecipeIds = await getRecentlyUsedRecipeIds({
@@ -895,7 +928,11 @@ export async function saveMealPlanEntries({
   }
 
   const values = entries.map(normalizeMealPlanEntryValues);
-  const validationError = validateMealPlanEntries(values, mealPlan.startDate, mealPlan.endDate);
+  const validationError = validateMealPlanEntries(
+    values,
+    mealPlan.startDate,
+    mealPlan.endDate,
+  );
 
   if (validationError) {
     logCollaborationWrite({
@@ -915,7 +952,9 @@ export async function saveMealPlanEntries({
     };
   }
 
-  const recipeIds = [...new Set(values.map((entry) => entry.recipeId).filter(Boolean))];
+  const recipeIds = [
+    ...new Set(values.map((entry) => entry.recipeId).filter(Boolean)),
+  ];
 
   if (recipeIds.length > 0) {
     const recipes = await db.recipe.findMany({
@@ -926,7 +965,10 @@ export async function saveMealPlanEntries({
         id: {
           in: recipeIds,
         },
-        OR: [{ scope: RecipeScope.GLOBAL }, { familyId, scope: RecipeScope.FAMILY }],
+        OR: [
+          { scope: RecipeScope.GLOBAL },
+          { familyId, scope: RecipeScope.FAMILY },
+        ],
       },
     });
 
@@ -942,14 +984,17 @@ export async function saveMealPlanEntries({
       });
 
       return {
-        formError: "Minst en valgt oppskrift er ikke tilgjengelig for familien.",
+        formError:
+          "Minst en valgt oppskrift er ikke tilgjengelig for familien.",
         status: "VALIDATION_ERROR" as const,
         values,
       };
     }
   }
 
-  const submittedDates = values.map((entry) => parseDateOnly(entry.date)!).filter(Boolean);
+  const submittedDates = values
+    .map((entry) => parseDateOnly(entry.date)!)
+    .filter(Boolean);
   const existingEntries = await db.mealPlanEntry.findMany({
     select: {
       date: true,
@@ -969,7 +1014,12 @@ export async function saveMealPlanEntries({
   const conflictingDates = values.flatMap((entry) => {
     const existingEntry = existingEntryByDate.get(entry.date);
 
-    if (matchesExpectedUpdatedAt(entryVersions[entry.date], existingEntry?.updatedAt)) {
+    if (
+      matchesExpectedUpdatedAt(
+        entryVersions[entry.date],
+        existingEntry?.updatedAt,
+      )
+    ) {
       return [];
     }
 
@@ -1001,7 +1051,9 @@ export async function saveMealPlanEntries({
         const date = parseDateOnly(entry.date);
 
         if (!date) {
-          throw new Error(`Expected validated meal plan date for "${entry.date}".`);
+          throw new Error(
+            `Expected validated meal plan date for "${entry.date}".`,
+          );
         }
 
         if (!entry.note && !entry.recipeId) {
@@ -1077,7 +1129,13 @@ export async function saveMealPlanEntries({
 }
 
 async function updateMealPlanApprovalState(
-  { entriesSnapshot, expectedMealPlanUpdatedAt, familyId, mealPlanId, userId }: MealPlanApprovalInput,
+  {
+    entriesSnapshot,
+    expectedMealPlanUpdatedAt,
+    familyId,
+    mealPlanId,
+    userId,
+  }: MealPlanApprovalInput,
   action: MealPlanApprovalAction,
 ) {
   await requireFamilyMembership({
@@ -1121,10 +1179,15 @@ async function updateMealPlanApprovalState(
   }
 
   if (action === "APPROVE") {
-    const currentEntriesSnapshot = buildMealPlanEntriesSnapshot(mealPlan.entries);
+    const currentEntriesSnapshot = buildMealPlanEntriesSnapshot(
+      mealPlan.entries,
+    );
 
     if (
-      !matchesExpectedUpdatedAt(expectedMealPlanUpdatedAt, mealPlan.updatedAt) ||
+      !matchesExpectedUpdatedAt(
+        expectedMealPlanUpdatedAt,
+        mealPlan.updatedAt,
+      ) ||
       entriesSnapshot.trim() !== currentEntriesSnapshot
     ) {
       logCollaborationWrite({
@@ -1145,28 +1208,48 @@ async function updateMealPlanApprovalState(
     }
   }
 
-  const nextStatus = action === "APPROVE" ? MealPlanStatus.APPROVED : MealPlanStatus.DRAFT;
+  const nextStatus =
+    action === "APPROVE" ? MealPlanStatus.APPROVED : MealPlanStatus.DRAFT;
 
   try {
-    const updatedMealPlan = await db.mealPlan.update({
-      data:
-        nextStatus === MealPlanStatus.APPROVED
-          ? {
-              approvedAt: new Date(),
-              approvedByUserId: userId,
-              status: MealPlanStatus.APPROVED,
-              ...buildActorUpdate(userId),
-            }
-          : {
-              approvedAt: null,
-              approvedByUserId: null,
-              status: MealPlanStatus.DRAFT,
-              ...buildActorUpdate(userId),
-            },
-      select: mealPlanDetailSelect,
-      where: {
-        id: mealPlan.id,
-      },
+    const updatedMealPlan = await db.$transaction(async (tx) => {
+      const result = await tx.mealPlan.update({
+        data:
+          nextStatus === MealPlanStatus.APPROVED
+            ? {
+                approvedAt: new Date(),
+                approvedByUserId: userId,
+                status: MealPlanStatus.APPROVED,
+                ...buildActorUpdate(userId),
+              }
+            : {
+                approvedAt: null,
+                approvedByUserId: null,
+                status: MealPlanStatus.DRAFT,
+                ...buildActorUpdate(userId),
+              },
+        select: mealPlanDetailSelect,
+        where: {
+          id: mealPlan.id,
+        },
+      });
+
+      if (nextStatus === MealPlanStatus.APPROVED) {
+        const closedAt = new Date();
+
+        await tx.mealPlanShare.updateMany({
+          data: {
+            closedAt,
+            status: "CLOSED",
+          },
+          where: {
+            mealPlanId: mealPlan.id,
+            status: "OPEN",
+          },
+        });
+      }
+
+      return result;
     });
 
     logCollaborationWrite({
@@ -1182,7 +1265,8 @@ async function updateMealPlanApprovalState(
 
     return {
       mealPlan: updatedMealPlan,
-      status: action === "APPROVE" ? ("APPROVED" as const) : ("REOPENED" as const),
+      status:
+        action === "APPROVE" ? ("APPROVED" as const) : ("REOPENED" as const),
     };
   } catch (error) {
     logCollaborationFailure({
@@ -1205,7 +1289,10 @@ function validateMealPlanInput({
   endDate,
   startDate,
   title,
-}: Pick<MealPlanMutationInput, "endDate" | "startDate" | "title">): MealPlanValidationResult {
+}: Pick<
+  MealPlanMutationInput,
+  "endDate" | "startDate" | "title"
+>): MealPlanValidationResult {
   const trimmedTitle = title.trim();
   const rangeValidation = validateMealPlanRange(startDate, endDate);
   const values = {
@@ -1239,7 +1326,10 @@ function validateMealPlanInput({
   };
 }
 
-function isMealPlanStatusTransitionAllowed(status: MealPlanStatus, action: MealPlanApprovalAction) {
+function isMealPlanStatusTransitionAllowed(
+  status: MealPlanStatus,
+  action: MealPlanApprovalAction,
+) {
   if (action === "APPROVE") {
     return status === MealPlanStatus.DRAFT;
   }
@@ -1247,7 +1337,10 @@ function isMealPlanStatusTransitionAllowed(status: MealPlanStatus, action: MealP
   return status === MealPlanStatus.APPROVED;
 }
 
-function getMealPlanApprovalTransitionError(action: MealPlanApprovalAction, currentStatus: MealPlanStatus) {
+function getMealPlanApprovalTransitionError(
+  action: MealPlanApprovalAction,
+  currentStatus: MealPlanStatus,
+) {
   if (action === "APPROVE") {
     if (currentStatus === MealPlanStatus.APPROVED) {
       return "Ukeplanen er allerede godkjent.";
@@ -1260,7 +1353,7 @@ function getMealPlanApprovalTransitionError(action: MealPlanApprovalAction, curr
     return "Ukeplanen er allerede et utkast.";
   }
 
-  return "Ukeplanen kan ikke gjenapnes fra gjeldende status.";
+  return "Ukeplanen kan ikke gjenåpnes fra gjeldende status.";
 }
 
 function shuffleRecipeIds(recipeIds: string[]) {
@@ -1310,7 +1403,9 @@ function assignRecipesToDates({
   };
 }
 
-function normalizeMealPlanEntryValues(entry: MealPlanEntryValues): MealPlanEntryValues {
+function normalizeMealPlanEntryValues(
+  entry: MealPlanEntryValues,
+): MealPlanEntryValues {
   return {
     date: entry.date.trim(),
     note: entry.note.trim(),
@@ -1318,7 +1413,11 @@ function normalizeMealPlanEntryValues(entry: MealPlanEntryValues): MealPlanEntry
   };
 }
 
-function validateMealPlanEntries(entries: MealPlanEntryValues[], startDate: Date, endDate: Date) {
+function validateMealPlanEntries(
+  entries: MealPlanEntryValues[],
+  startDate: Date,
+  endDate: Date,
+) {
   const visibleDateSet = new Set(getMealPlanDateRange(startDate, endDate));
 
   if (entries.length !== visibleDateSet.size) {
@@ -1352,7 +1451,7 @@ function validateMealPlanEntries(entries: MealPlanEntryValues[], startDate: Date
   return null;
 }
 
-function parseDateOnly(value: string) {
+export function parseDateOnly(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return null;
   }
@@ -1378,11 +1477,19 @@ function parseDateOnly(value: string) {
 function differenceInUtcDays(startDate: Date, endDate: Date) {
   const millisecondsPerDay = 1000 * 60 * 60 * 24;
 
-  return Math.round((endDate.getTime() - startDate.getTime()) / millisecondsPerDay);
+  return Math.round(
+    (endDate.getTime() - startDate.getTime()) / millisecondsPerDay,
+  );
 }
 
 function addUtcDays(date: Date, amount: number) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + amount));
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() + amount,
+    ),
+  );
 }
 
 function clampShoppingDateToRange(

@@ -13,6 +13,9 @@ const { dbMock, requireFamilyAdminMock, requireFamilyMembershipMock } = vi.hoist
         update: vi.fn(),
         updateMany: vi.fn(),
       },
+      mealPlanShare: {
+        updateMany: vi.fn(),
+      },
       mealPlanEntry: {
         createMany: vi.fn(),
         deleteMany: vi.fn(),
@@ -87,6 +90,7 @@ describe("meal-plan.server", () => {
     );
     dbMock.mealPlanEntry.findMany.mockResolvedValue([]);
     dbMock.mealPlan.updateMany.mockResolvedValue({ count: 1 });
+    dbMock.mealPlanShare.updateMany.mockResolvedValue({ count: 0 });
     dbMock.mealPlan.findUniqueOrThrow.mockResolvedValue({
       id: "meal-plan-1",
       title: "Langhelg",
@@ -570,6 +574,15 @@ describe("meal-plan.server", () => {
     expect(requireFamilyMembershipMock).toHaveBeenCalledWith({
       familyId: "family-1",
       userId: "user-1",
+    });
+    expect(dbMock.mealPlanShare.updateMany).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        status: "CLOSED",
+      }),
+      where: {
+        mealPlanId: "meal-plan-1",
+        status: "OPEN",
+      },
     });
     expect(dbMock.mealPlan.update).toHaveBeenCalledWith({
       data: expect.objectContaining({

@@ -2,35 +2,35 @@
 
 ## Current Objective
 
-Issue #67 — global top navigation bar shipped on branch `issue/67-global-top-nav`; PR ready for review.
+Issue #70 — share meal plan for family review shipped on branch `issue/70-share-meal-plan-review`; PR ready for review.
 
 ## Completed
 
-- Added `app-layout.tsx` layout route wrapping `/app` and all `/families/*` routes with a loader that resolves `familyId` from params or single membership on `/app`.
-- Added `AppTopNav` with logo placeholder (links to `/`), family nav links, active `NavLink` states, and mobile hamburger menu.
-- Restructured `app/routes.ts` so public/auth routes stay outside the layout.
-- Removed duplicate nav button row from `family.tsx` (now covered by top nav).
-- Tests: `app-top-nav.test.tsx` (5), `app-layout.test.ts` (3).
+- Added Prisma models and migration for meal plan shares, recipients, and per-day review comments with quick-response presets.
+- Implemented `meal-plan-share.server.ts`: share creation (one open share per plan), mobile review flow, approve-from-review, feedback inbox.
+- Added review routes (`family-meal-plan-reviews`, `family-meal-plan-review`) with one-tap chips (Dette hadde vi for litt siden / Fisk igjen...? / Ja!).
+- Integrated share + feedback panels on meal plan editor; nav badge for pending reviews.
+- Fixed post-approve redirect (no Forbidden), single-share guard, emerald Godkjent badge on meal plans list.
 
 ## Files To Read First
 
-- `app/routes/app-layout.tsx` — layout loader and `familyId` resolution
-- `app/components/app-top-nav.tsx` — top nav UI and link config
-- `app/routes.ts` — layout route nesting
+- `app/lib/meal-plan-share.server.ts` — share/review/approve domain logic
+- `app/routes/family-meal-plan-review.tsx` — mobile-first reviewer UI
+- `app/routes/family-meal-plan.tsx` — planner share + feedback panels
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 186 tests passed (35 files)
+- `npm run test:run` — 201 tests passed (38 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
 - PR review and merge.
-- Uncommitted local change in `app/routes/family-stores.tsx` (column reorder / rename) — not part of issue #67 commit.
-- Manual smoke: multi-family `/app`, mobile hamburger, meal-plan sub-nav unchanged.
+- Run migration on deploy: `npx prisma migrate deploy`.
+- Manual smoke: share whole family, review on mobile width, approve without comments, verify no second share while open.
 
 ## Next Step
 
-Merge PR when CI is green; optionally commit or discard `family-stores.tsx` layout tweak separately.
+Merge PR when CI is green.

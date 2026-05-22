@@ -12,6 +12,12 @@ import {
   COLLABORATION_CONFLICT_MESSAGE,
 } from "../lib/collaboration.server";
 import {
+  createMealPlanShare,
+  getMealPlanShareCreationData,
+  listSharesForMealPlan,
+  markReviewCommentAddressed,
+} from "../lib/meal-plan-share.server";
+import {
   approveMealPlan,
   autoFillMealPlanEntries,
   formatDateOnly,
@@ -27,13 +33,17 @@ type MealPlanNotice =
   | "meal-plan-auto-filled"
   | "meal-plan-created"
   | "meal-plan-entries-saved"
+  | "meal-plan-feedback-addressed"
   | "meal-plan-reopened"
+  | "meal-plan-shared"
   | "meal-plan-updated";
 type MealPlanIntent =
   | "approve-meal-plan"
   | "auto-fill-meal-plan-entries"
+  | "mark-comment-addressed"
   | "reopen-meal-plan"
   | "save-meal-plan-entries"
+  | "share-meal-plan"
   | "update-meal-plan";
 
 interface MealPlanNoticeMeta {
@@ -51,6 +61,7 @@ interface MealPlanEntryFormState {
 
 interface MealPlanActionData {
   autoFillFormError?: string;
+  commentId?: string;
   entryFormError?: string;
   entryValues?: Record<string, MealPlanEntryFormState>;
   fieldErrors?: {
@@ -60,6 +71,7 @@ interface MealPlanActionData {
   };
   formError?: string;
   intent?: MealPlanIntent;
+  shareFormError?: string;
   statusFormError?: string;
   values?: {
     endDate?: string;
@@ -134,9 +146,27 @@ export async function loader({
     return [formatDateOnly(entry.date)];
   });
 
+  const shareData =
+    result.mealPlan.status === "DRAFT"
+      ? await getMealPlanShareCreationData({
+          familyId,
+          mealPlanId,
+          userId: user.id,
+        })
+      : null;
+  const feedbackShares =
+    result.mealPlan.status === "DRAFT"
+      ? await listSharesForMealPlan({
+          familyId,
+          mealPlanId,
+          userId: user.id,
+        })
+      : [];
+
   return {
     calendarExportDates,
     family: result.family,
+    feedbackShares,
     mealPlan: {
       ...result.mealPlan,
       activeShoppingDate: result.mealPlan.activeShoppingDate
@@ -154,6 +184,8 @@ export async function loader({
     notice: getMealPlanNotice(request),
     noticeMeta: getMealPlanNoticeMeta(request),
     recipes: result.recipes,
+    activeOpenShare: shareData?.openShares[0] ?? null,
+    shareMembers: shareData?.members ?? [],
     userRole: result.userRole,
     visibleDates: result.visibleDates,
     entriesByDate,
@@ -335,6 +367,64 @@ export async function action({
     });
   }
 
+  if (intent === "share-meal-plan") {
+    const wholeFamily = formData.get("wholeFamily") === "on";
+    const recipientUserIds = formData
+      .getAll("recipientUserIds")
+      .map((value) => String(value));
+
+    const result = await createMealPlanShare({
+      familyId,
+      mealPlanId,
+      message: String(formData.get("message") ?? ""),
+      recipientUserIds,
+      userId: user.id,
+      wholeFamily,
+    });
+
+    if (
+      result.status === "VALIDATION_ERROR" ||
+      result.status === "ALREADY_SHARED"
+    ) {
+      return {
+        intent,
+        shareFormError: result.formError,
+      } satisfies MealPlanActionData;
+    }
+
+    return buildMealPlanRedirect({
+      familyId,
+      mealPlanId,
+      notice: "meal-plan-shared",
+      request,
+    });
+  }
+
+  if (intent === "mark-comment-addressed") {
+    const commentId = String(formData.get("commentId") ?? "");
+    const result = await markReviewCommentAddressed({
+      commentId,
+      familyId,
+      mealPlanId,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      return {
+        commentId,
+        intent,
+        shareFormError: "Fant ikke tilbakemeldingen.",
+      } satisfies MealPlanActionData;
+    }
+
+    return buildMealPlanRedirect({
+      familyId,
+      mealPlanId,
+      notice: "meal-plan-feedback-addressed",
+      request,
+    });
+  }
+
   if (intent !== "update-meal-plan") {
     return {
       formError: "Ukjent handling.",
@@ -399,6 +489,17 @@ export default function FamilyMealPlanRoute({
     pendingIntent === "save-meal-plan-entries";
   const isUpdatingMetadata =
     navigation.state === "submitting" && pendingIntent === "update-meal-plan";
+  const isSharingMealPlan =
+    navigation.state === "submitting" && pendingIntent === "share-meal-plan";
+  const isMarkingCommentAddressed =
+    navigation.state === "submitting" &&
+    pendingIntent === "mark-comment-addressed";
+  const openFeedbackShares = loaderData.feedbackShares.filter(
+    (share) => share.status === "OPEN",
+  );
+  const unresolvedComments = openFeedbackShares.flatMap((share) =>
+    share.comments.filter((comment) => !comment.addressedAt),
+  );
   const noticeContent = loaderData.notice
     ? getMealPlanNoticeContent(loaderData.notice, loaderData.noticeMeta)
     : null;
@@ -424,8 +525,8 @@ export default function FamilyMealPlanRoute({
         ? "Godkjenner..."
         : "Godkjenn ukeplan"
       : isReopeningMealPlan
-        ? "Gjenapner..."
-        : "Gjenapne som utkast";
+        ? "Gjenåpner..."
+        : "Gjenåpne som utkast";
   const entryValues =
     actionData?.intent === "save-meal-plan-entries" && actionData.entryValues
       ? actionData.entryValues
@@ -526,6 +627,25 @@ export default function FamilyMealPlanRoute({
             <p className="mt-2 text-sm leading-6 text-emerald-900">
               {noticeContent.description}
             </p>
+          </section>
+        ) : null}
+
+        {loaderData.mealPlan.status === "DRAFT" ? (
+          <section className="grid min-w-0 gap-6 lg:grid-cols-2">
+            <MealPlanShareSection
+              actionData={actionData}
+              activeOpenShare={loaderData.activeOpenShare}
+              familyId={loaderData.family.id}
+              isSharingMealPlan={isSharingMealPlan}
+              members={loaderData.shareMembers}
+            />
+            <MealPlanFeedbackSection
+              actionData={actionData}
+              isMarkingCommentAddressed={isMarkingCommentAddressed}
+              unresolvedCount={unresolvedComments.length}
+              visibleDates={loaderData.visibleDates}
+              shares={openFeedbackShares}
+            />
           </section>
         ) : null}
 
@@ -808,7 +928,9 @@ function getMealPlanNotice(request: Request): MealPlanNotice | null {
     notice === "meal-plan-auto-filled" ||
     notice === "meal-plan-created" ||
     notice === "meal-plan-entries-saved" ||
+    notice === "meal-plan-feedback-addressed" ||
     notice === "meal-plan-reopened" ||
+    notice === "meal-plan-shared" ||
     notice === "meal-plan-updated"
   ) {
     return notice;
@@ -904,11 +1026,21 @@ function getMealPlanNoticeContent(
           "Middagene og notatene ble lagret for den aktive perioden.",
         title: "Middager lagret",
       };
+    case "meal-plan-feedback-addressed":
+      return {
+        description: "Tilbakemeldingen er markert som behandlet.",
+        title: "Tilbakemelding behandlet",
+      };
+    case "meal-plan-shared":
+      return {
+        description: "Familiemedlemmer kan nå gi tilbakemelding på ukeplanen.",
+        title: "Ukeplan delt for gjennomgang",
+      };
     case "meal-plan-reopened":
       return {
         description:
-          "Ukeplanen er gjenapnet som utkast og kan fortsatt redigeres.",
-        title: "Ukeplan gjenapnet",
+          "Ukeplanen er gjenåpnet som utkast og kan fortsatt redigeres.",
+        title: "Ukeplan gjenåpnet",
       };
     case "meal-plan-updated":
       return {
@@ -925,6 +1057,284 @@ interface MealPlanRecipeOption {
   prepMinutes: number | null;
   tags: string[];
   title: string;
+}
+
+interface ShareMemberOption {
+  displayName: string;
+  id: string;
+  role: string;
+}
+
+interface FeedbackShare {
+  comments: Array<{
+    addressedAt: string | null;
+    authorDisplayName: string;
+    date: string;
+    feedbackLabel: string;
+    id: string;
+  }>;
+  createdAt: string;
+  id: string;
+  message: string | null;
+  recipients: Array<{
+    displayName: string;
+    status: string;
+    userId: string;
+  }>;
+  sharedByDisplayName: string;
+  wholeFamily: boolean;
+}
+
+function MealPlanShareSection({
+  actionData,
+  activeOpenShare,
+  familyId,
+  isSharingMealPlan,
+  members,
+}: {
+  actionData?: MealPlanActionData;
+  activeOpenShare: FeedbackShare | null;
+  familyId: string;
+  isSharingMealPlan: boolean;
+  members: ShareMemberOption[];
+}) {
+  if (activeOpenShare) {
+    const recipientNames = activeOpenShare.recipients
+      .map((recipient) => recipient.displayName)
+      .join(", ");
+
+    return (
+      <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <h2 className="text-lg font-semibold text-slate-950">
+          Delt for gjennomgang
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Ukeplanen venter allerede på tilbakemelding fra{" "}
+          {activeOpenShare.wholeFamily
+            ? "familien"
+            : recipientNames || "mottakerne"}
+          .{activeOpenShare.message ? ` «${activeOpenShare.message}»` : ""}
+        </p>
+        <p className="mt-3 text-sm text-slate-500">
+          Du kan ikke sende en ny gjennomgang før denne er avsluttet (for
+          eksempel når planen godkjennes).
+        </p>
+        <Link
+          className="mt-4 inline-flex text-sm font-medium text-emerald-700 hover:text-emerald-800"
+          to={`/families/${familyId}/meal-plans/reviews`}
+        >
+          Se det du skal gjennomgå
+        </Link>
+      </article>
+    );
+  }
+
+  return (
+    <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <h2 className="text-lg font-semibold text-slate-950">
+        Del for gjennomgang
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        Send ukeplanen til familien for enkel tilbakemelding på mobil. Du kan
+        bare ha én aktiv deling om gangen.
+      </p>
+      <Link
+        className="mt-3 inline-flex text-sm font-medium text-emerald-700 hover:text-emerald-800"
+        to={`/families/${familyId}/meal-plans/reviews`}
+      >
+        Se det du skal gjennomgå
+      </Link>
+
+      <Form className="mt-4 space-y-4" method="post">
+        <input name="intent" type="hidden" value="share-meal-plan" />
+
+        <label className="block space-y-2">
+          <span className="text-sm font-medium text-slate-700">
+            Valgfri melding
+          </span>
+          <input
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+            name="message"
+            placeholder="F.eks. Sjekk middagene denne uken"
+            type="text"
+          />
+        </label>
+
+        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <input className="h-4 w-4" name="wholeFamily" type="checkbox" />
+          <span className="text-sm text-slate-700">Del med hele familien</span>
+        </label>
+
+        {members.length > 0 ? (
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-slate-700">
+              Eller velg medlemmer
+            </legend>
+            <div className="grid gap-2">
+              {members.map((member) => (
+                <label
+                  key={member.id}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3"
+                >
+                  <input
+                    className="h-4 w-4"
+                    name="recipientUserIds"
+                    type="checkbox"
+                    value={member.id}
+                  />
+                  <span className="text-sm text-slate-800">
+                    {member.displayName}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ) : (
+          <p className="text-sm text-slate-500">
+            Ingen andre familiemedlemmer å dele med enn deg.
+          </p>
+        )}
+
+        {actionData?.intent === "share-meal-plan" &&
+        actionData.shareFormError ? (
+          <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {actionData.shareFormError}
+          </p>
+        ) : null}
+
+        <button
+          className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+          disabled={isSharingMealPlan || members.length === 0}
+          type="submit"
+        >
+          {isSharingMealPlan ? "Deler..." : "Del ukeplan"}
+        </button>
+      </Form>
+    </article>
+  );
+}
+
+function MealPlanFeedbackSection({
+  actionData,
+  isMarkingCommentAddressed,
+  shares,
+  unresolvedCount,
+  visibleDates,
+}: {
+  actionData?: MealPlanActionData;
+  isMarkingCommentAddressed: boolean;
+  shares: FeedbackShare[];
+  unresolvedCount: number;
+  visibleDates: string[];
+}) {
+  if (shares.length === 0) {
+    return (
+      <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <h2 className="text-lg font-semibold text-slate-950">Tilbakemelding</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Ingen aktiv deling ennå. Når noen svarer, vises tilbakemeldingene her
+          gruppert per dag.
+        </p>
+      </article>
+    );
+  }
+
+  const commentsByDate = new Map<
+    string,
+    Array<FeedbackShare["comments"][number] & { shareId: string }>
+  >();
+
+  for (const share of shares) {
+    for (const comment of share.comments) {
+      const existing = commentsByDate.get(comment.date) ?? [];
+
+      existing.push({ ...comment, shareId: share.id });
+      commentsByDate.set(comment.date, existing);
+    }
+  }
+
+  return (
+    <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-semibold text-slate-950">Tilbakemelding</h2>
+        {unresolvedCount > 0 ? (
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">
+            {unresolvedCount} ubehandlet
+          </span>
+        ) : null}
+      </div>
+
+      {shares.map((share) => (
+        <p key={share.id} className="mt-2 text-sm text-slate-600">
+          Delt av {share.sharedByDisplayName}
+          {share.wholeFamily ? " (hele familien)" : ""}
+          {share.message ? ` — «${share.message}»` : ""}
+        </p>
+      ))}
+
+      <div className="mt-4 space-y-3">
+        {visibleDates.map((date) => {
+          const comments = commentsByDate.get(date) ?? [];
+
+          if (comments.length === 0) {
+            return null;
+          }
+
+          return (
+            <div
+              key={date}
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+            >
+              <h3 className="text-sm font-semibold text-slate-900">
+                {formatWeekdayLabel(date)}
+              </h3>
+              <ul className="mt-2 space-y-2">
+                {comments.map((comment) => (
+                  <li
+                    key={comment.id}
+                    className="rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200"
+                  >
+                    <p className="text-sm font-medium text-slate-900">
+                      {comment.authorDisplayName}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-700">
+                      {comment.feedbackLabel}
+                    </p>
+                    {comment.addressedAt ? (
+                      <p className="mt-2 text-xs text-emerald-700">Behandlet</p>
+                    ) : (
+                      <Form className="mt-2" method="post">
+                        <input
+                          name="intent"
+                          type="hidden"
+                          value="mark-comment-addressed"
+                        />
+                        <input
+                          name="commentId"
+                          type="hidden"
+                          value={comment.id}
+                        />
+                        <button
+                          className="inline-flex min-h-10 items-center rounded-2xl bg-slate-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                          disabled={isMarkingCommentAddressed}
+                          type="submit"
+                        >
+                          {isMarkingCommentAddressed &&
+                          actionData?.commentId === comment.id
+                            ? "Lagrer..."
+                            : "Merk som behandlet"}
+                        </button>
+                      </Form>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </article>
+  );
 }
 
 function MealPlanApprovalSection({
