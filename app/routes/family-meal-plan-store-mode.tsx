@@ -1,6 +1,6 @@
 import { ShoppingItemSource } from "@prisma/client";
 import type { ChangeEvent } from "react";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Form,
   Link,
@@ -12,12 +12,16 @@ import {
   type MetaFunction,
 } from "react-router";
 
+import { StoreModeShoppingItemCard } from "../components/store-mode-shopping-item-card";
+import { StoreModeShoppingViewToggle } from "../components/store-mode-shopping-view-toggle";
 import { requireUser } from "../lib/auth.server";
 import {
-  formatGeneratedOccurrenceAttribution,
-  formatGeneratedQuantityBadge,
-} from "../lib/shopping-display";
-import { computeStoreModeProgress } from "../lib/shopping-store-mode-client";
+  buildStoreModeViewStorageKey,
+  computeStoreModeProgress,
+  readStoreModeShoppingView,
+  type StoreModeShoppingView,
+  writeStoreModeShoppingView,
+} from "../lib/shopping-store-mode-client";
 import { getMealPlanStoreModeData } from "../lib/shopping.server";
 import {
   toggleShoppingItemChecked,
@@ -298,6 +302,27 @@ export default function FamilyMealPlanStoreModeRoute({
       })),
     [displayItemsBySourceKey, loaderData.dueSectionGroups],
   );
+  const viewStorageKey = useMemo(
+    () =>
+      buildStoreModeViewStorageKey({
+        familyId: loaderData.family.id,
+        mealPlanId: loaderData.mealPlan.id,
+      }),
+    [loaderData.family.id, loaderData.mealPlan.id],
+  );
+  const [shoppingView, setShoppingView] = useState<StoreModeShoppingView>(
+    () => readStoreModeShoppingView(viewStorageKey),
+  );
+  const handleShoppingViewChange = useCallback(
+    (nextView: StoreModeShoppingView) => {
+      setShoppingView(nextView);
+      writeStoreModeShoppingView(viewStorageKey, nextView);
+    },
+    [viewStorageKey],
+  );
+  useEffect(() => {
+    setShoppingView(readStoreModeShoppingView(viewStorageKey));
+  }, [viewStorageKey]);
   const noticeContent = loaderData.notice
     ? getStoreModeNoticeContent(loaderData.notice)
     : null;
@@ -502,6 +527,15 @@ export default function FamilyMealPlanStoreModeRoute({
 
         {displaySectionGroups.length > 0 ? (
           <section className="grid gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-semibold text-slate-950">
+                Varer å handle
+              </h2>
+              <StoreModeShoppingViewToggle
+                onChange={handleShoppingViewChange}
+                view={shoppingView}
+              />
+            </div>
             {displaySectionGroups.map((section) => (
               <article
                 key={`${loaderData.selectedStore?.id ?? "no-store"}:${section.category.id}`}
@@ -516,111 +550,22 @@ export default function FamilyMealPlanStoreModeRoute({
                   </span>
                 </div>
 
-                <div className="mt-4 grid gap-3">
-                  {section.items.map((item) => {
-                    const quantityBadge = formatGeneratedQuantityBadge(item);
-                    const recipeAttribution =
-                      item.sourceType === "GENERATED"
-                        ? item.occurrenceCount === 1
-                          ? (item.occurrences[0]?.recipeTitle ?? null)
-                          : formatGeneratedOccurrenceAttribution(
-                              item.occurrences,
-                            )
-                        : null;
-
-                    return (
-                      <div key={item.sourceKey} className="block">
-                        <button
-                          aria-label={
-                            item.checked
-                              ? `Marker ${item.name} som ikke handlet`
-                              : `Marker ${item.name} som handlet`
-                          }
-                          aria-pressed={item.checked}
-                          className={
-                            item.checked
-                              ? "flex w-full cursor-pointer touch-manipulation items-start gap-4 rounded-[24px] border border-emerald-200 bg-emerald-50 p-4 text-left transition hover:bg-emerald-100 active:bg-emerald-200"
-                              : "flex w-full cursor-pointer touch-manipulation items-start gap-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4 text-left transition hover:bg-slate-100 active:bg-slate-200"
-                          }
-                          onClick={() => handleToggle(item)}
-                          type="button"
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={
-                              item.checked
-                                ? "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg font-semibold text-white"
-                                : "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-lg font-semibold text-slate-400"
-                            }
-                          >
-                            {item.checked ? "✓" : ""}
-                          </span>
-
-                          <span className="min-w-0 flex-1">
-                            <span className="flex flex-wrap items-center gap-2">
-                              <span className="text-base font-semibold text-slate-950">
-                                {item.name}
-                              </span>
-                              {quantityBadge ? (
-                                <span
-                                  className={
-                                    item.sourceType === "GENERATED" &&
-                                    !item.quantityLabel &&
-                                    item.occurrenceCount > 1
-                                      ? "rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800"
-                                      : "rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
-                                  }
-                                >
-                                  {quantityBadge}
-                                </span>
-                              ) : null}
-                              {item.sourceType === "MANUAL" ? (
-                                <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700">
-                                  Manuell
-                                </span>
-                              ) : null}
-                              {item.sourceType === "GENERATED" &&
-                              item.preferredStoreConflict ? (
-                                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-                                  Ulike foretrukne butikker
-                                </span>
-                              ) : null}
-                              {item.preferredStore &&
-                              item.preferredStore.id !==
-                                loaderData.selectedStore?.id ? (
-                                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-                                  Foretrekker {item.preferredStore.name}
-                                </span>
-                              ) : null}
-                            </span>
-
-                            <span className="mt-2 block text-sm leading-6 text-slate-600">
-                              {item.sourceType === "GENERATED"
-                                ? item.occurrenceCount === 1
-                                  ? `Fra ${recipeAttribution} fram til ${formatDateLabel(item.lastDate)}.`
-                                  : `Brukt i ${recipeAttribution}.`
-                                : item.buyOnDate
-                                  ? `Manuell vare planlagt for ${formatDateLabel(item.buyOnDate)}.`
-                                  : "Manuell vare uten spesifikk handledato."}
-                            </span>
-
-                            {item.note ? (
-                              <span className="mt-2 block text-sm leading-6 text-slate-700">
-                                Notat: {item.note}
-                              </span>
-                            ) : null}
-                            {item.sourceType === "GENERATED" &&
-                            item.postponedUntilDate ? (
-                              <span className="mt-2 block text-sm leading-6 text-amber-800">
-                                Utsatt til{" "}
-                                {formatDateLabel(item.postponedUntilDate)}.
-                              </span>
-                            ) : null}
-                          </span>
-                        </button>
-                      </div>
-                    );
-                  })}
+                <div
+                  className={
+                    shoppingView === "grid"
+                      ? "mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+                      : "mt-4 flex flex-col gap-3"
+                  }
+                >
+                  {section.items.map((item) => (
+                    <StoreModeShoppingItemCard
+                      key={item.sourceKey}
+                      item={item}
+                      layout={shoppingView}
+                      onToggle={() => handleToggle(item)}
+                      selectedStoreId={loaderData.selectedStore?.id}
+                    />
+                  ))}
                 </div>
               </article>
             ))}

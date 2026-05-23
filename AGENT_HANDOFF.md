@@ -2,34 +2,34 @@
 
 ## Current Objective
 
-Issue #78 — store mode optimistic check-off with localStorage sync; branch `issue/78-store-mode-offline-sync`, ready for PR.
+Issue #80 — store mode optional grid view for due shopping items; branch `issue/80-store-mode-grid-view`, ready for PR.
 
 ## Completed
 
-- Client queue module (`shopping-store-mode-client.ts`) with localStorage persistence, merge, reconcile, and progress helpers.
-- `useStoreModeToggleSync` hook: optimistic toggles, serial background sync, delayed sync banner (800ms), stable fetcher refs to avoid request loops.
-- Store mode route uses button toggles (always interactive), merged progress/sections, separate sync vs form error banners.
-- Shared `getToggleExpectedVersion` moved to client module; shopping route imports it.
-- Unit tests for queue client (9 tests).
+- View preference helpers in `shopping-store-mode-client.ts` (`list` | `grid`, localStorage per family/meal plan).
+- `StoreModeShoppingViewToggle` segmented control (Liste / Rutenett) with radiogroup a11y.
+- `StoreModeShoppingItemCard` shared item UI for list and grid layouts.
+- Store mode route: header + toggle above due sections; responsive grid within section groups; preference persists across reload.
+- Unit tests for view storage (13 tests in shopping-store-mode-client suite).
 
 ## Files To Read First
 
-- `app/lib/use-store-mode-toggle-sync.ts` — queue drain, revalidate when queue empty, loop fixes
-- `app/lib/shopping-store-mode-client.ts` — storage key, reconcile, merge
-- `app/routes/family-meal-plan-store-mode.tsx` — UI wiring and banners
+- `app/routes/family-meal-plan-store-mode.tsx` — view state, section layouts, toggle placement
+- `app/components/store-mode-shopping-item-card.tsx` — list vs grid card markup
+- `app/lib/shopping-store-mode-client.ts` — view storage key read/write
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 221 tests passed (40 files)
+- `npm run test:run` — 225 tests passed (40 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
 - PR review and merge.
-- Manual smoke: fast connection (no sync banner flash), offline tick + reload + reconnect, stale localStorage queue clears after sync.
+- Manual smoke: toggle list/grid, reload persistence, check-off in grid, empty due list hides toggle, narrow viewport tap targets.
 
 ## Next Step
 
-Merge PR when CI is green; closes #78.
+Merge PR when CI is green; closes #80.
