@@ -1,5 +1,5 @@
 import { ShoppingItemSource } from "@prisma/client";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ComponentProps } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Form,
@@ -12,14 +12,19 @@ import {
   type MetaFunction,
 } from "react-router";
 
+import { StoreModeDeprioritizeBoughtToggle } from "../components/store-mode-deprioritize-bought-toggle";
 import { StoreModeShoppingItemCard } from "../components/store-mode-shopping-item-card";
 import { StoreModeShoppingViewToggle } from "../components/store-mode-shopping-view-toggle";
 import { requireUser } from "../lib/auth.server";
 import {
+  buildStoreModeDeprioritizeBoughtStorageKey,
   buildStoreModeViewStorageKey,
   computeStoreModeProgress,
+  partitionStoreModeSections,
+  readStoreModeDeprioritizeBought,
   readStoreModeShoppingView,
   type StoreModeShoppingView,
+  writeStoreModeDeprioritizeBought,
   writeStoreModeShoppingView,
 } from "../lib/shopping-store-mode-client";
 import { getMealPlanStoreModeData } from "../lib/shopping.server";
@@ -310,8 +315,19 @@ export default function FamilyMealPlanStoreModeRoute({
       }),
     [loaderData.family.id, loaderData.mealPlan.id],
   );
+  const deprioritizeBoughtStorageKey = useMemo(
+    () =>
+      buildStoreModeDeprioritizeBoughtStorageKey({
+        familyId: loaderData.family.id,
+        mealPlanId: loaderData.mealPlan.id,
+      }),
+    [loaderData.family.id, loaderData.mealPlan.id],
+  );
   const [shoppingView, setShoppingView] = useState<StoreModeShoppingView>(
     () => readStoreModeShoppingView(viewStorageKey),
+  );
+  const [deprioritizeBought, setDeprioritizeBought] = useState(() =>
+    readStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey),
   );
   const handleShoppingViewChange = useCallback(
     (nextView: StoreModeShoppingView) => {
@@ -320,9 +336,30 @@ export default function FamilyMealPlanStoreModeRoute({
     },
     [viewStorageKey],
   );
+  const handleDeprioritizeBoughtChange = useCallback(
+    (enabled: boolean) => {
+      setDeprioritizeBought(enabled);
+      writeStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey, enabled);
+    },
+    [deprioritizeBoughtStorageKey],
+  );
   useEffect(() => {
     setShoppingView(readStoreModeShoppingView(viewStorageKey));
   }, [viewStorageKey]);
+  useEffect(() => {
+    setDeprioritizeBought(
+      readStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey),
+    );
+  }, [deprioritizeBoughtStorageKey]);
+  type StoreModeDisplayItem = (typeof displayDueItems)[number];
+  type StoreModeDisplaySection = (typeof displaySectionGroups)[number];
+  const { activeSections, boughtItems } = useMemo((): {
+    activeSections: StoreModeDisplaySection[];
+    boughtItems: StoreModeDisplayItem[];
+  } => partitionStoreModeSections(displaySectionGroups, deprioritizeBought), [
+    deprioritizeBought,
+    displaySectionGroups,
+  ]);
   const noticeContent = loaderData.notice
     ? getStoreModeNoticeContent(loaderData.notice)
     : null;
@@ -531,44 +568,68 @@ export default function FamilyMealPlanStoreModeRoute({
               <h2 className="text-lg font-semibold text-slate-950">
                 Varer å handle
               </h2>
-              <StoreModeShoppingViewToggle
-                onChange={handleShoppingViewChange}
-                view={shoppingView}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <StoreModeDeprioritizeBoughtToggle
+                  enabled={deprioritizeBought}
+                  onChange={handleDeprioritizeBoughtChange}
+                />
+                <StoreModeShoppingViewToggle
+                  onChange={handleShoppingViewChange}
+                  view={shoppingView}
+                />
+              </div>
             </div>
-            {displaySectionGroups.map((section) => (
-              <article
-                key={`${loaderData.selectedStore?.id ?? "no-store"}:${section.category.id}`}
-                className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
-              >
+            {activeSections.length > 0 ? (
+              activeSections.map((section) => (
+                <article
+                  key={`${loaderData.selectedStore?.id ?? "no-store"}:${section.category.id}`}
+                  className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-semibold text-slate-950">
+                      {section.displayName}
+                    </h2>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                      {section.items.length} varer
+                    </span>
+                  </div>
+
+                  <StoreModeItemGrid
+                    items={section.items}
+                    layout={shoppingView}
+                    onToggleItem={handleToggle}
+                    selectedStoreId={loaderData.selectedStore?.id}
+                  />
+                </article>
+              ))
+            ) : deprioritizeBought ? (
+              <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <h3 className="text-base font-semibold text-slate-950">
+                  Alt er krysset av
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  Du har handlet alle varene for denne turen. Kjøpte varer ligger
+                  nedenfor hvis du vil se eller endre dem.
+                </p>
+              </article>
+            ) : null}
+            {deprioritizeBought && boughtItems.length > 0 ? (
+              <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-slate-950">
-                    {section.displayName}
-                  </h2>
+                  <h2 className="text-lg font-semibold text-slate-950">Kjøpt</h2>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                    {section.items.length} varer
+                    {boughtItems.length} varer
                   </span>
                 </div>
 
-                <div
-                  className={
-                    shoppingView === "grid"
-                      ? "mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
-                      : "mt-4 flex flex-col gap-2"
-                  }
-                >
-                  {section.items.map((item) => (
-                    <StoreModeShoppingItemCard
-                      key={item.sourceKey}
-                      item={item}
-                      layout={shoppingView}
-                      onToggle={() => handleToggle(item)}
-                      selectedStoreId={loaderData.selectedStore?.id}
-                    />
-                  ))}
-                </div>
+                <StoreModeItemGrid
+                  items={boughtItems}
+                  layout={shoppingView}
+                  onToggleItem={handleToggle}
+                  selectedStoreId={loaderData.selectedStore?.id}
+                />
               </article>
-            ))}
+            ) : null}
           </section>
         ) : (
           <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -722,6 +783,38 @@ function buildStoreModeRedirect({
   url.searchParams.set("notice", notice);
 
   return Response.redirect(url, 302);
+}
+
+function StoreModeItemGrid<TItem extends ComponentProps<typeof StoreModeShoppingItemCard>["item"]>({
+  items,
+  layout,
+  onToggleItem,
+  selectedStoreId,
+}: {
+  items: TItem[];
+  layout: StoreModeShoppingView;
+  onToggleItem: (item: TItem) => void;
+  selectedStoreId?: string;
+}) {
+  return (
+    <div
+      className={
+        layout === "grid"
+          ? "mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
+          : "mt-4 flex flex-col gap-2"
+      }
+    >
+      {items.map((item) => (
+        <StoreModeShoppingItemCard
+          key={item.sourceKey}
+          item={item}
+          layout={layout}
+          onToggle={() => onToggleItem(item)}
+          selectedStoreId={selectedStoreId}
+        />
+      ))}
+    </div>
+  );
 }
 
 function submitSelectForm(
