@@ -12,6 +12,15 @@ vi.mock("../lib/auth.server", async () => {
 vi.mock("../lib/shopping.server", () => {
   return {
     getMealPlanStoreModeData: vi.fn(),
+    listRecentManualShoppingItemsForFamily: vi.fn(),
+  };
+});
+
+vi.mock("../lib/family-shopping-write.server", () => {
+  return {
+    createQuickFamilyShoppingItem: vi.fn(),
+    parseQuickAddFamilyShoppingItemInput: vi.fn(),
+    toggleFamilyShoppingItemChecked: vi.fn(),
   };
 });
 
@@ -28,8 +37,15 @@ vi.mock("../lib/store-write.server", () => {
   };
 });
 
+import {
+  createQuickFamilyShoppingItem,
+  parseQuickAddFamilyShoppingItemInput,
+} from "../lib/family-shopping-write.server";
 import { requireUser } from "../lib/auth.server";
-import { getMealPlanStoreModeData } from "../lib/shopping.server";
+import {
+  getMealPlanStoreModeData,
+  listRecentManualShoppingItemsForFamily,
+} from "../lib/shopping.server";
 import { toggleShoppingItemChecked, updateActiveShoppingDate } from "../lib/shopping-write.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
 import { action, loader } from "./family-meal-plan-store-mode";
@@ -58,6 +74,14 @@ describe("family meal plan store mode route", () => {
 
   it("loads and serializes store mode data", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([
+      {
+        categoryId: "",
+        displayName: "Melk",
+        nameNormalized: "melk",
+        quantity: "",
+      },
+    ]);
     vi.mocked(getMealPlanStoreModeData).mockResolvedValue({
       activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
       dueSectionGroups: [
@@ -161,6 +185,17 @@ describe("family meal plan store mode route", () => {
       mealPlanId: "meal-plan-1",
       userId: "user-1",
     });
+    expect(listRecentManualShoppingItemsForFamily).toHaveBeenCalledWith({
+      familyId: "family-1",
+    });
+    expect(result.recentManualItems).toEqual([
+      {
+        categoryId: "",
+        displayName: "Melk",
+        nameNormalized: "melk",
+        quantity: "",
+      },
+    ]);
     expect(result.activeShoppingDate).toBe("2026-05-16");
     expect(result.mealPlan.activeShoppingDate).toBe("2026-05-16");
     expect(result.dueSectionGroups[0]?.items[0]).toEqual(
@@ -209,6 +244,83 @@ describe("family meal plan store mode route", () => {
       },
       activeShoppingDateValue: "2026-05-20",
       intent: "update-active-shopping-date",
+    });
+  });
+
+  it("redirects after a family quick-add", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
+      ingredientId: "ingredient-1",
+      name: "Melk",
+      recentNameNormalized: "",
+    });
+    vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({
+      status: "CREATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "quick-add-family-shopping-item");
+    formData.set("name", "Melk");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(undefined, formData),
+    });
+
+    expect(createQuickFamilyShoppingItem).toHaveBeenCalledWith({
+      familyId: "family-1",
+      input: {
+        ingredientId: "ingredient-1",
+        name: "Melk",
+        recentNameNormalized: "",
+      },
+      userId: "user-1",
+    });
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).headers.get("Location")).toBe(
+      "http://localhost/families/family-1/meal-plans/meal-plan-1/store-mode?notice=family-shopping-item-added",
+    );
+  });
+
+  it("returns quick-add validation errors without redirecting", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
+      ingredientId: "",
+      name: "",
+      recentNameNormalized: "",
+    });
+    vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({
+      fieldErrors: {
+        name: "Skriv inn et varenavn.",
+      },
+      formError: "Kunne ikke legge til varen.",
+      status: "VALIDATION_ERROR",
+      values: {
+        categoryId: "",
+        name: "",
+        note: "",
+        preferredStoreId: "",
+        quantity: "",
+      },
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "quick-add-family-shopping-item");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(undefined, formData),
+    });
+
+    expect(result).toEqual({
+      formError: "Kunne ikke legge til varen.",
+      intent: "quick-add-family-shopping-item",
     });
   });
 

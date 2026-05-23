@@ -17,6 +17,13 @@ interface ManualShoppingQuickAddProps {
   ingredientSearchPath: string;
   quickAddIntent?: string;
   recentManualItems: RecentManualShoppingItem[];
+  /**
+   * Compact docked layout: hides label/description and recently used items
+   * until the input is focused, then slides them up above the input.
+   * Search dropdown also opens upward. Intended for fixed bottom bars where
+   * the thumb-reachable input should stay small until the user engages.
+   */
+  revealOnFocus?: boolean;
 }
 
 const MIN_SEARCH_LENGTH = 2;
@@ -27,6 +34,7 @@ export function ManualShoppingQuickAdd({
   ingredientSearchPath,
   quickAddIntent = DEFAULT_QUICK_ADD_INTENT,
   recentManualItems,
+  revealOnFocus = false,
 }: ManualShoppingQuickAddProps) {
   const listboxId = useId();
   const navigation = useNavigation();
@@ -36,6 +44,7 @@ export function ManualShoppingQuickAdd({
   });
   const [query, setQuery] = useState("");
   const [isListOpen, setIsListOpen] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [displayedResults, setDisplayedResults] = useState<IngredientSearchResult[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastRequestedQueryRef = useRef<string | null>(null);
@@ -104,6 +113,7 @@ export function ManualShoppingQuickAdd({
     function handlePointerDown(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
         setIsListOpen(false);
+        setIsInputFocused(false);
       }
     }
 
@@ -120,6 +130,7 @@ export function ManualShoppingQuickAdd({
     }
 
     setIsListOpen(false);
+    setIsInputFocused(false);
     setQuery("");
     lastRequestedQueryRef.current = null;
   }, [isQuickAdding]);
@@ -134,19 +145,62 @@ export function ManualShoppingQuickAdd({
   );
   const showDropdown = isListOpen && trimmedQuery.length >= MIN_SEARCH_LENGTH;
   const showCreateOption = trimmedQuery.length > 0 && !hasExactMatch && !isSearching;
+  const isExpanded =
+    !revealOnFocus || isInputFocused || trimmedQuery.length > 0;
+  const recentsBlock =
+    recentManualItems.length > 0 ? (
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-slate-700">Nylig brukt</p>
+        <div className="flex flex-wrap gap-2">
+          {recentManualItems.map((item) => (
+            <button
+              key={item.nameNormalized}
+              className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isQuickAdding}
+              onClick={() => {
+                submitQuickAdd({ recentNameNormalized: item.nameNormalized });
+              }}
+              type="button"
+            >
+              {item.displayName}
+            </button>
+          ))}
+        </div>
+      </div>
+    ) : null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2">
-        <label className="block text-sm font-medium text-slate-700" htmlFor={`${listboxId}-input`}>
-          Legg til vare
-        </label>
+    <div className="flex flex-col gap-3" ref={containerRef}>
+      <label
+        className={
+          revealOnFocus
+            ? "sr-only"
+            : "block text-sm font-medium text-slate-700"
+        }
+        htmlFor={`${listboxId}-input`}
+      >
+        Legg til vare
+      </label>
+      {!revealOnFocus ? (
         <p className="text-sm leading-6 text-slate-600">
           Søk i ingrediensregisteret, skriv et nytt navn, eller velg en nylig brukt vare.
         </p>
-      </div>
+      ) : null}
 
-      <div className="relative" ref={containerRef}>
+      {revealOnFocus && recentsBlock ? (
+        <div
+          aria-hidden={!isExpanded}
+          className={`grid transition-[grid-template-rows,opacity,transform] duration-200 ease-out ${
+            isExpanded
+              ? "translate-y-0 grid-rows-[1fr] opacity-100"
+              : "pointer-events-none -translate-y-1 grid-rows-[0fr] opacity-0"
+          }`}
+        >
+          <div className="overflow-hidden">{recentsBlock}</div>
+        </div>
+      ) : null}
+
+      <div className="relative">
         <div className="flex gap-2">
           <input
             aria-autocomplete="list"
@@ -161,6 +215,7 @@ export function ManualShoppingQuickAdd({
             }}
             onFocus={() => {
               setIsListOpen(true);
+              setIsInputFocused(true);
             }}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
@@ -191,7 +246,11 @@ export function ManualShoppingQuickAdd({
 
         {showDropdown ? (
           <ul
-            className="absolute z-10 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg"
+            className={
+              revealOnFocus
+                ? "absolute bottom-full z-10 mb-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg"
+                : "absolute z-10 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg"
+            }
             id={listboxId}
             role="listbox"
           >
@@ -233,26 +292,7 @@ export function ManualShoppingQuickAdd({
         ) : null}
       </div>
 
-      {recentManualItems.length > 0 ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-700">Nylig brukt</p>
-          <div className="flex flex-wrap gap-2">
-            {recentManualItems.map((item) => (
-              <button
-                key={item.nameNormalized}
-                className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isQuickAdding}
-                onClick={() => {
-                  submitQuickAdd({ recentNameNormalized: item.nameNormalized });
-                }}
-                type="button"
-              >
-                {item.displayName}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {!revealOnFocus && recentsBlock ? recentsBlock : null}
     </div>
   );
 }

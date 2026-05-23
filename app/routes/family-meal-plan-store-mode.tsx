@@ -12,10 +12,16 @@ import {
   type MetaFunction,
 } from "react-router";
 
+import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
 import { StoreModeDeprioritizeBoughtToggle } from "../components/store-mode-deprioritize-bought-toggle";
 import { StoreModeShoppingItemCard } from "../components/store-mode-shopping-item-card";
 import { StoreModeShoppingViewToggle } from "../components/store-mode-shopping-view-toggle";
 import { requireUser } from "../lib/auth.server";
+import {
+  createQuickFamilyShoppingItem,
+  parseQuickAddFamilyShoppingItemInput,
+  toggleFamilyShoppingItemChecked,
+} from "../lib/family-shopping-write.server";
 import {
   buildStoreModeDeprioritizeBoughtStorageKey,
   buildStoreModeViewStorageKey,
@@ -27,8 +33,10 @@ import {
   writeStoreModeDeprioritizeBought,
   writeStoreModeShoppingView,
 } from "../lib/shopping-store-mode-client";
-import { toggleFamilyShoppingItemChecked } from "../lib/family-shopping-write.server";
-import { getMealPlanStoreModeData } from "../lib/shopping.server";
+import {
+  getMealPlanStoreModeData,
+  listRecentManualShoppingItemsForFamily,
+} from "../lib/shopping.server";
 import {
   toggleShoppingItemChecked,
   updateActiveShoppingDate,
@@ -41,10 +49,12 @@ import {
 
 type StoreModeNotice =
   | "active-shopping-date-updated"
+  | "family-shopping-item-added"
   | "selected-store-updated"
   | "shopping-item-check-state-updated";
 
 type StoreModeIntent =
+  | "quick-add-family-shopping-item"
   | "toggle-family-shopping-item-checked"
   | "toggle-shopping-item-checked"
   | "update-active-shopping-date"
@@ -95,11 +105,16 @@ export async function loader({
     params.mealPlanId,
     "Fant ikke ukeplanen.",
   );
-  const result = await getMealPlanStoreModeData({
-    familyId,
-    mealPlanId,
-    userId: user.id,
-  });
+  const [result, recentManualItems] = await Promise.all([
+    getMealPlanStoreModeData({
+      familyId,
+      mealPlanId,
+      userId: user.id,
+    }),
+    listRecentManualShoppingItemsForFamily({
+      familyId,
+    }),
+  ]);
 
   return {
     activeShoppingDate: formatDateOnly(result.activeShoppingDate),
@@ -123,6 +138,7 @@ export async function loader({
     },
     notice: getStoreModeNotice(request),
     progress: result.progress,
+    recentManualItems,
     selectedStore: result.selectedStore,
     stockIngredientCount: result.stockIngredientCount,
     stores: result.stores,
@@ -209,6 +225,28 @@ export async function action({
       familyId,
       mealPlanId,
       notice: "selected-store-updated",
+      request,
+    });
+  }
+
+  if (intent === "quick-add-family-shopping-item") {
+    const result = await createQuickFamilyShoppingItem({
+      familyId,
+      input: parseQuickAddFamilyShoppingItemInput(formData),
+      userId: user.id,
+    });
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: "formError" in result ? result.formError : undefined,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    return buildStoreModeRedirect({
+      familyId,
+      mealPlanId,
+      notice: "family-shopping-item-added",
       request,
     });
   }
@@ -411,62 +449,55 @@ export default function FamilyMealPlanStoreModeRoute({
     actionData.activeShoppingDateValue
       ? actionData.activeShoppingDateValue
       : loaderData.activeShoppingDate;
+  const ingredientSearchPath = `/families/${loaderData.family.id}/shopping/ingredient-search`;
+  const quickAddFormError =
+    actionData?.intent === "quick-add-family-shopping-item"
+      ? actionData.formError
+      : undefined;
+  const generalFormError =
+    actionData?.formError &&
+    actionData.intent !== "quick-add-family-shopping-item"
+      ? actionData.formError
+      : undefined;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-900">
+    <main className="min-h-screen bg-slate-100 px-4 pb-36 pt-8 text-slate-900">
       <div className="mx-auto flex max-w-4xl flex-col gap-5">
-        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
-                  Butikkmodus
-                </span>
-                <h1 className="mt-4 text-3xl font-semibold tracking-tight">
-                  {loaderData.mealPlan.title}
-                </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                  Storflatevisning for handleturen med seksjonsrekkefølge fra
-                  valgt butikk og varer fra handledato og utover i ukeplanen.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
-                  to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
-                >
-                  Åpne handleliste
-                </Link>
-                <Link
-                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                  to={`/families/${loaderData.family.id}/stores`}
-                >
-                  Administrer butikker
-                </Link>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[24px] bg-white/10 p-4">
-                <p className="text-sm text-slate-300">Aktiv butikk</p>
-                <p className="mt-1 text-lg font-semibold">
-                  {loaderData.selectedStore?.name ?? "Ingen valgt butikk"}
-                </p>
-              </div>
-              <div className="rounded-[24px] bg-white/10 p-4">
-                <p className="text-sm text-slate-300">Handledato</p>
-                <p className="mt-1 text-lg font-semibold">
-                  {formatDateLabel(loaderData.activeShoppingDate)}
-                </p>
-              </div>
-              <div className="rounded-[24px] bg-emerald-500/20 p-4 ring-1 ring-emerald-400/30">
-                <p className="text-sm text-emerald-100">Fremdrift</p>
-                <p className="mt-1 text-lg font-semibold">
-                  {displayProgress.checkedCount}/{displayProgress.totalCount}{" "}
-                  varer krysset av
-                </p>
-              </div>
-            </div>
+        <section className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-slate-200">
+          <h1 className="min-w-0 truncate font-semibold text-slate-950">
+            {loaderData.mealPlan.title}
+          </h1>
+          <span className="hidden text-slate-300 sm:inline" aria-hidden="true">
+            ·
+          </span>
+          <span className="truncate text-slate-600">
+            {loaderData.selectedStore?.name ?? "Ingen butikk"}
+          </span>
+          <span className="hidden text-slate-300 sm:inline" aria-hidden="true">
+            ·
+          </span>
+          <span className="truncate text-slate-600">
+            {formatDateLabel(loaderData.activeShoppingDate)}
+          </span>
+          <span className="hidden text-slate-300 sm:inline" aria-hidden="true">
+            ·
+          </span>
+          <span className="shrink-0 font-medium text-emerald-700">
+            {displayProgress.checkedCount}/{displayProgress.totalCount}
+          </span>
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <Link
+              className="text-slate-600 underline-offset-2 hover:text-slate-950 hover:underline"
+              to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
+            >
+              Handleliste
+            </Link>
+            <Link
+              className="text-slate-600 underline-offset-2 hover:text-slate-950 hover:underline"
+              to={`/families/${loaderData.family.id}/stores`}
+            >
+              Butikker
+            </Link>
           </div>
         </section>
 
@@ -496,12 +527,12 @@ export default function FamilyMealPlanStoreModeRoute({
           </section>
         ) : null}
 
-        {actionData?.formError ? (
+        {generalFormError ? (
           <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
             <h2 className="text-base font-semibold">
               Kunne ikke oppdatere butikkmodus
             </h2>
-            <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
+            <p className="mt-2 text-sm leading-6">{generalFormError}</p>
           </section>
         ) : null}
 
@@ -523,82 +554,94 @@ export default function FamilyMealPlanStoreModeRoute({
           </section>
         ) : null}
 
-        <section className="grid gap-4 sm:grid-cols-2">
-          <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Velg butikk
-            </h2>
-            <Form className="mt-4 space-y-3" method="post">
-              <input
-                name="intent"
-                type="hidden"
-                value="update-selected-store"
-              />
-              <select
-                aria-busy={isSavingStore}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:cursor-wait disabled:bg-slate-50"
-                defaultValue={selectedStoreValue}
-                disabled={isSavingStore}
-                name="selectedStoreId"
-                onChange={(event) => {
-                  submitSelectForm(event, selectedStoreValue, submit);
-                }}
-              >
-                {loaderData.stores.map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.name}
-                  </option>
-                ))}
-              </select>
-              {actionData?.intent === "update-selected-store" &&
-              actionData.selectedStoreFieldErrors?.selectedStoreId ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.selectedStoreFieldErrors.selectedStoreId}
-                </p>
-              ) : null}
-            </Form>
-          </article>
+        <details className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <summary className="cursor-pointer text-sm font-medium text-slate-800">
+            Butikk og handledato
+            <span className="ml-2 font-normal text-slate-500">
+              {loaderData.selectedStore?.name ?? "Ingen butikk"} ·{" "}
+              {formatDateLabel(loaderData.activeShoppingDate)}
+            </span>
+          </summary>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <article>
+              <h2 className="text-base font-semibold text-slate-950">
+                Velg butikk
+              </h2>
+              <Form className="mt-4 space-y-3" method="post">
+                <input
+                  name="intent"
+                  type="hidden"
+                  value="update-selected-store"
+                />
+                <select
+                  aria-busy={isSavingStore}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:cursor-wait disabled:bg-slate-50"
+                  defaultValue={selectedStoreValue}
+                  disabled={isSavingStore}
+                  name="selectedStoreId"
+                  onChange={(event) => {
+                    submitSelectForm(event, selectedStoreValue, submit);
+                  }}
+                >
+                  {loaderData.stores.map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {store.name}
+                    </option>
+                  ))}
+                </select>
+                {actionData?.intent === "update-selected-store" &&
+                actionData.selectedStoreFieldErrors?.selectedStoreId ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.selectedStoreFieldErrors.selectedStoreId}
+                  </p>
+                ) : null}
+              </Form>
+            </article>
 
-          <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Velg handledato
-            </h2>
-            <Form className="mt-4 space-y-3" method="post">
-              <input
-                name="intent"
-                type="hidden"
-                value="update-active-shopping-date"
-              />
-              <input
-                name="mealPlanUpdatedAt"
-                type="hidden"
-                value={loaderData.mealPlan.updatedAt}
-              />
-              <select
-                aria-busy={isSavingShoppingDate}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:cursor-wait disabled:bg-slate-50"
-                defaultValue={activeShoppingDateValue}
-                disabled={isSavingShoppingDate}
-                name="activeShoppingDate"
-                onChange={(event) => {
-                  submitSelectForm(event, activeShoppingDateValue, submit);
-                }}
-              >
-                {loaderData.visibleDates.map((date) => (
-                  <option key={date} value={date}>
-                    {formatDateLabel(date)}
-                  </option>
-                ))}
-              </select>
-              {actionData?.intent === "update-active-shopping-date" &&
-              actionData.activeShoppingDateFieldErrors?.activeShoppingDate ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.activeShoppingDateFieldErrors.activeShoppingDate}
-                </p>
-              ) : null}
-            </Form>
-          </article>
-        </section>
+            <article>
+              <h2 className="text-base font-semibold text-slate-950">
+                Velg handledato
+              </h2>
+              <Form className="mt-4 space-y-3" method="post">
+                <input
+                  name="intent"
+                  type="hidden"
+                  value="update-active-shopping-date"
+                />
+                <input
+                  name="mealPlanUpdatedAt"
+                  type="hidden"
+                  value={loaderData.mealPlan.updatedAt}
+                />
+                <select
+                  aria-busy={isSavingShoppingDate}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:cursor-wait disabled:bg-slate-50"
+                  defaultValue={activeShoppingDateValue}
+                  disabled={isSavingShoppingDate}
+                  name="activeShoppingDate"
+                  onChange={(event) => {
+                    submitSelectForm(event, activeShoppingDateValue, submit);
+                  }}
+                >
+                  {loaderData.visibleDates.map((date) => (
+                    <option key={date} value={date}>
+                      {formatDateLabel(date)}
+                    </option>
+                  ))}
+                </select>
+                {actionData?.intent === "update-active-shopping-date" &&
+                actionData.activeShoppingDateFieldErrors?.activeShoppingDate ? (
+                  <p className="text-sm text-rose-600">
+                    {
+                      actionData.activeShoppingDateFieldErrors
+                        .activeShoppingDate
+                    }
+                  </p>
+                ) : null}
+              </Form>
+            </article>
+          </div>
+        </details>
 
         {displaySectionGroups.length > 0 ? (
           <section className="grid gap-4">
@@ -711,6 +754,22 @@ export default function FamilyMealPlanStoreModeRoute({
           </div>
         </section>
       </div>
+
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-3">
+        <div className="pointer-events-auto mx-auto max-w-4xl">
+          <div className="rounded-[28px] bg-white p-4 shadow-2xl ring-1 ring-slate-200">
+            {quickAddFormError ? (
+              <p className="mb-3 text-sm text-rose-600">{quickAddFormError}</p>
+            ) : null}
+            <ManualShoppingQuickAdd
+              ingredientSearchPath={ingredientSearchPath}
+              quickAddIntent="quick-add-family-shopping-item"
+              recentManualItems={loaderData.recentManualItems}
+              revealOnFocus
+            />
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
@@ -782,6 +841,7 @@ function getStoreModeNotice(request: Request): StoreModeNotice | null {
 
   if (
     notice === "active-shopping-date-updated" ||
+    notice === "family-shopping-item-added" ||
     notice === "selected-store-updated" ||
     notice === "shopping-item-check-state-updated"
   ) {
@@ -807,6 +867,11 @@ function getStoreModeNoticeContent(notice: StoreModeNotice) {
       return {
         description: "Avkryssingen for varelinjen ble oppdatert.",
         title: "Vare oppdatert",
+      };
+    case "family-shopping-item-added":
+      return {
+        description: "Varen ble lagt til og vises i handlelisten.",
+        title: "Vare lagt til",
       };
   }
 }
