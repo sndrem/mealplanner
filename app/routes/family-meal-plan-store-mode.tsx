@@ -27,6 +27,7 @@ import {
   writeStoreModeDeprioritizeBought,
   writeStoreModeShoppingView,
 } from "../lib/shopping-store-mode-client";
+import { toggleFamilyShoppingItemChecked } from "../lib/family-shopping-write.server";
 import { getMealPlanStoreModeData } from "../lib/shopping.server";
 import {
   toggleShoppingItemChecked,
@@ -44,6 +45,7 @@ type StoreModeNotice =
   | "shopping-item-check-state-updated";
 
 type StoreModeIntent =
+  | "toggle-family-shopping-item-checked"
   | "toggle-shopping-item-checked"
   | "update-active-shopping-date"
   | "update-selected-store";
@@ -209,6 +211,42 @@ export async function action({
       notice: "selected-store-updated",
       request,
     });
+  }
+
+  if (intent === "toggle-family-shopping-item-checked") {
+    const familyItemId = String(formData.get("sourceKey") ?? "").trim();
+    const checked = String(formData.get("checked") ?? "") === "true";
+
+    if (!familyItemId) {
+      return {
+        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    const result = await toggleFamilyShoppingItemChecked({
+      checked,
+      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
+      familyId,
+      familyItemId,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    return {
+      intent,
+      ok: true,
+    } satisfies StoreModeActionData;
   }
 
   if (intent === "toggle-shopping-item-checked") {
@@ -658,9 +696,11 @@ export default function FamilyMealPlanStoreModeRoute({
                   {" · "}
                   {item.sourceType === "GENERATED"
                     ? formatDateLabel(item.postponedUntilDate ?? item.firstDate)
-                    : item.buyOnDate
+                    : item.sourceType === "MANUAL" && item.buyOnDate
                       ? formatDateLabel(item.buyOnDate)
-                      : "Ingen dato"}
+                      : item.sourceType === "FAMILY"
+                        ? "Alltid på listen"
+                        : "Ingen dato"}
                 </span>
               ))
             ) : (
@@ -708,8 +748,14 @@ export function ErrorBoundary({ error }: { error: unknown }) {
 function serializeProjectedShoppingItem(
   item: Awaited<
     ReturnType<typeof getMealPlanStoreModeData>
-  >["laterItems"][number],
+  >["laterItems"][number] | Awaited<
+    ReturnType<typeof getMealPlanStoreModeData>
+  >["dueSectionGroups"][number]["items"][number],
 ) {
+  if (item.sourceType === "FAMILY") {
+    return item;
+  }
+
   if (item.sourceType === ShoppingItemSource.GENERATED) {
     return {
       ...item,

@@ -30,9 +30,14 @@ interface StoreModeShoppingItemCardManual extends StoreModeShoppingItemCardBase 
   sourceType: "MANUAL";
 }
 
+interface StoreModeShoppingItemCardFamily extends StoreModeShoppingItemCardBase {
+  sourceType: "FAMILY";
+}
+
 export type StoreModeShoppingItemCardItem =
   | StoreModeShoppingItemCardGenerated
-  | StoreModeShoppingItemCardManual;
+  | StoreModeShoppingItemCardManual
+  | StoreModeShoppingItemCardFamily;
 
 interface StoreModeShoppingItemCardProps {
   item: StoreModeShoppingItemCardItem;
@@ -162,6 +167,10 @@ function shouldAutoOpenStoreModeDetails(item: StoreModeShoppingItemCardItem) {
 }
 
 function formatStoreModeItemSourceLine(item: StoreModeShoppingItemCardItem) {
+  if (item.sourceType === "FAMILY") {
+    return "Følger familien på tvers av ukeplaner.";
+  }
+
   if (item.sourceType === "GENERATED") {
     const recipeAttribution =
       item.occurrenceCount === 1

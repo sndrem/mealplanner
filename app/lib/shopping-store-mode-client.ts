@@ -1,10 +1,12 @@
 import { ShoppingItemSource } from "@prisma/client";
 
+export type StoreModeItemSource = ShoppingItemSource | "FAMILY";
+
 export interface StoreModeToggleOp {
   checked: boolean;
   expectedUpdatedAt: string;
   sourceKey: string;
-  sourceType: ShoppingItemSource;
+  sourceType: StoreModeItemSource;
 }
 
 export interface StoreModeToggleItem {
@@ -12,7 +14,7 @@ export interface StoreModeToggleItem {
   collaborationVersion: string;
   overrideVersion?: string;
   sourceKey: string;
-  sourceType: ShoppingItemSource;
+  sourceType: StoreModeItemSource;
 }
 
 export interface StoreModeProgress {
@@ -310,7 +312,7 @@ export function reconcileToggleQueue({
 export function getToggleExpectedVersion(item: {
   collaborationVersion: string;
   overrideVersion?: string;
-  sourceType: ShoppingItemSource;
+  sourceType: StoreModeItemSource;
 }) {
   if (item.sourceType === ShoppingItemSource.MANUAL) {
     return item.overrideVersion ?? "";
@@ -330,7 +332,8 @@ function isStoreModeToggleOp(value: unknown): value is StoreModeToggleOp {
     typeof op.sourceKey === "string" &&
     op.sourceKey.length > 0 &&
     (op.sourceType === ShoppingItemSource.GENERATED ||
-      op.sourceType === ShoppingItemSource.MANUAL) &&
+      op.sourceType === ShoppingItemSource.MANUAL ||
+      op.sourceType === "FAMILY") &&
     typeof op.checked === "boolean" &&
     typeof op.expectedUpdatedAt === "string"
   );

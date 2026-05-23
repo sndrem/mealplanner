@@ -90,7 +90,12 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
     const [nextOp] = queueRef.current;
     inFlightSourceKeyRef.current = nextOp.sourceKey;
     const formData = new FormData();
-    formData.set("intent", "toggle-shopping-item-checked");
+    formData.set(
+      "intent",
+      nextOp.sourceType === "FAMILY"
+        ? "toggle-family-shopping-item-checked"
+        : "toggle-shopping-item-checked",
+    );
     formData.set("sourceKey", nextOp.sourceKey);
     formData.set("sourceType", nextOp.sourceType);
     formData.set("checked", nextOp.checked ? "true" : "false");

@@ -23,6 +23,7 @@ import {
   getMealPlanShoppingData,
   listRecentManualShoppingItemsForFamily,
 } from "../lib/shopping.server";
+import { toggleFamilyShoppingItemChecked } from "../lib/family-shopping-write.server";
 import {
   createManualShoppingItem,
   createQuickManualShoppingItem,
@@ -57,6 +58,7 @@ type ShoppingIntent =
   | "opt-in-stock-shopping-item"
   | "restore-generated-shopping-item"
   | "opt-in-stock-shopping-items"
+  | "toggle-family-shopping-item-checked"
   | "toggle-shopping-item-checked"
   | "update-generated-shopping-item"
   | "update-manual-shopping-item";
@@ -148,6 +150,13 @@ export async function loader({
     ),
     notice: getShoppingNotice(request),
     recentManualItems,
+    familyStoreGroups: result.familyStoreGroups.map((group) => ({
+      sections: group.sections.map((section) => ({
+        ...section,
+        items: section.items.map(serializeProjectedShoppingItem),
+      })),
+      store: group.store,
+    })),
     storeGroups: result.storeGroups.map((group) => ({
       sections: group.sections.map((section) => ({
         ...section,
@@ -395,6 +404,55 @@ export async function action({
       familyId,
       mealPlanId,
       notice: "generated-shopping-item-restored",
+      request,
+    });
+  }
+
+  if (intent === "toggle-family-shopping-item-checked") {
+    const familyItemId = String(formData.get("sourceKey") ?? "").trim();
+    const checked = String(formData.get("checked") ?? "") === "true";
+
+    if (!familyItemId) {
+      return {
+        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    const result = await toggleFamilyShoppingItemChecked({
+      checked,
+      expectedUpdatedAt: parseExpectedUpdatedAt(formData),
+      familyId,
+      familyItemId,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      return {
+        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
+        intent,
+        itemTarget: {
+          sourceKey: familyItemId,
+          sourceType: ShoppingItemSource.MANUAL,
+        },
+      } satisfies ShoppingActionData;
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+        itemTarget: {
+          sourceKey: familyItemId,
+          sourceType: ShoppingItemSource.MANUAL,
+        },
+      } satisfies ShoppingActionData;
+    }
+
+    return buildShoppingRedirect({
+      familyId,
+      mealPlanId,
+      notice: "shopping-item-check-state-updated",
       request,
     });
   }
@@ -1005,6 +1063,101 @@ export default function FamilyMealPlanShoppingRoute({
           </article>
         </section>
 
+        {loaderData.familyStoreGroups.length ? (
+          <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-violet-200">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-lg font-semibold text-slate-950">
+                Alltid på listen
+              </h2>
+              <p className="text-sm leading-6 text-slate-600">
+                Faste varer som følger familien på tvers av ukeplaner. Rediger
+                listen på{" "}
+                <Link
+                  className="font-medium text-emerald-700 underline"
+                  to={`/families/${loaderData.family.id}/shopping`}
+                >
+                  familiens handleliste
+                </Link>
+                .
+              </p>
+            </div>
+            <div className="mt-6 grid gap-5">
+              {loaderData.familyStoreGroups.map((group) => (
+                <div key={`family:${group.store?.id ?? "no-store"}`}>
+                  <h3 className="text-sm font-semibold text-slate-800">
+                    {group.store?.name ?? "Ingen valgt butikk"}
+                  </h3>
+                  <div className="mt-3 grid gap-2">
+                    {group.sections.flatMap((section) =>
+                      section.items.map((item) => {
+                        const isPendingCheckToggle =
+                          navigation.state === "submitting" &&
+                          pendingIntent ===
+                            "toggle-family-shopping-item-checked" &&
+                          pendingSourceKey === item.sourceKey;
+
+                        return (
+                          <article
+                            key={`family:${item.sourceKey}`}
+                            className="rounded-[20px] border border-violet-100 bg-violet-50/60 px-4 py-4"
+                          >
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-slate-950">
+                                  {item.name}
+                                  {item.quantityLabel
+                                    ? ` · ${item.quantityLabel}`
+                                    : ""}
+                                </p>
+                                <p className="mt-1 text-xs text-violet-800">
+                                  Alltid på listen
+                                </p>
+                              </div>
+                              <Form method="post">
+                                <input
+                                  name="intent"
+                                  type="hidden"
+                                  value="toggle-family-shopping-item-checked"
+                                />
+                                <input
+                                  name="sourceKey"
+                                  type="hidden"
+                                  value={item.sourceKey}
+                                />
+                                <input
+                                  name="checked"
+                                  type="hidden"
+                                  value={item.checked ? "false" : "true"}
+                                />
+                                <input
+                                  name="expectedUpdatedAt"
+                                  type="hidden"
+                                  value={getToggleExpectedVersion(item)}
+                                />
+                                <button
+                                  className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800 disabled:opacity-60"
+                                  disabled={isPendingCheckToggle}
+                                  type="submit"
+                                >
+                                  {isPendingCheckToggle
+                                    ? "Oppdaterer..."
+                                    : item.checked
+                                      ? "Fjern avkryssing"
+                                      : "Marker som kjøpt"}
+                                </button>
+                              </Form>
+                            </div>
+                          </article>
+                        );
+                      }),
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {loaderData.storeGroups.length ? (
           <section className="grid gap-6">
             {loaderData.storeGroups.map((group) => (
@@ -1198,7 +1351,7 @@ export default function FamilyMealPlanShoppingRoute({
                                   <p className="text-sm leading-6 text-slate-600">
                                     {item.sourceType === "GENERATED"
                                       ? formatGeneratedItemSummary(item)
-                                      : item.buyOnDate
+                                      : item.sourceType === "MANUAL" && item.buyOnDate
                                         ? `Lagt til manuelt og planlagt for ${formatDateLabel(item.buyOnDate)}.`
                                         : "Lagt til manuelt uten spesifikk handledato."}
                                   </p>
@@ -1215,7 +1368,7 @@ export default function FamilyMealPlanShoppingRoute({
                                 <p className="text-sm leading-6 text-slate-600">
                                   {item.sourceType === "GENERATED"
                                     ? formatGeneratedItemSummary(item)
-                                    : item.buyOnDate
+                                    : item.sourceType === "MANUAL" && item.buyOnDate
                                       ? `Lagt til manuelt og planlagt for ${formatDateLabel(item.buyOnDate)}.`
                                       : "Lagt til manuelt uten spesifikk handledato."}
                                 </p>
@@ -1306,8 +1459,14 @@ function requireRouteParam(value: string | undefined, message: string) {
 function serializeProjectedShoppingItem(
   item: Awaited<
     ReturnType<typeof getMealPlanShoppingData>
-  >["projectedItems"][number],
+  >["projectedItems"][number] | Awaited<
+    ReturnType<typeof getMealPlanShoppingData>
+  >["familyStoreGroups"][number]["sections"][number]["items"][number],
 ) {
+  if (item.sourceType === "FAMILY") {
+    return item;
+  }
+
   if (item.sourceType === ShoppingItemSource.GENERATED) {
     return {
       ...item,

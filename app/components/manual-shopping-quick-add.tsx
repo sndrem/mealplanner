@@ -15,15 +15,17 @@ interface ManualShoppingQuickAddLoaderSlice {
 
 interface ManualShoppingQuickAddProps {
   ingredientSearchPath: string;
+  quickAddIntent?: string;
   recentManualItems: RecentManualShoppingItem[];
 }
 
 const MIN_SEARCH_LENGTH = 2;
 const SEARCH_DEBOUNCE_MS = 250;
-const QUICK_ADD_INTENT = "quick-add-manual-shopping-item";
+const DEFAULT_QUICK_ADD_INTENT = "quick-add-manual-shopping-item";
 
 export function ManualShoppingQuickAdd({
   ingredientSearchPath,
+  quickAddIntent = DEFAULT_QUICK_ADD_INTENT,
   recentManualItems,
 }: ManualShoppingQuickAddProps) {
   const listboxId = useId();
@@ -41,7 +43,7 @@ export function ManualShoppingQuickAdd({
   searchFetcherRef.current = searchFetcher;
   const pendingIntent = navigation.formData?.get("intent");
   const isQuickAdding =
-    navigation.state === "submitting" && pendingIntent === QUICK_ADD_INTENT;
+    navigation.state === "submitting" && pendingIntent === quickAddIntent;
 
   const trimmedQuery = query.trim();
   const isSearching =
@@ -53,7 +55,7 @@ export function ManualShoppingQuickAdd({
     recentNameNormalized?: string;
   }) {
     const formData = new FormData();
-    formData.set("intent", QUICK_ADD_INTENT);
+    formData.set("intent", quickAddIntent);
 
     if (fields.ingredientId) {
       formData.set("ingredientId", fields.ingredientId);
