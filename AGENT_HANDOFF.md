@@ -2,21 +2,19 @@
 
 ## Current Objective
 
-Issue #80 — store mode optional grid view for due shopping items; branch `issue/80-store-mode-grid-view`, ready for PR.
+Issue #82 — compact store mode shopping cards with collapsible attribution; branch `issue/82-compact-store-mode-details`, ready for PR.
 
 ## Completed
 
-- View preference helpers in `shopping-store-mode-client.ts` (`list` | `grid`, localStorage per family/meal plan).
-- `StoreModeShoppingViewToggle` segmented control (Liste / Rutenett) with radiogroup a11y.
-- `StoreModeShoppingItemCard` shared item UI for list and grid layouts.
-- Store mode route: header + toggle above due sections; responsive grid within section groups; preference persists across reload.
-- Unit tests for view storage (13 tests in shopping-store-mode-client suite).
+- Restructured `StoreModeShoppingItemCard`: whole-card tap toggles handled state (no checkbox); red tint + strikethrough when checked.
+- Attribution, notes, and postponed copy behind `<details>` with bottom-left info icon (opens panel upward).
+- Removed «Manuell» badge; tightened padding, typography, badges, and list/grid gaps for denser cards.
+- Store mode route: item list/grid gap `gap-3` → `gap-2`.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan-store-mode.tsx` — view state, section layouts, toggle placement
-- `app/components/store-mode-shopping-item-card.tsx` — list vs grid card markup
-- `app/lib/shopping-store-mode-client.ts` — view storage key read/write
+- `app/components/store-mode-shopping-item-card.tsx` — card layout, toggle overlay, details disclosure
+- `app/routes/family-meal-plan-store-mode.tsx` — grid/list gap between cards
 
 ## Validation
 
@@ -28,8 +26,8 @@ Issue #80 — store mode optional grid view for due shopping items; branch `issu
 ## Open Items
 
 - PR review and merge.
-- Manual smoke: toggle list/grid, reload persistence, check-off in grid, empty due list hides toggle, narrow viewport tap targets.
+- Manual smoke: tap card to check/uncheck; info icon does not toggle; details auto-open for note/postpone/conflict; list + grid on narrow viewport.
 
 ## Next Step
 
-Merge PR when CI is green; closes #80.
+Merge PR when CI is green; closes #82.

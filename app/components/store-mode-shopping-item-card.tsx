@@ -16,8 +16,7 @@ interface StoreModeShoppingItemCardBase {
   sourceKey: string;
 }
 
-interface StoreModeShoppingItemCardGenerated
-  extends StoreModeShoppingItemCardBase {
+interface StoreModeShoppingItemCardGenerated extends StoreModeShoppingItemCardBase {
   lastDate: string;
   occurrenceCount: number;
   occurrences: Array<{ date: string; recipeTitle: string }>;
@@ -42,122 +41,32 @@ interface StoreModeShoppingItemCardProps {
   selectedStoreId: string | undefined;
 }
 
+const badgeClass =
+  "rounded-full px-2 py-0.5 text-[11px] font-medium leading-4";
+
 export function StoreModeShoppingItemCard({
   item,
-  layout,
+  layout: _layout,
   onToggle,
   selectedStoreId,
 }: StoreModeShoppingItemCardProps) {
   const quantityBadge = formatGeneratedQuantityBadge(item);
-  const recipeAttribution =
-    item.sourceType === "GENERATED"
-      ? item.occurrenceCount === 1
-        ? (item.occurrences[0]?.recipeTitle ?? null)
-        : formatGeneratedOccurrenceAttribution(item.occurrences)
-      : null;
-  const isGrid = layout === "grid";
+  const shouldAutoOpenDetails = shouldAutoOpenStoreModeDetails(item);
 
-  const checkedButtonClass = item.checked
-    ? isGrid
-      ? "flex h-full min-h-[44px] w-full cursor-pointer touch-manipulation flex-col gap-3 rounded-[20px] border border-emerald-200 bg-emerald-50 p-3 text-left transition hover:bg-emerald-100 active:bg-emerald-200"
-      : "flex w-full cursor-pointer touch-manipulation items-start gap-4 rounded-[24px] border border-emerald-200 bg-emerald-50 p-4 text-left transition hover:bg-emerald-100 active:bg-emerald-200"
-    : isGrid
-      ? "flex h-full min-h-[44px] w-full cursor-pointer touch-manipulation flex-col gap-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 text-left transition hover:bg-slate-100 active:bg-slate-200"
-      : "flex w-full cursor-pointer touch-manipulation items-start gap-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4 text-left transition hover:bg-slate-100 active:bg-slate-200";
+  const cardShellClass = item.checked
+    ? "relative flex h-full min-h-[36px] flex-col rounded-2xl border border-red-200 bg-red-50 p-2"
+    : "relative flex h-full min-h-[36px] flex-col rounded-2xl border border-slate-200 bg-slate-50 p-2";
 
-  const checkIndicatorClass = item.checked
-    ? isGrid
-      ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-base font-semibold text-white"
-      : "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg font-semibold text-white"
-    : isGrid
-      ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-base font-semibold text-slate-400"
-      : "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-lg font-semibold text-slate-400";
+  const toggleOverlayClass = item.checked
+    ? "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-red-100 active:bg-red-200"
+    : "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-slate-100 active:bg-slate-200";
 
-  const details = (
-    <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-2">
-          <span
-            className={
-              isGrid
-                ? "text-sm font-semibold text-slate-950"
-                : "text-base font-semibold text-slate-950"
-            }
-          >
-            {item.name}
-          </span>
-          {quantityBadge ? (
-            <span
-              className={
-                item.sourceType === "GENERATED" &&
-                !item.quantityLabel &&
-                item.occurrenceCount > 1
-                  ? "rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800"
-                  : "rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
-              }
-            >
-              {quantityBadge}
-            </span>
-          ) : null}
-          {item.sourceType === "MANUAL" ? (
-            <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700">
-              Manuell
-            </span>
-          ) : null}
-          {item.sourceType === "GENERATED" && item.preferredStoreConflict ? (
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-              Ulike foretrukne butikker
-            </span>
-          ) : null}
-          {item.preferredStore && item.preferredStore.id !== selectedStoreId ? (
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-              Foretrekker {item.preferredStore.name}
-            </span>
-          ) : null}
-        </span>
-
-        <span
-          className={
-            isGrid
-              ? "mt-2 block text-xs leading-5 text-slate-600"
-              : "mt-2 block text-sm leading-6 text-slate-600"
-          }
-        >
-          {item.sourceType === "GENERATED"
-            ? item.occurrenceCount === 1
-              ? `Fra ${recipeAttribution} fram til ${formatDateLabel(item.lastDate)}.`
-              : `Brukt i ${recipeAttribution}.`
-            : item.buyOnDate
-              ? `Manuell vare planlagt for ${formatDateLabel(item.buyOnDate)}.`
-              : "Manuell vare uten spesifikk handledato."}
-        </span>
-
-        {item.note ? (
-          <span
-            className={
-              isGrid
-                ? "mt-2 block text-xs leading-5 text-slate-700"
-                : "mt-2 block text-sm leading-6 text-slate-700"
-            }
-          >
-            Notat: {item.note}
-          </span>
-        ) : null}
-        {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
-          <span
-            className={
-              isGrid
-                ? "mt-2 block text-xs leading-5 text-amber-800"
-                : "mt-2 block text-sm leading-6 text-amber-800"
-            }
-          >
-            Utsatt til {formatDateLabel(item.postponedUntilDate)}.
-          </span>
-        ) : null}
-    </span>
-  );
+  const nameClass = item.checked
+    ? "text-sm font-semibold leading-5 text-slate-500 line-through decoration-slate-400"
+    : "text-sm font-semibold leading-5 text-slate-950";
 
   return (
-    <div className="block h-full">
+    <div className={`block h-full ${cardShellClass}`}>
       <button
         aria-label={
           item.checked
@@ -165,17 +74,109 @@ export function StoreModeShoppingItemCard({
             : `Marker ${item.name} som handlet`
         }
         aria-pressed={item.checked}
-        className={checkedButtonClass}
+        className={toggleOverlayClass}
         onClick={onToggle}
         type="button"
-      >
-        <span aria-hidden="true" className={checkIndicatorClass}>
-          {item.checked ? "✓" : ""}
-        </span>
-        {details}
-      </button>
+      />
+
+      <div className="relative z-10 flex h-full min-h-[32px] flex-col pointer-events-none">
+        <div className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-1.5">
+            <span className={nameClass}>{item.name}</span>
+            {quantityBadge ? (
+              <span
+                className={
+                  item.sourceType === "GENERATED" &&
+                  !item.quantityLabel &&
+                  item.occurrenceCount > 1
+                    ? `${badgeClass} bg-amber-100 text-amber-800`
+                    : `${badgeClass} bg-white text-slate-700 ring-1 ring-slate-200`
+                }
+              >
+                {quantityBadge}
+              </span>
+            ) : null}
+            {item.sourceType === "GENERATED" && item.preferredStoreConflict ? (
+              <span className={`${badgeClass} bg-amber-100 text-amber-800`}>
+                Ulike foretrukne butikker
+              </span>
+            ) : null}
+            {item.preferredStore &&
+            item.preferredStore.id !== selectedStoreId ? (
+              <span className={`${badgeClass} bg-amber-100 text-amber-800`}>
+                Foretrekker {item.preferredStore.name}
+              </span>
+            ) : null}
+          </span>
+        </div>
+
+        <details
+          className="group mt-auto flex shrink-0 flex-col-reverse items-start pointer-events-auto"
+          open={shouldAutoOpenDetails}
+        >
+          <summary
+            aria-label={`Vis informasjon om ${item.name}`}
+            className="mt-1 flex h-6 w-6 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 group-open:border-emerald-200 group-open:bg-emerald-50 group-open:text-emerald-700 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden"
+          >
+            <StoreModeInfoIcon className="h-3.5 w-3.5" />
+            <span className="sr-only">Vis informasjon</span>
+          </summary>
+          <div
+            className="mb-1 w-full space-y-1 border-b border-slate-200 pb-1.5 pointer-events-auto"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <p className="text-xs leading-4 text-slate-600">
+              {formatStoreModeItemSourceLine(item)}
+            </p>
+            {item.note ? (
+              <p className="text-xs leading-4 text-slate-700">
+                Notat: {item.note}
+              </p>
+            ) : null}
+            {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
+              <p className="text-xs leading-4 text-amber-800">
+                Utsatt til {formatDateLabel(item.postponedUntilDate)}.
+              </p>
+            ) : null}
+          </div>
+        </details>
+      </div>
     </div>
   );
+}
+
+function shouldAutoOpenStoreModeDetails(item: StoreModeShoppingItemCardItem) {
+  if (item.note) {
+    return true;
+  }
+
+  if (item.sourceType === "GENERATED" && item.postponedUntilDate) {
+    return true;
+  }
+
+  if (item.sourceType === "GENERATED" && item.preferredStoreConflict) {
+    return true;
+  }
+
+  return false;
+}
+
+function formatStoreModeItemSourceLine(item: StoreModeShoppingItemCardItem) {
+  if (item.sourceType === "GENERATED") {
+    const recipeAttribution =
+      item.occurrenceCount === 1
+        ? (item.occurrences[0]?.recipeTitle ?? null)
+        : formatGeneratedOccurrenceAttribution(item.occurrences);
+
+    return item.occurrenceCount === 1
+      ? `Fra ${recipeAttribution} fram til ${formatDateLabel(item.lastDate)}.`
+      : `Brukt i ${recipeAttribution}.`;
+  }
+
+  return item.buyOnDate
+    ? `Manuell vare planlagt for ${formatDateLabel(item.buyOnDate)}.`
+    : "Manuell vare uten spesifikk handledato.";
 }
 
 function formatDateLabel(value: string) {
@@ -184,4 +185,25 @@ function formatDateLabel(value: string) {
     month: "long",
     timeZone: "UTC",
   }).format(new Date(`${value}T00:00:00.000Z`));
+}
+
+function StoreModeInfoIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M12 11v5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.75"
+      />
+      <circle cx="12" cy="8" fill="currentColor" r="0.9" />
+    </svg>
+  );
 }
