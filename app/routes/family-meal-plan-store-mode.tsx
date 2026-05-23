@@ -553,8 +553,8 @@ export default function FamilyMealPlanStoreModeRoute({
                 <div
                   className={
                     shoppingView === "grid"
-                      ? "mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
-                      : "mt-4 flex flex-col gap-3"
+                      ? "mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
+                      : "mt-4 flex flex-col gap-2"
                   }
                 >
                   {section.items.map((item) => (
