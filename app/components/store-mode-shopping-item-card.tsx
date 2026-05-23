@@ -41,8 +41,7 @@ interface StoreModeShoppingItemCardProps {
   selectedStoreId: string | undefined;
 }
 
-const badgeClass =
-  "rounded-full px-2 py-0.5 text-[11px] font-medium leading-4";
+const badgeClass = "rounded-full px-2 py-0.5 text-[11px] font-medium leading-4";
 
 export function StoreModeShoppingItemCard({
   item,
@@ -111,7 +110,7 @@ export function StoreModeShoppingItemCard({
         </div>
 
         <details
-          className="group mt-auto flex shrink-0 flex-col-reverse items-start pointer-events-auto"
+          className="group mt-auto w-fit self-start flex flex-col-reverse items-start pointer-events-auto"
           open={shouldAutoOpenDetails}
         >
           <summary
@@ -122,7 +121,7 @@ export function StoreModeShoppingItemCard({
             <span className="sr-only">Vis informasjon</span>
           </summary>
           <div
-            className="mb-1 w-full space-y-1 border-b border-slate-200 pb-1.5 pointer-events-auto"
+            className="mb-1 w-max max-w-full space-y-1 border-b border-slate-200 pb-1.5 pointer-events-auto"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
           >

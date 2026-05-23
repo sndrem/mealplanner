@@ -24,6 +24,8 @@ export type StoreModeShoppingView = "list" | "grid";
 
 const STORE_MODE_QUEUE_KEY_PREFIX = "mealplanner:store-mode-queue:v1";
 const STORE_MODE_VIEW_KEY_PREFIX = "mealplanner:store-mode-view:v1";
+const STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX =
+  "mealplanner:store-mode-deprioritize-bought:v1";
 
 export function buildStoreModeViewStorageKey({
   familyId,
@@ -68,6 +70,94 @@ export function writeStoreModeShoppingView(
   } catch {
     // Private mode or quota exceeded — in-session state still works.
   }
+}
+
+export function buildStoreModeDeprioritizeBoughtStorageKey({
+  familyId,
+  mealPlanId,
+}: {
+  familyId: string;
+  mealPlanId: string;
+}) {
+  return `${STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX}:${familyId}:${mealPlanId}`;
+}
+
+export function readStoreModeDeprioritizeBought(storageKey: string): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+
+    if (raw === "true") {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export function writeStoreModeDeprioritizeBought(
+  storageKey: string,
+  enabled: boolean,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(storageKey, enabled ? "true" : "false");
+  } catch {
+    // Private mode or quota exceeded — in-session state still works.
+  }
+}
+
+export function partitionStoreModeSections<
+  TItem extends { checked: boolean },
+  TSection extends { items: TItem[] },
+>(
+  sections: TSection[],
+  deprioritizeBought: boolean,
+): { activeSections: TSection[]; boughtItems: TItem[] } {
+  if (!deprioritizeBought) {
+    return {
+      activeSections: sections,
+      boughtItems: [],
+    };
+  }
+
+  const activeSections: TSection[] = [];
+  const boughtItems: TItem[] = [];
+
+  for (const section of sections) {
+    const uncheckedItems: TItem[] = [];
+    const checkedItems: TItem[] = [];
+
+    for (const item of section.items) {
+      if (item.checked) {
+        checkedItems.push(item);
+      } else {
+        uncheckedItems.push(item);
+      }
+    }
+
+    if (uncheckedItems.length > 0) {
+      activeSections.push({
+        ...section,
+        items: uncheckedItems,
+      });
+    }
+
+    boughtItems.push(...checkedItems);
+  }
+
+  return {
+    activeSections,
+    boughtItems,
+  };
 }
 
 export function buildStoreModeQueueStorageKey({

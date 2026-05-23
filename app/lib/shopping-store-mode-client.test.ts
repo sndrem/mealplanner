@@ -6,14 +6,18 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   applyToggleOpsToItems,
   areToggleQueuesEqual,
+  buildStoreModeDeprioritizeBoughtStorageKey,
   buildStoreModeQueueStorageKey,
   buildStoreModeViewStorageKey,
   computeStoreModeProgress,
+  partitionStoreModeSections,
+  readStoreModeDeprioritizeBought,
   readStoreModeShoppingView,
   readStoreModeToggleQueue,
   reconcileToggleQueue,
   removeToggleOp,
   upsertToggleOp,
+  writeStoreModeDeprioritizeBought,
   writeStoreModeShoppingView,
   writeStoreModeToggleQueue,
 } from "./shopping-store-mode-client";
@@ -223,5 +227,96 @@ describe("shopping-store-mode-client", () => {
     window.localStorage.setItem(viewStorageKey, "table");
 
     expect(readStoreModeShoppingView(viewStorageKey)).toBe("list");
+  });
+
+  it("builds isolated deprioritize-bought storage keys per meal plan", () => {
+    expect(
+      buildStoreModeDeprioritizeBoughtStorageKey({
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      }),
+    ).not.toBe(
+      buildStoreModeDeprioritizeBoughtStorageKey({
+        familyId: "family-1",
+        mealPlanId: "meal-plan-2",
+      }),
+    );
+  });
+
+  it("defaults deprioritize-bought preference to false", () => {
+    const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+    });
+
+    expect(readStoreModeDeprioritizeBought(storageKey)).toBe(false);
+  });
+
+  it("persists and reads deprioritize-bought preference", () => {
+    const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+    });
+
+    writeStoreModeDeprioritizeBought(storageKey, true);
+
+    expect(readStoreModeDeprioritizeBought(storageKey)).toBe(true);
+  });
+
+  it("falls back to false for invalid stored deprioritize-bought values", () => {
+    const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+    });
+
+    window.localStorage.setItem(storageKey, "yes");
+
+    expect(readStoreModeDeprioritizeBought(storageKey)).toBe(false);
+  });
+
+  it("returns sections unchanged when deprioritize-bought is off", () => {
+    const sections = [
+      {
+        displayName: "Produce",
+        items: [
+          { checked: true, id: "a" },
+          { checked: false, id: "b" },
+        ],
+      },
+    ];
+
+    expect(partitionStoreModeSections(sections, false)).toEqual({
+      activeSections: sections,
+      boughtItems: [],
+    });
+  });
+
+  it("partitions unchecked into active sections and checked into bought items", () => {
+    const sections = [
+      {
+        displayName: "Produce",
+        items: [
+          { checked: true, id: "a" },
+          { checked: false, id: "b" },
+        ],
+      },
+      {
+        displayName: "Dairy",
+        items: [{ checked: true, id: "c" }],
+      },
+    ];
+
+    expect(partitionStoreModeSections(sections, true)).toEqual({
+      activeSections: [
+        {
+          displayName: "Produce",
+          items: [{ checked: false, id: "b" }],
+        },
+      ],
+      boughtItems: [
+        { checked: true, id: "a" },
+        { checked: true, id: "c" },
+      ],
+    });
   });
 });
