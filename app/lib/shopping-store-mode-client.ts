@@ -20,7 +20,55 @@ export interface StoreModeProgress {
   totalCount: number;
 }
 
+export type StoreModeShoppingView = "list" | "grid";
+
 const STORE_MODE_QUEUE_KEY_PREFIX = "mealplanner:store-mode-queue:v1";
+const STORE_MODE_VIEW_KEY_PREFIX = "mealplanner:store-mode-view:v1";
+
+export function buildStoreModeViewStorageKey({
+  familyId,
+  mealPlanId,
+}: {
+  familyId: string;
+  mealPlanId: string;
+}) {
+  return `${STORE_MODE_VIEW_KEY_PREFIX}:${familyId}:${mealPlanId}`;
+}
+
+export function readStoreModeShoppingView(
+  storageKey: string,
+): StoreModeShoppingView {
+  if (typeof window === "undefined") {
+    return "list";
+  }
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+
+    if (raw === "grid" || raw === "list") {
+      return raw;
+    }
+
+    return "list";
+  } catch {
+    return "list";
+  }
+}
+
+export function writeStoreModeShoppingView(
+  storageKey: string,
+  view: StoreModeShoppingView,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(storageKey, view);
+  } catch {
+    // Private mode or quota exceeded — in-session state still works.
+  }
+}
 
 export function buildStoreModeQueueStorageKey({
   activeShoppingDate,

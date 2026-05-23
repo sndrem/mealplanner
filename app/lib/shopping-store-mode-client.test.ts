@@ -7,11 +7,14 @@ import {
   applyToggleOpsToItems,
   areToggleQueuesEqual,
   buildStoreModeQueueStorageKey,
+  buildStoreModeViewStorageKey,
   computeStoreModeProgress,
+  readStoreModeShoppingView,
   readStoreModeToggleQueue,
   reconcileToggleQueue,
   removeToggleOp,
   upsertToggleOp,
+  writeStoreModeShoppingView,
   writeStoreModeToggleQueue,
 } from "./shopping-store-mode-client";
 
@@ -175,5 +178,50 @@ describe("shopping-store-mode-client", () => {
     window.localStorage.setItem(storageKey, "{not-an-array");
 
     expect(readStoreModeToggleQueue(storageKey)).toEqual([]);
+  });
+
+  it("builds isolated view storage keys per meal plan", () => {
+    expect(
+      buildStoreModeViewStorageKey({
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      }),
+    ).not.toBe(
+      buildStoreModeViewStorageKey({
+        familyId: "family-1",
+        mealPlanId: "meal-plan-2",
+      }),
+    );
+  });
+
+  it("defaults shopping view to list", () => {
+    const viewStorageKey = buildStoreModeViewStorageKey({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+    });
+
+    expect(readStoreModeShoppingView(viewStorageKey)).toBe("list");
+  });
+
+  it("persists and reads shopping view preference", () => {
+    const viewStorageKey = buildStoreModeViewStorageKey({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+    });
+
+    writeStoreModeShoppingView(viewStorageKey, "grid");
+
+    expect(readStoreModeShoppingView(viewStorageKey)).toBe("grid");
+  });
+
+  it("falls back to list for invalid stored shopping views", () => {
+    const viewStorageKey = buildStoreModeViewStorageKey({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+    });
+
+    window.localStorage.setItem(viewStorageKey, "table");
+
+    expect(readStoreModeShoppingView(viewStorageKey)).toBe("list");
   });
 });
