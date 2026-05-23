@@ -81,7 +81,9 @@ describe("family meal plan shopping route", () => {
       },
       excludedGeneratedCount: 0,
       excludedGeneratedItems: [],
+      familyStoreGroups: [],
       itemCounts: {
+        family: 0,
         generated: 1,
         manual: 1,
         total: 2,
@@ -282,7 +284,9 @@ describe("family meal plan shopping route", () => {
         id: "family-1",
         name: "Solberg",
       },
+      familyStoreGroups: [],
       itemCounts: {
+        family: 0,
         generated: 1,
         manual: 1,
         total: 2,
@@ -421,7 +425,9 @@ describe("family meal plan shopping route", () => {
       },
       excludedGeneratedCount: 0,
       excludedGeneratedItems: [],
+      familyStoreGroups: [],
       itemCounts: {
+        family: 0,
         generated: 1,
         manual: 0,
         total: 1,

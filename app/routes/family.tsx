@@ -231,25 +231,48 @@ export default function FamilyRoute({
           </article>
         </section>
 
-        <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">
-                Ukeplaner
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Gå videre til familiens ukeplaner for å opprette, velge og
-                oppdatere planer med start- og sluttdato.
-              </p>
-            </div>
+        <section className="grid gap-4 lg:grid-cols-2">
+          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">
+                  Ukeplaner
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+                  Gå videre til familiens ukeplaner for å opprette, velge og
+                  oppdatere planer med start- og sluttdato.
+                </p>
+              </div>
 
-            <Link
-              className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
-              to={`/families/${loaderData.family.id}/meal-plans`}
-            >
-              Administrer ukeplaner
-            </Link>
-          </div>
+              <Link
+                className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                to={`/families/${loaderData.family.id}/meal-plans`}
+              >
+                Administrer ukeplaner
+              </Link>
+            </div>
+          </article>
+
+          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">
+                  Alltid på listen
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+                  Varer som skal handles uansett ukeplan, for eksempel
+                  batterier eller andre faste behov.
+                </p>
+              </div>
+
+              <Link
+                className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                to={`/families/${loaderData.family.id}/shopping`}
+              >
+                Åpne listen
+              </Link>
+            </div>
+          </article>
         </section>
 
         {isAdmin ? (

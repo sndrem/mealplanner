@@ -94,6 +94,28 @@ const manualShoppingItemSelect =
     updatedAt: true,
   });
 
+const familyShoppingItemSelect =
+  Prisma.validator<Prisma.FamilyShoppingItemSelect>()({
+    category: {
+      select: categorySummarySelect,
+    },
+    categoryId: true,
+    checked: true,
+    id: true,
+    name: true,
+    note: true,
+    preferredStore: {
+      select: storeSummarySelect,
+    },
+    preferredStoreId: true,
+    quantity: true,
+    updatedAt: true,
+  });
+
+type FamilyShoppingItemRow = Prisma.FamilyShoppingItemGetPayload<{
+  select: typeof familyShoppingItemSelect;
+}>;
+
 export const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
   activeShoppingDate: true,
   endDate: true,
@@ -207,8 +229,10 @@ interface ProjectedShoppingItemBase {
   quantityLabel: string | null;
   section: StoreSectionSummary;
   sourceKey: string;
-  sourceType: ShoppingItemSource;
+  sourceType: ProjectedShoppingItemSource;
 }
+
+export type ProjectedShoppingItemSource = ShoppingItemSource | "FAMILY";
 
 export interface ProjectedShoppingOccurrence {
   amount: string | null;
@@ -240,9 +264,15 @@ export interface ProjectedManualShoppingItem extends ProjectedShoppingItemBase {
   sourceType: "MANUAL";
 }
 
+export interface ProjectedFamilyShoppingItem extends ProjectedShoppingItemBase {
+  quantity: string | null;
+  sourceType: "FAMILY";
+}
+
 export type ProjectedShoppingItem =
   | ProjectedGeneratedShoppingItem
-  | ProjectedManualShoppingItem;
+  | ProjectedManualShoppingItem
+  | ProjectedFamilyShoppingItem;
 
 export interface ProjectedShoppingSectionGroup {
   category: {
@@ -345,6 +375,14 @@ export async function getMealPlanShoppingData({
   const projectedItems = [...generatedItems, ...manualItems].sort(
     compareProjectedItems,
   );
+  const uncheckedFamilyItems = await loadFamilyShoppingItems({
+    checked: false,
+    familyId,
+  });
+  const familyProjectedItems = projectFamilyShoppingItems({
+    items: uncheckedFamilyItems,
+    stores,
+  });
 
   return {
     categories,
@@ -354,10 +392,12 @@ export async function getMealPlanShoppingData({
       id: membership.family.id,
       name: membership.family.name,
     },
+    familyStoreGroups: buildProjectedStoreGroups(familyProjectedItems),
     itemCounts: {
+      family: familyProjectedItems.length,
       generated: generatedItems.length,
       manual: manualItems.length,
-      total: projectedItems.length,
+      total: projectedItems.length + familyProjectedItems.length,
     },
     mealPlan,
     projectedItems,
@@ -389,20 +429,40 @@ export async function listRecentManualShoppingItemsForFamily({
   familyId: string;
   limit?: number;
 }) {
-  const rows = await db.manualShoppingItem.findMany({
-    orderBy: [{ updatedAt: "desc" }],
-    select: {
-      categoryId: true,
-      name: true,
-      quantity: true,
-    },
-    take: 100,
-    where: {
-      mealPlan: {
+  const [manualRows, familyRows] = await Promise.all([
+    db.manualShoppingItem.findMany({
+      orderBy: [{ updatedAt: "desc" }],
+      select: {
+        categoryId: true,
+        name: true,
+        quantity: true,
+        updatedAt: true,
+      },
+      take: 100,
+      where: {
+        mealPlan: {
+          familyId,
+        },
+      },
+    }),
+    db.familyShoppingItem.findMany({
+      orderBy: [{ updatedAt: "desc" }],
+      select: {
+        categoryId: true,
+        name: true,
+        quantity: true,
+        updatedAt: true,
+      },
+      take: 100,
+      where: {
         familyId,
       },
-    },
-  });
+    }),
+  ]);
+
+  const rows = [...manualRows, ...familyRows].sort(
+    (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
+  );
 
   const seen = new Set<string>();
   const recentItems: RecentManualShoppingItem[] = [];
@@ -434,6 +494,115 @@ export async function listRecentManualShoppingItemsForFamily({
   }
 
   return recentItems;
+}
+
+export async function loadFamilyShoppingItems({
+  checked,
+  familyId,
+}: {
+  checked?: boolean;
+  familyId: string;
+}) {
+  return db.familyShoppingItem.findMany({
+    orderBy: [{ checked: "asc" }, { updatedAt: "desc" }, { id: "asc" }],
+    select: familyShoppingItemSelect,
+    where: {
+      familyId,
+      ...(checked === undefined ? {} : { checked }),
+    },
+  });
+}
+
+export function projectFamilyShoppingItems({
+  items,
+  stores,
+}: {
+  items: FamilyShoppingItemRow[];
+  stores: ShoppingStore[];
+}) {
+  const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
+
+  return items.map((item) => {
+    const preferredStore = item.preferredStore;
+    const section = resolveStoreSection({
+      category: {
+        id: item.category.id,
+        name: item.category.displayName,
+      },
+      preferredStore,
+      storeSectionsByStoreId,
+    });
+
+    return {
+      category: {
+        id: item.category.id,
+        name: item.category.displayName,
+      },
+      checked: item.checked,
+      collaborationVersion: item.updatedAt.toISOString(),
+      name: item.name,
+      note: item.note,
+      preferredStore,
+      quantity: item.quantity,
+      quantityLabel: buildManualQuantityLabel(item.quantity),
+      section,
+      sourceKey: item.id,
+      sourceType: "FAMILY",
+    } satisfies ProjectedFamilyShoppingItem;
+  });
+}
+
+export async function getFamilyShoppingData({
+  familyId,
+  userId,
+}: {
+  familyId: string;
+  userId: string;
+}) {
+  const membership = await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const [stores, categories, familyItems] = await Promise.all([
+    db.store.findMany({
+      orderBy: [{ name: "asc" }],
+      select: shoppingStoreSelect,
+      where: {
+        OR: [{ familyId: null }, { familyId }],
+      },
+    }),
+    db.ingredientCategory.findMany({
+      orderBy: [{ displayName: "asc" }],
+      select: shoppingCategorySelect,
+    }),
+    loadFamilyShoppingItems({ familyId }),
+  ]);
+
+  const projectedItems = projectFamilyShoppingItems({
+    items: familyItems,
+    stores,
+  }).sort(compareProjectedItems);
+
+  return {
+    categories,
+    family: {
+      id: membership.family.id,
+      name: membership.family.name,
+    },
+    itemCounts: {
+      checked: projectedItems.filter((item) => item.checked).length,
+      total: projectedItems.length,
+      unchecked: projectedItems.filter((item) => !item.checked).length,
+    },
+    projectedItems,
+    storeGroups: buildProjectedStoreGroups(projectedItems),
+    stores: stores.map((store) => ({
+      id: store.id,
+      name: store.name,
+    })),
+    userRole: membership.role,
+  };
 }
 
 export async function getMealPlanStoreModeData({
@@ -539,11 +708,27 @@ export async function getMealPlanStoreModeData({
       ),
     )
     .sort(compareProjectedItemsByRelevantDate);
+  const uncheckedFamilyItems = await loadFamilyShoppingItems({
+    checked: false,
+    familyId,
+  });
+  const familyDueItems = projectFamilyShoppingItems({
+    items: uncheckedFamilyItems,
+    stores,
+  });
+  const mergedDueItems = [...dueItems, ...familyDueItems].sort((left, right) =>
+    compareProjectedItemsForStoreMode(
+      left,
+      right,
+      selectedStore,
+      storeSectionsByStoreId,
+    ),
+  );
 
   return {
     activeShoppingDate,
     dueSectionGroups: buildStoreModeSectionGroups({
-      items: dueItems,
+      items: mergedDueItems,
       selectedStore,
       storeSectionsByStoreId,
     }),
@@ -553,7 +738,7 @@ export async function getMealPlanStoreModeData({
     },
     laterItems,
     mealPlan,
-    progress: buildStoreModeProgress(dueItems),
+    progress: buildStoreModeProgress(mergedDueItems),
     selectedStore,
     stockIngredientCount: stockIngredientsForPlan.length,
     stockIngredientsForPlan,
@@ -1299,6 +1484,10 @@ function isProjectedItemBeforeShoppingDate(
 }
 
 function getProjectedItemRelevantDate(item: ProjectedShoppingItem) {
+  if (item.sourceType === "FAMILY") {
+    return null;
+  }
+
   if (item.sourceType === "GENERATED") {
     return item.postponedUntilDate ?? item.firstDate;
   }
@@ -1493,7 +1682,11 @@ function getProjectedItemSortTimestamp(item: ProjectedShoppingItem) {
     return item.firstDate.getTime();
   }
 
-  return item.buyOnDate ? item.buyOnDate.getTime() : Number.MIN_SAFE_INTEGER;
+  if (item.sourceType === "MANUAL") {
+    return item.buyOnDate ? item.buyOnDate.getTime() : Number.MIN_SAFE_INTEGER;
+  }
+
+  return Number.MIN_SAFE_INTEGER;
 }
 
 function getProjectedItemRelevantTimestamp(item: ProjectedShoppingItem) {

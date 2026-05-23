@@ -67,6 +67,7 @@ model User {
   updatedMealPlans             MealPlan[]             @relation("MealPlanUpdatedBy")
   updatedMealPlanEntries       MealPlanEntry[]        @relation("MealPlanEntryUpdatedBy")
   updatedManualShoppingItems   ManualShoppingItem[]   @relation("ManualShoppingItemUpdatedBy")
+  updatedFamilyShoppingItems   FamilyShoppingItem[]   @relation("FamilyShoppingItemUpdatedBy")
   updatedShoppingItemOverrides ShoppingItemOverride[] @relation("ShoppingItemOverrideUpdatedBy")
   storePreferences             UserStorePreference[]
   sharedMealPlans              MealPlanShare[]        @relation("MealPlanShareSharedBy")
@@ -91,6 +92,7 @@ model Family {
   stores              Store[]
   storePreferences    UserStorePreference[]
   stockIngredients    FamilyStockIngredient[]
+  shoppingItems       FamilyShoppingItem[]
 
   @@index([createdByUserId])
   @@index([name])
@@ -120,6 +122,7 @@ model IngredientCategory {
   ingredients         Ingredient[]
   recipeIngredients   RecipeIngredient[]
   manualShoppingItems ManualShoppingItem[]
+  familyShoppingItems FamilyShoppingItem[]
   storeSections       StoreSection[]
 
   @@index([displayName])
@@ -342,6 +345,30 @@ model ManualShoppingItem {
   @@index([buyOnDate])
 }
 
+model FamilyShoppingItem {
+  id               String   @id @default(cuid())
+  familyId         String
+  name             String
+  quantity         String?
+  categoryId       String
+  preferredStoreId String?
+  note             String?
+  checked          Boolean  @default(false)
+  updatedByUserId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  family           Family             @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  category         IngredientCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  preferredStore   Store?             @relation("FamilyShoppingItemPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
+  updatedByUser    User?              @relation("FamilyShoppingItemUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([familyId])
+  @@index([familyId, checked])
+  @@index([updatedByUserId])
+  @@index([categoryId])
+  @@index([preferredStoreId])
+}
+
 model ShoppingItemOverride {
   id                 String             @id @default(cuid())
   mealPlanId         String
@@ -378,6 +405,7 @@ model Store {
   sections                   StoreSection[]
   recipeIngredientsPreferred RecipeIngredient[]     @relation("RecipeIngredientPreferredStore")
   manualItemsPreferred       ManualShoppingItem[]   @relation("ManualShoppingItemPreferredStore")
+  familyItemsPreferred       FamilyShoppingItem[]   @relation("FamilyShoppingItemPreferredStore")
   shoppingOverridesPreferred ShoppingItemOverride[] @relation("ShoppingItemOverridePreferredStore")
   selectedByPreferences      UserStorePreference[]  @relation("UserStorePreferenceSelectedStore")
 

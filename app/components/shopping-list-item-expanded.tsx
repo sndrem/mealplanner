@@ -2,6 +2,10 @@ import { Form } from "react-router";
 
 import { formatOccurrenceSourceLine } from "../lib/shopping-display";
 import type {
+  FamilyShoppingItemFieldErrors,
+  FamilyShoppingItemValues,
+} from "../lib/family-shopping-write.server";
+import type {
   GeneratedShoppingItemOverrideFieldErrors,
   GeneratedShoppingItemOverrideValues,
   ManualShoppingItemFieldErrors,
@@ -16,10 +20,14 @@ type ShoppingListItemExpandedProps = {
     generatedOverrideFieldErrors?: GeneratedShoppingItemOverrideFieldErrors;
     intent?: string;
     itemTarget?: { sourceKey: string };
+    familyFieldErrors?: FamilyShoppingItemFieldErrors;
     manualFieldErrors?: ManualShoppingItemFieldErrors;
   };
   categories: Array<{ displayName: string; id: string }>;
+  familyValues?: FamilyShoppingItemValues | null;
   isPendingCheckToggle: boolean;
+  isPendingFamilyDelete?: boolean;
+  isPendingFamilySave?: boolean;
   isPendingGeneratedExclude: boolean;
   isPendingGeneratedSave: boolean;
   isPendingManualDelete: boolean;
@@ -38,11 +46,11 @@ type ShoppingListItemExpandedProps = {
       recipeTitle: string;
     }>;
     sourceKey: string;
-    sourceType: "GENERATED" | "MANUAL";
+    sourceType: "FAMILY" | "GENERATED" | "MANUAL";
   };
   manualValues: ManualShoppingItemValues | null;
-  mealPlanEndDate: string;
-  mealPlanStartDate: string;
+  mealPlanEndDate?: string;
+  mealPlanStartDate?: string;
   overrideValues: GeneratedShoppingItemOverrideValues | null;
   stores: Array<{ id: string; name: string }>;
   toggleExpectedVersion: string;
@@ -54,12 +62,15 @@ export function ShoppingListItemExpanded({
   isPendingCheckToggle,
   isPendingGeneratedExclude,
   isPendingGeneratedSave,
+  familyValues = null,
+  isPendingFamilyDelete = false,
+  isPendingFamilySave = false,
   isPendingManualDelete,
   isPendingManualSave,
   item,
   manualValues,
-  mealPlanEndDate,
-  mealPlanStartDate,
+  mealPlanEndDate = "",
+  mealPlanStartDate = "",
   overrideValues,
   stores,
   toggleExpectedVersion,
@@ -82,6 +93,16 @@ export function ShoppingListItemExpanded({
               ))}
             </ul>
           </>
+        ) : item.sourceType === "FAMILY" ? (
+          <>
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+              Alltid på listen
+            </p>
+            <p className="mt-3 text-sm leading-6 text-slate-700">
+              Denne varen følger familien på tvers av ukeplaner og kan redigeres
+              eller slettes her.
+            </p>
+          </>
         ) : (
           <>
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
@@ -100,10 +121,16 @@ export function ShoppingListItemExpanded({
           <input
             name="intent"
             type="hidden"
-            value="toggle-shopping-item-checked"
+            value={
+              item.sourceType === "FAMILY"
+                ? "toggle-family-shopping-item-checked"
+                : "toggle-shopping-item-checked"
+            }
           />
           <input name="sourceKey" type="hidden" value={item.sourceKey} />
-          <input name="sourceType" type="hidden" value={item.sourceType} />
+          {item.sourceType !== "FAMILY" ? (
+            <input name="sourceType" type="hidden" value={item.sourceType} />
+          ) : null}
           <input
             name="checked"
             type="hidden"
@@ -382,6 +409,128 @@ export function ShoppingListItemExpanded({
                 type="submit"
               >
                 {isPendingManualDelete
+                  ? "Sletter varelinje..."
+                  : "Slett varelinje"}
+              </button>
+            </Form>
+          </>
+        ) : null}
+
+        {item.sourceType === "FAMILY" && familyValues ? (
+          <>
+            <Form className="grid min-w-0 gap-3" method="post">
+              <input
+                name="intent"
+                type="hidden"
+                value="update-family-shopping-item"
+              />
+              <input name="familyItemId" type="hidden" value={item.sourceKey} />
+              <input
+                name="expectedUpdatedAt"
+                type="hidden"
+                value={item.collaborationVersion}
+              />
+
+              <label className="block min-w-0 text-sm font-medium text-slate-700">
+                Varenavn
+                <input
+                  className="mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  defaultValue={familyValues.name}
+                  name="name"
+                  type="text"
+                />
+              </label>
+
+              <label className="block min-w-0 text-sm font-medium text-slate-700">
+                Mengde
+                <input
+                  className="mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  defaultValue={familyValues.quantity}
+                  name="quantity"
+                  type="text"
+                />
+              </label>
+
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+                <label className="block min-w-0 text-sm font-medium text-slate-700">
+                  Kategori
+                  <select
+                    className="mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    defaultValue={familyValues.categoryId}
+                    name="categoryId"
+                  >
+                    <option value="">Velg kategori</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block min-w-0 text-sm font-medium text-slate-700">
+                  Foretrukket butikk
+                  <select
+                    className="mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    defaultValue={familyValues.preferredStoreId}
+                    name="preferredStoreId"
+                  >
+                    <option value="">Ingen valgt butikk</option>
+                    {stores.map((store) => (
+                      <option key={store.id} value={store.id}>
+                        {store.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className="block min-w-0 text-sm font-medium text-slate-700">
+                Notat
+                <textarea
+                  className="mt-2 box-border min-h-24 w-full max-w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  defaultValue={familyValues.note}
+                  name="note"
+                />
+              </label>
+
+              {actionData?.intent === "update-family-shopping-item" &&
+              actionData.itemTarget?.sourceKey === item.sourceKey &&
+              actionData.familyFieldErrors?.name ? (
+                <p className="text-sm text-rose-600">
+                  {actionData.familyFieldErrors.name}
+                </p>
+              ) : null}
+
+              <button
+                className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                disabled={isPendingFamilySave}
+                type="submit"
+              >
+                {isPendingFamilySave
+                  ? "Lagrer varelinje..."
+                  : "Lagre varelinje"}
+              </button>
+            </Form>
+
+            <Form method="post">
+              <input
+                name="intent"
+                type="hidden"
+                value="delete-family-shopping-item"
+              />
+              <input name="familyItemId" type="hidden" value={item.sourceKey} />
+              <input
+                name="expectedUpdatedAt"
+                type="hidden"
+                value={item.collaborationVersion}
+              />
+              <button
+                className="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:bg-rose-100 disabled:text-rose-400"
+                disabled={isPendingFamilyDelete}
+                type="submit"
+              >
+                {isPendingFamilyDelete
                   ? "Sletter varelinje..."
                   : "Slett varelinje"}
               </button>

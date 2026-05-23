@@ -32,6 +32,11 @@ export default [
       "families/:familyId/meal-plans/:mealPlanId/store-mode",
       "routes/family-meal-plan-store-mode.tsx",
     ),
+    route("families/:familyId/shopping", "routes/family-shopping.tsx"),
+    route(
+      "families/:familyId/shopping/ingredient-search",
+      "routes/family-shopping-ingredient-search.ts",
+    ),
     route("families/:familyId/stores", "routes/family-stores.tsx"),
     route("families/:familyId/stock-ingredients", "routes/family-stock-ingredients.tsx"),
     route("families/:familyId/recipes", "routes/family-recipes.tsx"),

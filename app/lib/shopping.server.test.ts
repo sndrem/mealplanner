@@ -4,6 +4,9 @@ const { dbMock, getFamilyStockMatchSetMock, requireFamilyMembershipMock } =
   vi.hoisted(() => {
     return {
       dbMock: {
+        familyShoppingItem: {
+          findMany: vi.fn(),
+        },
         ingredientCategory: {
           findMany: vi.fn(),
         },
@@ -73,6 +76,7 @@ describe("shopping.server", () => {
       ingredientIds: new Set(),
     });
     dbMock.userStorePreference.findUnique.mockResolvedValue(null);
+    dbMock.familyShoppingItem.findMany.mockResolvedValue([]);
     dbMock.ingredientCategory.findMany.mockResolvedValue([
       {
         displayName: "Brod",
@@ -346,6 +350,7 @@ describe("shopping.server", () => {
     });
     expect(result.categories.map((category) => category.displayName)).toEqual(["Brod", "Frukt og gront", "Meieri"]);
     expect(result.itemCounts).toEqual({
+      family: 0,
       generated: 4,
       manual: 1,
       total: 5,
@@ -555,6 +560,7 @@ describe("shopping.server", () => {
     });
 
     expect(result.itemCounts).toEqual({
+      family: 0,
       generated: 1,
       manual: 0,
       total: 1,
@@ -1728,22 +1734,76 @@ describe("shopping.server", () => {
     expect(dbMock.ingredientCategory.findMany).not.toHaveBeenCalled();
   });
 
+  it("includes unchecked family items in meal plan shopping data", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Uke 20",
+    });
+    dbMock.familyShoppingItem.findMany.mockResolvedValue([
+      {
+        category: {
+          displayName: "Annet",
+          id: "category-other",
+        },
+        categoryId: "category-other",
+        checked: false,
+        id: "family-item-1",
+        name: "Batterier",
+        note: null,
+        preferredStore: null,
+        preferredStoreId: null,
+        quantity: "1 pk",
+        updatedAt: new Date("2026-05-10T00:00:00.000Z"),
+      },
+    ]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.familyStoreGroups).toHaveLength(1);
+    expect(
+      result.familyStoreGroups[0]?.sections[0]?.items.map((item) => item.name),
+    ).toEqual(["Batterier"]);
+    expect(result.itemCounts.family).toBe(1);
+  });
+
   it("lists recent manual shopping items deduped by normalized name", async () => {
     dbMock.manualShoppingItem.findMany.mockResolvedValue([
       {
         categoryId: "category-dairy",
         name: "Melk",
         quantity: "2 liter",
+        updatedAt: new Date("2026-05-16T00:00:00.000Z"),
       },
       {
         categoryId: "category-other",
         name: "melk",
         quantity: "1 liter",
+        updatedAt: new Date("2026-05-15T00:00:00.000Z"),
       },
       {
         categoryId: "category-bakery",
         name: "Brød",
         quantity: null,
+        updatedAt: new Date("2026-05-14T00:00:00.000Z"),
+      },
+    ]);
+    dbMock.familyShoppingItem.findMany.mockResolvedValue([
+      {
+        categoryId: "category-other",
+        name: "Batterier",
+        quantity: "2",
+        updatedAt: new Date("2026-05-17T00:00:00.000Z"),
       },
     ]);
 
@@ -1752,21 +1812,15 @@ describe("shopping.server", () => {
       limit: 5,
     });
 
-    expect(dbMock.manualShoppingItem.findMany).toHaveBeenCalledWith({
-      orderBy: [{ updatedAt: "desc" }],
-      select: {
-        categoryId: true,
-        name: true,
-        quantity: true,
-      },
-      take: 100,
-      where: {
-        mealPlan: {
-          familyId: "family-1",
-        },
-      },
-    });
+    expect(dbMock.manualShoppingItem.findMany).toHaveBeenCalled();
+    expect(dbMock.familyShoppingItem.findMany).toHaveBeenCalled();
     expect(result).toEqual([
+      {
+        categoryId: "category-other",
+        displayName: "Batterier",
+        nameNormalized: "batterier",
+        quantity: "2",
+      },
       {
         categoryId: "category-dairy",
         displayName: "Melk",

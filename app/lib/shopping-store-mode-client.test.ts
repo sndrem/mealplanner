@@ -10,6 +10,7 @@ import {
   buildStoreModeQueueStorageKey,
   buildStoreModeViewStorageKey,
   computeStoreModeProgress,
+  getToggleExpectedVersion,
   partitionStoreModeSections,
   readStoreModeDeprioritizeBought,
   readStoreModeShoppingView,
@@ -139,6 +140,33 @@ describe("shopping-store-mode-client", () => {
         queue,
       }),
     ).toEqual(queue);
+  });
+
+  it("accepts FAMILY toggle operations and uses collaboration version", () => {
+    expect(
+      getToggleExpectedVersion({
+        collaborationVersion: "family-v1",
+        sourceType: "FAMILY",
+      }),
+    ).toBe("family-v1");
+
+    writeStoreModeToggleQueue(storageKey, [
+      {
+        checked: true,
+        expectedUpdatedAt: "family-v1",
+        sourceKey: "family-item-1",
+        sourceType: "FAMILY",
+      },
+    ]);
+
+    expect(readStoreModeToggleQueue(storageKey)).toEqual([
+      {
+        checked: true,
+        expectedUpdatedAt: "family-v1",
+        sourceKey: "family-item-1",
+        sourceType: "FAMILY",
+      },
+    ]);
   });
 
   it("persists and reads queue entries from localStorage", () => {

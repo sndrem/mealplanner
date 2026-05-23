@@ -105,6 +105,10 @@ export function formatCompactShoppingSourceLine(item: {
     return occurrenceAttribution ? `Brukt i ${occurrenceAttribution}` : null;
   }
 
+  if (item.sourceType === "FAMILY") {
+    return "Alltid på listen";
+  }
+
   if (item.buyOnDate) {
     return `Manuell · Kjøpes ${formatCompactDateLabel(item.buyOnDate)}`;
   }
