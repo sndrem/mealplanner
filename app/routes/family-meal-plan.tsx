@@ -17,6 +17,7 @@ import {
   listSharesForMealPlan,
   markReviewCommentAddressed,
 } from "../lib/meal-plan-share.server";
+import { isPlanDateToday } from "../lib/meal-plan-dates";
 import {
   approveMealPlan,
   autoFillMealPlanEntries,
@@ -687,6 +688,7 @@ export default function FamilyMealPlanRoute({
                       date={date}
                       entry={entry}
                       familyId={loaderData.family.id}
+                      isToday={isPlanDateToday(date)}
                       mealPlanId={loaderData.mealPlan.id}
                       recipes={loaderData.recipes}
                     />
@@ -1534,6 +1536,7 @@ function MealPlanDayRow({
   date,
   entry,
   familyId,
+  isToday,
   mealPlanId,
   recipes,
 }: {
@@ -1542,6 +1545,7 @@ function MealPlanDayRow({
   date: string;
   entry: MealPlanEntryFormState;
   familyId: string;
+  isToday: boolean;
   mealPlanId: string;
   recipes: MealPlanRecipeOption[];
 }) {
@@ -1551,8 +1555,14 @@ function MealPlanDayRow({
   const hasNoteOnly = !entry.recipeId && Boolean(entry.note.trim());
 
   return (
-    <details className="group min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
+    <details
+      className={
+        isToday
+          ? "group min-w-0 max-w-full overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 ring-1 ring-emerald-100"
+          : "group min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+      }
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 marker:content-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
             {formatWeekdayLabel(date)}
@@ -1563,6 +1573,11 @@ function MealPlanDayRow({
           <p className="text-xs text-slate-500">{formatDateLabel(date)}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
+          {isToday ? (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
+              I dag
+            </span>
+          ) : null}
           {hasNoteOnly ? (
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
               Notat

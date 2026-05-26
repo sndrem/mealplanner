@@ -11,10 +11,13 @@ import {
 } from "./collaboration.server";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
+import { formatDateOnly } from "./meal-plan-dates";
 import {
   logCollaborationFailure,
   logCollaborationWrite,
 } from "./write-observability.server";
+
+export { formatDateOnly, isPlanDateToday } from "./meal-plan-dates";
 
 const MEAL_PLAN_MAX_SPAN_DAYS = 7;
 const MEAL_PLAN_MAX_DAY_OFFSET = MEAL_PLAN_MAX_SPAN_DAYS - 1;
@@ -164,14 +167,6 @@ const AUTO_FILL_NO_ELIGIBLE_RECIPES_MESSAGE =
   "Ingen tilgjengelige oppskrifter etter a ha utelatt middager fra de to forrige ukeplanene.";
 const AUTO_FILL_REPEAT_WARNING_MESSAGE =
   "Noen middager ble valgt flere ganger fordi det var for fa oppskrifter igjen.";
-
-export function formatDateOnly(date: Date) {
-  return [
-    date.getUTCFullYear().toString().padStart(4, "0"),
-    (date.getUTCMonth() + 1).toString().padStart(2, "0"),
-    date.getUTCDate().toString().padStart(2, "0"),
-  ].join("-");
-}
 
 export function getMealPlanDateRange(startDate: Date, endDate: Date) {
   let currentDate = new Date(startDate.getTime());
