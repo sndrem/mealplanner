@@ -1293,6 +1293,12 @@ export default function FamilyMealPlanShoppingRoute({
                                   </span>
                                 ) : null}
                                 {item.sourceType === "GENERATED" &&
+                                item.recipeCount > 1 ? (
+                                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
+                                    {item.recipeCount} oppskrifter
+                                  </span>
+                                ) : null}
+                                {item.sourceType === "GENERATED" &&
                                 item.preferredStoreConflict ? (
                                   <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
                                     Ulike foretrukne butikker

@@ -20,6 +20,7 @@ interface StoreModeShoppingItemCardGenerated extends StoreModeShoppingItemCardBa
   lastDate: string;
   occurrenceCount: number;
   occurrences: Array<{ date: string; recipeTitle: string }>;
+  recipeCount: number;
   postponedUntilDate: string | null;
   preferredStoreConflict: boolean;
   sourceType: "GENERATED";
@@ -98,6 +99,11 @@ export function StoreModeShoppingItemCard({
                 }
               >
                 {quantityBadge}
+              </span>
+            ) : null}
+            {item.sourceType === "GENERATED" && item.recipeCount > 1 ? (
+              <span className={`${badgeClass} bg-emerald-100 text-emerald-800`}>
+                {item.recipeCount} oppskrifter
               </span>
             ) : null}
             {item.sourceType === "GENERATED" && item.preferredStoreConflict ? (

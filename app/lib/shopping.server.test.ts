@@ -588,6 +588,113 @@ describe("shopping.server", () => {
     ]);
   });
 
+  it("merges canonical ingredients with different ingredient records by normalized name and unit", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: {
+                  id: "category-produce",
+                  name: "Frukt og gront",
+                },
+                categoryId: "category-produce",
+                displayName: "Agurk",
+                id: "ingredient-1",
+                ingredientId: "canonical-cucumber-a",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Taco",
+          },
+          recipeId: "recipe-1",
+        },
+        {
+          date: new Date("2026-05-16T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "2",
+                category: {
+                  id: "category-produce",
+                  name: "Frukt og gront",
+                },
+                categoryId: "category-produce",
+                displayName: "agurk",
+                id: "ingredient-2",
+                ingredientId: "canonical-cucumber-b",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Salat",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-produce",
+            displayName: "Frukt og gront",
+            id: "section-1",
+            sortOrder: 1,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.projectedItems).toHaveLength(1);
+
+    const mergedCucumber = result.projectedItems[0];
+
+    if (mergedCucumber.sourceType !== "GENERATED") {
+      throw new Error("Expected a generated shopping item.");
+    }
+
+    expect(mergedCucumber).toEqual(
+      expect.objectContaining({
+        name: "Agurk",
+        occurrenceCount: 2,
+        quantityLabel: "3 stk",
+        recipeCount: 2,
+      }),
+    );
+  });
+
   it("sums identical units when the same recipe is planned on multiple days", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue({
       activeShoppingDate: null,
@@ -780,6 +887,7 @@ describe("shopping.server", () => {
         name: "Agurk",
         occurrenceCount: 2,
         preferredStoreConflict: true,
+        recipeCount: 2,
         sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2",
       }),
     );
@@ -866,6 +974,7 @@ describe("shopping.server", () => {
         name: "Persille",
         occurrenceCount: 2,
         quantityLabel: "3 stk",
+        recipeCount: 2,
       }),
     );
   });
@@ -1049,6 +1158,7 @@ describe("shopping.server", () => {
       expect.objectContaining({
         checked: true,
         note: "Kjøp ekstra",
+        recipeCount: 2,
         sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2",
       }),
     );

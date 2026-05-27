@@ -250,6 +250,7 @@ export interface ProjectedGeneratedShoppingItem extends ProjectedShoppingItemBas
   firstDate: Date;
   lastDate: Date;
   occurrenceCount: number;
+  recipeCount: number;
   occurrences: ProjectedShoppingOccurrence[];
   postponedUntilDate: Date | null;
   preferredStoreConflict: boolean;
@@ -871,6 +872,7 @@ function mapGeneratedProjectionBucketToItem({
     storeSectionsByStoreId,
   });
   const occurrences = [...bucket.occurrences].sort(compareProjectedOccurrences);
+  const recipeIds = new Set(occurrences.map((occurrence) => occurrence.recipeId));
 
   return {
     amount: bucket.amount,
@@ -882,6 +884,7 @@ function mapGeneratedProjectionBucketToItem({
     note: override?.note ?? null,
     occurrenceCount: occurrences.length,
     occurrences,
+    recipeCount: recipeIds.size,
     collaborationVersion: override?.updatedAt?.toISOString() ?? "",
     postponedUntilDate: override?.postponedUntilDate ?? null,
     preferredStore,
@@ -922,7 +925,7 @@ function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {
       const mergeKey = buildGeneratedMergeKey({
         categoryId: ingredient.categoryId,
         displayName: ingredient.displayName,
-        ingredientId: ingredient.ingredientId,
+        unit: ingredient.unit,
       });
       const existingBucket = buckets.get(mergeKey);
       const incomingStoreId = ingredient.preferredStoreId ?? null;
@@ -1210,16 +1213,16 @@ function buildMergedGeneratedSourceKey(occurrenceKeys: string[]) {
 function buildGeneratedMergeKey({
   categoryId,
   displayName,
-  ingredientId,
+  unit,
 }: {
   categoryId: string;
   displayName: string;
-  ingredientId: string | null;
+  unit: string | null;
 }) {
   return JSON.stringify({
     categoryId,
-    displayName: ingredientId ? null : displayName,
-    ingredientId,
+    displayName: normalizeIngredientCanonicalName(displayName),
+    unit: unit?.trim() || null,
   });
 }
 
