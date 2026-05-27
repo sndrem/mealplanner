@@ -2,33 +2,36 @@
 
 ## Current Objective
 
-Issue #92 — mobile quick-add bookmark for family shopping on branch `issue/92-mobile-family-shopping-quick-add`. Ready for PR review.
+Issue #94 on branch `issue/94-shopping-list-grouping`: merge duplicate generated shopping ingredients across recipes and show a recipe-count badge in shopping list UIs.
 
 ## Completed
 
-- Fixed bottom quick-add dock on mobile (`revealOnFocus`, `autoFocus`, safe-area padding) on `/families/:familyId/shopping`.
-- Desktop (`lg+`) keeps inline `ManualShoppingQuickAdd` in the “Legg til vare” card; single mount via `useIsLgViewport`.
-- `ManualShoppingQuickAdd` gained `autoFocus` and optional `searchFetcherKey` props.
-- Quick-add action tests added to `family-shopping.test.ts`.
+- Updated generated shopping grouping in `app/lib/shopping.server.ts` to merge by `categoryId + normalized displayName + unit`, instead of relying on `ingredientId`.
+- Added `recipeCount` to generated projected items and populated it from distinct contributing recipes.
+- Added `N oppskrifter` badges in both shopping list UIs (`family-meal-plan-shopping` and store mode card) when a generated item comes from more than one recipe.
+- Extended and updated shopping server tests for merge behavior across different ingredient records and for new `recipeCount` assertions.
+- Updated route test fixtures to include `recipeCount` for generated items.
+- Fixed an additional missing `recipeCount` in `app/routes/family-meal-plan-shopping.test.ts` expected store-group fixture.
 
 ## Files To Read First
 
-- `app/routes/family-shopping.tsx` — split mobile dock vs desktop inline layout
-- `app/components/manual-shopping-quick-add.tsx` — `autoFocus` / fetcher key props
-- `app/lib/use-lg-viewport.ts` — `useIsLgViewport` for responsive single mount
+- `app/lib/shopping.server.ts` - generated merge key + projected generated item shape (`recipeCount`)
+- `app/routes/family-meal-plan-shopping.tsx` - main shopping list badge rendering
+- `app/components/store-mode-shopping-item-card.tsx` - store mode badge rendering
+- `app/lib/shopping.server.test.ts` - grouping and regression coverage
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 246 tests passed (43 files)
+- `npm run test:run` — passed (247 tests, 43 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- PR review and merge; closes #92 on merge via `Closes #92`.
-- Manual smoke on iPhone home-screen bookmark: auto-focus may require one tap on iOS Safari.
+- Open PR for issue #94 and merge after review/CI.
+- Manual UI smoke-check recommended for `/families/:familyId/meal-plans/:mealPlanId/shopping` and `/families/:familyId/meal-plans/:mealPlanId/store-mode` to confirm the new badge copy and placement.
 
 ## Next Step
 
-Merge PR when CI is green.
+Create and ship the PR for issue #94 (`Closes #94`) and verify CI plus manual shopping-list behavior for duplicate ingredients.

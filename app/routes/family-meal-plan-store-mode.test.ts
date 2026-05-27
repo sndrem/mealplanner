@@ -104,6 +104,7 @@ describe("family meal plan store mode route", () => {
               name: "Paprika",
               note: null,
               occurrenceCount: 1,
+              recipeCount: 1,
               occurrences: [
                 {
                   amount: "1",
