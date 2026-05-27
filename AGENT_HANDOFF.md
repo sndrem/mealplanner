@@ -11,6 +11,7 @@ Issue #94 on branch `issue/94-shopping-list-grouping`: merge duplicate generated
 - Added `N oppskrifter` badges in both shopping list UIs (`family-meal-plan-shopping` and store mode card) when a generated item comes from more than one recipe.
 - Extended and updated shopping server tests for merge behavior across different ingredient records and for new `recipeCount` assertions.
 - Updated route test fixtures to include `recipeCount` for generated items.
+- Fixed an additional missing `recipeCount` in `app/routes/family-meal-plan-shopping.test.ts` expected store-group fixture.
 
 ## Files To Read First
 
