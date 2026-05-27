@@ -1,10 +1,10 @@
-# fly.toml app configuration file generated for mealplanner-xzvzow on 2026-05-20T12:04:08Z
+# fly.toml app configuration file generated for mealplanner-xzvzow on 2026-05-27T10:35:08Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
 app = 'mealplanner-xzvzow'
-primary_region = 'ams'
+primary_region = 'arn'
 
 [build]
 
@@ -15,7 +15,7 @@ primary_region = 'ams'
   NODE_ENV = 'production'
 
 [http_service]
-  internal_port = 3000
+  internal_port = 8080
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
