@@ -14,6 +14,7 @@ interface ManualShoppingQuickAddLoaderSlice {
 }
 
 interface ManualShoppingQuickAddProps {
+  autoFocus?: boolean;
   ingredientSearchPath: string;
   quickAddIntent?: string;
   recentManualItems: RecentManualShoppingItem[];
@@ -24,29 +25,34 @@ interface ManualShoppingQuickAddProps {
    * the thumb-reachable input should stay small until the user engages.
    */
   revealOnFocus?: boolean;
+  searchFetcherKey?: string;
 }
 
 const MIN_SEARCH_LENGTH = 2;
 const SEARCH_DEBOUNCE_MS = 250;
 const DEFAULT_QUICK_ADD_INTENT = "quick-add-manual-shopping-item";
+const DEFAULT_SEARCH_FETCHER_KEY = "manual-shopping-ingredient-search";
 
 export function ManualShoppingQuickAdd({
+  autoFocus = false,
   ingredientSearchPath,
   quickAddIntent = DEFAULT_QUICK_ADD_INTENT,
   recentManualItems,
   revealOnFocus = false,
+  searchFetcherKey = DEFAULT_SEARCH_FETCHER_KEY,
 }: ManualShoppingQuickAddProps) {
   const listboxId = useId();
   const navigation = useNavigation();
   const submit = useSubmit();
   const searchFetcher = useFetcher<ManualShoppingQuickAddLoaderSlice>({
-    key: "manual-shopping-ingredient-search",
+    key: searchFetcherKey,
   });
   const [query, setQuery] = useState("");
   const [isListOpen, setIsListOpen] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [displayedResults, setDisplayedResults] = useState<IngredientSearchResult[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const lastRequestedQueryRef = useRef<string | null>(null);
   const searchFetcherRef = useRef(searchFetcher);
   searchFetcherRef.current = searchFetcher;
@@ -135,6 +141,14 @@ export function ManualShoppingQuickAdd({
     lastRequestedQueryRef.current = null;
   }, [isQuickAdding]);
 
+  useEffect(() => {
+    if (!autoFocus) {
+      return;
+    }
+
+    inputRef.current?.focus({ preventScroll: true });
+  }, [autoFocus]);
+
   const hasExactMatch = useMemo(
     () =>
       displayedResults.some(
@@ -206,9 +220,11 @@ export function ManualShoppingQuickAdd({
             aria-autocomplete="list"
             aria-controls={showDropdown ? listboxId : undefined}
             aria-expanded={showDropdown}
+            autoFocus={autoFocus}
             className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             id={`${listboxId}-input`}
             name="quickAddQuery"
+            ref={inputRef}
             onChange={(event) => {
               setQuery(event.target.value);
               setIsListOpen(true);

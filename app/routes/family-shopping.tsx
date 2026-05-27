@@ -9,6 +9,7 @@ import {
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
 import { ShoppingListItemExpanded } from "../components/shopping-list-item-expanded";
 import { requireUser } from "../lib/auth.server";
+import { useIsLgViewport } from "../lib/use-lg-viewport";
 import {
   createFamilyShoppingItem,
   createQuickFamilyShoppingItem,
@@ -318,6 +319,7 @@ export default function FamilyShoppingRoute({
   loaderData: Awaited<ReturnType<typeof loader>>;
 }) {
   const navigation = useNavigation();
+  const isLg = useIsLgViewport();
   const noticeContent =
     loaderData.notice !== null
       ? getFamilyShoppingNoticeContent(loaderData.notice)
@@ -325,21 +327,35 @@ export default function FamilyShoppingRoute({
   const pendingIntent = navigation.formData?.get("intent");
   const pendingSourceKey = getPendingSourceKey(navigation.formData);
   const ingredientSearchPath = `/families/${loaderData.family.id}/shopping/ingredient-search`;
+  const quickAddFormError =
+    actionData?.intent === "quick-add-family-shopping-item"
+      ? actionData.formError
+      : undefined;
+  const generalFormError =
+    actionData?.formError &&
+    actionData.intent !== "quick-add-family-shopping-item"
+      ? actionData.formError
+      : undefined;
+  const quickAddProps = {
+    ingredientSearchPath,
+    quickAddIntent: "quick-add-family-shopping-item" as const,
+    recentManualItems: loaderData.recentManualItems,
+  };
   const addFamilyValues =
     actionData?.intent === "add-family-shopping-item" && actionData.familyValues
       ? actionData.familyValues
       : defaultFamilyShoppingItemValues;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-slate-100 px-4 pb-36 pt-8 text-slate-900 lg:pb-12 lg:py-12">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8 lg:py-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
               <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
                 Alltid på listen
               </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight lg:text-4xl">
                 {loaderData.family.name}
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
@@ -373,12 +389,12 @@ export default function FamilyShoppingRoute({
           </section>
         ) : null}
 
-        {actionData?.formError ? (
+        {generalFormError ? (
           <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
             <h2 className="text-base font-semibold">
               Kunne ikke oppdatere listen
             </h2>
-            <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
+            <p className="mt-2 text-sm leading-6">{generalFormError}</p>
           </section>
         ) : null}
 
@@ -411,24 +427,28 @@ export default function FamilyShoppingRoute({
               Legg til vare
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Bruk hurtigvalg eller det avanserte skjemaet for å legge til varer
-              som skal med uansett ukeplan.
+              {isLg
+                ? "Bruk hurtigvalg eller det avanserte skjemaet for å legge til varer som skal med uansett ukeplan."
+                : "Bruk feltet nederst for hurtig innlegging, eller det avanserte skjemaet under."}
             </p>
 
-            {actionData?.intent === "quick-add-family-shopping-item" &&
-            actionData.formError ? (
-              <p className="mt-4 text-sm text-rose-600">{actionData.formError}</p>
+            {isLg ? (
+              <>
+                {quickAddFormError ? (
+                  <p className="mt-4 text-sm text-rose-600">
+                    {quickAddFormError}
+                  </p>
+                ) : null}
+
+                <div className="mt-6">
+                  <ManualShoppingQuickAdd {...quickAddProps} />
+                </div>
+              </>
             ) : null}
 
-            <div className="mt-6">
-              <ManualShoppingQuickAdd
-                ingredientSearchPath={ingredientSearchPath}
-                quickAddIntent="quick-add-family-shopping-item"
-                recentManualItems={loaderData.recentManualItems}
-              />
-            </div>
-
-            <details className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+            <details
+              className={`rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 ${isLg ? "mt-6" : "mt-4"}`}
+            >
               <summary className="cursor-pointer text-sm font-medium text-slate-800">
                 Avansert: legg til med alle felt
               </summary>
@@ -504,99 +524,103 @@ export default function FamilyShoppingRoute({
                         {section.items
                           .filter((item) => item.sourceType === "FAMILY")
                           .map((item) => {
-                          const isPendingCheckToggle =
-                            navigation.state === "submitting" &&
-                            pendingIntent ===
-                              "toggle-family-shopping-item-checked" &&
-                            pendingSourceKey === item.sourceKey;
-                          const isPendingFamilySave =
-                            navigation.state === "submitting" &&
-                            pendingIntent === "update-family-shopping-item" &&
-                            pendingSourceKey === item.sourceKey;
-                          const isPendingFamilyDelete =
-                            navigation.state === "submitting" &&
-                            pendingIntent === "delete-family-shopping-item" &&
-                            pendingSourceKey === item.sourceKey;
-                          const familyValues =
-                            actionData?.intent ===
-                              "update-family-shopping-item" &&
-                            actionData.itemTarget?.sourceKey ===
-                              item.sourceKey &&
-                            actionData.familyValues
-                              ? actionData.familyValues
-                              : item.sourceType === "FAMILY"
-                                ? {
-                                    categoryId: item.category.id,
-                                    name: item.name,
-                                    note: item.note ?? "",
-                                    preferredStoreId:
-                                      item.preferredStore?.id ?? "",
-                                    quantity: item.quantity ?? "",
-                                  }
-                                : null;
+                            const isPendingCheckToggle =
+                              navigation.state === "submitting" &&
+                              pendingIntent ===
+                                "toggle-family-shopping-item-checked" &&
+                              pendingSourceKey === item.sourceKey;
+                            const isPendingFamilySave =
+                              navigation.state === "submitting" &&
+                              pendingIntent === "update-family-shopping-item" &&
+                              pendingSourceKey === item.sourceKey;
+                            const isPendingFamilyDelete =
+                              navigation.state === "submitting" &&
+                              pendingIntent === "delete-family-shopping-item" &&
+                              pendingSourceKey === item.sourceKey;
+                            const familyValues =
+                              actionData?.intent ===
+                                "update-family-shopping-item" &&
+                              actionData.itemTarget?.sourceKey ===
+                                item.sourceKey &&
+                              actionData.familyValues
+                                ? actionData.familyValues
+                                : item.sourceType === "FAMILY"
+                                  ? {
+                                      categoryId: item.category.id,
+                                      name: item.name,
+                                      note: item.note ?? "",
+                                      preferredStoreId:
+                                        item.preferredStore?.id ?? "",
+                                      quantity: item.quantity ?? "",
+                                    }
+                                  : null;
 
-                          return (
-                            <article
-                              key={item.sourceKey}
-                              className={`rounded-[24px] border p-4 ${
-                                item.checked
-                                  ? "border-slate-200 bg-slate-100 opacity-80"
-                                  : "border-slate-200 bg-slate-50"
-                              }`}
-                            >
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h4
-                                  className={`text-base font-semibold ${
-                                    item.checked
-                                      ? "text-slate-500 line-through"
-                                      : "text-slate-950"
-                                  }`}
-                                >
-                                  {item.name}
-                                </h4>
-                                {formatGeneratedQuantityBadge(item) ? (
-                                  <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                                    {formatGeneratedQuantityBadge(item)}
+                            return (
+                              <article
+                                key={item.sourceKey}
+                                className={`rounded-[24px] border p-4 ${
+                                  item.checked
+                                    ? "border-slate-200 bg-slate-100 opacity-80"
+                                    : "border-slate-200 bg-slate-50"
+                                }`}
+                              >
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h4
+                                    className={`text-base font-semibold ${
+                                      item.checked
+                                        ? "text-slate-500 line-through"
+                                        : "text-slate-950"
+                                    }`}
+                                  >
+                                    {item.name}
+                                  </h4>
+                                  {formatGeneratedQuantityBadge(item) ? (
+                                    <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                                      {formatGeneratedQuantityBadge(item)}
+                                    </span>
+                                  ) : null}
+                                  <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-800">
+                                    Alltid på listen
                                   </span>
-                                ) : null}
-                                <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-800">
-                                  Alltid på listen
-                                </span>
-                              </div>
-                              {formatCompactShoppingSourceLine(item) ? (
-                                <p className="mt-2 text-xs text-slate-600">
-                                  {formatCompactShoppingSourceLine(item)}
-                                </p>
-                              ) : null}
-                              <details className="mt-4">
-                                <summary className="cursor-pointer text-sm font-medium text-slate-800">
-                                  Detaljer
-                                </summary>
-                                <div className="mt-4">
-                                  <ShoppingListItemExpanded
-                                    actionData={actionData}
-                                    categories={loaderData.categories}
-                                    familyValues={familyValues}
-                                    isPendingCheckToggle={isPendingCheckToggle}
-                                    isPendingFamilyDelete={isPendingFamilyDelete}
-                                    isPendingFamilySave={isPendingFamilySave}
-                                    isPendingGeneratedExclude={false}
-                                    isPendingGeneratedSave={false}
-                                    isPendingManualDelete={false}
-                                    isPendingManualSave={false}
-                                    item={item}
-                                    manualValues={null}
-                                    overrideValues={null}
-                                    stores={loaderData.stores}
-                                    toggleExpectedVersion={getToggleExpectedVersion(
-                                      item,
-                                    )}
-                                  />
                                 </div>
-                              </details>
-                            </article>
-                          );
-                        })}
+                                {formatCompactShoppingSourceLine(item) ? (
+                                  <p className="mt-2 text-xs text-slate-600">
+                                    {formatCompactShoppingSourceLine(item)}
+                                  </p>
+                                ) : null}
+                                <details className="mt-4">
+                                  <summary className="cursor-pointer text-sm font-medium text-slate-800">
+                                    Detaljer
+                                  </summary>
+                                  <div className="mt-4">
+                                    <ShoppingListItemExpanded
+                                      actionData={actionData}
+                                      categories={loaderData.categories}
+                                      familyValues={familyValues}
+                                      isPendingCheckToggle={
+                                        isPendingCheckToggle
+                                      }
+                                      isPendingFamilyDelete={
+                                        isPendingFamilyDelete
+                                      }
+                                      isPendingFamilySave={isPendingFamilySave}
+                                      isPendingGeneratedExclude={false}
+                                      isPendingGeneratedSave={false}
+                                      isPendingManualDelete={false}
+                                      isPendingManualSave={false}
+                                      item={item}
+                                      manualValues={null}
+                                      overrideValues={null}
+                                      stores={loaderData.stores}
+                                      toggleExpectedVersion={getToggleExpectedVersion(
+                                        item,
+                                      )}
+                                    />
+                                  </div>
+                                </details>
+                              </article>
+                            );
+                          })}
                       </div>
                     </section>
                   ))}
@@ -610,11 +634,30 @@ export default function FamilyShoppingRoute({
               Listen er tom
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Legg til den første varen med skjemaet over.
+              {isLg
+                ? "Legg til den første varen med skjemaet over."
+                : "Legg til den første varen med feltet nederst."}
             </p>
           </section>
         )}
       </div>
+
+      {!isLg ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="pointer-events-auto mx-auto max-w-5xl">
+            <div className="rounded-[28px] bg-white p-4 shadow-2xl ring-1 ring-slate-200">
+              {quickAddFormError ? (
+                <p className="mb-3 text-sm text-rose-600">{quickAddFormError}</p>
+              ) : null}
+              <ManualShoppingQuickAdd
+                {...quickAddProps}
+                autoFocus
+                revealOnFocus
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

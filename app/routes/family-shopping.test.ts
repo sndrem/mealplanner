@@ -27,7 +27,11 @@ vi.mock("../lib/family-shopping-write.server", () => ({
 }));
 
 import { requireUser } from "../lib/auth.server";
-import { toggleFamilyShoppingItemChecked } from "../lib/family-shopping-write.server";
+import {
+  createQuickFamilyShoppingItem,
+  parseQuickAddFamilyShoppingItemInput,
+  toggleFamilyShoppingItemChecked,
+} from "../lib/family-shopping-write.server";
 import {
   getFamilyShoppingData,
   listRecentManualShoppingItemsForFamily,
@@ -128,5 +132,92 @@ describe("family shopping route", () => {
     });
     expect(response).toBeInstanceOf(Response);
     expect((response as Response).status).toBe(302);
+  });
+
+  it("redirects after a family quick-add", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
+      ingredientId: "ingredient-1",
+      name: "Melk",
+      recentNameNormalized: "",
+    });
+    vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({
+      status: "CREATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "quick-add-family-shopping-item");
+    formData.set("name", "Melk");
+
+    const response = await action({
+      params: { familyId: "family-1" },
+      request: new Request("http://localhost/families/family-1/shopping", {
+        body: formData,
+        method: "POST",
+      }),
+    });
+
+    expect(createQuickFamilyShoppingItem).toHaveBeenCalledWith({
+      familyId: "family-1",
+      input: {
+        ingredientId: "ingredient-1",
+        name: "Melk",
+        recentNameNormalized: "",
+      },
+      userId: "user-1",
+    });
+    expect(response).toBeInstanceOf(Response);
+    expect((response as Response).headers.get("Location")).toBe(
+      "http://localhost/families/family-1/shopping?notice=family-shopping-item-added",
+    );
+  });
+
+  it("returns quick-add validation errors without redirecting", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
+      ingredientId: "",
+      name: "",
+      recentNameNormalized: "",
+    });
+    vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({
+      fieldErrors: {
+        name: "Skriv inn et varenavn.",
+      },
+      formError: "Kunne ikke legge til varen.",
+      status: "VALIDATION_ERROR",
+      values: {
+        categoryId: "",
+        name: "",
+        note: "",
+        preferredStoreId: "",
+        quantity: "",
+      },
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "quick-add-family-shopping-item");
+
+    const result = await action({
+      params: { familyId: "family-1" },
+      request: new Request("http://localhost/families/family-1/shopping", {
+        body: formData,
+        method: "POST",
+      }),
+    });
+
+    expect(result).toEqual({
+      familyFieldErrors: {
+        name: "Skriv inn et varenavn.",
+      },
+      familyValues: {
+        categoryId: "",
+        name: "",
+        note: "",
+        preferredStoreId: "",
+        quantity: "",
+      },
+      formError: "Kunne ikke legge til varen.",
+      intent: "quick-add-family-shopping-item",
+    });
   });
 });
