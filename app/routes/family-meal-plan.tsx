@@ -33,6 +33,7 @@ type MealPlanNotice =
   | "meal-plan-approved"
   | "meal-plan-auto-filled"
   | "meal-plan-created"
+  | "meal-plan-entries-reset"
   | "meal-plan-entries-saved"
   | "meal-plan-feedback-addressed"
   | "meal-plan-reopened"
@@ -43,6 +44,7 @@ type MealPlanIntent =
   | "auto-fill-meal-plan-entries"
   | "mark-comment-addressed"
   | "reopen-meal-plan"
+  | "reset-meal-plan-entries"
   | "save-meal-plan-entries"
   | "share-meal-plan"
   | "update-meal-plan";
@@ -275,10 +277,17 @@ export async function action({
     } satisfies MealPlanActionData;
   }
 
-  if (intent === "save-meal-plan-entries") {
+  if (
+    intent === "save-meal-plan-entries" ||
+    intent === "reset-meal-plan-entries"
+  ) {
     const entryVersions = parseMealPlanEntryVersions(formData);
+    const entries =
+      intent === "reset-meal-plan-entries"
+        ? buildResetMealPlanEntries(formData)
+        : parseMealPlanEntries(formData);
     const result = await saveMealPlanEntries({
-      entries: parseMealPlanEntries(formData),
+      entries,
       entryVersions,
       familyId,
       mealPlanId,
@@ -311,7 +320,10 @@ export async function action({
     return buildMealPlanRedirect({
       familyId,
       mealPlanId,
-      notice: "meal-plan-entries-saved",
+      notice:
+        intent === "reset-meal-plan-entries"
+          ? "meal-plan-entries-reset"
+          : "meal-plan-entries-saved",
       request,
     });
   }
@@ -488,6 +500,9 @@ export default function FamilyMealPlanRoute({
   const isSavingEntries =
     navigation.state === "submitting" &&
     pendingIntent === "save-meal-plan-entries";
+  const isResettingEntries =
+    navigation.state === "submitting" &&
+    pendingIntent === "reset-meal-plan-entries";
   const isUpdatingMetadata =
     navigation.state === "submitting" && pendingIntent === "update-meal-plan";
   const isSharingMealPlan =
@@ -529,7 +544,9 @@ export default function FamilyMealPlanRoute({
         ? "Gjenåpner..."
         : "Gjenåpne som utkast";
   const entryValues =
-    actionData?.intent === "save-meal-plan-entries" && actionData.entryValues
+    (actionData?.intent === "save-meal-plan-entries" ||
+      actionData?.intent === "reset-meal-plan-entries") &&
+    actionData.entryValues
       ? actionData.entryValues
       : loaderData.entriesByDate;
   const selectedRecipeIds = new Set(
@@ -666,12 +683,6 @@ export default function FamilyMealPlanRoute({
               className="mt-4 min-w-0 space-y-3"
               method="post"
             >
-              <input
-                name="intent"
-                type="hidden"
-                value="save-meal-plan-entries"
-              />
-
               <div className="grid min-w-0 gap-2">
                 {loaderData.visibleDates.map((date) => {
                   const entry = entryValues[date] ?? {
@@ -696,7 +707,8 @@ export default function FamilyMealPlanRoute({
                 })}
               </div>
 
-              {actionData?.intent === "save-meal-plan-entries" &&
+              {(actionData?.intent === "save-meal-plan-entries" ||
+                actionData?.intent === "reset-meal-plan-entries") &&
               actionData.entryFormError ? (
                 <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                   {actionData.entryFormError}
@@ -706,10 +718,31 @@ export default function FamilyMealPlanRoute({
               <div className="grid gap-3 sm:grid-cols-2">
                 <button
                   className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                  disabled={isSavingEntries || isAutoFillingEntries}
+                  disabled={
+                    isSavingEntries ||
+                    isResettingEntries ||
+                    isAutoFillingEntries
+                  }
+                  name="intent"
                   type="submit"
+                  value="save-meal-plan-entries"
                 >
                   {isSavingEntries ? "Lagrer middager..." : "Lagre middager"}
+                </button>
+                <button
+                  className="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                  disabled={
+                    isSavingEntries ||
+                    isResettingEntries ||
+                    isAutoFillingEntries
+                  }
+                  name="intent"
+                  type="submit"
+                  value="reset-meal-plan-entries"
+                >
+                  {isResettingEntries
+                    ? "Tilbakestiller..."
+                    : "Tilbakestill ukeoversikt"}
                 </button>
               </div>
             </Form>
@@ -735,7 +768,10 @@ export default function FamilyMealPlanRoute({
               <button
                 className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                 disabled={
-                  !canAutoFillEntries || isAutoFillingEntries || isSavingEntries
+                  !canAutoFillEntries ||
+                  isAutoFillingEntries ||
+                  isSavingEntries ||
+                  isResettingEntries
                 }
                 type="submit"
               >
@@ -929,6 +965,7 @@ function getMealPlanNotice(request: Request): MealPlanNotice | null {
     notice === "meal-plan-approved" ||
     notice === "meal-plan-auto-filled" ||
     notice === "meal-plan-created" ||
+    notice === "meal-plan-entries-reset" ||
     notice === "meal-plan-entries-saved" ||
     notice === "meal-plan-feedback-addressed" ||
     notice === "meal-plan-reopened" ||
@@ -1021,6 +1058,12 @@ function getMealPlanNoticeContent(
         description:
           "Ukeplanen er klar for videre arbeid med innhold og handleliste.",
         title: "Ukeplan opprettet",
+      };
+    case "meal-plan-entries-reset":
+      return {
+        description:
+          "Alle middager og notater i ukeoversikten ble fjernet for den aktive perioden.",
+        title: "Ukeoversikt tilbakestilt",
       };
     case "meal-plan-entries-saved":
       return {
@@ -1712,6 +1755,14 @@ function parseMealPlanEntries(formData: FormData): MealPlanEntryValues[] {
       recipeId: String(formData.get(`recipeId:${date}`) ?? ""),
     };
   });
+}
+
+function buildResetMealPlanEntries(formData: FormData): MealPlanEntryValues[] {
+  return formData.getAll("entryDate").map((dateValue) => ({
+    date: String(dateValue),
+    note: "",
+    recipeId: "",
+  }));
 }
 
 function parseMealPlanEntryVersions(formData: FormData) {
