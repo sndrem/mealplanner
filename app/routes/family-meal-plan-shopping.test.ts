@@ -342,6 +342,7 @@ describe("family meal plan shopping route", () => {
                   name: "Lime",
                   note: null,
                   occurrenceCount: 1,
+                  recipeCount: 1,
                   occurrences: [
                     {
                       amount: "1",
