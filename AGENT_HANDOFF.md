@@ -2,22 +2,19 @@
 
 ## Current Objective
 
-Issue #99 on branch `issue/99-mobile-shopping-access`: make shopping easy to reach on mobile via bottom nav (store mode), with optional combined global + meal-plan list on the family shopping page.
+Issue #101 on branch `issue/101-store-mode-info-overflow`: fix store mode shopping item info panel horizontal overflow on mobile (grid and list views).
 
 ## Completed
 
-- Added mobile bottom tab nav (Familie, Ukeplaner, Handleliste) in app layout.
-- Handleliste opens store mode via `/families/:familyId/store-mode` redirect to today's (or latest) meal plan store mode.
-- Added server-persisted `GLOBAL` / `COMBINED` shopping list mode per user+family (`UserFamilyShoppingPreference`).
-- Extended family shopping with today's meal-plan detection, combined projection, dedup, source badges, and mode toggle UI.
-- Fixed Prisma enum leaking to client by using string literal mode types instead of `@prisma/client` re-exports.
+- Constrained `<details>` info panel to card width (`w-full min-w-0`) in `store-mode-shopping-item-card.tsx`.
+- Replaced `w-max` content wrapper with `w-full min-w-0 max-w-full` and `break-words` on info paragraphs.
+- Added `min-w-0` to card shell and inner flex column for flex/grid shrink.
+- Added `[&>*]:min-w-0` on store mode item grid to prevent grid track expansion.
 
 ## Files To Read First
 
-- `app/components/app-mobile-bottom-nav.tsx` - mobile tab bar and store-mode active state
-- `app/routes/family-store-mode.ts` - redirect into meal-plan store mode
-- `app/routes/family-shopping.tsx` - combined/global mode UI and actions
-- `app/lib/shopping.server.ts` - combined list projection and dedup
+- `app/components/store-mode-shopping-item-card.tsx` - details panel width/wrap fix
+- `app/routes/family-meal-plan-store-mode.tsx` - `StoreModeItemGrid` grid child min-width
 
 ## Validation
 
@@ -28,10 +25,8 @@ Issue #99 on branch `issue/99-mobile-shopping-access`: make shopping easy to rea
 
 ## Open Items
 
-- Run migration before deploy: `npx prisma migrate deploy`
-- Manual mobile smoke-check: bottom nav → store mode, mode toggle on family shopping, quick-add dock vs bottom nav overlap
-- PR for issue #99 pending merge
+- Manual mobile smoke-check on PR review: grid + list view, tap info icon, auto-opened details (note/postponed/conflict), card toggle vs info icon
 
 ## Next Step
 
-Merge PR for issue #99 after review/CI and verify store-mode redirect when no meal plan exists (falls back to meal plans list).
+Merge PR for issue #101 after review/CI; verify info panel wrapping at ~375px viewport in store mode.
