@@ -163,46 +163,55 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
     const previousState = lastProcessedFetcherStateRef.current;
     lastProcessedFetcherStateRef.current = toggleFetcher.state;
 
-    if (previousState === "submitting" && toggleFetcher.state === "idle") {
-      const submittedSourceKeyValue = inFlightSourceKeyRef.current;
-      inFlightSourceKeyRef.current = null;
+    const settledFromSubmitOrLoad =
+      (previousState === "submitting" || previousState === "loading") &&
+      toggleFetcher.state === "idle";
 
-      if (toggleFetcher.data?.ok) {
-        const nextQueue = submittedSourceKeyValue
-          ? removeToggleOp(queueRef.current, submittedSourceKeyValue)
-          : queueRef.current.slice(1);
-        persistQueue(nextQueue);
-        setSyncError(null);
-
-        if (nextQueue.length === 0) {
-          revalidateRef.current();
-        } else {
-          submitNextOp();
-        }
-
-        return;
-      }
-
-      if (toggleFetcher.data?.formError) {
-        const nextQueue = submittedSourceKeyValue
-          ? removeToggleOp(queueRef.current, submittedSourceKeyValue)
-          : queueRef.current.slice(1);
-        persistQueue(nextQueue);
-        setSyncError(toggleFetcher.data.formError);
-        revalidateRef.current();
-        scheduleRetry();
-        return;
-      }
-
-      if (submittedSourceKeyValue) {
-        const nextQueue = removeToggleOp(queueRef.current, submittedSourceKeyValue);
-        persistQueue(nextQueue);
-        setSyncError(
-          "Kunne ikke synkronisere. Prøver igjen når nettet er tilbake.",
-        );
-        scheduleRetry();
-      }
+    if (!settledFromSubmitOrLoad) {
+      return;
     }
+
+    const submittedSourceKeyValue = inFlightSourceKeyRef.current;
+
+    if (!submittedSourceKeyValue) {
+      return;
+    }
+
+    inFlightSourceKeyRef.current = null;
+
+    if (toggleFetcher.data?.ok) {
+      const nextQueue = removeToggleOp(
+        queueRef.current,
+        submittedSourceKeyValue,
+      );
+      persistQueue(nextQueue);
+      setSyncError(null);
+
+      if (nextQueue.length === 0) {
+        revalidateRef.current();
+      } else {
+        submitNextOp();
+      }
+
+      return;
+    }
+
+    if (toggleFetcher.data?.formError) {
+      const nextQueue = removeToggleOp(
+        queueRef.current,
+        submittedSourceKeyValue,
+      );
+      persistQueue(nextQueue);
+      setSyncError(toggleFetcher.data.formError);
+      revalidateRef.current();
+      scheduleRetry();
+      return;
+    }
+
+    const nextQueue = removeToggleOp(queueRef.current, submittedSourceKeyValue);
+    persistQueue(nextQueue);
+    setSyncError("Kunne ikke synkronisere. Prøver igjen når nettet er tilbake.");
+    scheduleRetry();
   }, [
     persistQueue,
     scheduleRetry,

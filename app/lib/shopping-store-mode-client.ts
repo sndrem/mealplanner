@@ -302,7 +302,9 @@ export function reconcileToggleQueue({
     const loaderItem = loaderBySourceKey.get(op.sourceKey);
 
     if (!loaderItem) {
-      return true;
+      // Family items leave the store-mode loader once checked (only unchecked
+      // items are loaded). Drop fulfilled check ops; keep uncheck ops pending.
+      return !op.checked;
     }
 
     return loaderItem.checked !== op.checked;
