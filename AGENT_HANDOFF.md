@@ -2,31 +2,31 @@
 
 ## Current Objective
 
-Issue #101 on branch `issue/101-store-mode-info-overflow`: fix store mode shopping item info panel horizontal overflow on mobile (grid and list views).
+Issue #103 on branch `issue/103-store-mode-sync-banner`: fix store mode amber sync banner persisting after toggles are already synced on the server.
 
 ## Completed
 
-- Constrained `<details>` info panel to card width (`w-full min-w-0`) in `store-mode-shopping-item-card.tsx`.
-- Replaced `w-max` content wrapper with `w-full min-w-0 max-w-full` and `break-words` on info paragraphs.
-- Added `min-w-0` to card shell and inner flex column for flex/grid shrink.
-- Added `[&>*]:min-w-0` on store mode item grid to prevent grid track expansion.
+- Fetcher settlement now handles `submitting → idle` and `loading → idle`, guarded by `inFlightSourceKeyRef`.
+- `reconcileToggleQueue` drops check ops when the item is absent from the loader (family items after check).
+- Unit tests for reconcile edge cases and hook fetcher state transitions.
 
 ## Files To Read First
 
-- `app/components/store-mode-shopping-item-card.tsx` - details panel width/wrap fix
-- `app/routes/family-meal-plan-store-mode.tsx` - `StoreModeItemGrid` grid child min-width
+- `app/lib/use-store-mode-toggle-sync.ts` - fetcher queue drain on `loading → idle`
+- `app/lib/shopping-store-mode-client.ts` - reconcile when loader item missing
+- `app/lib/use-store-mode-toggle-sync.test.ts` - fetcher state machine tests
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (260 tests, 46 files)
+- `npm run test:run` — passed (265 tests, 47 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Manual mobile smoke-check on PR review: grid + list view, tap info icon, auto-opened details (note/postponed/conflict), card toggle vs info icon
+- Manual mobile smoke-check: throttle network in store mode, toggle meal-plan + family items, confirm amber banner clears after sync.
 
 ## Next Step
 
-Merge PR for issue #101 after review/CI; verify info panel wrapping at ~375px viewport in store mode.
+Merge PR for issue #103 after review/CI; optional manual verification on production mobile.

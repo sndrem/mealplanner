@@ -142,6 +142,40 @@ describe("shopping-store-mode-client", () => {
     ).toEqual(queue);
   });
 
+  it("drops check ops when the item is absent from the loader", () => {
+    expect(
+      reconcileToggleQueue({
+        loaderItems: [],
+        queue: [
+          {
+            checked: true,
+            expectedUpdatedAt: "family-v1",
+            sourceKey: "family-item-1",
+            sourceType: "FAMILY",
+          },
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it("keeps uncheck ops when the item is absent from the loader", () => {
+    const queue = [
+      {
+        checked: false,
+        expectedUpdatedAt: "family-v1",
+        sourceKey: "family-item-1",
+        sourceType: "FAMILY" as const,
+      },
+    ];
+
+    expect(
+      reconcileToggleQueue({
+        loaderItems: [],
+        queue,
+      }),
+    ).toEqual(queue);
+  });
+
   it("accepts FAMILY toggle operations and uses collaboration version", () => {
     expect(
       getToggleExpectedVersion({
