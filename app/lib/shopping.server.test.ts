@@ -1,8 +1,13 @@
 import { afterEach, describe, expect, it, beforeEach, vi } from "vitest";
 
-const { dbMock, getFamilyStockMatchSetMock, requireFamilyMembershipMock } =
-  vi.hoisted(() => {
+const {
+  dbMock,
+  getFamilyShoppingListModeMock,
+  getFamilyStockMatchSetMock,
+  requireFamilyMembershipMock,
+} = vi.hoisted(() => {
     return {
+      getFamilyShoppingListModeMock: vi.fn(),
       dbMock: {
         familyShoppingItem: {
           findMany: vi.fn(),
@@ -49,10 +54,16 @@ vi.mock("./stock.server", async (importOriginal) => {
   };
 });
 
+vi.mock("./shopping-preference.server", () => ({
+  getFamilyShoppingListMode: getFamilyShoppingListModeMock,
+}));
+
 import {
+  getFamilyShoppingData,
   getMealPlanShoppingData,
   getMealPlanStoreModeData,
   listRecentManualShoppingItemsForFamily,
+  mergeFamilyAndMealPlanShoppingItems,
 } from "./shopping.server";
 
 const mockMembership = {
@@ -1943,6 +1954,155 @@ describe("shopping.server", () => {
         nameNormalized: "brød",
         quantity: "1",
       },
+    ]);
+  });
+
+  it("dedupes meal-plan items that overlap with family items in combined mode", () => {
+    const familyItems = [
+      {
+        category: { id: "category-dairy", name: "Meieri" },
+        checked: false,
+        collaborationVersion: "v1",
+        name: "Melk",
+        note: null,
+        preferredStore: null,
+        quantity: "1",
+        quantityLabel: "1",
+        section: { displayName: "Meieri", sortOrder: 1 },
+        sourceKey: "family-1",
+        sourceType: "FAMILY" as const,
+      },
+    ];
+    const mealPlanItems = [
+      {
+        amount: "1",
+        buyOnDate: null,
+        category: { id: "category-dairy", name: "Meieri" },
+        checked: false,
+        collaborationVersion: "v2",
+        firstDate: new Date("2026-05-16T00:00:00.000Z"),
+        lastDate: new Date("2026-05-16T00:00:00.000Z"),
+        name: "Melk",
+        note: null,
+        occurrenceCount: 1,
+        occurrences: [],
+        postponedUntilDate: null,
+        preferredStore: null,
+        preferredStoreConflict: false,
+        quantityLabel: "1 l",
+        recipeCount: 1,
+        section: { displayName: "Meieri", sortOrder: 1 },
+        sourceKey: "generated-1",
+        sourceType: "GENERATED" as const,
+        unit: "l",
+      },
+      {
+        buyOnDate: null,
+        category: { id: "category-other", name: "Annet" },
+        checked: false,
+        collaborationVersion: "v3",
+        name: "Lime",
+        note: null,
+        overrideVersion: "",
+        preferredStore: null,
+        quantity: "2",
+        quantityLabel: "2",
+        section: { displayName: "Annet", sortOrder: 2 },
+        sourceKey: "manual-1",
+        sourceType: "MANUAL" as const,
+      },
+    ];
+
+    const merged = mergeFamilyAndMealPlanShoppingItems({
+      familyItems,
+      mealPlanItems,
+    });
+
+    expect(merged.map((item) => item.name)).toEqual(["Melk", "Lime"]);
+    expect(merged).toHaveLength(2);
+  });
+
+  it("returns combined family shopping data when mode and meal plan are available", async () => {
+    getFamilyShoppingListModeMock.mockResolvedValue("COMBINED");
+    dbMock.familyShoppingItem.findMany.mockResolvedValue([
+      {
+        category: {
+          displayName: "Annet",
+          id: "category-other",
+        },
+        categoryId: "category-other",
+        checked: false,
+        id: "family-item-1",
+        name: "Batterier",
+        note: null,
+        preferredStore: null,
+        preferredStoreId: null,
+        quantity: "1",
+        updatedAt: new Date("2026-05-10T00:00:00.000Z"),
+      },
+    ]);
+    dbMock.mealPlan.findFirst.mockImplementation(
+      (args: { where: { id?: string } }) => {
+        if (args.where.id) {
+          return {
+            activeShoppingDate: null,
+            endDate: new Date("2026-05-18T00:00:00.000Z"),
+            entries: [],
+            id: "meal-plan-1",
+            manualShoppingItems: [
+              {
+                buyOnDate: null,
+                category: {
+                  displayName: "Annet",
+                  id: "category-other",
+                },
+                categoryId: "category-other",
+                id: "manual-1",
+                name: "Lime",
+                note: null,
+                preferredStore: null,
+                preferredStoreId: null,
+                quantity: "2",
+                updatedAt: new Date("2026-05-10T00:00:00.000Z"),
+              },
+            ],
+            shoppingOverrides: [],
+            startDate: new Date("2026-05-15T00:00:00.000Z"),
+            status: "DRAFT",
+            title: "Uke 20",
+          };
+        }
+
+        return {
+          endDate: new Date("2026-05-18T00:00:00.000Z"),
+          id: "meal-plan-1",
+          startDate: new Date("2026-05-15T00:00:00.000Z"),
+          status: "DRAFT",
+          title: "Uke 20",
+        };
+      },
+    );
+    dbMock.store.findMany.mockResolvedValue([]);
+
+    const result = await getFamilyShoppingData({
+      familyId: "family-1",
+      referenceDate: new Date("2026-05-16T00:00:00.000Z"),
+      userId: "user-1",
+    });
+
+    expect(result.activeListMode).toBe("COMBINED");
+    expect(result.canOfferCombined).toBe(true);
+    expect(result.todayMealPlan).toEqual({
+      id: "meal-plan-1",
+      status: "DRAFT",
+      title: "Uke 20",
+    });
+    expect(result.itemCounts.family).toBe(1);
+    expect(result.itemCounts.mealPlan).toBe(1);
+    expect(result.itemCounts.total).toBe(2);
+    expect(result.projectedItems.map((item) => item.name).sort()).toEqual([
+      "Batterier",
+      "Lime",
     ]);
   });
 });

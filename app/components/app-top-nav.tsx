@@ -24,6 +24,11 @@ function buildFamilyNavItems(
       label: reviewLabel,
       to: `/families/${familyId}/meal-plans/reviews`,
     },
+    {
+      end: true,
+      label: "Handleliste",
+      to: `/families/${familyId}/store-mode`,
+    },
     { end: true, label: "Butikker", to: `/families/${familyId}/stores` },
     { end: false, label: "Oppskrifter", to: `/families/${familyId}/recipes` },
     {

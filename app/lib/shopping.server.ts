@@ -3,7 +3,9 @@ import { MealType, Prisma, ShoppingItemSource } from "@prisma/client";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
+import { findMealPlanCoveringDate } from "./meal-plan-for-date.server";
 import { getMealPlanDateRange } from "./meal-plan.server";
+import { getFamilyShoppingListMode } from "./shopping-preference.server";
 import {
   getFamilyStockMatchSet,
   isStockIngredientMatch,
@@ -553,11 +555,84 @@ export function projectFamilyShoppingItems({
   });
 }
 
+export function buildFamilyShoppingCrossSourceDedupKey(item: {
+  category: { id: string };
+  name: string;
+}) {
+  return JSON.stringify({
+    categoryId: item.category.id,
+    name: normalizeIngredientCanonicalName(item.name),
+  });
+}
+
+export function mergeFamilyAndMealPlanShoppingItems({
+  familyItems,
+  mealPlanItems,
+}: {
+  familyItems: ProjectedFamilyShoppingItem[];
+  mealPlanItems: Array<
+    ProjectedGeneratedShoppingItem | ProjectedManualShoppingItem
+  >;
+}) {
+  const familyKeys = new Set(
+    familyItems.map((item) => buildFamilyShoppingCrossSourceDedupKey(item)),
+  );
+
+  const dedupedMealPlanItems = mealPlanItems.filter(
+    (item) => !familyKeys.has(buildFamilyShoppingCrossSourceDedupKey(item)),
+  );
+
+  return [...familyItems, ...dedupedMealPlanItems].sort(compareProjectedItems);
+}
+
+async function projectMealPlanShoppingItemsForFamily({
+  familyId,
+  mealPlanId,
+}: {
+  familyId: string;
+  mealPlanId: string;
+}) {
+  const mealPlan = await loadShoppingMealPlan({
+    familyId,
+    mealPlanId,
+  });
+
+  if (!mealPlan) {
+    return [];
+  }
+
+  const stockMatchSet = await getFamilyStockMatchSet(familyId);
+  const includeDespiteStockKeys = buildIncludeDespiteStockKeys(
+    mealPlan.shoppingOverrides,
+  );
+  const stores = await db.store.findMany({
+    orderBy: [{ name: "asc" }],
+    select: shoppingStoreSelect,
+    where: {
+      OR: [{ familyId: null }, { familyId }],
+    },
+  });
+  const generatedItems = projectGeneratedShoppingItems({
+    includeDespiteStockKeys,
+    mealPlan,
+    stockMatchSet,
+    stores,
+  });
+  const manualItems = projectManualShoppingItems({
+    mealPlan,
+    stores,
+  });
+
+  return [...generatedItems, ...manualItems];
+}
+
 export async function getFamilyShoppingData({
   familyId,
+  referenceDate = new Date(),
   userId,
 }: {
   familyId: string;
+  referenceDate?: Date;
   userId: string;
 }) {
   const membership = await requireFamilyMembership({
@@ -565,27 +640,55 @@ export async function getFamilyShoppingData({
     userId,
   });
 
-  const [stores, categories, familyItems] = await Promise.all([
-    db.store.findMany({
-      orderBy: [{ name: "asc" }],
-      select: shoppingStoreSelect,
-      where: {
-        OR: [{ familyId: null }, { familyId }],
-      },
-    }),
-    db.ingredientCategory.findMany({
-      orderBy: [{ displayName: "asc" }],
-      select: shoppingCategorySelect,
-    }),
-    loadFamilyShoppingItems({ familyId }),
-  ]);
+  const [stores, categories, familyItems, savedListMode, todayMealPlan] =
+    await Promise.all([
+      db.store.findMany({
+        orderBy: [{ name: "asc" }],
+        select: shoppingStoreSelect,
+        where: {
+          OR: [{ familyId: null }, { familyId }],
+        },
+      }),
+      db.ingredientCategory.findMany({
+        orderBy: [{ displayName: "asc" }],
+        select: shoppingCategorySelect,
+      }),
+      loadFamilyShoppingItems({ familyId }),
+      getFamilyShoppingListMode({
+        familyId,
+        userId,
+      }),
+      findMealPlanCoveringDate({
+        familyId,
+        referenceDate,
+      }),
+    ]);
 
-  const projectedItems = projectFamilyShoppingItems({
+  const familyProjectedItems = projectFamilyShoppingItems({
     items: familyItems,
     stores,
-  }).sort(compareProjectedItems);
+  });
+  const mealPlanProjectedItems =
+    todayMealPlan === null
+      ? []
+      : await projectMealPlanShoppingItemsForFamily({
+          familyId,
+          mealPlanId: todayMealPlan.id,
+        });
+  const canOfferCombined = todayMealPlan !== null;
+  const activeListMode =
+    savedListMode === "COMBINED" && canOfferCombined ? "COMBINED" : "GLOBAL";
+  const projectedItems =
+    activeListMode === "COMBINED"
+      ? mergeFamilyAndMealPlanShoppingItems({
+          familyItems: familyProjectedItems,
+          mealPlanItems: mealPlanProjectedItems,
+        })
+      : [...familyProjectedItems].sort(compareProjectedItems);
 
   return {
+    activeListMode,
+    canOfferCombined,
     categories,
     family: {
       id: membership.family.id,
@@ -593,15 +696,27 @@ export async function getFamilyShoppingData({
     },
     itemCounts: {
       checked: projectedItems.filter((item) => item.checked).length,
+      family: familyProjectedItems.length,
+      mealPlan: mealPlanProjectedItems.length,
       total: projectedItems.length,
       unchecked: projectedItems.filter((item) => !item.checked).length,
     },
+    mealPlanItemCount: mealPlanProjectedItems.length,
     projectedItems,
+    savedListMode,
     storeGroups: buildProjectedStoreGroups(projectedItems),
     stores: stores.map((store) => ({
       id: store.id,
       name: store.name,
     })),
+    todayMealPlan:
+      todayMealPlan === null
+        ? null
+        : {
+            id: todayMealPlan.id,
+            status: todayMealPlan.status,
+            title: todayMealPlan.title,
+          },
     userRole: membership.role,
   };
 }
