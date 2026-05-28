@@ -2,32 +2,36 @@
 
 ## Current Objective
 
-Issue #96 on branch `issue/96-reset-weekly-overview`: add a secondary reset action in the weekly meal plan overview to clear all dinner entries in one click.
+Issue #99 on branch `issue/99-mobile-shopping-access`: make shopping easy to reach on mobile via bottom nav (store mode), with optional combined global + meal-plan list on the family shopping page.
 
 ## Completed
 
-- Added `reset-meal-plan-entries` intent that clears all visible weekly meal fields via `saveMealPlanEntries`.
-- Added secondary **Tilbakestill ukeoversikt** button beside **Lagre middager** with pending/disabled states.
-- Added `meal-plan-entries-reset` success notice with dedicated copy.
-- Added route action tests for reset payload, redirect, and validation error handling.
+- Added mobile bottom tab nav (Familie, Ukeplaner, Handleliste) in app layout.
+- Handleliste opens store mode via `/families/:familyId/store-mode` redirect to today's (or latest) meal plan store mode.
+- Added server-persisted `GLOBAL` / `COMBINED` shopping list mode per user+family (`UserFamilyShoppingPreference`).
+- Extended family shopping with today's meal-plan detection, combined projection, dedup, source badges, and mode toggle UI.
+- Fixed Prisma enum leaking to client by using string literal mode types instead of `@prisma/client` re-exports.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan.tsx` - reset intent, UI button, notice handling
-- `app/routes/family-meal-plan.test.ts` - reset action tests
+- `app/components/app-mobile-bottom-nav.tsx` - mobile tab bar and store-mode active state
+- `app/routes/family-store-mode.ts` - redirect into meal-plan store mode
+- `app/routes/family-shopping.tsx` - combined/global mode UI and actions
+- `app/lib/shopping.server.ts` - combined list projection and dedup
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (249 tests, 43 files)
+- `npm run test:run` — passed (260 tests, 46 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Open PR for issue #96 and merge after review/CI.
-- Manual UI smoke-check: fill several days, click reset, confirm fields clear and success notice appears.
+- Run migration before deploy: `npx prisma migrate deploy`
+- Manual mobile smoke-check: bottom nav → store mode, mode toggle on family shopping, quick-add dock vs bottom nav overlap
+- PR for issue #99 pending merge
 
 ## Next Step
 
-Create and ship the PR for issue #96 (`Closes #96`) and verify CI plus manual reset behavior on the meal plan page.
+Merge PR for issue #99 after review/CI and verify store-mode redirect when no meal plan exists (falls back to meal plans list).

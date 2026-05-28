@@ -26,12 +26,26 @@ vi.mock("../lib/family-shopping-write.server", () => ({
   updateFamilyShoppingItem: vi.fn(),
 }));
 
+vi.mock("../lib/shopping-preference-write.server", () => ({
+  parseFamilyShoppingListMode: vi.fn(),
+  updateFamilyShoppingListMode: vi.fn(),
+}));
+
+vi.mock("../lib/shopping-write.server", () => ({
+  toggleShoppingItemChecked: vi.fn(),
+}));
+
 import { requireUser } from "../lib/auth.server";
 import {
   createQuickFamilyShoppingItem,
   parseQuickAddFamilyShoppingItemInput,
   toggleFamilyShoppingItemChecked,
 } from "../lib/family-shopping-write.server";
+import {
+  parseFamilyShoppingListMode,
+  updateFamilyShoppingListMode,
+} from "../lib/shopping-preference-write.server";
+import { toggleShoppingItemChecked } from "../lib/shopping-write.server";
 import {
   getFamilyShoppingData,
   listRecentManualShoppingItemsForFamily,
@@ -54,10 +68,21 @@ describe("family shopping route", () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([]);
     vi.mocked(getFamilyShoppingData).mockResolvedValue({
+      activeListMode: "GLOBAL",
+      canOfferCombined: false,
       categories: [],
       family: { id: "family-1", name: "Solberg" },
-      itemCounts: { checked: 0, total: 1, unchecked: 1 },
+      itemCounts: {
+        checked: 0,
+        family: 1,
+        mealPlan: 0,
+        total: 1,
+        unchecked: 1,
+      },
+      mealPlanItemCount: 0,
       projectedItems: [],
+      savedListMode: "GLOBAL",
+      todayMealPlan: null,
       storeGroups: [
         {
           sections: [
@@ -219,5 +244,70 @@ describe("family shopping route", () => {
       formError: "Kunne ikke legge til varen.",
       intent: "quick-add-family-shopping-item",
     });
+  });
+
+  it("updates shopping list mode from the route action", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseFamilyShoppingListMode).mockReturnValue("COMBINED");
+    vi.mocked(updateFamilyShoppingListMode).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "set-family-shopping-list-mode");
+    formData.set("listMode", "COMBINED");
+
+    const response = await action({
+      params: { familyId: "family-1" },
+      request: new Request("http://localhost/families/family-1/shopping", {
+        body: formData,
+        method: "POST",
+      }),
+    });
+
+    expect(updateFamilyShoppingListMode).toHaveBeenCalledWith({
+      familyId: "family-1",
+      listMode: "COMBINED",
+      userId: "user-1",
+    });
+    expect(response).toBeInstanceOf(Response);
+    expect((response as Response).headers.get("Location")).toBe(
+      "http://localhost/families/family-1/shopping?notice=family-shopping-list-mode-updated",
+    );
+  });
+
+  it("toggles a meal-plan shopping item from the route action", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(toggleShoppingItemChecked).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "toggle-meal-plan-shopping-item-checked");
+    formData.set("mealPlanId", "meal-plan-1");
+    formData.set("sourceKey", "generated-1");
+    formData.set("sourceType", "GENERATED");
+    formData.set("checked", "true");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+
+    const response = await action({
+      params: { familyId: "family-1" },
+      request: new Request("http://localhost/families/family-1/shopping", {
+        body: formData,
+        method: "POST",
+      }),
+    });
+
+    expect(toggleShoppingItemChecked).toHaveBeenCalledWith({
+      checked: true,
+      expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      sourceKey: "generated-1",
+      sourceType: "GENERATED",
+      userId: "user-1",
+    });
+    expect(response).toBeInstanceOf(Response);
+    expect((response as Response).status).toBe(302);
   });
 });

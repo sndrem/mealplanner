@@ -22,6 +22,11 @@ enum MealPlanStatus {
   APPROVED
 }
 
+enum FamilyShoppingListMode {
+  GLOBAL
+  COMBINED
+}
+
 enum MealPlanShareStatus {
   OPEN
   CLOSED
@@ -70,6 +75,7 @@ model User {
   updatedFamilyShoppingItems   FamilyShoppingItem[]   @relation("FamilyShoppingItemUpdatedBy")
   updatedShoppingItemOverrides ShoppingItemOverride[] @relation("ShoppingItemOverrideUpdatedBy")
   storePreferences             UserStorePreference[]
+  familyShoppingPreferences    UserFamilyShoppingPreference[]
   sharedMealPlans              MealPlanShare[]        @relation("MealPlanShareSharedBy")
   mealPlanShareRecipients      MealPlanShareRecipient[]
   mealPlanReviewComments       MealPlanReviewComment[] @relation("MealPlanReviewCommentAuthor")
@@ -90,8 +96,9 @@ model Family {
   recipes         Recipe[]
   mealPlans       MealPlan[]
   stores              Store[]
-  storePreferences    UserStorePreference[]
-  stockIngredients    FamilyStockIngredient[]
+  storePreferences           UserStorePreference[]
+  familyShoppingPreferences  UserFamilyShoppingPreference[]
+  stockIngredients           FamilyStockIngredient[]
   shoppingItems       FamilyShoppingItem[]
 
   @@index([createdByUserId])
@@ -444,4 +451,19 @@ model UserStorePreference {
   @@index([userId])
   @@index([familyId])
   @@index([selectedStoreId])
+}
+
+model UserFamilyShoppingPreference {
+  id        String                 @id @default(cuid())
+  userId    String
+  familyId  String
+  listMode  FamilyShoppingListMode @default(GLOBAL)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family    Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, familyId])
+  @@index([userId])
+  @@index([familyId])
 }
