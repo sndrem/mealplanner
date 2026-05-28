@@ -71,7 +71,7 @@ export function StoreModeShoppingItemCard({
     : "text-sm font-semibold leading-5 text-slate-950";
 
   return (
-    <div className={`block h-full ${cardShellClass}`}>
+    <div className={`block h-full min-w-0 ${cardShellClass}`}>
       <button
         aria-label={
           item.checked
@@ -84,7 +84,7 @@ export function StoreModeShoppingItemCard({
         type="button"
       />
 
-      <div className="relative z-10 flex h-full min-h-[32px] flex-col pointer-events-none">
+      <div className="relative z-10 flex h-full min-h-[32px] min-w-0 flex-col pointer-events-none">
         <div className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5">
             <span className={nameClass}>{item.name}</span>
@@ -121,7 +121,7 @@ export function StoreModeShoppingItemCard({
         </div>
 
         <details
-          className="group mt-auto w-fit self-start flex flex-col-reverse items-start pointer-events-auto"
+          className="group mt-auto flex w-full min-w-0 flex-col-reverse items-start pointer-events-auto"
           open={shouldAutoOpenDetails}
         >
           <summary
@@ -132,20 +132,20 @@ export function StoreModeShoppingItemCard({
             <span className="sr-only">Vis informasjon</span>
           </summary>
           <div
-            className="mb-1 w-max max-w-full space-y-1 border-b border-slate-200 pb-1.5 pointer-events-auto"
+            className="mb-1 w-full min-w-0 max-w-full space-y-1 border-b border-slate-200 pb-1.5 pointer-events-auto"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
           >
-            <p className="text-xs leading-4 text-slate-600">
+            <p className="break-words text-xs leading-4 text-slate-600">
               {formatStoreModeItemSourceLine(item)}
             </p>
             {item.note ? (
-              <p className="text-xs leading-4 text-slate-700">
+              <p className="break-words text-xs leading-4 text-slate-700">
                 Notat: {item.note}
               </p>
             ) : null}
             {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
-              <p className="text-xs leading-4 text-amber-800">
+              <p className="break-words text-xs leading-4 text-amber-800">
                 Utsatt til {formatDateLabel(item.postponedUntilDate)}.
               </p>
             ) : null}
