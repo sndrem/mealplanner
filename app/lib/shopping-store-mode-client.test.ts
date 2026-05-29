@@ -305,16 +305,16 @@ describe("shopping-store-mode-client", () => {
     );
   });
 
-  it("defaults deprioritize-bought preference to false", () => {
+  it("defaults deprioritize-bought preference to true", () => {
     const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
     });
 
-    expect(readStoreModeDeprioritizeBought(storageKey)).toBe(false);
+    expect(readStoreModeDeprioritizeBought(storageKey)).toBe(true);
   });
 
-  it("persists and reads deprioritize-bought preference", () => {
+  it("persists and reads deprioritize-bought preference when enabled", () => {
     const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
@@ -325,7 +325,18 @@ describe("shopping-store-mode-client", () => {
     expect(readStoreModeDeprioritizeBought(storageKey)).toBe(true);
   });
 
-  it("falls back to false for invalid stored deprioritize-bought values", () => {
+  it("persists and reads deprioritize-bought preference when disabled", () => {
+    const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+    });
+
+    writeStoreModeDeprioritizeBought(storageKey, false);
+
+    expect(readStoreModeDeprioritizeBought(storageKey)).toBe(false);
+  });
+
+  it("falls back to true for invalid stored deprioritize-bought values", () => {
     const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
       familyId: "family-1",
       mealPlanId: "meal-plan-1",
@@ -333,7 +344,7 @@ describe("shopping-store-mode-client", () => {
 
     window.localStorage.setItem(storageKey, "yes");
 
-    expect(readStoreModeDeprioritizeBought(storageKey)).toBe(false);
+    expect(readStoreModeDeprioritizeBought(storageKey)).toBe(true);
   });
 
   it("returns sections unchanged when deprioritize-bought is off", () => {
