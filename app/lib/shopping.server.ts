@@ -785,11 +785,6 @@ export async function getMealPlanStoreModeData({
     mealPlan,
     stores,
   });
-  const stockIngredientsForPlan = getStockIngredientsForMealPlan({
-    includeDespiteStockKeys,
-    mealPlan,
-    stockMatchSet,
-  });
   const projectedItems = [...generatedItems, ...manualItems];
   const activeShoppingDate = mealPlan.activeShoppingDate ?? mealPlan.startDate;
   const selectedStore = resolveSelectedStoreSummary(
@@ -856,8 +851,6 @@ export async function getMealPlanStoreModeData({
     mealPlan,
     progress: buildStoreModeProgress(mergedDueItems),
     selectedStore,
-    stockIngredientCount: stockIngredientsForPlan.length,
-    stockIngredientsForPlan,
     stores: stores.map((store) => ({
       id: store.id,
       name: store.name,
