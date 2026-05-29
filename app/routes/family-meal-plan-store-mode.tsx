@@ -140,7 +140,6 @@ export async function loader({
     progress: result.progress,
     recentManualItems,
     selectedStore: result.selectedStore,
-    stockIngredientCount: result.stockIngredientCount,
     stores: result.stores,
     userRole: result.userRole,
     visibleDates: result.visibleDates,
@@ -533,24 +532,6 @@ export default function FamilyMealPlanStoreModeRoute({
               Kunne ikke oppdatere butikkmodus
             </h2>
             <p className="mt-2 text-sm leading-6">{generalFormError}</p>
-          </section>
-        ) : null}
-
-        {loaderData.stockIngredientCount > 0 ? (
-          <section className="rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-5 text-amber-950 shadow-sm">
-            <p className="text-sm font-semibold">
-              {loaderData.stockIngredientCount} basisvarer brukt denne uken
-            </p>
-            <p className="mt-2 text-sm leading-6 text-amber-900">
-              Basisvarer ligger utenfor butikkmodus med mindre de er lagt til i
-              handlelisten.
-            </p>
-            <Link
-              className="mt-4 inline-flex rounded-2xl bg-amber-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-950"
-              to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
-            >
-              Åpne handlelisten
-            </Link>
           </section>
         ) : null}
 
