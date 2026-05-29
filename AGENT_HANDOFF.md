@@ -2,31 +2,32 @@
 
 ## Current Objective
 
-Issue #103 on branch `issue/103-store-mode-sync-banner`: fix store mode amber sync banner persisting after toggles are already synced on the server.
+Issue #111 on branch `issue/111-nordic-playful-store-mode`: Nordic Playful store-mode visual refresh (warm brown accent) ready for PR merge.
 
 ## Completed
 
-- Fetcher settlement now handles `submitting → idle` and `loading → idle`, guarded by `inFlightSourceKeyRef`.
-- `reconcileToggleQueue` drops check ops when the item is absent from the loader (family items after check).
-- Unit tests for reconcile edge cases and hook fetcher state transitions.
+- Store-mode theme tokens in `app/app.css` and shared classes in `app/lib/store-mode-theme.ts`.
+- Restyled `family-meal-plan-store-mode` route, store-mode components, and `ManualShoppingQuickAdd` `appearance="store-mode"`.
+- Bought (`Kjøpt`) section wrapped in `<details>`, closed by default.
+- Design concept HTML mockups and comparison doc under `docs/design/` (from #112).
 
 ## Files To Read First
 
-- `app/lib/use-store-mode-toggle-sync.ts` - fetcher queue drain on `loading → idle`
-- `app/lib/shopping-store-mode-client.ts` - reconcile when loader item missing
-- `app/lib/use-store-mode-toggle-sync.test.ts` - fetcher state machine tests
+- `app/lib/store-mode-theme.ts` - semantic Tailwind class strings for store mode
+- `app/routes/family-meal-plan-store-mode.tsx` - route layout, collapsible bought section
+- `docs/design/store-mode-concepts/nordic-playful.html` - visual reference
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (265 tests, 47 files)
+- `npm run test:run` — passed (267 tests, 48 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Manual mobile smoke-check: throttle network in store mode, toggle meal-plan + family items, confirm amber banner clears after sync.
+- Manual mobile smoke-check: store mode in ~390px viewport; expand Kjøpt section; quick-add focus ring; toggle items (red checked state).
 
 ## Next Step
 
-Merge PR for issue #103 after review/CI; optional manual verification on production mobile.
+Merge PR (Closes #111) after review/CI.

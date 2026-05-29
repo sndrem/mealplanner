@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="nb">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>C — Color-Sectioned Sprint · Butikkmodus</title>
+    <link rel="stylesheet" href="shared.css" />
+    <style>
+      body {
+        background: #f1f5f9;
+        color: #0f172a;
+      }
+
+      .concept-label {
+        background: #ffedd5;
+        color: #c2410c;
+      }
+
+      .meta-strip {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+      }
+
+      .progress-pill {
+        background: #0f172a;
+        color: #fff;
+      }
+
+      .progress-pill .dot {
+        background: #4ade80;
+      }
+
+      .banner.sync {
+        background: #fef9c3;
+        border: 1px solid #fde047;
+        color: #713f12;
+      }
+
+      .toolbar button.on {
+        background: #fff;
+        color: #0f172a;
+        outline: 1px solid #cbd5e1;
+      }
+
+      .toolbar button.off {
+        background: #e2e8f0;
+        color: #64748b;
+      }
+
+      /* Category tints — maps to IngredientCategoryKey in seed data */
+      .section-card.cat-produce {
+        background: #d1fae5;
+        border: 1px solid #6ee7b7;
+      }
+
+      .section-card.cat-produce .count-chip {
+        background: #059669;
+        color: #fff;
+      }
+
+      .section-card.cat-produce .item-card {
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+      }
+
+      .section-card.cat-dairy {
+        background: #ede9fe;
+        border: 1px solid #c4b5fd;
+      }
+
+      .section-card.cat-dairy .count-chip {
+        background: #7c3aed;
+        color: #fff;
+      }
+
+      .section-card.cat-dairy .item-card {
+        background: #f5f3ff;
+        border: 1px solid #ddd6fe;
+      }
+
+      .section-card.cat-pantry {
+        background: #ffedd5;
+        border: 1px solid #fdba74;
+      }
+
+      .section-card.cat-pantry .count-chip {
+        background: #ea580c;
+        color: #fff;
+      }
+
+      .section-card.cat-pantry .item-card {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+      }
+
+      .item-card .badge {
+        background: #fff;
+        color: #475569;
+        outline: 1px solid rgba(0, 0, 0, 0.06);
+      }
+
+      .item-card.checked {
+        background: #fef2f2 !important;
+        border-color: #fca5a5 !important;
+      }
+
+      .item-card.checked .name {
+        color: #64748b;
+      }
+
+      .legend {
+        margin-top: 1rem;
+        padding: 0.75rem;
+        background: #fff;
+        border-radius: 0.75rem;
+        font-size: 0.6875rem;
+        color: #64748b;
+        line-height: 1.6;
+      }
+
+      .legend strong {
+        color: #0f172a;
+      }
+
+      .swatches {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.35rem;
+      }
+
+      .swatches span {
+        padding: 0.15rem 0.4rem;
+        border-radius: 0.35rem;
+        font-weight: 600;
+        font-size: 0.625rem;
+      }
+
+      .quick-add-dock .inner {
+        background: #fff;
+        border: 2px solid #0f172a;
+        box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.12);
+      }
+
+      .quick-add-dock label {
+        color: #0f172a;
+        font-weight: 600;
+      }
+
+      .quick-add-dock input {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+      }
+
+      .quick-add-dock input:focus {
+        border-color: #0f172a;
+        box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.12);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="concept-nav" aria-label="Konsepter">
+      <a href="index.html">Oversikt</a>
+      <a href="soft-pastel-calm.html">A — Calm</a>
+      <a href="nordic-playful.html">B — Nordic</a>
+      <a href="color-sectioned-sprint.html" aria-current="page">C — Sprint</a>
+    </nav>
+
+    <div class="phone-frame">
+      <span class="concept-label">C · Color-Sectioned Sprint</span>
+
+      <header class="meta-strip">
+        <h1>Uke 22 · Middager</h1>
+        <span class="sep">·</span>
+        <span class="muted">Rema 1000</span>
+        <span class="sep">·</span>
+        <span class="muted">fredag 30. mai</span>
+        <span class="progress-pill">
+          <span class="dot" aria-hidden="true"></span>
+          12/18
+        </span>
+        <div class="links">
+          <a href="#">Handleliste</a>
+          <a href="#">Butikker</a>
+        </div>
+      </header>
+
+      <section class="banner sync" aria-label="Synkroniserer">
+        <h2>Synkroniserer</h2>
+        <p>Lagrer avkryssing …</p>
+      </section>
+
+      <div class="toolbar">
+        <button type="button" class="on">Flytt kjøpte til bunnen</button>
+        <button type="button" class="on">Liste</button>
+        <button type="button" class="off">Rutenett</button>
+      </div>
+
+      <section
+        class="section-card cat-produce"
+        aria-labelledby="sec-produce"
+      >
+        <div class="section-head">
+          <h2 id="sec-produce">Frukt og grønt</h2>
+          <span class="count-chip">4 varer</span>
+        </div>
+        <div class="item-grid">
+          <article class="item-card">
+            <span class="name">Cherrytomater</span>
+            <span class="badge">400 g</span>
+          </article>
+          <article class="item-card checked">
+            <span class="name">Spinat</span>
+          </article>
+          <article class="item-card">
+            <span class="name">Avokado</span>
+            <span class="badge">2 stk</span>
+          </article>
+          <article class="item-card">
+            <span class="name">Sitron</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-card cat-dairy" aria-labelledby="sec-dairy">
+        <div class="section-head">
+          <h2 id="sec-dairy">Meieri</h2>
+          <span class="count-chip">2 varer</span>
+        </div>
+        <div class="item-grid">
+          <article class="item-card">
+            <span class="name">Melk</span>
+            <span class="badge">1 L</span>
+          </article>
+          <article class="item-card checked">
+            <span class="name">Revet ost</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-card cat-pantry" aria-labelledby="sec-pantry">
+        <div class="section-head">
+          <h2 id="sec-pantry">Tørrvarer</h2>
+          <span class="count-chip">1 vare</span>
+        </div>
+        <div class="item-grid">
+          <article class="item-card">
+            <span class="name">Pasta</span>
+            <span class="badge">500 g</span>
+          </article>
+        </div>
+      </section>
+
+      <aside class="legend">
+        <strong>Kategorifarger</strong> (9 nøkler i appen): produce, meat-fish,
+        dairy, pantry, frozen, bakery-bread, drinks, household, other.
+        <div class="swatches">
+          <span style="background: #d1fae5">produce</span>
+          <span style="background: #fecdd3">meat-fish</span>
+          <span style="background: #ede9fe">dairy</span>
+          <span style="background: #ffedd5">pantry</span>
+          <span style="background: #e0f2fe">frozen</span>
+          <span style="background: #fef3c7">bakery</span>
+          <span style="background: #dbeafe">drinks</span>
+          <span style="background: #e2e8f0">household</span>
+          <span style="background: #f1f5f9">other</span>
+        </div>
+      </aside>
+    </div>
+
+    <div class="quick-add-dock">
+      <div class="inner">
+        <label for="quick-add">Legg til vare</label>
+        <input
+          id="quick-add"
+          type="search"
+          placeholder="Søk eller skriv varenavn …"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+  </body>
+</html>

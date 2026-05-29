@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="nb">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>B — Nordic Playful · Butikkmodus</title>
+    <link rel="stylesheet" href="shared.css" />
+    <style>
+      :root {
+        --accent-warm: #c9bfb0;
+        --accent-warm-light: #ebe4dc;
+        --accent-warm-deep: #a89988;
+        --accent-warm-text: #57534e;
+      }
+
+      body {
+        background: #fafaf9;
+        color: #1c1917;
+      }
+
+      .concept-label {
+        background: #f5f5f4;
+        color: #57534e;
+      }
+
+      .meta-strip {
+        background: #fff;
+        border: 1px solid #e7e5e4;
+        box-shadow: 0 1px 3px rgba(28, 25, 23, 0.04);
+      }
+
+      .meta-strip h1 {
+        font-size: 0.9375rem;
+        letter-spacing: -0.02em;
+      }
+
+      .progress-pill {
+        background: var(--accent-warm-light);
+        color: var(--accent-warm-text);
+        font-size: 0.875rem;
+        padding: 0.25rem 0.65rem;
+      }
+
+      .progress-pill .dot {
+        background: var(--accent-warm-deep);
+      }
+
+      .banner.sync {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+      }
+
+      .toolbar button.on {
+        background: #fff;
+        color: #1c1917;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+        outline: 1px solid #e7e5e4;
+      }
+
+      .toolbar button.off {
+        background: #f5f5f4;
+        color: #78716c;
+      }
+
+      .section-card {
+        background: #fff;
+        border: 1px solid #e7e5e4;
+        box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04);
+      }
+
+      .section-head h2 {
+        font-size: 1.125rem;
+        letter-spacing: -0.03em;
+      }
+
+      .count-chip {
+        background: #f5f5f4;
+        color: #57534e;
+      }
+
+      .item-card {
+        background: #fafaf9;
+        border: 1px solid #e7e5e4;
+        min-height: 4.5rem;
+      }
+
+      .item-card .badge {
+        background: #fff;
+        color: #57534e;
+        outline: 1px solid #e7e5e4;
+      }
+
+      .item-card.checked {
+        background: #fef2f2;
+        border-color: #fecaca;
+      }
+
+      .item-card.checked .name {
+        color: #64748b;
+      }
+
+      .accent-bar {
+        height: 3px;
+        width: 2.5rem;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent-warm-light), var(--accent-warm));
+        margin-bottom: 0.65rem;
+      }
+
+      .quick-add-dock .inner {
+        background: #fff;
+        border: 2px solid var(--accent-warm);
+        box-shadow: 0 -4px 24px rgba(168, 153, 136, 0.18);
+      }
+
+      .quick-add-dock label {
+        color: #57534e;
+        font-weight: 600;
+      }
+
+      .quick-add-dock input {
+        background: #fafaf9;
+        border: 1px solid #d6d3d1;
+        color: #1c1917;
+      }
+
+      .quick-add-dock input:focus {
+        border-color: var(--accent-warm);
+        box-shadow: 0 0 0 3px rgba(201, 191, 176, 0.45);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="concept-nav" aria-label="Konsepter">
+      <a href="index.html">Oversikt</a>
+      <a href="soft-pastel-calm.html">A — Calm</a>
+      <a href="nordic-playful.html" aria-current="page">B — Nordic</a>
+      <a href="color-sectioned-sprint.html">C — Sprint</a>
+    </nav>
+
+    <div class="phone-frame">
+      <span class="concept-label">B · Nordic Playful</span>
+
+      <header class="meta-strip">
+        <h1>Uke 22 · Middager</h1>
+        <span class="sep">·</span>
+        <span class="muted">Rema 1000</span>
+        <span class="sep">·</span>
+        <span class="muted">fredag 30. mai</span>
+        <span class="progress-pill">
+          <span class="dot" aria-hidden="true"></span>
+          12/18
+        </span>
+        <div class="links">
+          <a href="#">Handleliste</a>
+          <a href="#">Butikker</a>
+        </div>
+      </header>
+
+      <section class="banner sync" aria-label="Synkroniserer">
+        <h2>Synkroniserer</h2>
+        <p>Lagrer avkryssing …</p>
+      </section>
+
+      <div class="toolbar">
+        <button type="button" class="on">Flytt kjøpte til bunnen</button>
+        <button type="button" class="on">Liste</button>
+        <button type="button" class="off">Rutenett</button>
+      </div>
+
+      <section class="section-card" aria-labelledby="sec-produce">
+        <div class="accent-bar" aria-hidden="true"></div>
+        <div class="section-head">
+          <h2 id="sec-produce">Frukt og grønt</h2>
+          <span class="count-chip">4 varer</span>
+        </div>
+        <div class="item-grid">
+          <article class="item-card">
+            <span class="name">Cherrytomater</span>
+            <span class="badge">400 g</span>
+          </article>
+          <article class="item-card checked">
+            <span class="name">Spinat</span>
+          </article>
+          <article class="item-card">
+            <span class="name">Avokado</span>
+            <span class="badge">2 stk</span>
+          </article>
+          <article class="item-card">
+            <span class="name">Sitron</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-card" aria-labelledby="sec-dairy">
+        <div class="accent-bar" aria-hidden="true"></div>
+        <div class="section-head">
+          <h2 id="sec-dairy">Meieri</h2>
+          <span class="count-chip">2 varer</span>
+        </div>
+        <div class="item-grid">
+          <article class="item-card">
+            <span class="name">Melk</span>
+            <span class="badge">1 L</span>
+          </article>
+          <article class="item-card checked">
+            <span class="name">Revet ost</span>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <div class="quick-add-dock">
+      <div class="inner">
+        <label for="quick-add">Legg til vare</label>
+        <input
+          id="quick-add"
+          type="search"
+          placeholder="Søk eller skriv varenavn …"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+  </body>
+</html>

@@ -43,6 +43,21 @@ import {
 } from "../lib/shopping-write.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
 import {
+  getStoreModeBannerClass,
+  storeModeAccentBarClass,
+  storeModeCountChipClass,
+  storeModeLaterChipClass,
+  storeModeMetaStripClass,
+  storeModeMutedPanelClass,
+  storeModePageClass,
+  storeModeProgressDotClass,
+  storeModeProgressPillClass,
+  storeModeQuickAddDockClass,
+  storeModeSectionCardClass,
+  storeModeSelectClass,
+  storeModeSurfaceCardClass,
+} from "../lib/store-mode-theme";
+import {
   STORE_MODE_SYNC_PROGRESS_MESSAGE,
   useStoreModeToggleSync,
 } from "../lib/use-store-mode-toggle-sync";
@@ -460,39 +475,40 @@ export default function FamilyMealPlanStoreModeRoute({
       : undefined;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 pb-36 pt-8 text-slate-900">
+    <main className={storeModePageClass}>
       <div className="mx-auto flex max-w-4xl flex-col gap-5">
-        <section className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-slate-200">
-          <h1 className="min-w-0 truncate font-semibold text-slate-950">
+        <section className={storeModeMetaStripClass}>
+          <h1 className="min-w-0 truncate font-semibold text-stone-950">
             {loaderData.mealPlan.title}
           </h1>
-          <span className="hidden text-slate-300 sm:inline" aria-hidden="true">
+          <span className="hidden text-stone-300 sm:inline" aria-hidden="true">
             ·
           </span>
-          <span className="truncate text-slate-600">
+          <span className="truncate text-stone-600">
             {loaderData.selectedStore?.name ?? "Ingen butikk"}
           </span>
-          <span className="hidden text-slate-300 sm:inline" aria-hidden="true">
+          <span className="hidden text-stone-300 sm:inline" aria-hidden="true">
             ·
           </span>
-          <span className="truncate text-slate-600">
+          <span className="truncate text-stone-600">
             {formatDateLabel(loaderData.activeShoppingDate)}
           </span>
-          <span className="hidden text-slate-300 sm:inline" aria-hidden="true">
+          <span className="hidden text-stone-300 sm:inline" aria-hidden="true">
             ·
           </span>
-          <span className="shrink-0 font-medium text-emerald-700">
+          <span className={storeModeProgressPillClass}>
+            <span aria-hidden="true" className={storeModeProgressDotClass} />
             {displayProgress.checkedCount}/{displayProgress.totalCount}
           </span>
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <Link
-              className="text-slate-600 underline-offset-2 hover:text-slate-950 hover:underline"
+              className="text-stone-600 underline-offset-2 hover:text-stone-950 hover:underline"
               to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
             >
               Handleliste
             </Link>
             <Link
-              className="text-slate-600 underline-offset-2 hover:text-slate-950 hover:underline"
+              className="text-stone-600 underline-offset-2 hover:text-stone-950 hover:underline"
               to={`/families/${loaderData.family.id}/stores`}
             >
               Butikker
@@ -501,7 +517,7 @@ export default function FamilyMealPlanStoreModeRoute({
         </section>
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
+          <section className={getStoreModeBannerClass("success")}>
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
             <p className="mt-2 text-sm leading-6 text-emerald-900">
               {noticeContent.description}
@@ -511,11 +527,11 @@ export default function FamilyMealPlanStoreModeRoute({
 
         {syncBannerMessage ? (
           <section
-            className={
+            className={getStoreModeBannerClass(
               syncBannerMessage === STORE_MODE_SYNC_PROGRESS_MESSAGE
-                ? "rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-5 text-amber-950 shadow-sm"
-                : "rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm"
-            }
+                ? "sync"
+                : "error",
+            )}
           >
             <h2 className="text-base font-semibold">
               {syncBannerMessage === STORE_MODE_SYNC_PROGRESS_MESSAGE
@@ -527,7 +543,7 @@ export default function FamilyMealPlanStoreModeRoute({
         ) : null}
 
         {generalFormError ? (
-          <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
+          <section className={getStoreModeBannerClass("error")}>
             <h2 className="text-base font-semibold">
               Kunne ikke oppdatere butikkmodus
             </h2>
@@ -535,17 +551,17 @@ export default function FamilyMealPlanStoreModeRoute({
           </section>
         ) : null}
 
-        <details className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <summary className="cursor-pointer text-sm font-medium text-slate-800">
+        <details className={storeModeSectionCardClass}>
+          <summary className="cursor-pointer text-sm font-medium text-stone-800">
             Butikk og handledato
-            <span className="ml-2 font-normal text-slate-500">
+            <span className="ml-2 font-normal text-stone-500">
               {loaderData.selectedStore?.name ?? "Ingen butikk"} ·{" "}
               {formatDateLabel(loaderData.activeShoppingDate)}
             </span>
           </summary>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <article>
-              <h2 className="text-base font-semibold text-slate-950">
+              <h2 className="text-base font-semibold text-stone-950">
                 Velg butikk
               </h2>
               <Form className="mt-4 space-y-3" method="post">
@@ -556,7 +572,7 @@ export default function FamilyMealPlanStoreModeRoute({
                 />
                 <select
                   aria-busy={isSavingStore}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:cursor-wait disabled:bg-slate-50"
+                  className={storeModeSelectClass}
                   defaultValue={selectedStoreValue}
                   disabled={isSavingStore}
                   name="selectedStoreId"
@@ -580,7 +596,7 @@ export default function FamilyMealPlanStoreModeRoute({
             </article>
 
             <article>
-              <h2 className="text-base font-semibold text-slate-950">
+              <h2 className="text-base font-semibold text-stone-950">
                 Velg handledato
               </h2>
               <Form className="mt-4 space-y-3" method="post">
@@ -596,7 +612,7 @@ export default function FamilyMealPlanStoreModeRoute({
                 />
                 <select
                   aria-busy={isSavingShoppingDate}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:cursor-wait disabled:bg-slate-50"
+                  className={storeModeSelectClass}
                   defaultValue={activeShoppingDateValue}
                   disabled={isSavingShoppingDate}
                   name="activeShoppingDate"
@@ -627,7 +643,7 @@ export default function FamilyMealPlanStoreModeRoute({
         {displaySectionGroups.length > 0 ? (
           <section className="grid gap-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold tracking-tight text-stone-950">
                 Varer å handle
               </h2>
               <div className="flex flex-wrap items-center gap-2">
@@ -645,13 +661,14 @@ export default function FamilyMealPlanStoreModeRoute({
               activeSections.map((section) => (
                 <article
                   key={`${loaderData.selectedStore?.id ?? "no-store"}:${section.category.id}`}
-                  className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
+                  className={storeModeSectionCardClass}
                 >
+                  <div aria-hidden="true" className={storeModeAccentBarClass} />
                   <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-semibold text-slate-950">
+                    <h2 className="text-lg font-semibold tracking-tight text-stone-950">
                       {section.displayName}
                     </h2>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                    <span className={storeModeCountChipClass}>
                       {section.items.length} varer
                     </span>
                   </div>
@@ -665,24 +682,26 @@ export default function FamilyMealPlanStoreModeRoute({
                 </article>
               ))
             ) : deprioritizeBought ? (
-              <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                <h3 className="text-base font-semibold text-slate-950">
+              <article className={`${storeModeSurfaceCardClass} p-6`}>
+                <h3 className="text-base font-semibold text-stone-950">
                   Alt er krysset av
                 </h3>
-                <p className="mt-3 text-sm leading-6 text-slate-600">
+                <p className="mt-3 text-sm leading-6 text-stone-600">
                   Du har handlet alle varene for denne turen. Kjøpte varer ligger
                   nedenfor hvis du vil se eller endre dem.
                 </p>
               </article>
             ) : null}
             {deprioritizeBought && boughtItems.length > 0 ? (
-              <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-slate-950">Kjøpt</h2>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              <details className={storeModeMutedPanelClass}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
+                  <span className="text-lg font-semibold tracking-tight text-stone-950">
+                    Kjøpt
+                  </span>
+                  <span className={storeModeCountChipClass}>
                     {boughtItems.length} varer
                   </span>
-                </div>
+                </summary>
 
                 <StoreModeItemGrid
                   items={boughtItems}
@@ -690,23 +709,23 @@ export default function FamilyMealPlanStoreModeRoute({
                   onToggleItem={handleToggle}
                   selectedStoreId={loaderData.selectedStore?.id}
                 />
-              </article>
+              </details>
             ) : null}
           </section>
         ) : (
-          <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <section className={`${storeModeSurfaceCardClass} p-6`}>
+            <h2 className="text-lg font-semibold tracking-tight text-stone-950">
               Ingen varer må handles nå
             </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
+            <p className="mt-3 text-sm leading-6 text-stone-600">
               Alt er enten ferdig handlet, utenfor denne handleturen, eller
               allerede passert.
             </p>
           </section>
         )}
 
-        <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-lg font-semibold text-slate-950">
+        <section className={`${storeModeSurfaceCardClass} p-6`}>
+          <h2 className="text-lg font-semibold tracking-tight text-stone-950">
             Før handledato
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -714,7 +733,7 @@ export default function FamilyMealPlanStoreModeRoute({
               loaderData.laterItems.map((item) => (
                 <span
                   key={`later:${item.sourceKey}`}
-                  className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
+                  className={storeModeLaterChipClass}
                 >
                   {item.name}
                   {" · "}
@@ -728,7 +747,7 @@ export default function FamilyMealPlanStoreModeRoute({
                 </span>
               ))
             ) : (
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-stone-600">
                 Ingen varer ligger før handledato akkurat nå.
               </p>
             )}
@@ -738,11 +757,12 @@ export default function FamilyMealPlanStoreModeRoute({
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-3">
         <div className="pointer-events-auto mx-auto max-w-4xl">
-          <div className="rounded-[28px] bg-white p-4 shadow-2xl ring-1 ring-slate-200">
+          <div className={storeModeQuickAddDockClass}>
             {quickAddFormError ? (
               <p className="mb-3 text-sm text-rose-600">{quickAddFormError}</p>
             ) : null}
             <ManualShoppingQuickAdd
+              appearance="store-mode"
               ingredientSearchPath={ingredientSearchPath}
               quickAddIntent="quick-add-family-shopping-item"
               recentManualItems={loaderData.recentManualItems}
@@ -770,12 +790,12 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-16 text-slate-900">
-      <div className="mx-auto max-w-2xl rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{message}</p>
+    <main className={`${storeModePageClass} py-16`}>
+      <div className={`mx-auto max-w-2xl ${storeModeSurfaceCardClass} p-8`}>
+        <h1 className="text-2xl font-semibold text-stone-950">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-stone-600">{message}</p>
         <Link
-          className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
+          className="mt-6 inline-flex rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white"
           to="/app"
         >
           Til appen

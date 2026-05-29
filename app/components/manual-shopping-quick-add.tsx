@@ -13,7 +13,10 @@ interface ManualShoppingQuickAddLoaderSlice {
   ingredientSearchResults: IngredientSearchResult[];
 }
 
+type ManualShoppingQuickAddAppearance = "default" | "store-mode";
+
 interface ManualShoppingQuickAddProps {
+  appearance?: ManualShoppingQuickAddAppearance;
   autoFocus?: boolean;
   ingredientSearchPath: string;
   quickAddIntent?: string;
@@ -33,7 +36,56 @@ const SEARCH_DEBOUNCE_MS = 250;
 const DEFAULT_QUICK_ADD_INTENT = "quick-add-manual-shopping-item";
 const DEFAULT_SEARCH_FETCHER_KEY = "manual-shopping-ingredient-search";
 
+const quickAddStyles = {
+  default: {
+    createOption:
+      "flex w-full px-4 py-3 text-left text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60",
+    description: "text-sm leading-6 text-slate-600",
+    dropdown:
+      "absolute z-10 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg",
+    dropdownUp:
+      "absolute bottom-full z-10 mb-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg",
+    input:
+      "min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
+    label: "block text-sm font-medium text-slate-700",
+    option:
+      "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60",
+    optionMeta: "text-xs text-slate-500",
+    recentButton:
+      "rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60",
+    recentLabel: "text-sm font-medium text-slate-700",
+    searchPending: "px-4 py-2 text-sm text-slate-500",
+    submit:
+      "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400",
+  },
+  "store-mode": {
+    createOption:
+      "flex w-full px-4 py-3 text-left text-sm font-medium text-store-accent-text transition hover:bg-store-accent-light disabled:cursor-not-allowed disabled:opacity-60",
+    description: "text-sm leading-6 text-stone-600",
+    dropdown:
+      "absolute z-10 max-h-64 w-full overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-lg",
+    dropdownUp:
+      "absolute bottom-full z-10 mb-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-lg",
+    input:
+      "min-w-0 flex-1 rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
+    label: "block text-sm font-medium text-stone-700",
+    option:
+      "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-stone-900 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60",
+    optionMeta: "text-xs text-stone-500",
+    recentButton:
+      "rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-800 transition hover:border-store-accent hover:bg-white disabled:cursor-not-allowed disabled:opacity-60",
+    recentLabel: "text-sm font-medium text-stone-700",
+    searchPending: "px-4 py-2 text-sm text-stone-500",
+    submit:
+      "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400",
+  },
+} as const satisfies Record<
+  ManualShoppingQuickAddAppearance,
+  Record<string, string>
+>;
+
 export function ManualShoppingQuickAdd({
+  appearance = "default",
   autoFocus = false,
   ingredientSearchPath,
   quickAddIntent = DEFAULT_QUICK_ADD_INTENT,
@@ -41,6 +93,7 @@ export function ManualShoppingQuickAdd({
   revealOnFocus = false,
   searchFetcherKey = DEFAULT_SEARCH_FETCHER_KEY,
 }: ManualShoppingQuickAddProps) {
+  const styles = quickAddStyles[appearance];
   const listboxId = useId();
   const navigation = useNavigation();
   const submit = useSubmit();
@@ -164,12 +217,12 @@ export function ManualShoppingQuickAdd({
   const recentsBlock =
     recentManualItems.length > 0 ? (
       <div className="space-y-2">
-        <p className="text-sm font-medium text-slate-700">Nylig brukt</p>
+        <p className={styles.recentLabel}>Nylig brukt</p>
         <div className="flex flex-wrap gap-2">
           {recentManualItems.map((item) => (
             <button
               key={item.nameNormalized}
-              className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              className={styles.recentButton}
               disabled={isQuickAdding}
               onClick={() => {
                 submitQuickAdd({ recentNameNormalized: item.nameNormalized });
@@ -186,17 +239,13 @@ export function ManualShoppingQuickAdd({
   return (
     <div className="flex flex-col gap-3" ref={containerRef}>
       <label
-        className={
-          revealOnFocus
-            ? "sr-only"
-            : "block text-sm font-medium text-slate-700"
-        }
+        className={revealOnFocus ? "sr-only" : styles.label}
         htmlFor={`${listboxId}-input`}
       >
         Legg til vare
       </label>
       {!revealOnFocus ? (
-        <p className="text-sm leading-6 text-slate-600">
+        <p className={styles.description}>
           Søk i ingrediensregisteret, skriv et nytt navn, eller velg en nylig brukt vare.
         </p>
       ) : null}
@@ -221,7 +270,7 @@ export function ManualShoppingQuickAdd({
             aria-controls={showDropdown ? listboxId : undefined}
             aria-expanded={showDropdown}
             autoFocus={autoFocus}
-            className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className={styles.input}
             id={`${listboxId}-input`}
             name="quickAddQuery"
             ref={inputRef}
@@ -249,7 +298,7 @@ export function ManualShoppingQuickAdd({
             value={query}
           />
           <button
-            className="inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className={styles.submit}
             disabled={!trimmedQuery || isQuickAdding}
             onClick={() => {
               submitQuickAdd({ name: trimmedQuery });
@@ -262,23 +311,19 @@ export function ManualShoppingQuickAdd({
 
         {showDropdown ? (
           <ul
-            className={
-              revealOnFocus
-                ? "absolute bottom-full z-10 mb-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg"
-                : "absolute z-10 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg"
-            }
+            className={revealOnFocus ? styles.dropdownUp : styles.dropdown}
             id={listboxId}
             role="listbox"
           >
             {isSearching ? (
-              <li className="px-4 py-2 text-sm text-slate-500" role="presentation">
+              <li className={styles.searchPending} role="presentation">
                 Søker...
               </li>
             ) : null}
             {displayedResults.map((ingredient) => (
               <li key={ingredient.id} role="option">
                 <button
-                  className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={styles.option}
                   disabled={isQuickAdding}
                   onClick={() => {
                     submitQuickAdd({ ingredientId: ingredient.id });
@@ -286,14 +331,14 @@ export function ManualShoppingQuickAdd({
                   type="button"
                 >
                   <span className="font-medium">{ingredient.canonicalName}</span>
-                  <span className="text-xs text-slate-500">Fra register</span>
+                  <span className={styles.optionMeta}>Fra register</span>
                 </button>
               </li>
             ))}
             {showCreateOption ? (
               <li role="option">
                 <button
-                  className="flex w-full px-4 py-3 text-left text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={styles.createOption}
                   disabled={isQuickAdding}
                   onClick={() => {
                     submitQuickAdd({ name: trimmedQuery });

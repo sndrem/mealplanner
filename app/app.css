@@ -3,6 +3,13 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Store mode — Nordic Playful warm accent */
+  --color-store-bg: #fafaf9;
+  --color-store-accent-light: #ebe4dc;
+  --color-store-accent: #c9bfb0;
+  --color-store-accent-deep: #a89988;
+  --color-store-accent-text: #57534e;
 }
 
 @layer base {
