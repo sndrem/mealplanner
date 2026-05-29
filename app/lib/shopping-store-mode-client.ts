@@ -86,19 +86,23 @@ export function buildStoreModeDeprioritizeBoughtStorageKey({
 
 export function readStoreModeDeprioritizeBought(storageKey: string): boolean {
   if (typeof window === "undefined") {
-    return false;
+    return true;
   }
 
   try {
     const raw = window.localStorage.getItem(storageKey);
 
+    if (raw === "false") {
+      return false;
+    }
+
     if (raw === "true") {
       return true;
     }
 
-    return false;
+    return true;
   } catch {
-    return false;
+    return true;
   }
 }
 
