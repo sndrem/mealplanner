@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="nb">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Store mode — velg konsept</title>
+    <link rel="stylesheet" href="shared.css" />
+    <style>
+      body {
+        background: #f8fafc;
+        color: #0f172a;
+        padding: 2rem 1.25rem 3rem;
+      }
+
+      main {
+        max-width: 32rem;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem;
+      }
+
+      .lead {
+        color: #475569;
+        font-size: 0.9375rem;
+        margin: 0 0 1.5rem;
+        line-height: 1.6;
+      }
+
+      .cards {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .card {
+        display: block;
+        padding: 1.1rem 1.25rem;
+        border-radius: 1rem;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+      }
+
+      .card:hover {
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        transform: translateY(-1px);
+      }
+
+      .card h2 {
+        margin: 0 0 0.35rem;
+        font-size: 1.0625rem;
+      }
+
+      .card p {
+        margin: 0;
+        font-size: 0.875rem;
+        color: #64748b;
+        line-height: 1.5;
+      }
+
+      .tag {
+        display: inline-block;
+        margin-top: 0.65rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.2rem 0.5rem;
+        border-radius: 999px;
+      }
+
+      .tag.a {
+        background: #ede9fe;
+        color: #5b21b6;
+      }
+
+      .tag.b {
+        background: #f1f5f9;
+        color: #334155;
+      }
+
+      .tag.c {
+        background: #ffedd5;
+        color: #c2410c;
+      }
+
+      .doc-link {
+        margin-top: 2rem;
+        font-size: 0.875rem;
+      }
+
+      .doc-link a {
+        color: #6366f1;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Butikkmodus — visuelle konsepter</h1>
+      <p class="lead">
+        Tre isolerte mobilmockups for issue #112. Åpne hver side på telefon eller
+        smal nettleservindu (~390px). Krysset av-varer bruker rød «ferdig»-stil som i
+        appen i dag.
+      </p>
+
+      <div class="cards">
+        <a class="card" href="soft-pastel-calm.html">
+          <h2>A — Soft Pastel Calm</h2>
+          <p>Lavendel, fersken og mint. Rolig gradient og myke flater — mindre stress, fortsatt oversiktlig.</p>
+          <span class="tag a">Mest avslappende</span>
+        </a>
+        <a class="card" href="nordic-playful.html">
+          <h2>B — Nordic Playful</h2>
+          <p>Lys base, mye luft, pastell kun på det som teller (fremdrift, fokus). Lesbarhet først.</p>
+          <span class="tag b">Anbefalt default</span>
+        </a>
+        <a class="card" href="color-sectioned-sprint.html">
+          <h2>C — Color-Sectioned Sprint</h2>
+          <p>Hver varegruppe har egen pastellfarge — rask gjenkjenning i butikken.</p>
+          <span class="tag c">Raskest skanning</span>
+        </a>
+      </div>
+
+      <p class="doc-link">
+        Sammenligning og anbefaling:
+        <a href="../store-mode-visual-concepts.md">store-mode-visual-concepts.md</a>
+      </p>
+    </main>
+  </body>
+</html>

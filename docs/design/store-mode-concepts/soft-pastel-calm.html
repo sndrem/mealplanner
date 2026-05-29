@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="nb">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A — Soft Pastel Calm · Butikkmodus</title>
+    <link rel="stylesheet" href="shared.css" />
+    <style>
+      body {
+        background: linear-gradient(165deg, #faf5ff 0%, #fdf2f8 45%, #ecfdf5 100%);
+        color: #3b0764;
+      }
+
+      .concept-label {
+        background: #ede9fe;
+        color: #6d28d9;
+      }
+
+      .meta-strip {
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid #e9d5ff;
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.08);
+        color: #4c1d95;
+      }
+
+      .progress-pill {
+        background: #d1fae5;
+        color: #047857;
+      }
+
+      .progress-pill .dot {
+        background: #10b981;
+      }
+
+      .banner.sync {
+        background: linear-gradient(135deg, #fef9c3, #fde68a);
+        border: 1px solid #fcd34d;
+        color: #854d0e;
+      }
+
+      .toolbar button.on {
+        background: #fff;
+        color: #6d28d9;
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+        outline: 1px solid #e9d5ff;
+      }
+
+      .toolbar button.off {
+        background: rgba(255, 255, 255, 0.6);
+        color: #7c3aed;
+      }
+
+      .section-card {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(236, 253, 245, 0.9));
+        border: 1px solid #a7f3d0;
+        box-shadow: 0 6px 24px rgba(16, 185, 129, 0.06);
+      }
+
+      .section-card.dairy {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(237, 233, 254, 0.92));
+        border-color: #ddd6fe;
+        box-shadow: 0 6px 24px rgba(139, 92, 246, 0.06);
+      }
+
+      .count-chip {
+        background: #f3e8ff;
+        color: #7e22ce;
+      }
+
+      .item-card {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #e9d5ff;
+        color: #4c1d95;
+      }
+
+      .item-card .badge {
+        background: #fef3c7;
+        color: #b45309;
+      }
+
+      .item-card.checked {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #991b1b;
+      }
+
+      .item-card.checked .name {
+        color: #64748b;
+      }
+
+      .quick-add-dock .inner {
+        background: rgba(255, 255, 255, 0.95);
+        border: 2px solid #c4b5fd;
+        box-shadow: 0 -8px 32px rgba(139, 92, 246, 0.12);
+      }
+
+      .quick-add-dock label {
+        color: #6d28d9;
+      }
+
+      .quick-add-dock input {
+        background: #faf5ff;
+        border-color: #ddd6fe;
+        color: #4c1d95;
+      }
+
+      .quick-add-dock input:focus {
+        border-color: #a78bfa;
+        box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.25);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="concept-nav" aria-label="Konsepter">
+      <a href="index.html">Oversikt</a>
+      <a href="soft-pastel-calm.html" aria-current="page">A — Calm</a>
+      <a href="nordic-playful.html">B — Nordic</a>
+      <a href="color-sectioned-sprint.html">C — Sprint</a>
+    </nav>
+
+    <div class="phone-frame">
+      <span class="concept-label">A · Soft Pastel Calm</span>
+
+      <header class="meta-strip">
+        <h1>Uke 22 · Middager</h1>
+        <span class="sep">·</span>
+        <span class="muted">Rema 1000</span>
+        <span class="sep">·</span>
+        <span class="muted">fredag 30. mai</span>
+        <span class="progress-pill">
+          <span class="dot" aria-hidden="true"></span>
+          12/18
+        </span>
+        <div class="links">
+          <a href="#">Handleliste</a>
+          <a href="#">Butikker</a>
+        </div>
+      </header>
+
+      <section class="banner sync" aria-label="Synkroniserer">
+        <h2>Synkroniserer</h2>
+        <p>Lagrer avkryssing …</p>
+      </section>
+
+      <div class="toolbar">
+        <button type="button" class="on">Flytt kjøpte til bunnen</button>
+        <button type="button" class="on">Liste</button>
+        <button type="button" class="off">Rutenett</button>
+      </div>
+
+      <section class="section-card" aria-labelledby="sec-produce">
+        <div class="section-head">
+          <h2 id="sec-produce">Frukt og grønt</h2>
+          <span class="count-chip">4 varer</span>
+        </div>
+        <div class="item-grid">
+          <article class="item-card">
+            <span class="name">Cherrytomater</span>
+            <span class="badge">400 g</span>
+          </article>
+          <article class="item-card checked">
+            <span class="name">Spinat</span>
+          </article>
+          <article class="item-card">
+            <span class="name">Avokado</span>
+            <span class="badge">2 stk</span>
+          </article>
+          <article class="item-card">
+            <span class="name">Sitron</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-card dairy" aria-labelledby="sec-dairy">
+        <div class="section-head">
+          <h2 id="sec-dairy">Meieri</h2>
+          <span class="count-chip">2 varer</span>
+        </div>
+        <div class="item-grid">
+          <article class="item-card">
+            <span class="name">Melk</span>
+            <span class="badge">1 L</span>
+          </article>
+          <article class="item-card checked">
+            <span class="name">Revet ost</span>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <div class="quick-add-dock">
+      <div class="inner">
+        <label for="quick-add">Legg til vare</label>
+        <input
+          id="quick-add"
+          type="search"
+          placeholder="Søk eller skriv varenavn …"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+  </body>
+</html>
