@@ -137,4 +137,48 @@ describe("family recipes route", () => {
       "http://localhost/families/family-1/recipes/recipe-new?notice=recipe-created",
     );
   });
+
+  it("redirects to returnTo after create when provided", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseFamilyRecipeValues).mockReturnValue({
+      defaultServings: "",
+      description: "",
+      ingredients: [
+        {
+          amount: "",
+          categoryId: "category-dairy",
+          displayName: "Melk",
+          preferredStoreId: "",
+          unit: "",
+        },
+      ],
+      prepMinutes: "",
+      tags: "",
+      title: "Familiepai",
+    });
+    vi.mocked(createFamilyRecipe).mockResolvedValue({
+      recipe: {
+        id: "recipe-new",
+        title: "Familiepai",
+      },
+      status: "CREATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "create-recipe");
+    formData.set(
+      "returnTo",
+      "/families/family-1/meal-plans/meal-plan-1",
+    );
+
+    const response = await action({
+      params: { familyId: "family-1" },
+      request: buildRequest("http://localhost/families/family-1/recipes", formData),
+    });
+
+    expect(response).toBeInstanceOf(Response);
+    expect((response as Response).headers.get("Location")).toBe(
+      "http://localhost/families/family-1/meal-plans/meal-plan-1?notice=recipe-created",
+    );
+  });
 });
