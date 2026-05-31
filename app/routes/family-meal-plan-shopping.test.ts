@@ -260,6 +260,16 @@ describe("family meal plan shopping route", () => {
         },
       ],
       userRole: "ADMIN",
+      selectableShoppingDates: [
+        "2026-05-15",
+        "2026-05-16",
+        "2026-05-17",
+        "2026-05-18",
+        "2026-05-22",
+        "2026-05-23",
+        "2026-05-24",
+        "2026-05-25",
+      ],
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
 
@@ -413,6 +423,16 @@ describe("family meal plan shopping route", () => {
         },
       ],
       userRole: "ADMIN",
+      selectableShoppingDates: [
+        "2026-05-15",
+        "2026-05-16",
+        "2026-05-17",
+        "2026-05-18",
+        "2026-05-22",
+        "2026-05-23",
+        "2026-05-24",
+        "2026-05-25",
+      ],
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
   });
@@ -477,6 +497,7 @@ describe("family meal plan shopping route", () => {
       storeGroups: [],
       stores: [],
       userRole: "ADMIN",
+      selectableShoppingDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
 

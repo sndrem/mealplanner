@@ -13,6 +13,7 @@ import {
 } from "react-router";
 
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
+import { ShoppingDateSelect } from "../components/shopping-list-item-expanded";
 import { StoreModeDeprioritizeBoughtToggle } from "../components/store-mode-deprioritize-bought-toggle";
 import { StoreModeShoppingItemCard } from "../components/store-mode-shopping-item-card";
 import { StoreModeShoppingViewToggle } from "../components/store-mode-shopping-view-toggle";
@@ -155,6 +156,7 @@ export async function loader({
     progress: result.progress,
     recentManualItems,
     selectedStore: result.selectedStore,
+    selectableShoppingDates: result.selectableShoppingDates,
     stores: result.stores,
     userRole: result.userRole,
     visibleDates: result.visibleDates,
@@ -364,18 +366,15 @@ export default function FamilyMealPlanStoreModeRoute({
     () => loaderData.dueSectionGroups.flatMap((section) => section.items),
     [loaderData.dueSectionGroups],
   );
-  const {
-    displayItemsBySourceKey,
-    handleToggle,
-    syncBannerMessage,
-  } = useStoreModeToggleSync({
-    activeShoppingDate: loaderData.activeShoppingDate,
-    familyId: loaderData.family.id,
-    loaderItems: loaderDueItems,
-    mealPlanId: loaderData.mealPlan.id,
-    revalidate: revalidator.revalidate,
-    toggleFetcher,
-  });
+  const { displayItemsBySourceKey, handleToggle, syncBannerMessage } =
+    useStoreModeToggleSync({
+      activeShoppingDate: loaderData.activeShoppingDate,
+      familyId: loaderData.family.id,
+      loaderItems: loaderDueItems,
+      mealPlanId: loaderData.mealPlan.id,
+      revalidate: revalidator.revalidate,
+      toggleFetcher,
+    });
   const displayDueItems = useMemo(
     () =>
       loaderDueItems.map(
@@ -413,8 +412,8 @@ export default function FamilyMealPlanStoreModeRoute({
       }),
     [loaderData.family.id, loaderData.mealPlan.id],
   );
-  const [shoppingView, setShoppingView] = useState<StoreModeShoppingView>(
-    () => readStoreModeShoppingView(viewStorageKey),
+  const [shoppingView, setShoppingView] = useState<StoreModeShoppingView>(() =>
+    readStoreModeShoppingView(viewStorageKey),
   );
   const [deprioritizeBought, setDeprioritizeBought] = useState(() =>
     readStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey),
@@ -443,13 +442,13 @@ export default function FamilyMealPlanStoreModeRoute({
   }, [deprioritizeBoughtStorageKey]);
   type StoreModeDisplayItem = (typeof displayDueItems)[number];
   type StoreModeDisplaySection = (typeof displaySectionGroups)[number];
-  const { activeSections, boughtItems } = useMemo((): {
-    activeSections: StoreModeDisplaySection[];
-    boughtItems: StoreModeDisplayItem[];
-  } => partitionStoreModeSections(displaySectionGroups, deprioritizeBought), [
-    deprioritizeBought,
-    displaySectionGroups,
-  ]);
+  const { activeSections, boughtItems } = useMemo(
+    (): {
+      activeSections: StoreModeDisplaySection[];
+      boughtItems: StoreModeDisplayItem[];
+    } => partitionStoreModeSections(displaySectionGroups, deprioritizeBought),
+    [deprioritizeBought, displaySectionGroups],
+  );
   const noticeContent = loaderData.notice
     ? getStoreModeNoticeContent(loaderData.notice)
     : null;
@@ -610,7 +609,7 @@ export default function FamilyMealPlanStoreModeRoute({
                   type="hidden"
                   value={loaderData.mealPlan.updatedAt}
                 />
-                <select
+                <ShoppingDateSelect
                   aria-busy={isSavingShoppingDate}
                   className={storeModeSelectClass}
                   defaultValue={activeShoppingDateValue}
@@ -619,13 +618,9 @@ export default function FamilyMealPlanStoreModeRoute({
                   onChange={(event) => {
                     submitSelectForm(event, activeShoppingDateValue, submit);
                   }}
-                >
-                  {loaderData.visibleDates.map((date) => (
-                    <option key={date} value={date}>
-                      {formatDateLabel(date)}
-                    </option>
-                  ))}
-                </select>
+                  selectableShoppingDates={loaderData.selectableShoppingDates}
+                  showEmptyOption={false}
+                />
                 {actionData?.intent === "update-active-shopping-date" &&
                 actionData.activeShoppingDateFieldErrors?.activeShoppingDate ? (
                   <p className="text-sm text-rose-600">
@@ -687,8 +682,8 @@ export default function FamilyMealPlanStoreModeRoute({
                   Alt er krysset av
                 </h3>
                 <p className="mt-3 text-sm leading-6 text-stone-600">
-                  Du har handlet alle varene for denne turen. Kjøpte varer ligger
-                  nedenfor hvis du vil se eller endre dem.
+                  Du har handlet alle varene for denne turen. Kjøpte varer
+                  ligger nedenfor hvis du vil se eller endre dem.
                 </p>
               </article>
             ) : null}
@@ -806,11 +801,11 @@ export function ErrorBoundary({ error }: { error: unknown }) {
 }
 
 function serializeProjectedShoppingItem(
-  item: Awaited<
-    ReturnType<typeof getMealPlanStoreModeData>
-  >["laterItems"][number] | Awaited<
-    ReturnType<typeof getMealPlanStoreModeData>
-  >["dueSectionGroups"][number]["items"][number],
+  item:
+    | Awaited<ReturnType<typeof getMealPlanStoreModeData>>["laterItems"][number]
+    | Awaited<
+        ReturnType<typeof getMealPlanStoreModeData>
+      >["dueSectionGroups"][number]["items"][number],
 ) {
   if (item.sourceType === "FAMILY") {
     return item;
@@ -897,7 +892,9 @@ function buildStoreModeRedirect({
   return Response.redirect(url, 302);
 }
 
-function StoreModeItemGrid<TItem extends ComponentProps<typeof StoreModeShoppingItemCard>["item"]>({
+function StoreModeItemGrid<
+  TItem extends ComponentProps<typeof StoreModeShoppingItemCard>["item"],
+>({
   items,
   layout,
   onToggleItem,

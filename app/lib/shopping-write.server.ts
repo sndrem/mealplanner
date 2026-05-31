@@ -1275,12 +1275,11 @@ export async function updateActiveShoppingDate({
   }
 
   const normalizedDate = activeShoppingDate.trim();
-  const validation = validateOptionalDateInRange(
-    normalizedDate,
-    mealPlan.startDate,
-    mealPlan.endDate,
-    "Velg en gyldig handledato.",
-  );
+  const validation = await validateOptionalDateInFamilyMealPlans({
+    familyId,
+    invalidMessage: "Velg en gyldig handledato.",
+    value: normalizedDate,
+  });
 
   if (!validation.ok) {
     return {
@@ -1410,7 +1409,7 @@ async function getScopedMealPlan({
 
 async function validateManualShoppingItemValues({
   familyId,
-  mealPlan,
+  mealPlan: _mealPlan,
   values,
 }: {
   familyId: string;
@@ -1432,12 +1431,11 @@ async function validateManualShoppingItemValues({
     fieldErrors.categoryId = "Velg en kategori.";
   }
 
-  const buyOnDateValidation = validateOptionalDateInRange(
-    normalizedValues.buyOnDate,
-    mealPlan.startDate,
-    mealPlan.endDate,
-    "Velg en gyldig handledato.",
-  );
+  const buyOnDateValidation = await validateOptionalDateInFamilyMealPlans({
+    familyId,
+    invalidMessage: "Velg en gyldig handledato.",
+    value: normalizedValues.buyOnDate,
+  });
 
   if (!buyOnDateValidation.ok) {
     fieldErrors.buyOnDate = buyOnDateValidation.fieldError;
@@ -1489,7 +1487,7 @@ async function validateManualShoppingItemValues({
 
 async function validateGeneratedShoppingItemOverrideValues({
   familyId,
-  mealPlan,
+  mealPlan: _mealPlan,
   values,
 }: {
   familyId: string;
@@ -1502,12 +1500,11 @@ async function validateGeneratedShoppingItemOverrideValues({
 }) {
   const normalizedValues = normalizeGeneratedShoppingItemOverrideValues(values);
   const fieldErrors: GeneratedShoppingItemOverrideFieldErrors = {};
-  const postponedDateValidation = validateOptionalDateInRange(
-    normalizedValues.postponedUntilDate,
-    mealPlan.startDate,
-    mealPlan.endDate,
-    "Velg en gyldig dato innenfor ukeplanen.",
-  );
+  const postponedDateValidation = await validateOptionalDateInFamilyMealPlans({
+    familyId,
+    invalidMessage: "Velg en gyldig dato innenfor ukeplanen.",
+    value: normalizedValues.postponedUntilDate,
+  });
 
   if (!postponedDateValidation.ok) {
     fieldErrors.postponedUntilDate = postponedDateValidation.fieldError;
@@ -1743,12 +1740,15 @@ async function resolveScopedStoreId(preferredStoreId: string, familyId: string) 
   return store?.id ?? null;
 }
 
-function validateOptionalDateInRange(
-  value: string,
-  startDate: Date,
-  endDate: Date,
-  invalidMessage: string,
-) {
+async function validateOptionalDateInFamilyMealPlans({
+  familyId,
+  invalidMessage,
+  value,
+}: {
+  familyId: string;
+  invalidMessage: string;
+  value: string;
+}) {
   if (!value) {
     return {
       date: null,
@@ -1765,9 +1765,25 @@ function validateOptionalDateInRange(
     };
   }
 
-  if (parsedDate.getTime() < startDate.getTime() || parsedDate.getTime() > endDate.getTime()) {
+  const mealPlans = await db.mealPlan.findMany({
+    select: {
+      endDate: true,
+      startDate: true,
+    },
+    where: {
+      familyId,
+    },
+  });
+
+  const isWithinAnyPlan = mealPlans.some(
+    (plan) =>
+      parsedDate.getTime() >= plan.startDate.getTime() &&
+      parsedDate.getTime() <= plan.endDate.getTime(),
+  );
+
+  if (!isWithinAnyPlan) {
     return {
-      fieldError: "Datoen må ligge innenfor ukeplanens aktive periode.",
+      fieldError: "Datoen må ligge innenfor en av familiens ukeplaner.",
       ok: false as const,
     };
   }

@@ -168,6 +168,14 @@ describe("family meal plan store mode route", () => {
         },
       ],
       userRole: "ADMIN",
+      selectableShoppingDates: [
+        "2026-05-15",
+        "2026-05-16",
+        "2026-05-17",
+        "2026-05-18",
+        "2026-05-22",
+        "2026-05-23",
+      ],
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
 
@@ -196,6 +204,14 @@ describe("family meal plan store mode route", () => {
       },
     ]);
     expect(result.activeShoppingDate).toBe("2026-05-16");
+    expect(result.selectableShoppingDates).toEqual([
+      "2026-05-15",
+      "2026-05-16",
+      "2026-05-17",
+      "2026-05-18",
+      "2026-05-22",
+      "2026-05-23",
+    ]);
     expect(result.mealPlan.activeShoppingDate).toBe("2026-05-16");
     expect(result.dueSectionGroups[0]?.items[0]).toEqual(
       expect.objectContaining({

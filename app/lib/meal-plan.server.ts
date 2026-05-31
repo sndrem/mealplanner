@@ -180,6 +180,20 @@ export function getMealPlanDateRange(startDate: Date, endDate: Date) {
   return dates;
 }
 
+export function unionMealPlanDateRanges(
+  plans: Array<{ endDate: Date; startDate: Date }>,
+) {
+  const dateSet = new Set<string>();
+
+  for (const plan of plans) {
+    for (const date of getMealPlanDateRange(plan.startDate, plan.endDate)) {
+      dateSet.add(date);
+    }
+  }
+
+  return [...dateSet].sort();
+}
+
 export function validateMealPlanRange(
   startDate: string,
   endDate: string,

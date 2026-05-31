@@ -1,4 +1,5 @@
 import { Form } from "react-router";
+import type { ChangeEventHandler } from "react";
 
 import { formatOccurrenceSourceLine } from "../lib/shopping-display";
 import type {
@@ -14,6 +15,72 @@ import type {
 
 export const shoppingDateInputClassName =
   "mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100";
+
+function buildShoppingDateSelectOptions(
+  selectableShoppingDates: string[],
+  selectedDate: string,
+) {
+  const dates = new Set(selectableShoppingDates);
+
+  if (selectedDate) {
+    dates.add(selectedDate);
+  }
+
+  return [...dates].sort();
+}
+
+function formatShoppingDateOptionLabel(value: string) {
+  return new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00.000Z`));
+}
+
+export function ShoppingDateSelect({
+  "aria-busy": ariaBusy,
+  className = shoppingDateInputClassName,
+  defaultValue,
+  disabled = false,
+  emptyOptionLabel = "Ingen dato valgt",
+  name,
+  onChange,
+  selectableShoppingDates,
+  showEmptyOption = true,
+}: {
+  "aria-busy"?: boolean;
+  className?: string;
+  defaultValue: string;
+  disabled?: boolean;
+  emptyOptionLabel?: string;
+  name: string;
+  onChange?: ChangeEventHandler<HTMLSelectElement>;
+  selectableShoppingDates: string[];
+  showEmptyOption?: boolean;
+}) {
+  const options = buildShoppingDateSelectOptions(
+    selectableShoppingDates,
+    defaultValue,
+  );
+
+  return (
+    <select
+      aria-busy={ariaBusy}
+      className={className}
+      defaultValue={defaultValue}
+      disabled={disabled}
+      name={name}
+      onChange={onChange}
+    >
+      {showEmptyOption ? <option value="">{emptyOptionLabel}</option> : null}
+      {options.map((date) => (
+        <option key={date} value={date}>
+          {formatShoppingDateOptionLabel(date)}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 type ShoppingListItemExpandedProps = {
   actionData?: {
@@ -49,9 +116,8 @@ type ShoppingListItemExpandedProps = {
     sourceType: "FAMILY" | "GENERATED" | "MANUAL";
   };
   manualValues: ManualShoppingItemValues | null;
-  mealPlanEndDate?: string;
-  mealPlanStartDate?: string;
   overrideValues: GeneratedShoppingItemOverrideValues | null;
+  selectableShoppingDates?: string[];
   stores: Array<{ id: string; name: string }>;
   toggleExpectedVersion: string;
 };
@@ -69,9 +135,8 @@ export function ShoppingListItemExpanded({
   isPendingManualSave,
   item,
   manualValues,
-  mealPlanEndDate = "",
-  mealPlanStartDate = "",
   overrideValues,
+  selectableShoppingDates = [],
   stores,
   toggleExpectedVersion,
 }: ShoppingListItemExpandedProps) {
@@ -188,13 +253,10 @@ export function ShoppingListItemExpanded({
 
             <label className="block min-w-0 text-sm font-medium text-slate-700">
               Utsatt til
-              <input
-                className={shoppingDateInputClassName}
+              <ShoppingDateSelect
                 defaultValue={overrideValues.postponedUntilDate}
-                max={mealPlanEndDate}
-                min={mealPlanStartDate}
                 name="postponedUntilDate"
-                type="date"
+                selectableShoppingDates={selectableShoppingDates}
               />
             </label>
 
@@ -297,13 +359,11 @@ export function ShoppingListItemExpanded({
 
                 <label className="block min-w-0 text-sm font-medium text-slate-700">
                   Handledato
-                  <input
-                    className={shoppingDateInputClassName}
+                  <ShoppingDateSelect
                     defaultValue={manualValues.buyOnDate}
-                    max={mealPlanEndDate}
-                    min={mealPlanStartDate}
+                    emptyOptionLabel="Ingen handledato"
                     name="buyOnDate"
-                    type="date"
+                    selectableShoppingDates={selectableShoppingDates}
                   />
                 </label>
               </div>
