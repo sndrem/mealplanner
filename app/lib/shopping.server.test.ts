@@ -1597,6 +1597,351 @@ describe("shopping.server", () => {
     ).toEqual(["Paprika"]);
     expect(result.laterItems.map((item) => item.name)).toEqual([]);
   });
+
+  it("includes merged cross-day ingredients on a last-day-only shopping trip", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-18T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-produce", name: "Frukt og gront" },
+                categoryId: "category-produce",
+                displayName: "Løk",
+                id: "ingredient-1",
+                ingredientId: "canonical-onion",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Fredag",
+          },
+          recipeId: "recipe-1",
+        },
+        {
+          date: new Date("2026-05-18T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "2",
+                category: { id: "category-produce", name: "Frukt og gront" },
+                categoryId: "category-produce",
+                displayName: "Løk",
+                id: "ingredient-2",
+                ingredientId: "canonical-onion",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+              {
+                amount: "1",
+                category: { id: "category-dairy", name: "Meieri" },
+                categoryId: "category-dairy",
+                displayName: "Krem",
+                id: "ingredient-3",
+                ingredientId: "canonical-cream",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 2,
+                unit: "dl",
+              },
+            ],
+            title: "Mandag",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Ukehandel",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: "family-1",
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-produce",
+            displayName: "Frukt og gront",
+            id: "section-1",
+            sortOrder: 1,
+          },
+          {
+            categoryId: "category-dairy",
+            displayName: "Meieri",
+            id: "section-2",
+            sortOrder: 2,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(
+      result.dueSectionGroups
+        .flatMap((section) => section.items.map((item) => item.name))
+        .sort(),
+    ).toEqual(["Krem", "Løk"]);
+    expect(result.laterItems.map((item) => item.name)).toEqual([]);
+  });
+
+  it("includes a postponed generated item when postponedUntilDate matches the last-day trip", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-18T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-produce", name: "Frukt og gront" },
+                categoryId: "category-produce",
+                displayName: "Paprika",
+                id: "ingredient-1",
+                ingredientId: "canonical-paprika",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Fredag",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [
+        {
+          checked: false,
+          excludedFromList: false,
+          includeDespiteStock: false,
+          note: null,
+          postponedUntilDate: new Date("2026-05-18T00:00:00.000Z"),
+          preferredStore: null,
+          preferredStoreId: null,
+          sourceKey: "entry-1:ingredient-1",
+          sourceType: "GENERATED",
+          updatedAt: new Date("2026-05-15T10:00:00.000Z"),
+        },
+      ],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Ukehandel",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: "family-1",
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-produce",
+            displayName: "Frukt og gront",
+            id: "section-1",
+            sortOrder: 1,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(
+      result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
+    ).toEqual(["Paprika"]);
+    expect(result.laterItems.map((item) => item.name)).toEqual([]);
+  });
+
+  it("keeps merged cross-day ingredients on the trip when today is after the first occurrence", async () => {
+    vi.setSystemTime(new Date("2026-05-16T09:30:45.000Z"));
+
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-18T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-produce", name: "Frukt og gront" },
+                categoryId: "category-produce",
+                displayName: "Løk",
+                id: "ingredient-1",
+                ingredientId: "canonical-onion",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Fredag",
+          },
+          recipeId: "recipe-1",
+        },
+        {
+          date: new Date("2026-05-18T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "2",
+                category: { id: "category-produce", name: "Frukt og gront" },
+                categoryId: "category-produce",
+                displayName: "Løk",
+                id: "ingredient-2",
+                ingredientId: "canonical-onion",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Mandag",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Ukehandel",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: "family-1",
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-produce",
+            displayName: "Frukt og gront",
+            id: "section-1",
+            sortOrder: 1,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(
+      result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
+    ).toEqual(["Løk"]);
+    expect(result.laterItems.map((item) => item.name)).toEqual([]);
+  });
+
+  it("does not pull generated items into the trip when all effective dates are in the past", async () => {
+    vi.setSystemTime(new Date("2026-05-18T09:30:45.000Z"));
+
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-18T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-produce", name: "Frukt og gront" },
+                categoryId: "category-produce",
+                displayName: "Løk",
+                id: "ingredient-1",
+                ingredientId: "canonical-onion",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Fredag",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Ukehandel",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: "family-1",
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-produce",
+            displayName: "Frukt og gront",
+            id: "section-1",
+            sortOrder: 1,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(
+      result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
+    ).toEqual([]);
+    expect(result.laterItems.map((item) => item.name)).toEqual([]);
+  });
   });
 
   it("excludes stock ingredients from generated shopping items and exposes a stock summary", async () => {
