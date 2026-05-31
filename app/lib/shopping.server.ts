@@ -840,6 +840,7 @@ export async function getMealPlanStoreModeData({
       isProjectedItemBeforeShoppingDate(
         item,
         activeShoppingDate,
+        mealPlan.endDate,
         todayAtUtcMidnight,
       ),
     )
@@ -1567,10 +1568,79 @@ function getUtcToday(referenceDate = new Date()) {
   );
 }
 
+function getGeneratedEffectiveDates(item: ProjectedGeneratedShoppingItem) {
+  if (item.postponedUntilDate) {
+    return [item.postponedUntilDate];
+  }
+
+  return item.occurrences.map((occurrence) => occurrence.date);
+}
+
+function isDateOnOrAfterToday(date: Date, todayAtUtcMidnight: Date) {
+  return date.getTime() >= todayAtUtcMidnight.getTime();
+}
+
+function isGeneratedItemFullyPast(
+  item: ProjectedGeneratedShoppingItem,
+  todayAtUtcMidnight: Date,
+) {
+  const effectiveDates = getGeneratedEffectiveDates(item);
+
+  return effectiveDates.every(
+    (date) => date.getTime() < todayAtUtcMidnight.getTime(),
+  );
+}
+
+function isGeneratedItemInTripWindow(
+  item: ProjectedGeneratedShoppingItem,
+  activeShoppingDate: Date,
+  endDate: Date,
+  todayAtUtcMidnight: Date,
+) {
+  return getGeneratedEffectiveDates(item).some(
+    (date) =>
+      date.getTime() >= activeShoppingDate.getTime() &&
+      date.getTime() <= endDate.getTime() &&
+      isDateOnOrAfterToday(date, todayAtUtcMidnight),
+  );
+}
+
+function isGeneratedItemBeforeShoppingDate(
+  item: ProjectedGeneratedShoppingItem,
+  activeShoppingDate: Date,
+  endDate: Date,
+  todayAtUtcMidnight: Date,
+) {
+  if (isGeneratedItemFullyPast(item, todayAtUtcMidnight)) {
+    return false;
+  }
+
+  if (
+    isGeneratedItemInTripWindow(
+      item,
+      activeShoppingDate,
+      endDate,
+      todayAtUtcMidnight,
+    )
+  ) {
+    return false;
+  }
+
+  return getGeneratedEffectiveDates(item).some(
+    (date) =>
+      isDateOnOrAfterToday(date, todayAtUtcMidnight) &&
+      date.getTime() < activeShoppingDate.getTime(),
+  );
+}
+
 function isProjectedItemPast(
   item: ProjectedShoppingItem,
   todayAtUtcMidnight: Date,
 ) {
+  if (item.sourceType === "GENERATED") {
+    return isGeneratedItemFullyPast(item, todayAtUtcMidnight);
+  }
+
   const relevantDate = getProjectedItemRelevantDate(item);
 
   if (!relevantDate) {
@@ -1586,6 +1656,15 @@ function isProjectedItemInStoreModeTrip(
   endDate: Date,
   todayAtUtcMidnight: Date,
 ) {
+  if (item.sourceType === "GENERATED") {
+    return isGeneratedItemInTripWindow(
+      item,
+      activeShoppingDate,
+      endDate,
+      todayAtUtcMidnight,
+    );
+  }
+
   if (isProjectedItemPast(item, todayAtUtcMidnight)) {
     return false;
   }
@@ -1605,8 +1684,18 @@ function isProjectedItemInStoreModeTrip(
 function isProjectedItemBeforeShoppingDate(
   item: ProjectedShoppingItem,
   activeShoppingDate: Date,
+  endDate: Date,
   todayAtUtcMidnight: Date,
 ) {
+  if (item.sourceType === "GENERATED") {
+    return isGeneratedItemBeforeShoppingDate(
+      item,
+      activeShoppingDate,
+      endDate,
+      todayAtUtcMidnight,
+    );
+  }
+
   if (isProjectedItemPast(item, todayAtUtcMidnight)) {
     return false;
   }
