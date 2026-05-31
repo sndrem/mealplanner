@@ -6,6 +6,7 @@ const {
   getFamilyStockMatchSetMock,
   getStockIngredientsForMealPlanMock,
   loadShoppingMealPlanMock,
+  projectCreatedManualShoppingItemMock,
   requireFamilyMembershipMock,
   transactionMock,
 } = vi.hoisted(() => {
@@ -57,6 +58,7 @@ const {
     getFamilyStockMatchSetMock: vi.fn(),
     getStockIngredientsForMealPlanMock: vi.fn(),
     loadShoppingMealPlanMock: vi.fn(),
+    projectCreatedManualShoppingItemMock: vi.fn(),
     requireFamilyMembershipMock: vi.fn(),
     transactionMock,
   };
@@ -83,8 +85,19 @@ vi.mock("./write-observability.server", () => {
 
 vi.mock("./shopping.server", () => {
   return {
+    buildRecentManualItemFromProjectedItem: (item: {
+      category: { id: string };
+      name: string;
+      quantity: string | null;
+    }) => ({
+      categoryId: item.category.id,
+      displayName: item.name.trim(),
+      nameNormalized: item.name.trim().toLowerCase(),
+      quantity: item.quantity?.trim() || "1",
+    }),
     getStockIngredientsForMealPlan: getStockIngredientsForMealPlanMock,
     loadShoppingMealPlan: loadShoppingMealPlanMock,
+    projectCreatedManualShoppingItem: projectCreatedManualShoppingItemMock,
   };
 });
 
@@ -182,6 +195,9 @@ describe("shopping-write.server", () => {
     dbMock.store.findFirst.mockResolvedValue({
       id: "store-1",
     });
+    dbMock.manualShoppingItem.create.mockResolvedValue({
+      id: "manual-item-1",
+    });
 
     const result = await createManualShoppingItem({
       familyId: "family-1",
@@ -198,6 +214,7 @@ describe("shopping-write.server", () => {
     });
 
     expect(result).toEqual({
+      manualItemId: "manual-item-1",
       status: "CREATED",
     });
     expect(dbMock.manualShoppingItem.create).toHaveBeenCalledWith({
@@ -229,6 +246,9 @@ describe("shopping-write.server", () => {
       id: "category-produce",
     });
     dbMock.store.findFirst.mockResolvedValue(null);
+    dbMock.manualShoppingItem.create.mockResolvedValue({
+      id: "manual-item-2",
+    });
 
     const result = await createManualShoppingItem({
       familyId: "family-1",
@@ -245,6 +265,7 @@ describe("shopping-write.server", () => {
     });
 
     expect(result).toEqual({
+      manualItemId: "manual-item-2",
       status: "CREATED",
     });
     expect(dbMock.manualShoppingItem.create).toHaveBeenCalledWith({
@@ -320,6 +341,24 @@ describe("shopping-write.server", () => {
     dbMock.ingredientCategory.findUnique.mockResolvedValue({
       id: "category-other",
     });
+    dbMock.manualShoppingItem.create.mockResolvedValue({
+      id: "manual-item-3",
+    });
+    projectCreatedManualShoppingItemMock.mockResolvedValue({
+      buyOnDate: null,
+      category: { id: "category-other", name: "Annet" },
+      checked: false,
+      collaborationVersion: "2026-05-31T00:00:00.000Z",
+      name: "Tannkrem",
+      note: null,
+      overrideVersion: "",
+      preferredStore: null,
+      quantity: "1",
+      quantityLabel: "1",
+      section: { displayName: "Annet", sortOrder: 99 },
+      sourceKey: "manual-item-3",
+      sourceType: "MANUAL",
+    });
 
     const result = await createQuickManualShoppingItem({
       familyId: "family-1",
@@ -331,6 +370,27 @@ describe("shopping-write.server", () => {
     });
 
     expect(result).toEqual({
+      item: {
+        buyOnDate: null,
+        category: { id: "category-other", name: "Annet" },
+        checked: false,
+        collaborationVersion: "2026-05-31T00:00:00.000Z",
+        name: "Tannkrem",
+        note: null,
+        overrideVersion: "",
+        preferredStore: null,
+        quantity: "1",
+        quantityLabel: "1",
+        section: { displayName: "Annet", sortOrder: 99 },
+        sourceKey: "manual-item-3",
+        sourceType: "MANUAL",
+      },
+      recentManualItem: {
+        categoryId: "category-other",
+        displayName: "Tannkrem",
+        nameNormalized: "tannkrem",
+        quantity: "1",
+      },
       status: "CREATED",
     });
     expect(dbMock.manualShoppingItem.create).toHaveBeenCalledWith({

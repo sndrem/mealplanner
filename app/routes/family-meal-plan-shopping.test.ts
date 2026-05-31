@@ -547,9 +547,30 @@ describe("family meal plan shopping route", () => {
     expect((response as Response).status).toBe(302);
   });
 
-  it("redirects after a quick-add manual shopping item", async () => {
+  it("returns quick-add success data without redirecting", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(createQuickManualShoppingItem).mockResolvedValue({
+      item: {
+        buyOnDate: null,
+        category: { id: "category-other", name: "Annet" },
+        checked: false,
+        collaborationVersion: "2026-05-31T00:00:00.000Z",
+        name: "Tannkrem",
+        note: null,
+        overrideVersion: "",
+        preferredStore: null,
+        quantity: "1",
+        quantityLabel: "1",
+        section: { displayName: "Annet", sortOrder: 99 },
+        sourceKey: "manual-item-1",
+        sourceType: "MANUAL",
+      },
+      recentManualItem: {
+        categoryId: "category-other",
+        displayName: "Tannkrem",
+        nameNormalized: "tannkrem",
+        quantity: "1",
+      },
       status: "CREATED",
     });
 
@@ -557,7 +578,7 @@ describe("family meal plan shopping route", () => {
     formData.set("intent", "quick-add-manual-shopping-item");
     formData.set("name", "Tannkrem");
 
-    const response = await action({
+    const result = await action({
       params: {
         familyId: "family-1",
         mealPlanId: "meal-plan-1",
@@ -578,8 +599,31 @@ describe("family meal plan shopping route", () => {
       mealPlanId: "meal-plan-1",
       userId: "user-1",
     });
-    expect(response).toBeInstanceOf(Response);
-    expect((response as Response).status).toBe(302);
+    expect(result).toEqual({
+      intent: "quick-add-manual-shopping-item",
+      item: {
+        buyOnDate: null,
+        category: { id: "category-other", name: "Annet" },
+        checked: false,
+        collaborationVersion: "2026-05-31T00:00:00.000Z",
+        name: "Tannkrem",
+        note: null,
+        overrideVersion: "",
+        preferredStore: null,
+        quantity: "1",
+        quantityLabel: "1",
+        section: { displayName: "Annet", sortOrder: 99 },
+        sourceKey: "manual-item-1",
+        sourceType: "MANUAL",
+      },
+      ok: true,
+      recentManualItem: {
+        categoryId: "category-other",
+        displayName: "Tannkrem",
+        nameNormalized: "tannkrem",
+        quantity: "1",
+      },
+    });
   });
 
   it("returns manual item validation errors from the server module", async () => {

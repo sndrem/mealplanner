@@ -9,8 +9,10 @@ import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import {
+  buildRecentManualItemFromProjectedItem,
   getStockIngredientsForMealPlan,
   loadShoppingMealPlan,
+  projectCreatedManualShoppingItem,
 } from "./shopping.server";
 import { getFamilyStockMatchSet } from "./stock.server";
 import { logCollaborationFailure, logCollaborationWrite } from "./write-observability.server";
@@ -80,12 +82,34 @@ export async function createQuickManualShoppingItem({
     };
   }
 
-  return createManualShoppingItem({
+  const createResult = await createManualShoppingItem({
     familyId,
     mealPlanId,
     userId,
     values: resolvedValues.values,
   });
+
+  if (createResult.status !== "CREATED") {
+    return createResult;
+  }
+
+  const item = await projectCreatedManualShoppingItem({
+    familyId,
+    manualItemId: createResult.manualItemId,
+    mealPlanId,
+  });
+
+  if (!item) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  return {
+    item,
+    recentManualItem: buildRecentManualItemFromProjectedItem(item),
+    status: "CREATED" as const,
+  };
 }
 
 export async function createManualShoppingItem({
@@ -126,7 +150,7 @@ export async function createManualShoppingItem({
   }
 
   try {
-    await db.manualShoppingItem.create({
+    const created = await db.manualShoppingItem.create({
       data: {
         buyOnDate: validation.buyOnDate,
         categoryId: validation.values.categoryId,
@@ -150,6 +174,7 @@ export async function createManualShoppingItem({
     });
 
     return {
+      manualItemId: created.id,
       status: "CREATED" as const,
     };
   } catch (error) {

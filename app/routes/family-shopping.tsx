@@ -1,9 +1,11 @@
 import { ShoppingItemSource } from "@prisma/client";
+import { useCallback, useEffect, useState } from "react";
 import {
   Form,
   Link,
   isRouteErrorResponse,
   useNavigation,
+  useRevalidator,
   type MetaFunction,
 } from "react-router";
 
@@ -34,11 +36,21 @@ import {
 } from "../lib/shopping-preference-write.server";
 import { getToggleExpectedVersion } from "../lib/shopping-store-mode-client";
 import {
+  insertProjectedItemIntoStoreGroups,
+  prependRecentManualItem,
+} from "../lib/shopping-list-client";
+import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import {
+  serializeProjectedShoppingItem,
+  type SerializedProjectedShoppingItem,
+} from "../lib/shopping-serialize";
+import {
   getFamilyShoppingData,
   listRecentManualShoppingItemsForFamily,
-  type ProjectedShoppingItem,
+  type RecentManualShoppingItem,
 } from "../lib/shopping.server";
 import { toggleShoppingItemChecked } from "../lib/shopping-write.server";
+import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
 
 type FamilyShoppingNotice =
   | "family-shopping-item-added"
@@ -61,9 +73,12 @@ interface FamilyShoppingActionData {
   familyValues?: FamilyShoppingItemValues;
   formError?: string;
   intent?: FamilyShoppingIntent;
+  item?: QuickAddShoppingSuccess["item"];
   itemTarget?: {
     sourceKey: string;
   };
+  ok?: true;
+  recentManualItem?: RecentManualShoppingItem;
 }
 
 const defaultFamilyShoppingItemValues: FamilyShoppingItemValues = {
@@ -119,10 +134,7 @@ export async function loader({
     storeGroups: result.storeGroups.map((group) => ({
       sections: group.sections.map((section) => ({
         ...section,
-        items: section.items.map((item) => ({
-          ...item,
-          collaborationVersion: item.collaborationVersion,
-        })),
+        items: section.items.map(serializeProjectedShoppingItem),
       })),
       store: group.store,
     })),
@@ -259,11 +271,12 @@ export async function action({
       } satisfies FamilyShoppingActionData;
     }
 
-    return buildFamilyShoppingRedirect({
-      familyId,
-      notice: "family-shopping-item-added",
-      request,
-    });
+    return {
+      intent,
+      item: serializeProjectedShoppingItem(result.item),
+      ok: true,
+      recentManualItem: result.recentManualItem,
+    } satisfies FamilyShoppingActionData;
   }
 
   if (intent === "update-family-shopping-item") {
@@ -411,7 +424,13 @@ export default function FamilyShoppingRoute({
   loaderData: Awaited<ReturnType<typeof loader>>;
 }) {
   const navigation = useNavigation();
+  const revalidator = useRevalidator();
+  const scheduleRevalidate = useDebouncedRevalidate(revalidator.revalidate);
   const isLg = useIsLgViewport();
+  const [storeGroups, setStoreGroups] = useState(loaderData.storeGroups);
+  const [recentManualItems, setRecentManualItems] = useState(
+    loaderData.recentManualItems,
+  );
   const noticeContent =
     loaderData.notice !== null
       ? getFamilyShoppingNoticeContent(loaderData.notice)
@@ -419,19 +438,35 @@ export default function FamilyShoppingRoute({
   const pendingIntent = navigation.formData?.get("intent");
   const pendingSourceKey = getPendingSourceKey(navigation.formData);
   const ingredientSearchPath = `/families/${loaderData.family.id}/shopping/ingredient-search`;
-  const quickAddFormError =
-    actionData?.intent === "quick-add-family-shopping-item"
-      ? actionData.formError
-      : undefined;
   const generalFormError =
     actionData?.formError &&
     actionData.intent !== "quick-add-family-shopping-item"
       ? actionData.formError
       : undefined;
+
+  useEffect(() => {
+    setStoreGroups(loaderData.storeGroups);
+    setRecentManualItems(loaderData.recentManualItems);
+  }, [loaderData.recentManualItems, loaderData.storeGroups]);
+
+  const handleQuickAddSuccess = useCallback(
+    (payload: QuickAddShoppingSuccess) => {
+      setStoreGroups((currentGroups) =>
+        insertProjectedItemIntoStoreGroups(currentGroups, payload.item),
+      );
+      setRecentManualItems((currentRecents) =>
+        prependRecentManualItem(currentRecents, payload.recentManualItem),
+      );
+      scheduleRevalidate();
+    },
+    [scheduleRevalidate],
+  );
+
   const quickAddProps = {
     ingredientSearchPath,
+    onQuickAddSuccess: handleQuickAddSuccess,
     quickAddIntent: "quick-add-family-shopping-item" as const,
-    recentManualItems: loaderData.recentManualItems,
+    recentManualItems,
   };
   const addFamilyValues =
     actionData?.intent === "add-family-shopping-item" && actionData.familyValues
@@ -608,17 +643,9 @@ export default function FamilyShoppingRoute({
             </p>
 
             {isLg ? (
-              <>
-                {quickAddFormError ? (
-                  <p className="mt-4 text-sm text-rose-600">
-                    {quickAddFormError}
-                  </p>
-                ) : null}
-
-                <div className="mt-6">
-                  <ManualShoppingQuickAdd {...quickAddProps} />
-                </div>
-              </>
+              <div className="mt-6">
+                <ManualShoppingQuickAdd {...quickAddProps} />
+              </div>
             ) : null}
 
             <details
@@ -677,9 +704,9 @@ export default function FamilyShoppingRoute({
           </article>
         </section>
 
-        {loaderData.storeGroups.length ? (
+        {storeGroups.length ? (
           <section className="grid gap-6">
-            {loaderData.storeGroups.map((group) => (
+            {storeGroups.map((group) => (
               <article
                 key={group.store?.id ?? "no-store"}
                 className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200"
@@ -732,9 +759,6 @@ export default function FamilyShoppingRoute({
         <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-4 pt-3">
           <div className="pointer-events-auto mx-auto max-w-5xl">
             <div className="rounded-[28px] bg-white p-4 shadow-2xl ring-1 ring-slate-200">
-              {quickAddFormError ? (
-                <p className="mb-3 text-sm text-rose-600">{quickAddFormError}</p>
-              ) : null}
               <ManualShoppingQuickAdd
                 {...quickAddProps}
                 autoFocus
@@ -822,7 +846,9 @@ function getFamilyShoppingNotice(
   return null;
 }
 
-function formatCompactShoppingSourceLineForItem(item: ProjectedShoppingItem) {
+function formatCompactShoppingSourceLineForItem(
+  item: SerializedProjectedShoppingItem,
+) {
   if (item.sourceType === "GENERATED") {
     return formatCompactShoppingSourceLine({
       occurrenceCount: item.occurrenceCount,
@@ -864,7 +890,7 @@ function parseMealPlanShoppingItemSource(value: FormDataEntryValue | null) {
   return null;
 }
 
-function getFamilyShoppingSourceBadge(item: ProjectedShoppingItem) {
+function getFamilyShoppingSourceBadge(item: SerializedProjectedShoppingItem) {
   if (item.sourceType === "FAMILY") {
     return {
       className: "rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-800",
@@ -946,7 +972,7 @@ function renderFamilyShoppingListItem({
   actionData?: FamilyShoppingActionData;
   categories: Awaited<ReturnType<typeof loader>>["categories"];
   familyId: string;
-  item: ProjectedShoppingItem;
+  item: SerializedProjectedShoppingItem;
   navigation: ReturnType<typeof useNavigation>;
   pendingIntent: FormDataEntryValue | null | undefined;
   pendingSourceKey: string | null;

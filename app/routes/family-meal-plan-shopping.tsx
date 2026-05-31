@@ -1,9 +1,11 @@
 import { ShoppingItemSource } from "@prisma/client";
+import { useCallback, useEffect, useState } from "react";
 import {
   Form,
   Link,
   isRouteErrorResponse,
   useNavigation,
+  useRevalidator,
   type MetaFunction,
 } from "react-router";
 
@@ -20,8 +22,15 @@ import {
 } from "../components/shopping-list-item-expanded";
 import { getToggleExpectedVersion } from "../lib/shopping-store-mode-client";
 import {
+  insertProjectedItemIntoStoreGroups,
+  prependRecentManualItem,
+} from "../lib/shopping-list-client";
+import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
+import {
   getMealPlanShoppingData,
   listRecentManualShoppingItemsForFamily,
+  type RecentManualShoppingItem,
 } from "../lib/shopping.server";
 import { toggleFamilyShoppingItemChecked } from "../lib/family-shopping-write.server";
 import {
@@ -39,6 +48,7 @@ import {
   type ManualShoppingItemFieldErrors,
   type ManualShoppingItemValues,
 } from "../lib/shopping-write.server";
+import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
 
 type ShoppingNotice =
   | "generated-shopping-item-excluded"
@@ -67,13 +77,16 @@ interface ShoppingActionData {
   formError?: string;
   generatedOverrideFieldErrors?: GeneratedShoppingItemOverrideFieldErrors;
   intent?: ShoppingIntent;
+  item?: QuickAddShoppingSuccess["item"];
   itemTarget?: {
     sourceKey: string;
     sourceType: ShoppingItemSource;
   };
   manualFieldErrors?: ManualShoppingItemFieldErrors;
   manualValues?: ManualShoppingItemValues;
+  ok?: true;
   overrideValues?: GeneratedShoppingItemOverrideValues;
+  recentManualItem?: RecentManualShoppingItem;
 }
 
 interface FamilyMealPlanShoppingRouteProps {
@@ -249,12 +262,12 @@ export async function action({
       } satisfies ShoppingActionData;
     }
 
-    return buildShoppingRedirect({
-      familyId,
-      mealPlanId,
-      notice: "manual-shopping-item-added",
-      request,
-    });
+    return {
+      intent,
+      item: serializeProjectedShoppingItem(result.item),
+      ok: true,
+      recentManualItem: result.recentManualItem,
+    } satisfies ShoppingActionData;
   }
 
   if (intent === "update-manual-shopping-item") {
@@ -594,18 +607,40 @@ export default function FamilyMealPlanShoppingRoute({
   loaderData,
 }: FamilyMealPlanShoppingRouteProps) {
   const navigation = useNavigation();
+  const revalidator = useRevalidator();
+  const scheduleRevalidate = useDebouncedRevalidate(revalidator.revalidate);
   const pendingIntent = navigation.formData?.get("intent");
   const pendingSourceKey = getPendingSourceKey(navigation.formData);
+  const [storeGroups, setStoreGroups] = useState(loaderData.storeGroups);
+  const [recentManualItems, setRecentManualItems] = useState(
+    loaderData.recentManualItems,
+  );
   const addManualValues =
-    (actionData?.intent === "add-manual-shopping-item" ||
-      actionData?.intent === "quick-add-manual-shopping-item") &&
-    actionData.manualValues
+    actionData?.intent === "add-manual-shopping-item" && actionData.manualValues
       ? actionData.manualValues
       : defaultManualShoppingItemValues;
   const ingredientSearchPath = `/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping/ingredient-search`;
   const noticeContent = loaderData.notice
     ? getShoppingNoticeContent(loaderData.notice)
     : null;
+
+  useEffect(() => {
+    setStoreGroups(loaderData.storeGroups);
+    setRecentManualItems(loaderData.recentManualItems);
+  }, [loaderData.recentManualItems, loaderData.storeGroups]);
+
+  const handleQuickAddSuccess = useCallback(
+    (payload: QuickAddShoppingSuccess) => {
+      setStoreGroups((currentGroups) =>
+        insertProjectedItemIntoStoreGroups(currentGroups, payload.item),
+      );
+      setRecentManualItems((currentRecents) =>
+        prependRecentManualItem(currentRecents, payload.recentManualItem),
+      );
+      scheduleRevalidate();
+    },
+    [scheduleRevalidate],
+  );
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -909,13 +944,7 @@ export default function FamilyMealPlanShoppingRoute({
               </p>
             </div>
 
-            {actionData?.intent === "quick-add-manual-shopping-item" &&
-            actionData.formError ? (
-              <p className="mt-4 text-sm text-rose-600">
-                {actionData.formError}
-              </p>
-            ) : null}
-            {actionData?.intent === "quick-add-manual-shopping-item" &&
+            {actionData?.intent === "add-manual-shopping-item" &&
             actionData.manualFieldErrors?.name ? (
               <p className="mt-2 text-sm text-rose-600">
                 {actionData.manualFieldErrors.name}
@@ -925,7 +954,8 @@ export default function FamilyMealPlanShoppingRoute({
             <div className="mt-6">
               <ManualShoppingQuickAdd
                 ingredientSearchPath={ingredientSearchPath}
-                recentManualItems={loaderData.recentManualItems}
+                onQuickAddSuccess={handleQuickAddSuccess}
+                recentManualItems={recentManualItems}
               />
             </div>
 
@@ -1157,9 +1187,9 @@ export default function FamilyMealPlanShoppingRoute({
           </section>
         ) : null}
 
-        {loaderData.storeGroups.length ? (
+        {storeGroups.length ? (
           <section className="grid gap-6">
-            {loaderData.storeGroups.map((group) => (
+            {storeGroups.map((group) => (
               <article
                 key={group.store?.id ?? "no-store"}
                 className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200"
@@ -1459,38 +1489,6 @@ function requireRouteParam(value: string | undefined, message: string) {
   }
 
   return value;
-}
-
-function serializeProjectedShoppingItem(
-  item: Awaited<
-    ReturnType<typeof getMealPlanShoppingData>
-  >["projectedItems"][number] | Awaited<
-    ReturnType<typeof getMealPlanShoppingData>
-  >["familyStoreGroups"][number]["sections"][number]["items"][number],
-) {
-  if (item.sourceType === "FAMILY") {
-    return item;
-  }
-
-  if (item.sourceType === ShoppingItemSource.GENERATED) {
-    return {
-      ...item,
-      firstDate: formatDateOnly(item.firstDate),
-      lastDate: formatDateOnly(item.lastDate),
-      occurrences: item.occurrences.map((occurrence) => ({
-        ...occurrence,
-        date: formatDateOnly(occurrence.date),
-      })),
-      postponedUntilDate: item.postponedUntilDate
-        ? formatDateOnly(item.postponedUntilDate)
-        : null,
-    };
-  }
-
-  return {
-    ...item,
-    buyOnDate: item.buyOnDate ? formatDateOnly(item.buyOnDate) : null,
-  };
 }
 
 function parseExpectedUpdatedAt(formData: FormData) {

@@ -2,32 +2,35 @@
 
 ## Current Objective
 
-Issue #119 on branch `issue/119-create-recipe-from-meal-plan`: add an ADMIN-only create-recipe entry point from the meal plan editor, linking to the recipes page with return navigation. Ready for PR review.
+Issue #121 on branch `issue/121-client-side-quick-add`: client-side quick-add for manual shopping items without full page refresh. Shipped via PR.
 
 ## Completed
 
-- Added "Opprett ny oppskrift →" link below "Fyll tomme dager" in `family-meal-plan.tsx`, gated to ADMIN users.
-- Extended `family-recipes.tsx` with `returnTo` query param, `#create-recipe` anchor, back link, and post-create redirect to meal plan.
-- Added `recipe-created` notice on the meal plan page after returning from create.
-- Added action test for `returnTo` redirect path in `family-recipes.test.ts`.
+- `ManualShoppingQuickAdd` uses dedicated `useFetcher` instead of `useSubmit`; inline validation errors; `onQuickAddSuccess` callback.
+- Quick-add actions return JSON `{ ok: true, item, recentManualItem }` instead of 302 redirects (meal-plan shopping, family shopping, store mode).
+- Write layer returns projected item after create via `projectCreatedManualShoppingItem` / `projectCreatedFamilyShoppingItem`.
+- Shared modules: `shopping-serialize.ts`, `shopping-quick-add.ts`, `shopping-list-client.ts`, `use-debounced-revalidate.ts`.
+- Parent routes maintain local list state and debounced background revalidation.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan.tsx` - create link, notice, `buildCreateRecipeHref`
-- `app/routes/family-recipes.tsx` - returnTo loader/action, create section anchor
+- `app/components/manual-shopping-quick-add.tsx`
+- `app/lib/shopping-list-client.ts`
+- `app/routes/family-meal-plan-shopping.tsx`
+- `app/routes/family-shopping.tsx`
+- `app/routes/family-meal-plan-store-mode.tsx`
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (277 tests, 48 files)
+- `npm run test:run` — passed (282 tests, 49 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Manual check: ADMIN sees link; MEMBER does not; end-to-end create flow returns to meal plan with new recipe in day selector.
-- New recipe is not auto-selected on a day (out of scope).
+- Manual QA after merge: rapid adds on all three surfaces; no scroll jitter on mobile dock.
 
 ## Next Step
 
-Merge PR (Closes #119) after review/CI.
+Merge PR (Closes #121) after review/CI.

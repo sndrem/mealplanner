@@ -262,7 +262,7 @@ describe("family meal plan store mode route", () => {
     });
   });
 
-  it("redirects after a family quick-add", async () => {
+  it("returns quick-add success data without redirecting", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
       ingredientId: "ingredient-1",
@@ -270,6 +270,25 @@ describe("family meal plan store mode route", () => {
       recentNameNormalized: "",
     });
     vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({
+      item: {
+        category: { id: "category-dairy", name: "Meieri" },
+        checked: false,
+        collaborationVersion: "2026-05-31T00:00:00.000Z",
+        name: "Melk",
+        note: null,
+        preferredStore: null,
+        quantity: "1",
+        quantityLabel: "1",
+        section: { displayName: "Meieri", sortOrder: 1 },
+        sourceKey: "family-item-1",
+        sourceType: "FAMILY",
+      },
+      recentManualItem: {
+        categoryId: "category-dairy",
+        displayName: "Melk",
+        nameNormalized: "melk",
+        quantity: "1",
+      },
       status: "CREATED",
     });
 
@@ -294,10 +313,29 @@ describe("family meal plan store mode route", () => {
       },
       userId: "user-1",
     });
-    expect(result).toBeInstanceOf(Response);
-    expect((result as Response).headers.get("Location")).toBe(
-      "http://localhost/families/family-1/meal-plans/meal-plan-1/store-mode?notice=family-shopping-item-added",
-    );
+    expect(result).toEqual({
+      intent: "quick-add-family-shopping-item",
+      item: {
+        category: { id: "category-dairy", name: "Meieri" },
+        checked: false,
+        collaborationVersion: "2026-05-31T00:00:00.000Z",
+        name: "Melk",
+        note: null,
+        preferredStore: null,
+        quantity: "1",
+        quantityLabel: "1",
+        section: { displayName: "Meieri", sortOrder: 1 },
+        sourceKey: "family-item-1",
+        sourceType: "FAMILY",
+      },
+      ok: true,
+      recentManualItem: {
+        categoryId: "category-dairy",
+        displayName: "Melk",
+        nameNormalized: "melk",
+        quantity: "1",
+      },
+    });
   });
 
   it("returns quick-add validation errors without redirecting", async () => {

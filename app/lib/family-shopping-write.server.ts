@@ -7,6 +7,10 @@ import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import {
+  buildRecentManualItemFromProjectedItem,
+  projectCreatedFamilyShoppingItem,
+} from "./shopping.server";
+import {
   resolveQuickAddManualShoppingItemValues,
   type QuickAddManualShoppingItemInput,
 } from "./shopping-write.server";
@@ -71,11 +75,30 @@ export async function createQuickFamilyShoppingItem({
     };
   }
 
-  return createFamilyShoppingItem({
+  const createResult = await createFamilyShoppingItem({
     familyId,
     userId,
     values: resolvedValues.values,
   });
+
+  if (createResult.status !== "CREATED") {
+    return createResult;
+  }
+
+  const item = await projectCreatedFamilyShoppingItem({
+    familyId,
+    familyItemId: createResult.familyItemId,
+  });
+
+  if (!item) {
+    throw new Error("Fant ikke den nylig opprettede familiens handlelinje.");
+  }
+
+  return {
+    item,
+    recentManualItem: buildRecentManualItemFromProjectedItem(item),
+    status: "CREATED" as const,
+  };
 }
 
 export async function createFamilyShoppingItem({
@@ -106,7 +129,7 @@ export async function createFamilyShoppingItem({
   }
 
   try {
-    await db.familyShoppingItem.create({
+    const created = await db.familyShoppingItem.create({
       data: {
         categoryId: validation.values.categoryId,
         familyId,
@@ -128,6 +151,7 @@ export async function createFamilyShoppingItem({
     });
 
     return {
+      familyItemId: created.id,
       status: "CREATED" as const,
     };
   } catch (error) {

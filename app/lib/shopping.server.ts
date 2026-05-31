@@ -121,6 +121,10 @@ type FamilyShoppingItemRow = Prisma.FamilyShoppingItemGetPayload<{
   select: typeof familyShoppingItemSelect;
 }>;
 
+type ManualShoppingItemRow = Prisma.ManualShoppingItemGetPayload<{
+  select: typeof manualShoppingItemSelect;
+}>;
+
 export const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
   activeShoppingDate: true,
   endDate: true,
@@ -540,33 +544,104 @@ export function projectFamilyShoppingItems({
 }) {
   const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
 
-  return items.map((item) => {
-    const preferredStore = item.preferredStore;
-    const section = resolveStoreSection({
-      category: {
-        id: item.category.id,
-        name: item.category.displayName,
-      },
-      preferredStore,
+  return items.map((item) =>
+    projectSingleFamilyShoppingItemRow({
+      item,
       storeSectionsByStoreId,
-    });
+    }),
+  );
+}
 
-    return {
-      category: {
-        id: item.category.id,
-        name: item.category.displayName,
+export function buildRecentManualItemFromProjectedItem(
+  item: Pick<ProjectedFamilyShoppingItem | ProjectedManualShoppingItem, "category" | "name" | "quantity">,
+): RecentManualShoppingItem {
+  const displayName = item.name.trim();
+
+  return {
+    categoryId: item.category.id,
+    displayName,
+    nameNormalized: normalizeIngredientCanonicalName(displayName),
+    quantity: item.quantity?.trim() || "1",
+  };
+}
+
+async function loadShoppingStoresForFamily(familyId: string) {
+  return db.store.findMany({
+    orderBy: [{ name: "asc" }],
+    select: shoppingStoreSelect,
+    where: {
+      OR: [{ familyId: null }, { familyId }],
+    },
+  });
+}
+
+export async function projectCreatedManualShoppingItem({
+  familyId,
+  manualItemId,
+  mealPlanId,
+}: {
+  familyId: string;
+  manualItemId: string;
+  mealPlanId: string;
+}) {
+  const [stores, item, override] = await Promise.all([
+    loadShoppingStoresForFamily(familyId),
+    db.manualShoppingItem.findFirst({
+      select: manualShoppingItemSelect,
+      where: {
+        id: manualItemId,
+        mealPlan: {
+          familyId,
+          id: mealPlanId,
+        },
       },
-      checked: item.checked,
-      collaborationVersion: item.updatedAt.toISOString(),
-      name: item.name,
-      note: item.note,
-      preferredStore,
-      quantity: item.quantity,
-      quantityLabel: buildManualQuantityLabel(item.quantity),
-      section,
-      sourceKey: item.id,
-      sourceType: "FAMILY",
-    } satisfies ProjectedFamilyShoppingItem;
+    }),
+    db.shoppingItemOverride.findFirst({
+      select: shoppingOverrideSelect,
+      where: {
+        mealPlanId,
+        sourceKey: manualItemId,
+        sourceType: ShoppingItemSource.MANUAL,
+      },
+    }),
+  ]);
+
+  if (!item) {
+    return null;
+  }
+
+  return projectSingleManualShoppingItemRow({
+    item,
+    override,
+    stores,
+  });
+}
+
+export async function projectCreatedFamilyShoppingItem({
+  familyId,
+  familyItemId,
+}: {
+  familyId: string;
+  familyItemId: string;
+}) {
+  const [stores, item] = await Promise.all([
+    loadShoppingStoresForFamily(familyId),
+    db.familyShoppingItem.findFirst({
+      select: familyShoppingItemSelect,
+      where: {
+        familyId,
+        id: familyItemId,
+      },
+    }),
+  ]);
+
+  if (!item) {
+    return null;
+  }
+
+  return projectSingleFamilyShoppingItemRow({
+    item,
+    storeSectionsByStoreId: buildStoreSectionsByStoreId(stores),
   });
 }
 
@@ -1130,6 +1205,81 @@ function buildIncludeDespiteStockKeys(overrides: ShoppingOverride[]) {
   );
 }
 
+function projectSingleFamilyShoppingItemRow({
+  item,
+  storeSectionsByStoreId,
+}: {
+  item: FamilyShoppingItemRow;
+  storeSectionsByStoreId: Map<string, Map<string, StoreSectionSummary>>;
+}) {
+  const preferredStore = item.preferredStore;
+  const section = resolveStoreSection({
+    category: {
+      id: item.category.id,
+      name: item.category.displayName,
+    },
+    preferredStore,
+    storeSectionsByStoreId,
+  });
+
+  return {
+    category: {
+      id: item.category.id,
+      name: item.category.displayName,
+    },
+    checked: item.checked,
+    collaborationVersion: item.updatedAt.toISOString(),
+    name: item.name,
+    note: item.note,
+    preferredStore,
+    quantity: item.quantity,
+    quantityLabel: buildManualQuantityLabel(item.quantity),
+    section,
+    sourceKey: item.id,
+    sourceType: "FAMILY",
+  } satisfies ProjectedFamilyShoppingItem;
+}
+
+function projectSingleManualShoppingItemRow({
+  item,
+  override,
+  stores,
+}: {
+  item: ManualShoppingItemRow;
+  override?: ShoppingOverride | null;
+  stores: ShoppingStore[];
+}) {
+  const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
+  const preferredStore = item.preferredStore;
+  const section = resolveStoreSection({
+    category: {
+      id: item.category.id,
+      name: item.category.displayName,
+    },
+    preferredStore,
+    storeSectionsByStoreId,
+  });
+
+  return {
+    buyOnDate: item.buyOnDate,
+    category: {
+      id: item.category.id,
+      name: item.category.displayName,
+    },
+    checked: override?.checked ?? false,
+    collaborationVersion: item.updatedAt?.toISOString() ?? "",
+    name: item.name,
+    note: item.note,
+    overrideVersion: override?.updatedAt?.toISOString() ?? "",
+    preferredStore,
+    quantity: item.quantity,
+    quantityLabel: buildManualQuantityLabel(item.quantity),
+    section,
+    sourceKey: item.id,
+    sourceType: ShoppingItemSource.MANUAL,
+  } satisfies ProjectedManualShoppingItem;
+}
+
 function projectManualShoppingItems({
   mealPlan,
   stores,
@@ -1137,43 +1287,18 @@ function projectManualShoppingItems({
   mealPlan: ShoppingMealPlan;
   stores: ShoppingStore[];
 }) {
-  const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
   const overrideBySourceKey = buildOverrideMap(
     mealPlan.shoppingOverrides,
     ShoppingItemSource.MANUAL,
   );
 
-  return mealPlan.manualShoppingItems.map((item) => {
-    const override = overrideBySourceKey.get(item.id);
-    const preferredStore = item.preferredStore;
-    const section = resolveStoreSection({
-      category: {
-        id: item.category.id,
-        name: item.category.displayName,
-      },
-      preferredStore,
-      storeSectionsByStoreId,
-    });
-
-    return {
-      buyOnDate: item.buyOnDate,
-      category: {
-        id: item.category.id,
-        name: item.category.displayName,
-      },
-      checked: override?.checked ?? false,
-      collaborationVersion: item.updatedAt?.toISOString() ?? "",
-      name: item.name,
-      note: item.note,
-      overrideVersion: override?.updatedAt?.toISOString() ?? "",
-      preferredStore,
-      quantity: item.quantity,
-      quantityLabel: buildManualQuantityLabel(item.quantity),
-      section,
-      sourceKey: item.id,
-      sourceType: ShoppingItemSource.MANUAL,
-    } satisfies ProjectedManualShoppingItem;
-  });
+  return mealPlan.manualShoppingItems.map((item) =>
+    projectSingleManualShoppingItemRow({
+      item,
+      override: overrideBySourceKey.get(item.id),
+      stores,
+    }),
+  );
 }
 
 function buildProjectedStoreGroups(

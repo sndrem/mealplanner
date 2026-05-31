@@ -35,8 +35,15 @@ import {
   writeStoreModeShoppingView,
 } from "../lib/shopping-store-mode-client";
 import {
+  insertProjectedItemIntoSectionGroups,
+  prependRecentManualItem,
+} from "../lib/shopping-list-client";
+import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
+import {
   getMealPlanStoreModeData,
   listRecentManualShoppingItemsForFamily,
+  type RecentManualShoppingItem,
 } from "../lib/shopping.server";
 import {
   toggleShoppingItemChecked,
@@ -62,6 +69,7 @@ import {
   STORE_MODE_SYNC_PROGRESS_MESSAGE,
   useStoreModeToggleSync,
 } from "../lib/use-store-mode-toggle-sync";
+import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
 
 type StoreModeNotice =
   | "active-shopping-date-updated"
@@ -83,7 +91,9 @@ interface StoreModeActionData {
   activeShoppingDateValue?: string;
   formError?: string;
   intent?: StoreModeIntent;
+  item?: QuickAddShoppingSuccess["item"];
   ok?: boolean;
+  recentManualItem?: RecentManualShoppingItem;
   selectedStoreFieldErrors?: {
     selectedStoreId?: string;
   };
@@ -259,12 +269,12 @@ export async function action({
       } satisfies StoreModeActionData;
     }
 
-    return buildStoreModeRedirect({
-      familyId,
-      mealPlanId,
-      notice: "family-shopping-item-added",
-      request,
-    });
+    return {
+      intent,
+      item: serializeProjectedShoppingItem(result.item),
+      ok: true,
+      recentManualItem: result.recentManualItem,
+    } satisfies StoreModeActionData;
   }
 
   if (intent === "toggle-family-shopping-item-checked") {
@@ -354,17 +364,43 @@ export default function FamilyMealPlanStoreModeRoute({
   const navigation = useNavigation();
   const submit = useSubmit();
   const revalidator = useRevalidator();
+  const scheduleRevalidate = useDebouncedRevalidate(revalidator.revalidate);
   const toggleFetcher = useFetcher<StoreModeActionData>();
   const pendingIntent = navigation.formData?.get("intent");
+  const [dueSectionGroups, setDueSectionGroups] = useState(
+    loaderData.dueSectionGroups,
+  );
+  const [recentManualItems, setRecentManualItems] = useState(
+    loaderData.recentManualItems,
+  );
   const isSavingStore =
     navigation.state === "submitting" &&
     pendingIntent === "update-selected-store";
   const isSavingShoppingDate =
     navigation.state === "submitting" &&
     pendingIntent === "update-active-shopping-date";
+
+  useEffect(() => {
+    setDueSectionGroups(loaderData.dueSectionGroups);
+    setRecentManualItems(loaderData.recentManualItems);
+  }, [loaderData.dueSectionGroups, loaderData.recentManualItems]);
+
+  const handleQuickAddSuccess = useCallback(
+    (payload: QuickAddShoppingSuccess) => {
+      setDueSectionGroups((currentSections) =>
+        insertProjectedItemIntoSectionGroups(currentSections, payload.item),
+      );
+      setRecentManualItems((currentRecents) =>
+        prependRecentManualItem(currentRecents, payload.recentManualItem),
+      );
+      scheduleRevalidate();
+    },
+    [scheduleRevalidate],
+  );
+
   const loaderDueItems = useMemo(
-    () => loaderData.dueSectionGroups.flatMap((section) => section.items),
-    [loaderData.dueSectionGroups],
+    () => dueSectionGroups.flatMap((section) => section.items),
+    [dueSectionGroups],
   );
   const { displayItemsBySourceKey, handleToggle, syncBannerMessage } =
     useStoreModeToggleSync({
@@ -388,13 +424,13 @@ export default function FamilyMealPlanStoreModeRoute({
   );
   const displaySectionGroups = useMemo(
     () =>
-      loaderData.dueSectionGroups.map((section) => ({
+      dueSectionGroups.map((section) => ({
         ...section,
         items: section.items.map(
           (item) => displayItemsBySourceKey.get(item.sourceKey) ?? item,
         ),
       })),
-    [displayItemsBySourceKey, loaderData.dueSectionGroups],
+    [displayItemsBySourceKey, dueSectionGroups],
   );
   const viewStorageKey = useMemo(
     () =>
@@ -463,10 +499,6 @@ export default function FamilyMealPlanStoreModeRoute({
       ? actionData.activeShoppingDateValue
       : loaderData.activeShoppingDate;
   const ingredientSearchPath = `/families/${loaderData.family.id}/shopping/ingredient-search`;
-  const quickAddFormError =
-    actionData?.intent === "quick-add-family-shopping-item"
-      ? actionData.formError
-      : undefined;
   const generalFormError =
     actionData?.formError &&
     actionData.intent !== "quick-add-family-shopping-item"
@@ -753,14 +785,12 @@ export default function FamilyMealPlanStoreModeRoute({
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-3">
         <div className="pointer-events-auto mx-auto max-w-4xl">
           <div className={storeModeQuickAddDockClass}>
-            {quickAddFormError ? (
-              <p className="mb-3 text-sm text-rose-600">{quickAddFormError}</p>
-            ) : null}
             <ManualShoppingQuickAdd
               appearance="store-mode"
               ingredientSearchPath={ingredientSearchPath}
+              onQuickAddSuccess={handleQuickAddSuccess}
               quickAddIntent="quick-add-family-shopping-item"
-              recentManualItems={loaderData.recentManualItems}
+              recentManualItems={recentManualItems}
               revealOnFocus
             />
           </div>
@@ -798,38 +828,6 @@ export function ErrorBoundary({ error }: { error: unknown }) {
       </div>
     </main>
   );
-}
-
-function serializeProjectedShoppingItem(
-  item:
-    | Awaited<ReturnType<typeof getMealPlanStoreModeData>>["laterItems"][number]
-    | Awaited<
-        ReturnType<typeof getMealPlanStoreModeData>
-      >["dueSectionGroups"][number]["items"][number],
-) {
-  if (item.sourceType === "FAMILY") {
-    return item;
-  }
-
-  if (item.sourceType === ShoppingItemSource.GENERATED) {
-    return {
-      ...item,
-      firstDate: formatDateOnly(item.firstDate),
-      lastDate: formatDateOnly(item.lastDate),
-      occurrences: item.occurrences.map((occurrence) => ({
-        ...occurrence,
-        date: formatDateOnly(occurrence.date),
-      })),
-      postponedUntilDate: item.postponedUntilDate
-        ? formatDateOnly(item.postponedUntilDate)
-        : null,
-    };
-  }
-
-  return {
-    ...item,
-    buyOnDate: item.buyOnDate ? formatDateOnly(item.buyOnDate) : null,
-  };
 }
 
 function getStoreModeNotice(request: Request): StoreModeNotice | null {
