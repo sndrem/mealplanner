@@ -14,6 +14,7 @@ const { dbMock, requireFamilyMembershipMock } = vi.hoisted(() => {
       },
       store: {
         findFirst: vi.fn(),
+        findMany: vi.fn(),
       },
     },
     requireFamilyMembershipMock: vi.fn(),
@@ -85,7 +86,10 @@ describe("family-shopping-write.server", () => {
       },
     });
 
-    expect(result).toEqual({ status: "CREATED" });
+    expect(result).toEqual({
+      familyItemId: "family-item-1",
+      status: "CREATED",
+    });
     expect(dbMock.familyShoppingItem.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -135,6 +139,22 @@ describe("family-shopping-write.server", () => {
       },
     });
     dbMock.familyShoppingItem.create.mockResolvedValue({ id: "family-item-1" });
+    dbMock.store.findMany.mockResolvedValue([]);
+    dbMock.familyShoppingItem.findFirst.mockResolvedValue({
+      category: {
+        displayName: "Annet",
+        id: "category-other",
+      },
+      categoryId: "category-other",
+      checked: false,
+      id: "family-item-1",
+      name: "Batterier",
+      note: null,
+      preferredStore: null,
+      preferredStoreId: null,
+      quantity: "1",
+      updatedAt: new Date("2026-05-31T00:00:00.000Z"),
+    });
 
     const { createQuickFamilyShoppingItem } = await import(
       "./family-shopping-write.server"
@@ -146,6 +166,30 @@ describe("family-shopping-write.server", () => {
       userId: "user-1",
     });
 
-    expect(result).toEqual({ status: "CREATED" });
+    expect(result).toEqual({
+      item: {
+        category: { id: "category-other", name: "Annet" },
+        checked: false,
+        collaborationVersion: "2026-05-31T00:00:00.000Z",
+        name: "Batterier",
+        note: null,
+        preferredStore: null,
+        quantity: "1",
+        quantityLabel: "1",
+        section: {
+          displayName: "Annet",
+          sortOrder: expect.any(Number),
+        },
+        sourceKey: "family-item-1",
+        sourceType: "FAMILY",
+      },
+      recentManualItem: {
+        categoryId: "category-other",
+        displayName: "Batterier",
+        nameNormalized: "batterier",
+        quantity: "1",
+      },
+      status: "CREATED",
+    });
   });
 });

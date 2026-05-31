@@ -1,6 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { useFetcher, useNavigation, useSubmit } from "react-router";
+import { useFetcher } from "react-router";
 
+import type { QuickAddShoppingActionData, QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import { isQuickAddShoppingSuccess } from "../lib/shopping-quick-add";
 import type { RecentManualShoppingItem } from "../lib/shopping.server";
 
 export interface IngredientSearchResult {
@@ -19,6 +21,7 @@ interface ManualShoppingQuickAddProps {
   appearance?: ManualShoppingQuickAddAppearance;
   autoFocus?: boolean;
   ingredientSearchPath: string;
+  onQuickAddSuccess?: (payload: QuickAddShoppingSuccess) => void;
   quickAddIntent?: string;
   recentManualItems: RecentManualShoppingItem[];
   /**
@@ -35,6 +38,7 @@ const MIN_SEARCH_LENGTH = 2;
 const SEARCH_DEBOUNCE_MS = 250;
 const DEFAULT_QUICK_ADD_INTENT = "quick-add-manual-shopping-item";
 const DEFAULT_SEARCH_FETCHER_KEY = "manual-shopping-ingredient-search";
+const DEFAULT_QUICK_ADD_FETCHER_KEY = "manual-shopping-quick-add";
 
 const quickAddStyles = {
   default: {
@@ -45,6 +49,7 @@ const quickAddStyles = {
       "absolute z-10 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg",
     dropdownUp:
       "absolute bottom-full z-10 mb-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg",
+    error: "text-sm text-rose-600",
     input:
       "min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
     label: "block text-sm font-medium text-slate-700",
@@ -66,6 +71,7 @@ const quickAddStyles = {
       "absolute z-10 max-h-64 w-full overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-lg",
     dropdownUp:
       "absolute bottom-full z-10 mb-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-lg",
+    error: "text-sm text-rose-600",
     input:
       "min-w-0 flex-1 rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
     label: "block text-sm font-medium text-stone-700",
@@ -88,6 +94,7 @@ export function ManualShoppingQuickAdd({
   appearance = "default",
   autoFocus = false,
   ingredientSearchPath,
+  onQuickAddSuccess,
   quickAddIntent = DEFAULT_QUICK_ADD_INTENT,
   recentManualItems,
   revealOnFocus = false,
@@ -95,8 +102,9 @@ export function ManualShoppingQuickAdd({
 }: ManualShoppingQuickAddProps) {
   const styles = quickAddStyles[appearance];
   const listboxId = useId();
-  const navigation = useNavigation();
-  const submit = useSubmit();
+  const quickAddFetcher = useFetcher<QuickAddShoppingActionData>({
+    key: DEFAULT_QUICK_ADD_FETCHER_KEY,
+  });
   const searchFetcher = useFetcher<ManualShoppingQuickAddLoaderSlice>({
     key: searchFetcherKey,
   });
@@ -107,15 +115,24 @@ export function ManualShoppingQuickAdd({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastRequestedQueryRef = useRef<string | null>(null);
+  const lastHandledQuickAddDataRef = useRef<QuickAddShoppingActionData | null>(null);
   const searchFetcherRef = useRef(searchFetcher);
   searchFetcherRef.current = searchFetcher;
-  const pendingIntent = navigation.formData?.get("intent");
-  const isQuickAdding =
-    navigation.state === "submitting" && pendingIntent === quickAddIntent;
-
+  const onQuickAddSuccessRef = useRef(onQuickAddSuccess);
+  onQuickAddSuccessRef.current = onQuickAddSuccess;
+  const isQuickAdding = quickAddFetcher.state !== "idle";
   const trimmedQuery = query.trim();
-  const isSearching =
-    searchFetcher.state === "loading" && trimmedQuery.length >= MIN_SEARCH_LENGTH;
+  const quickAddActionData =
+    quickAddFetcher.data?.intent === quickAddIntent ? quickAddFetcher.data : undefined;
+  const quickAddFormError =
+    quickAddActionData && !isQuickAddShoppingSuccess(quickAddActionData)
+      ? quickAddActionData.formError
+      : undefined;
+  const quickAddNameError =
+    quickAddActionData && !isQuickAddShoppingSuccess(quickAddActionData)
+      ? quickAddActionData.manualFieldErrors?.name ??
+        quickAddActionData.familyFieldErrors?.name
+      : undefined;
 
   function submitQuickAdd(fields: {
     ingredientId?: string;
@@ -137,7 +154,7 @@ export function ManualShoppingQuickAdd({
       formData.set("recentNameNormalized", fields.recentNameNormalized);
     }
 
-    submit(formData, { method: "post" });
+    quickAddFetcher.submit(formData, { method: "post" });
   }
 
   useEffect(() => {
@@ -184,15 +201,20 @@ export function ManualShoppingQuickAdd({
   }, []);
 
   useEffect(() => {
-    if (!isQuickAdding) {
+    if (
+      !isQuickAddShoppingSuccess(quickAddFetcher.data) ||
+      quickAddFetcher.data === lastHandledQuickAddDataRef.current
+    ) {
       return;
     }
 
+    lastHandledQuickAddDataRef.current = quickAddFetcher.data;
     setIsListOpen(false);
     setIsInputFocused(false);
     setQuery("");
     lastRequestedQueryRef.current = null;
-  }, [isQuickAdding]);
+    onQuickAddSuccessRef.current?.(quickAddFetcher.data);
+  }, [quickAddFetcher.data]);
 
   useEffect(() => {
     if (!autoFocus) {
@@ -201,6 +223,9 @@ export function ManualShoppingQuickAdd({
 
     inputRef.current?.focus({ preventScroll: true });
   }, [autoFocus]);
+
+  const isSearching =
+    searchFetcher.state === "loading" && trimmedQuery.length >= MIN_SEARCH_LENGTH;
 
   const hasExactMatch = useMemo(
     () =>
@@ -249,6 +274,9 @@ export function ManualShoppingQuickAdd({
           Søk i ingrediensregisteret, skriv et nytt navn, eller velg en nylig brukt vare.
         </p>
       ) : null}
+
+      {quickAddFormError ? <p className={styles.error}>{quickAddFormError}</p> : null}
+      {quickAddNameError ? <p className={styles.error}>{quickAddNameError}</p> : null}
 
       {revealOnFocus && recentsBlock ? (
         <div
