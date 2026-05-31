@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Form,
   Link,
@@ -1592,6 +1593,12 @@ function MealPlanDayRow({
   mealPlanId: string;
   recipes: MealPlanRecipeOption[];
 }) {
+  const [selectedRecipeId, setSelectedRecipeId] = useState(entry.recipeId);
+
+  useEffect(() => {
+    setSelectedRecipeId(entry.recipeId);
+  }, [entry.recipeId]);
+
   const selectedRecipe =
     recipes.find((recipe) => recipe.id === entry.recipeId) ?? null;
   const mealLabel = getMealDaySummaryLabel(entry, selectedRecipe);
@@ -1655,8 +1662,9 @@ function MealPlanDayRow({
           Oppskrift
           <select
             className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-            defaultValue={entry.recipeId}
             name={`recipeId:${date}`}
+            onChange={(event) => setSelectedRecipeId(event.target.value)}
+            value={selectedRecipeId}
           >
             <option value="">Velg middag</option>
             {recipes.map((recipe) => (
@@ -1665,6 +1673,14 @@ function MealPlanDayRow({
               </option>
             ))}
           </select>
+          {selectedRecipeId ? (
+            <Link
+              className="mt-2 inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+              to={`/families/${familyId}/recipes/${selectedRecipeId}`}
+            >
+              Se oppskrift
+            </Link>
+          ) : null}
         </label>
 
         <label className="block min-w-0 text-sm font-medium text-slate-700">
