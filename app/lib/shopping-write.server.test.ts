@@ -37,6 +37,7 @@ const {
       },
       mealPlan: {
         findFirst: vi.fn(),
+        findMany: vi.fn(),
         update: vi.fn(),
         updateMany: vi.fn(),
       },
@@ -123,6 +124,12 @@ describe("shopping-write.server", () => {
       userId: "user-1",
     });
     dbMock.mealPlan.findFirst.mockResolvedValue(mockMealPlan);
+    dbMock.mealPlan.findMany.mockResolvedValue([
+      {
+        endDate: mockMealPlan.endDate,
+        startDate: mockMealPlan.startDate,
+      },
+    ]);
     dbMock.mealPlan.updateMany.mockResolvedValue({ count: 1 });
     dbMock.manualShoppingItem.updateMany.mockResolvedValue({ count: 1 });
     dbMock.manualShoppingItem.deleteMany.mockResolvedValue({ count: 1 });
@@ -150,7 +157,7 @@ describe("shopping-write.server", () => {
 
     expect(result).toEqual({
       fieldErrors: {
-        buyOnDate: "Datoen må ligge innenfor ukeplanens aktive periode.",
+        buyOnDate: "Datoen må ligge innenfor en av familiens ukeplaner.",
         categoryId: "Velg en kategori.",
         name: "Skriv inn et varenavn.",
       },
@@ -204,6 +211,47 @@ describe("shopping-write.server", () => {
         quantity: "6 stk",
         updatedByUserId: "user-1",
       },
+    });
+  });
+
+  it("accepts a buyOnDate from another family meal plan range", async () => {
+    dbMock.mealPlan.findMany.mockResolvedValue([
+      {
+        endDate: new Date("2026-05-18T00:00:00.000Z"),
+        startDate: new Date("2026-05-15T00:00:00.000Z"),
+      },
+      {
+        endDate: new Date("2026-05-25T00:00:00.000Z"),
+        startDate: new Date("2026-05-22T00:00:00.000Z"),
+      },
+    ]);
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-produce",
+    });
+    dbMock.store.findFirst.mockResolvedValue(null);
+
+    const result = await createManualShoppingItem({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+      values: {
+        buyOnDate: "2026-05-23",
+        categoryId: "category-produce",
+        name: "Bananer",
+        note: "",
+        preferredStoreId: "",
+        quantity: "",
+      },
+    });
+
+    expect(result).toEqual({
+      status: "CREATED",
+    });
+    expect(dbMock.manualShoppingItem.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        buyOnDate: new Date("2026-05-23T00:00:00.000Z"),
+        mealPlanId: "meal-plan-1",
+      }),
     });
   });
 
@@ -536,6 +584,40 @@ describe("shopping-write.server", () => {
         activeShoppingDate: new Date("2026-05-17T00:00:00.000Z"),
         updatedByUserId: "user-1",
       },
+      where: {
+        id: "meal-plan-1",
+        updatedAt: mockMealPlan.updatedAt,
+      },
+    });
+  });
+
+  it("accepts an active shopping date from another family meal plan range", async () => {
+    dbMock.mealPlan.findMany.mockResolvedValue([
+      {
+        endDate: new Date("2026-05-18T00:00:00.000Z"),
+        startDate: new Date("2026-05-15T00:00:00.000Z"),
+      },
+      {
+        endDate: new Date("2026-05-25T00:00:00.000Z"),
+        startDate: new Date("2026-05-22T00:00:00.000Z"),
+      },
+    ]);
+
+    const result = await updateActiveShoppingDate({
+      activeShoppingDate: "2026-05-23",
+      expectedMealPlanUpdatedAt: mockMealPlan.updatedAt.toISOString(),
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "UPDATED",
+    });
+    expect(dbMock.mealPlan.updateMany).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        activeShoppingDate: new Date("2026-05-23T00:00:00.000Z"),
+      }),
       where: {
         id: "meal-plan-1",
         updatedAt: mockMealPlan.updatedAt,

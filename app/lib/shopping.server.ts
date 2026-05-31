@@ -4,7 +4,10 @@ import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import { findMealPlanCoveringDate } from "./meal-plan-for-date.server";
-import { getMealPlanDateRange } from "./meal-plan.server";
+import {
+  getMealPlanDateRange,
+  unionMealPlanDateRanges,
+} from "./meal-plan.server";
 import { getFamilyShoppingListMode } from "./shopping-preference.server";
 import {
   getFamilyStockMatchSet,
@@ -338,20 +341,31 @@ export async function getMealPlanShoppingData({
     });
   }
 
-  const [stores, categories, stockMatchSet] = await Promise.all([
-    db.store.findMany({
-      orderBy: [{ name: "asc" }],
-      select: shoppingStoreSelect,
-      where: {
-        OR: [{ familyId: null }, { familyId }],
-      },
-    }),
-    db.ingredientCategory.findMany({
-      orderBy: [{ displayName: "asc" }],
-      select: shoppingCategorySelect,
-    }),
-    getFamilyStockMatchSet(familyId),
-  ]);
+  const [stores, categories, stockMatchSet, familyMealPlanRanges] =
+    await Promise.all([
+      db.store.findMany({
+        orderBy: [{ name: "asc" }],
+        select: shoppingStoreSelect,
+        where: {
+          OR: [{ familyId: null }, { familyId }],
+        },
+      }),
+      db.ingredientCategory.findMany({
+        orderBy: [{ displayName: "asc" }],
+        select: shoppingCategorySelect,
+      }),
+      getFamilyStockMatchSet(familyId),
+      db.mealPlan.findMany({
+        orderBy: [{ startDate: "asc" }, { id: "asc" }],
+        select: {
+          endDate: true,
+          startDate: true,
+        },
+        where: {
+          familyId,
+        },
+      }),
+    ]);
 
   const includeDespiteStockKeys = buildIncludeDespiteStockKeys(
     mealPlan.shoppingOverrides,
@@ -412,6 +426,7 @@ export async function getMealPlanShoppingData({
       name: store.name,
     })),
     userRole: membership.role,
+    selectableShoppingDates: unionMealPlanDateRanges(familyMealPlanRanges),
     visibleDates: getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate),
   };
 }
@@ -735,7 +750,7 @@ export async function getMealPlanStoreModeData({
     userId,
   });
 
-  const [mealPlan, stores, selectedStorePreference, stockMatchSet] =
+  const [mealPlan, stores, selectedStorePreference, stockMatchSet, familyMealPlanRanges] =
     await Promise.all([
       db.mealPlan.findFirst({
         select: shoppingMealPlanSelect,
@@ -763,6 +778,16 @@ export async function getMealPlanStoreModeData({
         },
       }),
       getFamilyStockMatchSet(familyId),
+      db.mealPlan.findMany({
+        orderBy: [{ startDate: "asc" }, { id: "asc" }],
+        select: {
+          endDate: true,
+          startDate: true,
+        },
+        where: {
+          familyId,
+        },
+      }),
     ]);
 
   if (!mealPlan) {
@@ -856,6 +881,7 @@ export async function getMealPlanStoreModeData({
       name: store.name,
     })),
     userRole: membership.role,
+    selectableShoppingDates: unionMealPlanDateRanges(familyMealPlanRanges),
     visibleDates: getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate),
   };
 }

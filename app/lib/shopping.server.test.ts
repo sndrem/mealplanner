@@ -20,6 +20,7 @@ const {
         },
         mealPlan: {
           findFirst: vi.fn(),
+          findMany: vi.fn(),
         },
         store: {
           findMany: vi.fn(),
@@ -88,6 +89,12 @@ describe("shopping.server", () => {
     });
     dbMock.userStorePreference.findUnique.mockResolvedValue(null);
     dbMock.familyShoppingItem.findMany.mockResolvedValue([]);
+    dbMock.mealPlan.findMany.mockResolvedValue([
+      {
+        endDate: new Date("2026-05-18T00:00:00.000Z"),
+        startDate: new Date("2026-05-15T00:00:00.000Z"),
+      },
+    ]);
     dbMock.ingredientCategory.findMany.mockResolvedValue([
       {
         displayName: "Brod",
@@ -377,6 +384,12 @@ describe("shopping.server", () => {
       },
     ]);
     expect(result.visibleDates).toEqual(["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"]);
+    expect(result.selectableShoppingDates).toEqual([
+      "2026-05-15",
+      "2026-05-16",
+      "2026-05-17",
+      "2026-05-18",
+    ]);
     expect(result.projectedItems.map((item) => item.name)).toEqual([
       "Paprika",
       "Yoghurt",
@@ -1351,6 +1364,12 @@ describe("shopping.server", () => {
       checkedCount: 0,
       totalCount: 1,
     });
+    expect(result.selectableShoppingDates).toEqual([
+      "2026-05-15",
+      "2026-05-16",
+      "2026-05-17",
+      "2026-05-18",
+    ]);
   });
 
   it("includes all items from the shopping date through the end of the meal plan", async () => {

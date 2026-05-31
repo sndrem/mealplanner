@@ -15,8 +15,8 @@ import {
 } from "../lib/shopping-display";
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
 import {
+  ShoppingDateSelect,
   ShoppingListItemExpanded,
-  shoppingDateInputClassName,
 } from "../components/shopping-list-item-expanded";
 import { getToggleExpectedVersion } from "../lib/shopping-store-mode-client";
 import {
@@ -176,6 +176,7 @@ export async function loader({
     ),
     stores: result.stores,
     userRole: result.userRole,
+    selectableShoppingDates: result.selectableShoppingDates,
     visibleDates: result.visibleDates,
   };
 }
@@ -1005,13 +1006,11 @@ export default function FamilyMealPlanShoppingRoute({
 
                   <label className="block min-w-0 text-sm font-medium text-slate-700">
                     Handledato
-                    <input
-                      className={shoppingDateInputClassName}
+                    <ShoppingDateSelect
                       defaultValue={addManualValues.buyOnDate}
-                      max={loaderData.mealPlan.endDate}
-                      min={loaderData.mealPlan.startDate}
+                      emptyOptionLabel="Ingen handledato"
                       name="buyOnDate"
-                      type="date"
+                      selectableShoppingDates={loaderData.selectableShoppingDates}
                     />
                   </label>
                 </div>
@@ -1262,9 +1261,9 @@ export default function FamilyMealPlanShoppingRoute({
                             isPendingManualSave,
                             item,
                             manualValues,
-                            mealPlanEndDate: loaderData.mealPlan.endDate,
-                            mealPlanStartDate: loaderData.mealPlan.startDate,
                             overrideValues,
+                            selectableShoppingDates:
+                              loaderData.selectableShoppingDates,
                             stores: loaderData.stores,
                             toggleExpectedVersion:
                               getToggleExpectedVersion(item),

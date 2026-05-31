@@ -65,6 +65,7 @@ import {
   reopenMealPlan,
   saveMealPlanEntries,
   updateMealPlan,
+  unionMealPlanDateRanges,
   validateMealPlanRange,
 } from "./meal-plan.server";
 
@@ -1271,5 +1272,55 @@ describe("meal-plan.server", () => {
       warning:
         "Noen middager ble valgt flere ganger fordi det var for fa oppskrifter igjen.",
     });
+  });
+});
+
+describe("unionMealPlanDateRanges", () => {
+  it("returns the same dates as getMealPlanDateRange for a single plan", () => {
+    expect(
+      unionMealPlanDateRanges([
+        {
+          endDate: new Date("2026-05-18T00:00:00.000Z"),
+          startDate: new Date("2026-05-15T00:00:00.000Z"),
+        },
+      ]),
+    ).toEqual(["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"]);
+  });
+
+  it("deduplicates overlapping plan ranges", () => {
+    expect(
+      unionMealPlanDateRanges([
+        {
+          endDate: new Date("2026-05-17T00:00:00.000Z"),
+          startDate: new Date("2026-05-15T00:00:00.000Z"),
+        },
+        {
+          endDate: new Date("2026-05-18T00:00:00.000Z"),
+          startDate: new Date("2026-05-17T00:00:00.000Z"),
+        },
+      ]),
+    ).toEqual(["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"]);
+  });
+
+  it("unions adjacent non-overlapping plans without gap dates", () => {
+    expect(
+      unionMealPlanDateRanges([
+        {
+          endDate: new Date("2026-05-17T00:00:00.000Z"),
+          startDate: new Date("2026-05-15T00:00:00.000Z"),
+        },
+        {
+          endDate: new Date("2026-05-21T00:00:00.000Z"),
+          startDate: new Date("2026-05-19T00:00:00.000Z"),
+        },
+      ]),
+    ).toEqual([
+      "2026-05-15",
+      "2026-05-16",
+      "2026-05-17",
+      "2026-05-19",
+      "2026-05-20",
+      "2026-05-21",
+    ]);
   });
 });
