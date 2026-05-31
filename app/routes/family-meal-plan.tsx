@@ -39,7 +39,8 @@ type MealPlanNotice =
   | "meal-plan-feedback-addressed"
   | "meal-plan-reopened"
   | "meal-plan-shared"
-  | "meal-plan-updated";
+  | "meal-plan-updated"
+  | "recipe-created";
 type MealPlanIntent =
   | "approve-meal-plan"
   | "auto-fill-meal-plan-entries"
@@ -527,6 +528,7 @@ export default function FamilyMealPlanRoute({
   }).length;
   const canAutoFillEntries =
     loaderData.mealPlan.status === "DRAFT" && emptyDayCount > 0;
+  const canManageRecipes = loaderData.userRole === "ADMIN";
   const titleValue = actionData?.values?.title ?? loaderData.mealPlan.title;
   const startDateValue =
     actionData?.values?.startDate ?? loaderData.mealPlan.startDate;
@@ -781,6 +783,18 @@ export default function FamilyMealPlanRoute({
                   : "Fyll tomme dager"}
               </button>
             </Form>
+
+            {canManageRecipes ? (
+              <Link
+                className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-50"
+                to={buildCreateRecipeHref(
+                  loaderData.family.id,
+                  loaderData.mealPlan.id,
+                )}
+              >
+                Opprett ny oppskrift →
+              </Link>
+            ) : null}
           </article>
 
           <article className="min-w-0 w-full rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
@@ -971,7 +985,8 @@ function getMealPlanNotice(request: Request): MealPlanNotice | null {
     notice === "meal-plan-feedback-addressed" ||
     notice === "meal-plan-reopened" ||
     notice === "meal-plan-shared" ||
-    notice === "meal-plan-updated"
+    notice === "meal-plan-updated" ||
+    notice === "recipe-created"
   ) {
     return notice;
   }
@@ -1093,7 +1108,19 @@ function getMealPlanNoticeContent(
         description: "Endringene i navn og datointervall ble lagret.",
         title: "Ukeplan oppdatert",
       };
+    case "recipe-created":
+      return {
+        description:
+          "Oppskriften er tilgjengelig i middagsvelgeren for hver dag.",
+        title: "Oppskrift opprettet",
+      };
   }
+}
+
+function buildCreateRecipeHref(familyId: string, mealPlanId: string) {
+  const returnTo = `/families/${familyId}/meal-plans/${mealPlanId}`;
+
+  return `/families/${familyId}/recipes?returnTo=${encodeURIComponent(returnTo)}#create-recipe`;
 }
 
 interface MealPlanRecipeOption {

@@ -2,29 +2,32 @@
 
 ## Current Objective
 
-Issue #118 on branch `issue/118-recipe-link-selector`: add a "Se oppskrift" link from each meal plan day row that reflects the currently selected recipe, including unsaved dropdown changes. Ready for PR review.
+Issue #119 on branch `issue/119-create-recipe-from-meal-plan`: add an ADMIN-only create-recipe entry point from the meal plan editor, linking to the recipes page with return navigation. Ready for PR review.
 
 ## Completed
 
-- Made the recipe selector in `MealPlanDayRow` controlled with local state synced via `useEffect` on `entry.recipeId`.
-- Added conditional "Se oppskrift" link beneath the selector, styled like "Eksporter dag (.ics)", linking to `/families/:familyId/recipes/:recipeId`.
+- Added "Opprett ny oppskrift →" link below "Fyll tomme dager" in `family-meal-plan.tsx`, gated to ADMIN users.
+- Extended `family-recipes.tsx` with `returnTo` query param, `#create-recipe` anchor, back link, and post-create redirect to meal plan.
+- Added `recipe-created` notice on the meal plan page after returning from create.
+- Added action test for `returnTo` redirect path in `family-recipes.test.ts`.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan.tsx` - `MealPlanDayRow` controlled select and recipe link
+- `app/routes/family-meal-plan.tsx` - create link, notice, `buildCreateRecipeHref`
+- `app/routes/family-recipes.tsx` - returnTo loader/action, create section anchor
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (276 tests, 48 files)
+- `npm run test:run` — passed (277 tests, 48 files)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Manual check: change recipe in dropdown without saving and confirm link updates; clear selection and confirm link hides.
-- Out of scope: live summary blurb/tags still reflect saved `entry.recipeId` only.
+- Manual check: ADMIN sees link; MEMBER does not; end-to-end create flow returns to meal plan with new recipe in day selector.
+- New recipe is not auto-selected on a day (out of scope).
 
 ## Next Step
 
-Merge PR (Closes #118) after review/CI.
+Merge PR (Closes #119) after review/CI.

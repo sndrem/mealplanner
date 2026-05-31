@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Form, Link, isRouteErrorResponse, useNavigation } from "react-router";
 
-import { requireUser } from "../lib/auth.server";
+import { requireUser, getSafeRedirectTo } from "../lib/auth.server";
 import {
   filterRecipeList,
   hasActiveRecipeSearch,
@@ -62,6 +62,10 @@ export async function loader({
     familyRecipes: result.familyRecipes,
     globalRecipes: result.globalRecipes,
     notice: getRecipesNotice(request),
+    returnTo: getSafeRedirectTo(
+      new URL(request.url).searchParams.get("returnTo"),
+      "",
+    ),
     userRole: result.userRole,
   };
 }
@@ -94,6 +98,15 @@ export async function action({
         createValues: result.values,
         intent,
       } satisfies RecipesActionData;
+    }
+
+    const returnTo = getSafeRedirectTo(String(formData.get("returnTo") ?? ""), "");
+
+    if (returnTo) {
+      const url = new URL(returnTo, request.url);
+      url.searchParams.set("notice", "recipe-created");
+
+      return Response.redirect(url, 302);
     }
 
     const url = new URL(
@@ -169,6 +182,14 @@ export default function FamilyRecipesRoute({
             </div>
 
             <div className="flex flex-wrap gap-3">
+              {loaderData.returnTo ? (
+                <Link
+                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                  to={loaderData.returnTo}
+                >
+                  Tilbake til ukeplan
+                </Link>
+              ) : null}
               <Link
                 className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
                 to={`/families/${loaderData.family.id}/meal-plans`}
@@ -204,7 +225,10 @@ export default function FamilyRecipesRoute({
         ) : null}
 
         {canManageRecipes ? (
-          <section className="rounded-[28px] border-2 border-emerald-200 bg-white p-6 shadow-sm ring-1 ring-emerald-100">
+          <section
+            className="rounded-[28px] border-2 border-emerald-200 bg-white p-6 shadow-sm ring-1 ring-emerald-100"
+            id="create-recipe"
+          >
             <div className="flex flex-col gap-2">
               <span className="inline-flex w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
                 Familie — ny oppskrift
@@ -221,6 +245,13 @@ export default function FamilyRecipesRoute({
             <Form className="mt-6 space-y-4" method="post">
               <input name="intent" type="hidden" value="create-recipe" />
               <input name="ingredientIndex" type="hidden" value="0" />
+              {loaderData.returnTo ? (
+                <input
+                  name="returnTo"
+                  type="hidden"
+                  value={loaderData.returnTo}
+                />
+              ) : null}
               <label className="block text-sm font-medium text-slate-700">
                 Oppskriftstittel
                 <input
