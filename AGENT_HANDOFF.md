@@ -2,35 +2,32 @@
 
 ## Current Objective
 
-Issue #121 on branch `issue/121-client-side-quick-add`: client-side quick-add for manual shopping items without full page refresh. Shipped via PR.
+Issue #125 on branch `issue/125-family-home-tabs`: family home with Oversikt/Familie tabs — ready for PR merge.
 
 ## Completed
 
-- `ManualShoppingQuickAdd` uses dedicated `useFetcher` instead of `useSubmit`; inline validation errors; `onQuickAddSuccess` callback.
-- Quick-add actions return JSON `{ ok: true, item, recentManualItem }` instead of 302 redirects (meal-plan shopping, family shopping, store mode).
-- Write layer returns projected item after create via `projectCreatedManualShoppingItem` / `projectCreatedFamilyShoppingItem`.
-- Shared modules: `shopping-serialize.ts`, `shopping-quick-add.ts`, `shopping-list-client.ts`, `use-debounced-revalidate.ts`.
-- Parent routes maintain local list state and debounced background revalidation.
+- Two-tab family route (`Oversikt` / `Familie`) with URL `?tab=familie`.
+- Oversikt: 3 recent meal plans (muted when past), weekly dinner menu per day (Mon–Sun), store-mode + Alltid på listen links.
+- Familie: Din tilgang, Familiekode, Medlemmer (unchanged permissions); member-remove redirects to Familie tab.
+- Helpers: `meal-plan-week.ts`, `meal-plan-display.ts`, `family-home.server.ts`, `family-home-tabs.tsx`.
 
 ## Files To Read First
 
-- `app/components/manual-shopping-quick-add.tsx`
-- `app/lib/shopping-list-client.ts`
-- `app/routes/family-meal-plan-shopping.tsx`
-- `app/routes/family-shopping.tsx`
-- `app/routes/family-meal-plan-store-mode.tsx`
+- `app/routes/family.tsx`
+- `app/lib/family-home.server.ts`
+- `app/components/family-home-tabs.tsx`
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (282 tests, 49 files)
+- `npm run test:run` — passed (297 tests)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Manual QA after merge: rapid adds on all three surfaces; no scroll jitter on mobile dock.
+- Manual QA after merge: tab keyboard nav; past-plan muted styling; week grid on mobile vs desktop.
 
 ## Next Step
 
-Merge PR (Closes #121) after review/CI.
+Merge PR (Closes #125) after review/CI.
