@@ -24,6 +24,13 @@ export const storeModeAccentBarClass =
 export const storeModeSelectClass =
   "w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:bg-stone-50";
 
+const storeModeMetaSelectBase =
+  "min-w-0 w-auto truncate rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:bg-stone-50";
+
+export const storeModeMetaStoreSelectClass = `${storeModeMetaSelectBase} max-w-[11rem]`;
+
+export const storeModeMetaDateSelectClass = `${storeModeMetaSelectBase} max-w-[9rem]`;
+
 export const storeModeCountChipClass =
   "rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600";
 
