@@ -39,6 +39,7 @@ function formatShoppingDateOptionLabel(value: string) {
 
 export function ShoppingDateSelect({
   "aria-busy": ariaBusy,
+  "aria-label": ariaLabel,
   className = shoppingDateInputClassName,
   defaultValue,
   disabled = false,
@@ -49,6 +50,7 @@ export function ShoppingDateSelect({
   showEmptyOption = true,
 }: {
   "aria-busy"?: boolean;
+  "aria-label"?: string;
   className?: string;
   defaultValue: string;
   disabled?: boolean;
@@ -66,6 +68,7 @@ export function ShoppingDateSelect({
   return (
     <select
       aria-busy={ariaBusy}
+      aria-label={ariaLabel}
       className={className}
       defaultValue={defaultValue}
       disabled={disabled}

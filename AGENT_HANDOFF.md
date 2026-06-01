@@ -2,32 +2,30 @@
 
 ## Current Objective
 
-Issue #125 on branch `issue/125-family-home-tabs`: family home with Oversikt/Familie tabs — ready for PR merge.
+Issue #127 on branch `issue/127-store-mode-header`: consolidate butikkmodus header — ready for PR review.
 
 ## Completed
 
-- Two-tab family route (`Oversikt` / `Familie`) with URL `?tab=familie`.
-- Oversikt: 3 recent meal plans (muted when past), weekly dinner menu per day (Mon–Sun), store-mode + Alltid på listen links.
-- Familie: Din tilgang, Familiekode, Medlemmer (unchanged permissions); member-remove redirects to Familie tab.
-- Helpers: `meal-plan-week.ts`, `meal-plan-display.ts`, `family-home.server.ts`, `family-home-tabs.tsx`.
+- Moved store and shopping-date selects into the meta strip; removed **Butikk og handledato** `<details>` panel and duplicate static store/date text.
+- Added compact `storeModeMetaStoreSelectClass` / `storeModeMetaDateSelectClass` in store-mode theme.
+- Optional `aria-label` on `ShoppingDateSelect` for header accessibility.
 
 ## Files To Read First
 
-- `app/routes/family.tsx`
-- `app/lib/family-home.server.ts`
-- `app/components/family-home-tabs.tsx`
+- `app/routes/family-meal-plan-store-mode.tsx` — meta strip layout and inline forms
+- `app/lib/store-mode-theme.ts` — compact select tokens
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (297 tests)
+- `npm run test:run` — passed (298 tests)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Manual QA after merge: tab keyboard nav; past-plan muted styling; week grid on mobile vs desktop.
+- Manual QA: change store/date from header; narrow viewport wrap; validation errors near controls.
 
 ## Next Step
 
-Merge PR (Closes #125) after review/CI.
+Merge PR (Closes #127) after review/CI.

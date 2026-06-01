@@ -55,6 +55,8 @@ import {
   storeModeAccentBarClass,
   storeModeCountChipClass,
   storeModeLaterChipClass,
+  storeModeMetaDateSelectClass,
+  storeModeMetaStoreSelectClass,
   storeModeMetaStripClass,
   storeModeMutedPanelClass,
   storeModePageClass,
@@ -62,7 +64,6 @@ import {
   storeModeProgressPillClass,
   storeModeQuickAddDockClass,
   storeModeSectionCardClass,
-  storeModeSelectClass,
   storeModeSurfaceCardClass,
 } from "../lib/store-mode-theme";
 import {
@@ -515,15 +516,63 @@ export default function FamilyMealPlanStoreModeRoute({
           <span className="hidden text-stone-300 sm:inline" aria-hidden="true">
             ·
           </span>
-          <span className="truncate text-stone-600">
-            {loaderData.selectedStore?.name ?? "Ingen butikk"}
-          </span>
-          <span className="hidden text-stone-300 sm:inline" aria-hidden="true">
-            ·
-          </span>
-          <span className="truncate text-stone-600">
-            {formatDateLabel(loaderData.activeShoppingDate)}
-          </span>
+          <Form className="inline-flex min-w-0 flex-col gap-1" method="post">
+            <input name="intent" type="hidden" value="update-selected-store" />
+            <select
+              aria-busy={isSavingStore}
+              aria-label="Velg butikk"
+              className={storeModeMetaStoreSelectClass}
+              defaultValue={selectedStoreValue}
+              disabled={isSavingStore}
+              name="selectedStoreId"
+              onChange={(event) => {
+                submitSelectForm(event, selectedStoreValue, submit);
+              }}
+            >
+              {loaderData.stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.name}
+                </option>
+              ))}
+            </select>
+            {actionData?.intent === "update-selected-store" &&
+            actionData.selectedStoreFieldErrors?.selectedStoreId ? (
+              <p className="text-sm text-rose-600">
+                {actionData.selectedStoreFieldErrors.selectedStoreId}
+              </p>
+            ) : null}
+          </Form>
+          <Form className="inline-flex min-w-0 flex-col gap-1" method="post">
+            <input
+              name="intent"
+              type="hidden"
+              value="update-active-shopping-date"
+            />
+            <input
+              name="mealPlanUpdatedAt"
+              type="hidden"
+              value={loaderData.mealPlan.updatedAt}
+            />
+            <ShoppingDateSelect
+              aria-busy={isSavingShoppingDate}
+              aria-label="Velg handledato"
+              className={storeModeMetaDateSelectClass}
+              defaultValue={activeShoppingDateValue}
+              disabled={isSavingShoppingDate}
+              name="activeShoppingDate"
+              onChange={(event) => {
+                submitSelectForm(event, activeShoppingDateValue, submit);
+              }}
+              selectableShoppingDates={loaderData.selectableShoppingDates}
+              showEmptyOption={false}
+            />
+            {actionData?.intent === "update-active-shopping-date" &&
+            actionData.activeShoppingDateFieldErrors?.activeShoppingDate ? (
+              <p className="text-sm text-rose-600">
+                {actionData.activeShoppingDateFieldErrors.activeShoppingDate}
+              </p>
+            ) : null}
+          </Form>
           <span className="hidden text-stone-300 sm:inline" aria-hidden="true">
             ·
           </span>
@@ -581,91 +630,6 @@ export default function FamilyMealPlanStoreModeRoute({
             <p className="mt-2 text-sm leading-6">{generalFormError}</p>
           </section>
         ) : null}
-
-        <details className={storeModeSectionCardClass}>
-          <summary className="cursor-pointer text-sm font-medium text-stone-800">
-            Butikk og handledato
-            <span className="ml-2 font-normal text-stone-500">
-              {loaderData.selectedStore?.name ?? "Ingen butikk"} ·{" "}
-              {formatDateLabel(loaderData.activeShoppingDate)}
-            </span>
-          </summary>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <article>
-              <h2 className="text-base font-semibold text-stone-950">
-                Velg butikk
-              </h2>
-              <Form className="mt-4 space-y-3" method="post">
-                <input
-                  name="intent"
-                  type="hidden"
-                  value="update-selected-store"
-                />
-                <select
-                  aria-busy={isSavingStore}
-                  className={storeModeSelectClass}
-                  defaultValue={selectedStoreValue}
-                  disabled={isSavingStore}
-                  name="selectedStoreId"
-                  onChange={(event) => {
-                    submitSelectForm(event, selectedStoreValue, submit);
-                  }}
-                >
-                  {loaderData.stores.map((store) => (
-                    <option key={store.id} value={store.id}>
-                      {store.name}
-                    </option>
-                  ))}
-                </select>
-                {actionData?.intent === "update-selected-store" &&
-                actionData.selectedStoreFieldErrors?.selectedStoreId ? (
-                  <p className="text-sm text-rose-600">
-                    {actionData.selectedStoreFieldErrors.selectedStoreId}
-                  </p>
-                ) : null}
-              </Form>
-            </article>
-
-            <article>
-              <h2 className="text-base font-semibold text-stone-950">
-                Velg handledato
-              </h2>
-              <Form className="mt-4 space-y-3" method="post">
-                <input
-                  name="intent"
-                  type="hidden"
-                  value="update-active-shopping-date"
-                />
-                <input
-                  name="mealPlanUpdatedAt"
-                  type="hidden"
-                  value={loaderData.mealPlan.updatedAt}
-                />
-                <ShoppingDateSelect
-                  aria-busy={isSavingShoppingDate}
-                  className={storeModeSelectClass}
-                  defaultValue={activeShoppingDateValue}
-                  disabled={isSavingShoppingDate}
-                  name="activeShoppingDate"
-                  onChange={(event) => {
-                    submitSelectForm(event, activeShoppingDateValue, submit);
-                  }}
-                  selectableShoppingDates={loaderData.selectableShoppingDates}
-                  showEmptyOption={false}
-                />
-                {actionData?.intent === "update-active-shopping-date" &&
-                actionData.activeShoppingDateFieldErrors?.activeShoppingDate ? (
-                  <p className="text-sm text-rose-600">
-                    {
-                      actionData.activeShoppingDateFieldErrors
-                        .activeShoppingDate
-                    }
-                  </p>
-                ) : null}
-              </Form>
-            </article>
-          </div>
-        </details>
 
         {displaySectionGroups.length > 0 ? (
           <section className="grid gap-4">
