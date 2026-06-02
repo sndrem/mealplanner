@@ -36,6 +36,7 @@ export interface ManualShoppingItemFieldErrors {
 export interface QuickAddManualShoppingItemInput {
   ingredientId?: string;
   name?: string;
+  quantity?: string;
   recentNameNormalized?: string;
 }
 
@@ -1667,6 +1668,8 @@ export async function resolveQuickAddManualShoppingItemValues({
   }
 
   const ingredientId = input.ingredientId?.trim();
+  const requestedQuantity = input.quantity?.trim();
+  const quantity = requestedQuantity || QUICK_ADD_DEFAULT_QUANTITY;
 
   if (ingredientId) {
     const ingredient = await db.ingredient.findUnique({
@@ -1685,6 +1688,7 @@ export async function resolveQuickAddManualShoppingItemValues({
         values: buildQuickAddManualShoppingItemValues({
           categoryId: ingredient.defaultCategoryId ?? otherCategoryId,
           name: ingredient.canonicalName,
+          quantity,
         }),
       };
     }
@@ -1704,7 +1708,7 @@ export async function resolveQuickAddManualShoppingItemValues({
         values: buildQuickAddManualShoppingItemValues({
           categoryId: recentItem.categoryId,
           name: recentItem.name.trim(),
-          quantity: recentItem.quantity?.trim() || QUICK_ADD_DEFAULT_QUANTITY,
+          quantity: requestedQuantity || recentItem.quantity?.trim() || QUICK_ADD_DEFAULT_QUANTITY,
         }),
       };
     }
@@ -1724,6 +1728,7 @@ export async function resolveQuickAddManualShoppingItemValues({
       values: buildQuickAddManualShoppingItemValues({
         categoryId: otherCategoryId,
         name,
+        quantity,
       }),
     };
   }
@@ -1733,6 +1738,7 @@ export async function resolveQuickAddManualShoppingItemValues({
     values: buildQuickAddManualShoppingItemValues({
       categoryId: otherCategoryId,
       name,
+      quantity,
     }),
   };
 }

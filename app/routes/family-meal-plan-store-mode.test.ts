@@ -267,6 +267,7 @@ describe("family meal plan store mode route", () => {
     vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
       ingredientId: "ingredient-1",
       name: "Melk",
+      quantity: "",
       recentNameNormalized: "",
     });
     vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({
@@ -309,6 +310,7 @@ describe("family meal plan store mode route", () => {
       input: {
         ingredientId: "ingredient-1",
         name: "Melk",
+        quantity: "",
         recentNameNormalized: "",
       },
       userId: "user-1",
@@ -343,6 +345,7 @@ describe("family meal plan store mode route", () => {
     vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
       ingredientId: "",
       name: "",
+      quantity: "",
       recentNameNormalized: "",
     });
     vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({

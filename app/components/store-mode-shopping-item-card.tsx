@@ -44,6 +44,10 @@ interface StoreModeShoppingItemCardProps {
   isRecentlyAdded?: boolean;
   item: StoreModeShoppingItemCardItem;
   layout: StoreModeShoppingView;
+  onQuickAddFromCard?: (item: {
+    name: string;
+    quantityLabel: string | null;
+  }) => void;
   onToggle: () => void;
   selectedStoreId: string | undefined;
 }
@@ -54,6 +58,7 @@ export function StoreModeShoppingItemCard({
   isRecentlyAdded = false,
   item,
   layout: _layout,
+  onQuickAddFromCard,
   onToggle,
   selectedStoreId,
 }: StoreModeShoppingItemCardProps) {
@@ -129,7 +134,7 @@ export function StoreModeShoppingItemCard({
         </div>
 
         <details
-          className="group mt-auto flex w-full min-w-0 flex-col-reverse items-start pointer-events-auto"
+          className="group mt-auto flex w-0 min-w-0 flex-col-reverse items-start pointer-events-auto"
           open={shouldAutoOpenDetails}
         >
           <summary
@@ -152,6 +157,18 @@ export function StoreModeShoppingItemCard({
                 Notat: {item.note}
               </p>
             ) : null}
+            <button
+              className="inline-flex w-fit rounded-full border border-store-accent/40 bg-store-accent-light px-2.5 py-1 text-xs font-medium text-store-accent-text transition hover:border-store-accent hover:bg-store-accent-light/80"
+              onClick={() =>
+                onQuickAddFromCard?.({
+                  name: item.name,
+                  quantityLabel: item.quantityLabel,
+                })
+              }
+              type="button"
+            >
+              Hurtiglegg til
+            </button>
             {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
               <p className="break-words text-xs leading-4 text-amber-800">
                 Utsatt til {formatDateLabel(item.postponedUntilDate)}.

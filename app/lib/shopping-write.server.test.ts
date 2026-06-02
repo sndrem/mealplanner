@@ -337,6 +337,69 @@ describe("shopping-write.server", () => {
     });
   });
 
+  it("uses an explicit quick-add quantity for ingredient matches", async () => {
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
+    dbMock.ingredient.findUnique.mockResolvedValue({
+      canonicalName: "Melk",
+      defaultCategoryId: "category-dairy",
+    });
+
+    const result = await resolveQuickAddManualShoppingItemValues({
+      familyId: "family-1",
+      input: {
+        ingredientId: "ingredient-milk",
+        quantity: "4 flasker",
+      },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      values: {
+        buyOnDate: "",
+        categoryId: "category-dairy",
+        name: "Melk",
+        note: "",
+        preferredStoreId: "",
+        quantity: "4 flasker",
+      },
+    });
+  });
+
+  it("prefers explicit quick-add quantity over recent item quantity", async () => {
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
+    dbMock.manualShoppingItem.findMany.mockResolvedValue([
+      {
+        categoryId: "category-bakery",
+        name: "Brød",
+        quantity: "2 stk",
+      },
+    ]);
+
+    const result = await resolveQuickAddManualShoppingItemValues({
+      familyId: "family-1",
+      input: {
+        quantity: "4 stk",
+        recentNameNormalized: "brød",
+      },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      values: {
+        buyOnDate: "",
+        categoryId: "category-bakery",
+        name: "Brød",
+        note: "",
+        preferredStoreId: "",
+        quantity: "4 stk",
+      },
+    });
+  });
+
   it("creates a quick-add manual item with Annet defaults for new names", async () => {
     dbMock.ingredientCategory.findUnique.mockResolvedValue({
       id: "category-other",
