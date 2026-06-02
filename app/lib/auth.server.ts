@@ -94,15 +94,23 @@ export async function requireUser(request: Request) {
   return user;
 }
 
-export async function requireAnonymous(request: Request) {
+export async function requireAnonymous(
+  request: Request,
+  options?: {
+    authenticatedRedirectTo?: string;
+  },
+) {
   const user = await getCurrentUser(request);
 
   if (!user) {
     return;
   }
 
+  const authenticatedRedirectTo = options?.authenticatedRedirectTo;
   const url = new URL(request.url);
-  const redirectTo = getSafeRedirectTo(url.searchParams.get("redirectTo"));
+  const redirectTo = authenticatedRedirectTo
+    ? getSafeRedirectTo(authenticatedRedirectTo)
+    : getSafeRedirectTo(url.searchParams.get("redirectTo"));
 
   throw redirect(redirectTo);
 }

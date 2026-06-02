@@ -12,7 +12,48 @@ vi.mock("../lib/auth.server", async () => {
 });
 
 import { loginUser, requireAnonymous, signInUser } from "../lib/auth.server";
-import { action } from "./login";
+import { action, loader } from "./login";
+
+describe("login route loader", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns a safe redirect target for unauthenticated users", async () => {
+    vi.mocked(requireAnonymous).mockResolvedValue(undefined);
+
+    const result = await loader({
+      params: {},
+      request: new Request("http://localhost/login?redirectTo=%2Ffamilies%2Ffamily-1"),
+      context: {} as never,
+    } as unknown as Parameters<typeof loader>[0]);
+
+    expect(requireAnonymous).toHaveBeenCalledWith(expect.any(Request), {
+      authenticatedRedirectTo: "/app",
+    });
+    expect(result).toEqual({
+      redirectTo: "/families/family-1",
+    });
+  });
+
+  it("forces authenticated users to /app before rendering login", async () => {
+    const redirectResponse = new Response(null, {
+      headers: {
+        Location: "/app",
+      },
+      status: 302,
+    });
+    vi.mocked(requireAnonymous).mockRejectedValue(redirectResponse);
+
+    await expect(
+      loader({
+        params: {},
+        request: new Request("http://localhost/login?redirectTo=%2Ffamilies%2Ffamily-1"),
+        context: {} as never,
+      } as unknown as Parameters<typeof loader>[0]),
+    ).rejects.toBe(redirectResponse);
+  });
+});
 
 describe("login route action", () => {
   afterEach(() => {
@@ -20,6 +61,8 @@ describe("login route action", () => {
   });
 
   it("returns field errors when required fields are missing", async () => {
+    vi.mocked(requireAnonymous).mockResolvedValue(undefined);
+
     const request = new Request("http://localhost/login", {
       body: new FormData(),
       method: "POST",
@@ -66,6 +109,9 @@ describe("login route action", () => {
         email: "test@example.com",
       },
     });
+    expect(requireAnonymous).toHaveBeenCalledWith(request, {
+      authenticatedRedirectTo: "/app",
+    });
   });
 
   it("creates a session and redirects on successful login", async () => {
@@ -105,6 +151,9 @@ describe("login route action", () => {
       redirectTo: "/app",
       request,
       userId: "user-1",
+    });
+    expect(requireAnonymous).toHaveBeenCalledWith(request, {
+      authenticatedRedirectTo: "/app",
     });
     expect(result).toBe(redirectResponse);
   });

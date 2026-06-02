@@ -12,7 +12,7 @@ export const meta: Route.MetaFunction = () => {
 };
 
 export async function loader({ request }: Route.LoaderArgs) {
-  await requireAnonymous(request);
+  await requireAnonymous(request, { authenticatedRedirectTo: "/app" });
 
   const url = new URL(request.url);
 
@@ -22,7 +22,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  await requireAnonymous(request);
+  await requireAnonymous(request, { authenticatedRedirectTo: "/app" });
 
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "");
