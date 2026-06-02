@@ -775,9 +775,9 @@ export default function FamilyShoppingRoute({
       </div>
 
       {!isLg ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-4 pt-3">
-          <div className="pointer-events-auto mx-auto max-w-5xl">
-            <div className="rounded-[28px] bg-white p-4 shadow-2xl ring-1 ring-slate-200">
+        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 overflow-x-clip px-4 pt-3">
+          <div className="pointer-events-auto mx-auto max-w-5xl min-w-0">
+            <div className="rounded-[28px] bg-white p-4 shadow-2xl ring-1 ring-slate-200 overflow-x-clip">
               <ManualShoppingQuickAdd
                 {...quickAddProps}
                 autoFocus
