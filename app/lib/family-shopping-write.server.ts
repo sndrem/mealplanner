@@ -447,6 +447,86 @@ export async function toggleFamilyShoppingItemChecked({
   };
 }
 
+export async function updateFamilyShoppingItemQuantity({
+  expectedUpdatedAt,
+  familyId,
+  familyItemId,
+  quantity,
+  userId,
+}: {
+  expectedUpdatedAt: string;
+  familyId: string;
+  familyItemId: string;
+  quantity: string;
+  userId: string;
+}) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const existingItem = await db.familyShoppingItem.findFirst({
+    select: {
+      id: true,
+      updatedAt: true,
+    },
+    where: {
+      familyId,
+      id: familyItemId,
+    },
+  });
+
+  if (!existingItem) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  if (!matchesExpectedUpdatedAt(expectedUpdatedAt, existingItem.updatedAt)) {
+    return buildFamilyShoppingConflictResult({
+      action: "update-family-shopping-item-quantity",
+      entityId: existingItem.id,
+      familyId,
+      userId,
+    });
+  }
+
+  const updateResult = await db.familyShoppingItem.updateMany({
+    data: {
+      quantity: quantity.trim() || null,
+      ...buildActorUpdate(userId),
+    },
+    where: {
+      familyId,
+      id: existingItem.id,
+      updatedAt: existingItem.updatedAt,
+    },
+  });
+
+  if (updateResult.count === 0) {
+    return buildFamilyShoppingConflictResult({
+      action: "update-family-shopping-item-quantity",
+      entityId: existingItem.id,
+      familyId,
+      userId,
+    });
+  }
+
+  logCollaborationWrite({
+    action: "update-family-shopping-item-quantity",
+    domain: "shopping",
+    entityId: existingItem.id,
+    entityType: "family-shopping-item",
+    familyId,
+    outcome: "UPDATED",
+    userId,
+  });
+
+  return {
+    status: "UPDATED" as const,
+  };
+}
+
 async function resolveQuickAddFamilyShoppingItemValues({
   familyId,
   input,

@@ -22,6 +22,7 @@ import {
   createQuickFamilyShoppingItem,
   parseQuickAddFamilyShoppingItemInput,
   toggleFamilyShoppingItemChecked,
+  updateFamilyShoppingItemQuantity,
 } from "../lib/family-shopping-write.server";
 import {
   buildStoreModeDeprioritizeBoughtStorageKey,
@@ -81,6 +82,7 @@ type StoreModeNotice =
 
 type StoreModeIntent =
   | "quick-add-family-shopping-item"
+  | "update-family-shopping-item-quantity"
   | "toggle-family-shopping-item-checked"
   | "toggle-shopping-item-checked"
   | "update-active-shopping-date"
@@ -315,6 +317,42 @@ export async function action({
     } satisfies StoreModeActionData;
   }
 
+  if (intent === "update-family-shopping-item-quantity") {
+    const familyItemId = String(formData.get("sourceKey") ?? "").trim();
+    const quantity = String(formData.get("quantity") ?? "");
+
+    if (!familyItemId) {
+      return {
+        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    const result = await updateFamilyShoppingItemQuantity({
+      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
+      familyId,
+      familyItemId,
+      quantity,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    return {
+      intent,
+      ok: true,
+    } satisfies StoreModeActionData;
+  }
+
   if (intent === "toggle-shopping-item-checked") {
     const sourceKey = String(formData.get("sourceKey") ?? "").trim();
     const sourceType = parseShoppingItemSource(formData.get("sourceType"));
@@ -368,6 +406,7 @@ export default function FamilyMealPlanStoreModeRoute({
   const revalidator = useRevalidator();
   const scheduleRevalidate = useDebouncedRevalidate(revalidator.revalidate);
   const toggleFetcher = useFetcher<StoreModeActionData>();
+  const quantityFetcher = useFetcher<StoreModeActionData>();
   const pendingIntent = navigation.formData?.get("intent");
   const [dueSectionGroups, setDueSectionGroups] = useState(
     loaderData.dueSectionGroups,
@@ -420,6 +459,38 @@ export default function FamilyMealPlanStoreModeRoute({
     },
     [],
   );
+
+  const handleUpdateQuantity = useCallback(
+    ({
+      expectedUpdatedAt,
+      quantity,
+      sourceKey,
+    }: {
+      expectedUpdatedAt: string;
+      quantity: string;
+      sourceKey: string;
+    }) => {
+      const formData = new FormData();
+      formData.set("intent", "update-family-shopping-item-quantity");
+      formData.set("sourceKey", sourceKey);
+      formData.set("expectedUpdatedAt", expectedUpdatedAt);
+      formData.set("quantity", quantity);
+      quantityFetcher.submit(formData, { method: "post" });
+    },
+    [quantityFetcher],
+  );
+
+  useEffect(() => {
+    if (
+      quantityFetcher.state !== "idle" ||
+      quantityFetcher.data?.intent !== "update-family-shopping-item-quantity" ||
+      !quantityFetcher.data.ok
+    ) {
+      return;
+    }
+
+    scheduleRevalidate();
+  }, [quantityFetcher.data, quantityFetcher.state, scheduleRevalidate]);
 
   useEffect(() => {
     if (!recentlyAddedSourceKey) {
@@ -708,6 +779,7 @@ export default function FamilyMealPlanStoreModeRoute({
                     items={section.items}
                     layout={shoppingView}
                     onQuickAddFromCard={handleQuickAddFromCard}
+                    onUpdateQuantity={handleUpdateQuantity}
                     onToggleItem={handleToggle}
                     recentlyAddedSourceKey={recentlyAddedSourceKey}
                     selectedStoreId={loaderData.selectedStore?.id}
@@ -740,6 +812,7 @@ export default function FamilyMealPlanStoreModeRoute({
                   items={boughtItems}
                   layout={shoppingView}
                   onQuickAddFromCard={handleQuickAddFromCard}
+                  onUpdateQuantity={handleUpdateQuantity}
                   onToggleItem={handleToggle}
                   recentlyAddedSourceKey={recentlyAddedSourceKey}
                   selectedStoreId={loaderData.selectedStore?.id}
@@ -905,6 +978,7 @@ function StoreModeItemGrid<
   items,
   layout,
   onQuickAddFromCard,
+  onUpdateQuantity,
   onToggleItem,
   recentlyAddedSourceKey,
   selectedStoreId,
@@ -912,6 +986,11 @@ function StoreModeItemGrid<
   items: TItem[];
   layout: StoreModeShoppingView;
   onQuickAddFromCard: (item: { name: string; quantityLabel: string | null }) => void;
+  onUpdateQuantity: (item: {
+    expectedUpdatedAt: string;
+    quantity: string;
+    sourceKey: string;
+  }) => void;
   onToggleItem: (item: TItem) => void;
   recentlyAddedSourceKey: string | null;
   selectedStoreId?: string;
@@ -931,6 +1010,7 @@ function StoreModeItemGrid<
           item={item}
           layout={layout}
           onQuickAddFromCard={onQuickAddFromCard}
+          onUpdateQuantity={onUpdateQuantity}
           onToggle={() => onToggleItem(item)}
           selectedStoreId={selectedStoreId}
         />

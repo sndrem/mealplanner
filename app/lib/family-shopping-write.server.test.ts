@@ -39,6 +39,7 @@ import {
   createFamilyShoppingItem,
   parseQuickAddFamilyShoppingItemInput,
   toggleFamilyShoppingItemChecked,
+  updateFamilyShoppingItemQuantity,
 } from "./family-shopping-write.server";
 
 describe("family-shopping-write.server", () => {
@@ -205,5 +206,30 @@ describe("family-shopping-write.server", () => {
       quantity: "4 flasker",
       recentNameNormalized: "",
     });
+  });
+
+  it("updates quantity on a family shopping item", async () => {
+    dbMock.familyShoppingItem.findFirst.mockResolvedValue({
+      id: "family-item-1",
+      updatedAt: new Date("2026-05-10T00:00:00.000Z"),
+    });
+    dbMock.familyShoppingItem.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await updateFamilyShoppingItemQuantity({
+      expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
+      familyId: "family-1",
+      familyItemId: "family-item-1",
+      quantity: " 4 flasker ",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({ status: "UPDATED" });
+    expect(dbMock.familyShoppingItem.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          quantity: "4 flasker",
+        }),
+      }),
+    );
   });
 });
