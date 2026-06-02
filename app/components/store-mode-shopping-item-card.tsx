@@ -239,7 +239,7 @@ export function StoreModeShoppingItemCard({
             <label className="mt-3 block text-xs font-medium text-stone-700">
               Mengde
               <input
-                className="mt-1 w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
+                className="mt-1 w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-base text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
                 onChange={(event) => setQuantityDraft(event.target.value)}
                 placeholder="F.eks. 4 flasker"
                 ref={quantityInputRef}
