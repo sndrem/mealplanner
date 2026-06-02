@@ -40,6 +40,7 @@ import {
   prependRecentManualItem,
 } from "../lib/shopping-list-client";
 import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import { scrollToShoppingItem } from "../lib/shopping-quick-add-feedback.client";
 import {
   serializeProjectedShoppingItem,
   type SerializedProjectedShoppingItem,
@@ -191,7 +192,9 @@ export async function action({
   if (intent === "toggle-meal-plan-shopping-item-checked") {
     const mealPlanId = String(formData.get("mealPlanId") ?? "").trim();
     const sourceKey = String(formData.get("sourceKey") ?? "").trim();
-    const sourceType = parseMealPlanShoppingItemSource(formData.get("sourceType"));
+    const sourceType = parseMealPlanShoppingItemSource(
+      formData.get("sourceType"),
+    );
     const checked = String(formData.get("checked") ?? "") === "true";
 
     if (!mealPlanId || !sourceKey || !sourceType) {
@@ -431,6 +434,9 @@ export default function FamilyShoppingRoute({
   const [recentManualItems, setRecentManualItems] = useState(
     loaderData.recentManualItems,
   );
+  const [recentlyAddedSourceKey, setRecentlyAddedSourceKey] = useState<
+    string | null
+  >(null);
   const noticeContent =
     loaderData.notice !== null
       ? getFamilyShoppingNoticeContent(loaderData.notice)
@@ -457,10 +463,29 @@ export default function FamilyShoppingRoute({
       setRecentManualItems((currentRecents) =>
         prependRecentManualItem(currentRecents, payload.recentManualItem),
       );
+      setRecentlyAddedSourceKey(payload.item.sourceKey);
       scheduleRevalidate();
     },
     [scheduleRevalidate],
   );
+
+  useEffect(() => {
+    if (!recentlyAddedSourceKey) {
+      return;
+    }
+
+    scrollToShoppingItem(recentlyAddedSourceKey);
+
+    const clearHighlightTimeoutId = window.setTimeout(() => {
+      setRecentlyAddedSourceKey((current) =>
+        current === recentlyAddedSourceKey ? null : current,
+      );
+    }, 900);
+
+    return () => {
+      window.clearTimeout(clearHighlightTimeoutId);
+    };
+  }, [recentlyAddedSourceKey, storeGroups]);
 
   const quickAddProps = {
     ingredientSearchPath,
@@ -546,11 +571,7 @@ export default function FamilyShoppingRoute({
                     type="hidden"
                     value="set-family-shopping-list-mode"
                   />
-                  <input
-                    name="listMode"
-                    type="hidden"
-                    value="GLOBAL"
-                  />
+                  <input name="listMode" type="hidden" value="GLOBAL" />
                   <button
                     className={`rounded-2xl px-5 py-3 text-sm font-medium transition ${
                       loaderData.activeListMode === "GLOBAL"
@@ -572,11 +593,7 @@ export default function FamilyShoppingRoute({
                     type="hidden"
                     value="set-family-shopping-list-mode"
                   />
-                  <input
-                    name="listMode"
-                    type="hidden"
-                    value="COMBINED"
-                  />
+                  <input name="listMode" type="hidden" value="COMBINED" />
                   <button
                     className={`rounded-2xl px-5 py-3 text-sm font-medium transition ${
                       loaderData.activeListMode === "COMBINED"
@@ -732,8 +749,10 @@ export default function FamilyShoppingRoute({
                             navigation,
                             pendingIntent,
                             pendingSourceKey,
+                            recentlyAddedSourceKey,
                             stores: loaderData.stores,
-                            todayMealPlanId: loaderData.todayMealPlan?.id ?? null,
+                            todayMealPlanId:
+                              loaderData.todayMealPlan?.id ?? null,
                           }),
                         )}
                       </div>
@@ -893,20 +912,23 @@ function parseMealPlanShoppingItemSource(value: FormDataEntryValue | null) {
 function getFamilyShoppingSourceBadge(item: SerializedProjectedShoppingItem) {
   if (item.sourceType === "FAMILY") {
     return {
-      className: "rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-800",
+      className:
+        "rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-800",
       label: "Global",
     };
   }
 
   if (item.sourceType === "GENERATED") {
     return {
-      className: "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800",
+      className:
+        "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800",
       label: "Ukeplan",
     };
   }
 
   return {
-    className: "rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700",
+    className:
+      "rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700",
     label: "Ukeplan · Manuell",
   };
 }
@@ -966,6 +988,7 @@ function renderFamilyShoppingListItem({
   navigation,
   pendingIntent,
   pendingSourceKey,
+  recentlyAddedSourceKey,
   stores,
   todayMealPlanId,
 }: {
@@ -976,6 +999,7 @@ function renderFamilyShoppingListItem({
   navigation: ReturnType<typeof useNavigation>;
   pendingIntent: FormDataEntryValue | null | undefined;
   pendingSourceKey: string | null;
+  recentlyAddedSourceKey: string | null;
   stores: Awaited<ReturnType<typeof loader>>["stores"];
   todayMealPlanId: string | null;
 }) {
@@ -1009,15 +1033,18 @@ function renderFamilyShoppingListItem({
             quantity: item.quantity ?? "",
           }
         : null;
+  const rowStateClass =
+    recentlyAddedSourceKey === item.sourceKey
+      ? "border-emerald-300 bg-emerald-100"
+      : item.checked
+        ? "border-slate-200 bg-slate-100 opacity-80"
+        : "border-slate-200 bg-slate-50";
 
   return (
     <article
       key={item.sourceKey}
-      className={`rounded-[24px] border p-4 ${
-        item.checked
-          ? "border-slate-200 bg-slate-100 opacity-80"
-          : "border-slate-200 bg-slate-50"
-      }`}
+      className={`scroll-mb-44 rounded-[24px] border p-4 transition-colors duration-250 ${rowStateClass}`}
+      data-shopping-source-key={item.sourceKey}
     >
       <div className="flex flex-wrap items-center gap-2">
         <h4

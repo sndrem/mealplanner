@@ -41,6 +41,7 @@ export type StoreModeShoppingItemCardItem =
   | StoreModeShoppingItemCardFamily;
 
 interface StoreModeShoppingItemCardProps {
+  isRecentlyAdded?: boolean;
   item: StoreModeShoppingItemCardItem;
   layout: StoreModeShoppingView;
   onToggle: () => void;
@@ -50,6 +51,7 @@ interface StoreModeShoppingItemCardProps {
 const badgeClass = "rounded-full px-2 py-0.5 text-[11px] font-medium leading-4";
 
 export function StoreModeShoppingItemCard({
+  isRecentlyAdded = false,
   item,
   layout: _layout,
   onToggle,
@@ -58,9 +60,12 @@ export function StoreModeShoppingItemCard({
   const quantityBadge = formatGeneratedQuantityBadge(item);
   const shouldAutoOpenDetails = shouldAutoOpenStoreModeDetails(item);
 
-  const cardShellClass = item.checked
-    ? "relative flex h-full min-h-[44px] flex-col rounded-2xl border border-red-200 bg-red-50 p-2.5 transition-colors duration-150"
-    : "relative flex h-full min-h-[44px] flex-col rounded-2xl border border-stone-200 bg-stone-50 p-2.5 transition-colors duration-150";
+  const cardStateClass = isRecentlyAdded
+    ? "border-emerald-300 bg-emerald-100"
+    : item.checked
+      ? "border-red-200 bg-red-50"
+      : "border-stone-200 bg-stone-50";
+  const cardShellClass = `relative flex h-full min-h-[44px] flex-col rounded-2xl border p-2.5 transition-colors duration-250 ${cardStateClass}`;
 
   const toggleOverlayClass = item.checked
     ? "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-red-100 active:bg-red-200"
@@ -71,7 +76,10 @@ export function StoreModeShoppingItemCard({
     : "text-sm font-semibold leading-5 text-stone-950";
 
   return (
-    <div className={`block h-full min-w-0 ${cardShellClass}`}>
+    <div
+      className={`scroll-mb-44 block h-full min-w-0 ${cardShellClass}`}
+      data-shopping-source-key={item.sourceKey}
+    >
       <button
         aria-label={
           item.checked

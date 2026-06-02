@@ -2,18 +2,21 @@
 
 ## Current Objective
 
-Issue #127 on branch `issue/127-store-mode-header`: consolidate butikkmodus header — ready for PR review.
+Issue #129 on branch `issue/129-mobile-quick-add-feedback`: improve mobile quick-add feedback so newly added items are easy to find.
 
 ## Completed
 
-- Moved store and shopping-date selects into the meta strip; removed **Butikk og handledato** `<details>` panel and duplicate static store/date text.
-- Added compact `storeModeMetaStoreSelectClass` / `storeModeMetaDateSelectClass` in store-mode theme.
-- Optional `aria-label` on `ShoppingDateSelect` for header accessibility.
+- Added quick-add feedback helper to scroll to the newly added item using `sourceKey` targeting.
+- Updated store mode and family shopping quick-add flows to set and clear `recentlyAddedSourceKey` after success.
+- Added full-row/card highlight state for recently added items and smooth fade back to baseline using `transition-colors duration-250`.
+- Tuned highlight lifecycle to remain visible briefly before clearing, and ensured clearing still runs even if scroll targeting does not find an element.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan-store-mode.tsx` — meta strip layout and inline forms
-- `app/lib/store-mode-theme.ts` — compact select tokens
+- `app/routes/family-meal-plan-store-mode.tsx` — quick-add success handling, highlight timeout, and item-grid highlight wiring
+- `app/routes/family-shopping.tsx` — quick-add success handling and highlighted row styling
+- `app/components/store-mode-shopping-item-card.tsx` — mutually exclusive visual state classes for highlight/checked/normal
+- `app/lib/shopping-quick-add-feedback.client.ts` — DOM selector and conditional scroll helper
 
 ## Validation
 
@@ -24,8 +27,9 @@ Issue #127 on branch `issue/127-store-mode-header`: consolidate butikkmodus head
 
 ## Open Items
 
-- Manual QA: change store/date from header; narrow viewport wrap; validation errors near controls.
+- Manual QA on mobile viewport: verify quick-add row/card highlight is noticeable and fade-back feels natural in both store mode and family shopping.
+- Decide if highlight dwell time (`900ms`) should be adjusted after product review.
 
 ## Next Step
 
-Merge PR (Closes #127) after review/CI.
+Push branch, open PR, and request UI/UX review focused on mobile quick-add confirmation behavior.
