@@ -15,6 +15,7 @@ alwaysApply: true
 - Reuse existing primitives and patterns before introducing new wrappers, variants, or utilities.
 - In Tailwind, prefer readable utility composition and shared patterns over long repeated class strings.
 - Match existing project conventions and keep changes minimal.
+- Use text-base as font size for any text inputs to prevent auto-zoom in iOS devices
 
 ```tsx
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {

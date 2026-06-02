@@ -21,6 +21,7 @@ vi.mock("../lib/family-shopping-write.server", () => {
     createQuickFamilyShoppingItem: vi.fn(),
     parseQuickAddFamilyShoppingItemInput: vi.fn(),
     toggleFamilyShoppingItemChecked: vi.fn(),
+    updateFamilyShoppingItemQuantity: vi.fn(),
   };
 });
 
@@ -40,6 +41,7 @@ vi.mock("../lib/store-write.server", () => {
 import {
   createQuickFamilyShoppingItem,
   parseQuickAddFamilyShoppingItemInput,
+  updateFamilyShoppingItemQuantity,
 } from "../lib/family-shopping-write.server";
 import { requireUser } from "../lib/auth.server";
 import {
@@ -377,6 +379,39 @@ describe("family meal plan store mode route", () => {
     expect(result).toEqual({
       formError: "Kunne ikke legge til varen.",
       intent: "quick-add-family-shopping-item",
+    });
+  });
+
+  it("updates family item quantity without redirecting", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(updateFamilyShoppingItemQuantity).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-family-shopping-item-quantity");
+    formData.set("sourceKey", "family-item-1");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+    formData.set("quantity", "4 flasker");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(undefined, formData),
+    });
+
+    expect(updateFamilyShoppingItemQuantity).toHaveBeenCalledWith({
+      expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
+      familyId: "family-1",
+      familyItemId: "family-item-1",
+      quantity: "4 flasker",
+      userId: "user-1",
+    });
+    expect(result).toEqual({
+      intent: "update-family-shopping-item-quantity",
+      ok: true,
     });
   });
 

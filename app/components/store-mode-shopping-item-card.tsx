@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 import {
   formatGeneratedOccurrenceAttribution,
   formatGeneratedQuantityBadge,
@@ -6,6 +8,7 @@ import type { StoreModeShoppingView } from "../lib/shopping-store-mode-client";
 
 interface StoreModeShoppingItemCardBase {
   checked: boolean;
+  collaborationVersion: string;
   name: string;
   note: string | null;
   preferredStore: {
@@ -48,6 +51,11 @@ interface StoreModeShoppingItemCardProps {
     name: string;
     quantityLabel: string | null;
   }) => void;
+  onUpdateQuantity?: (item: {
+    expectedUpdatedAt: string;
+    quantity: string;
+    sourceKey: string;
+  }) => void;
   onToggle: () => void;
   selectedStoreId: string | undefined;
 }
@@ -59,11 +67,15 @@ export function StoreModeShoppingItemCard({
   item,
   layout: _layout,
   onQuickAddFromCard,
+  onUpdateQuantity,
   onToggle,
   selectedStoreId,
 }: StoreModeShoppingItemCardProps) {
   const quantityBadge = formatGeneratedQuantityBadge(item);
   const shouldAutoOpenDetails = shouldAutoOpenStoreModeDetails(item);
+  const [isQuantityModalOpen, setIsQuantityModalOpen] = useState(false);
+  const [quantityDraft, setQuantityDraft] = useState(item.quantityLabel ?? "");
+  const quantityInputRef = useRef<HTMLInputElement>(null);
 
   const cardStateClass = isRecentlyAdded
     ? "border-emerald-300 bg-emerald-100"
@@ -79,6 +91,16 @@ export function StoreModeShoppingItemCard({
   const nameClass = item.checked
     ? "text-sm font-semibold leading-5 text-stone-500 line-through decoration-stone-400"
     : "text-sm font-semibold leading-5 text-stone-950";
+  const showQuantityEdit = item.sourceType === "FAMILY";
+
+  useEffect(() => {
+    if (!isQuantityModalOpen) {
+      return;
+    }
+
+    quantityInputRef.current?.focus();
+    quantityInputRef.current?.select();
+  }, [isQuantityModalOpen]);
 
   return (
     <div
@@ -102,17 +124,33 @@ export function StoreModeShoppingItemCard({
           <span className="flex flex-wrap items-center gap-1.5">
             <span className={nameClass}>{item.name}</span>
             {quantityBadge ? (
-              <span
-                className={
-                  item.sourceType === "GENERATED" &&
-                  !item.quantityLabel &&
-                  item.occurrenceCount > 1
-                    ? `${badgeClass} bg-amber-100 text-amber-800`
-                    : `${badgeClass} bg-white text-stone-700 ring-1 ring-stone-200`
-                }
-              >
-                {quantityBadge}
-              </span>
+              showQuantityEdit ? (
+                <button
+                  className={`${badgeClass} pointer-events-auto bg-store-accent-light text-store-accent-text ring-1 ring-store-accent/40 transition hover:bg-store-accent-light/80`}
+                  onClick={() => {
+                    setQuantityDraft(item.quantityLabel ?? "");
+                    setIsQuantityModalOpen(true);
+                  }}
+                  type="button"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    {quantityBadge}
+                    <EditPencilIcon className="h-3 w-3 opacity-80" />
+                  </span>
+                </button>
+              ) : (
+                <span
+                  className={
+                    item.sourceType === "GENERATED" &&
+                    !item.quantityLabel &&
+                    item.occurrenceCount > 1
+                      ? `${badgeClass} bg-amber-100 text-amber-800`
+                      : `${badgeClass} bg-white text-stone-700 ring-1 ring-stone-200`
+                  }
+                >
+                  {quantityBadge}
+                </span>
+              )
             ) : null}
             {item.sourceType === "GENERATED" && item.recipeCount > 1 ? (
               <span className={`${badgeClass} bg-emerald-100 text-emerald-800`}>
@@ -177,6 +215,64 @@ export function StoreModeShoppingItemCard({
           </div>
         </details>
       </div>
+
+      {isQuantityModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/35 p-4"
+          onClick={() => setIsQuantityModalOpen(false)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setIsQuantityModalOpen(false);
+            }
+          }}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-4 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <h3 className="text-sm font-semibold text-stone-950">
+              Oppdater mengde
+            </h3>
+            <p className="mt-1 text-xs text-stone-600">{item.name}</p>
+            <label className="mt-3 block text-xs font-medium text-stone-700">
+              Mengde
+              <input
+                className="mt-1 w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
+                onChange={(event) => setQuantityDraft(event.target.value)}
+                placeholder="F.eks. 4 flasker"
+                ref={quantityInputRef}
+                type="text"
+                value={quantityDraft}
+              />
+            </label>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                className="rounded-xl border border-stone-300 px-3 py-2 text-sm text-stone-700 transition hover:bg-stone-100"
+                onClick={() => setIsQuantityModalOpen(false)}
+                type="button"
+              >
+                Avbryt
+              </button>
+              <button
+                className="rounded-xl bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
+                onClick={() => {
+                  onUpdateQuantity?.({
+                    expectedUpdatedAt: item.collaborationVersion,
+                    quantity: quantityDraft,
+                    sourceKey: item.sourceKey,
+                  });
+                  setIsQuantityModalOpen(false);
+                }}
+                type="button"
+              >
+                Lagre
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -243,6 +339,33 @@ function StoreModeInfoIcon({ className }: { className?: string }) {
         strokeWidth="1.75"
       />
       <circle cx="12" cy="8" fill="currentColor" r="0.9" />
+    </svg>
+  );
+}
+
+function EditPencilIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M4 20h4l10-10-4-4L4 16v4Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.75"
+      />
+      <path
+        d="m12 6 4 4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.75"
+      />
     </svg>
   );
 }
