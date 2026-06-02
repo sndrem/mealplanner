@@ -2,32 +2,33 @@
 
 ## Current Objective
 
-Issue #130 on branch `issue/130-redirect-authenticated-users-app`: redirect authenticated users away from `/login` to `/app`.
+Issue #132 on branch `issue/132-mobile-quick-add-overflow`: prevent mobile horizontal overflow when focusing `ManualShoppingQuickAdd` while keeping quick-add focus behavior usable.
 
 ## Completed
 
-- Extended `requireAnonymous` to support an explicit authenticated redirect target.
-- Updated login route loader and action to force authenticated traffic to `/app`.
-- Added login loader coverage for unauthenticated safe `redirectTo` handling and authenticated redirect behavior.
-- Added action assertions to ensure login route calls the anonymous guard with `/app` override.
+- Hardened `ManualShoppingQuickAdd` container sizing to enforce `min-w-0`/`max-w-full` and clipped horizontal overflow in focus/reveal states.
+- Updated quick-add input flex behavior (`w-0` with `flex-1`) in both default and store-mode styles to prevent intrinsic width growth on mobile.
+- Added scoped overflow guards to mobile fixed quick-add docks in family shopping and store-mode routes.
+- Updated store-mode quick-add dock theme class to include width/overflow constraints for safe reuse.
 
 ## Files To Read First
 
-- `app/lib/auth.server.ts` - anonymous/authenticated route guard behavior
-- `app/routes/login.tsx` - login loader/action guard wiring
-- `app/routes/login.test.ts` - loader and action coverage for redirect behavior
+- `app/components/manual-shopping-quick-add.tsx` - core quick-add focus/reveal layout constraints and input sizing
+- `app/routes/family-shopping.tsx` - mobile fixed quick-add dock wrapper constraints
+- `app/routes/family-meal-plan-store-mode.tsx` - store-mode mobile dock wrapper constraints
+- `app/lib/store-mode-theme.ts` - shared store-mode quick-add dock class
 
 ## Validation
 
-- `npm run prisma:generate` — passed
-- `npm run lint` — passed
-- `npm run test:run` — passed (300 tests)
-- `npm run typecheck` — passed
+- `npm run prisma:generate` - passed
+- `npm run lint` - passed
+- `npm run test:run` - passed (52 files, 300 tests)
+- `npm run typecheck` - passed
 
 ## Open Items
 
-- Optional manual verification: while authenticated, visit `/login` directly and confirm immediate redirect to `/app`.
+- Manual QA still recommended on real mobile viewport/Safari: focus quick-add, type, and verify no horizontal scrollbar appears and focus/caret remains visible.
 
 ## Next Step
 
-Commit branch changes, push, and open PR with `Closes #130`.
+Commit branch changes, push, and open PR with `Closes #132`.
