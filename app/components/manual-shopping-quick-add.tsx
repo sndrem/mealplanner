@@ -51,7 +51,7 @@ const quickAddStyles = {
       "absolute bottom-full z-10 mb-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg",
     error: "text-sm text-rose-600",
     input:
-      "min-w-0 w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
+      "min-w-0 w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
     label: "block text-sm font-medium text-slate-700",
     option:
       "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60",
@@ -73,7 +73,7 @@ const quickAddStyles = {
       "absolute bottom-full z-10 mb-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-lg",
     error: "text-sm text-rose-600",
     input:
-      "min-w-0 w-0 flex-1 rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
+      "min-w-0 w-0 flex-1 rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 text-base text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
     label: "block text-sm font-medium text-stone-700",
     option:
       "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-stone-900 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60",
