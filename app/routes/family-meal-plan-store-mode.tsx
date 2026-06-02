@@ -39,6 +39,7 @@ import {
   prependRecentManualItem,
 } from "../lib/shopping-list-client";
 import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import { scrollToShoppingItem } from "../lib/shopping-quick-add-feedback.client";
 import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
 import {
   getMealPlanStoreModeData,
@@ -374,6 +375,9 @@ export default function FamilyMealPlanStoreModeRoute({
   const [recentManualItems, setRecentManualItems] = useState(
     loaderData.recentManualItems,
   );
+  const [recentlyAddedSourceKey, setRecentlyAddedSourceKey] = useState<
+    string | null
+  >(null);
   const isSavingStore =
     navigation.state === "submitting" &&
     pendingIntent === "update-selected-store";
@@ -394,10 +398,29 @@ export default function FamilyMealPlanStoreModeRoute({
       setRecentManualItems((currentRecents) =>
         prependRecentManualItem(currentRecents, payload.recentManualItem),
       );
+      setRecentlyAddedSourceKey(payload.item.sourceKey);
       scheduleRevalidate();
     },
     [scheduleRevalidate],
   );
+
+  useEffect(() => {
+    if (!recentlyAddedSourceKey) {
+      return;
+    }
+
+    scrollToShoppingItem(recentlyAddedSourceKey);
+
+    const clearHighlightTimeoutId = window.setTimeout(() => {
+      setRecentlyAddedSourceKey((current) =>
+        current === recentlyAddedSourceKey ? null : current,
+      );
+    }, 900);
+
+    return () => {
+      window.clearTimeout(clearHighlightTimeoutId);
+    };
+  }, [dueSectionGroups, recentlyAddedSourceKey]);
 
   const loaderDueItems = useMemo(
     () => dueSectionGroups.flatMap((section) => section.items),
@@ -668,6 +691,7 @@ export default function FamilyMealPlanStoreModeRoute({
                     items={section.items}
                     layout={shoppingView}
                     onToggleItem={handleToggle}
+                    recentlyAddedSourceKey={recentlyAddedSourceKey}
                     selectedStoreId={loaderData.selectedStore?.id}
                   />
                 </article>
@@ -698,6 +722,7 @@ export default function FamilyMealPlanStoreModeRoute({
                   items={boughtItems}
                   layout={shoppingView}
                   onToggleItem={handleToggle}
+                  recentlyAddedSourceKey={recentlyAddedSourceKey}
                   selectedStoreId={loaderData.selectedStore?.id}
                 />
               </details>
@@ -860,11 +885,13 @@ function StoreModeItemGrid<
   items,
   layout,
   onToggleItem,
+  recentlyAddedSourceKey,
   selectedStoreId,
 }: {
   items: TItem[];
   layout: StoreModeShoppingView;
   onToggleItem: (item: TItem) => void;
+  recentlyAddedSourceKey: string | null;
   selectedStoreId?: string;
 }) {
   return (
@@ -878,6 +905,7 @@ function StoreModeItemGrid<
       {items.map((item) => (
         <StoreModeShoppingItemCard
           key={item.sourceKey}
+          isRecentlyAdded={recentlyAddedSourceKey === item.sourceKey}
           item={item}
           layout={layout}
           onToggle={() => onToggleItem(item)}
