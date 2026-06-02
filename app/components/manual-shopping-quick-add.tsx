@@ -1,7 +1,10 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useFetcher } from "react-router";
 
-import type { QuickAddShoppingActionData, QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import type {
+  QuickAddShoppingActionData,
+  QuickAddShoppingSuccess,
+} from "../lib/shopping-quick-add";
 import { isQuickAddShoppingSuccess } from "../lib/shopping-quick-add";
 import type { RecentManualShoppingItem } from "../lib/shopping.server";
 
@@ -92,7 +95,7 @@ const quickAddStyles = {
     submit:
       "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400",
     quantityInput:
-      "w-24 shrink-0 rounded-2xl border border-stone-300 bg-stone-50 px-3 py-3 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
+      "w-24 shrink-0 rounded-2xl border border-stone-300 bg-stone-50 px-3 py-3 text-base text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
   },
 } as const satisfies Record<
   ManualShoppingQuickAddAppearance,
@@ -122,11 +125,15 @@ export function ManualShoppingQuickAdd({
   const [quantity, setQuantity] = useState("");
   const [isListOpen, setIsListOpen] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [displayedResults, setDisplayedResults] = useState<IngredientSearchResult[]>([]);
+  const [displayedResults, setDisplayedResults] = useState<
+    IngredientSearchResult[]
+  >([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastRequestedQueryRef = useRef<string | null>(null);
-  const lastHandledQuickAddDataRef = useRef<QuickAddShoppingActionData | null>(null);
+  const lastHandledQuickAddDataRef = useRef<QuickAddShoppingActionData | null>(
+    null,
+  );
   const searchFetcherRef = useRef(searchFetcher);
   searchFetcherRef.current = searchFetcher;
   const onQuickAddSuccessRef = useRef(onQuickAddSuccess);
@@ -134,15 +141,17 @@ export function ManualShoppingQuickAdd({
   const isQuickAdding = quickAddFetcher.state !== "idle";
   const trimmedQuery = query.trim();
   const quickAddActionData =
-    quickAddFetcher.data?.intent === quickAddIntent ? quickAddFetcher.data : undefined;
+    quickAddFetcher.data?.intent === quickAddIntent
+      ? quickAddFetcher.data
+      : undefined;
   const quickAddFormError =
     quickAddActionData && !isQuickAddShoppingSuccess(quickAddActionData)
       ? quickAddActionData.formError
       : undefined;
   const quickAddNameError =
     quickAddActionData && !isQuickAddShoppingSuccess(quickAddActionData)
-      ? quickAddActionData.manualFieldErrors?.name ??
-        quickAddActionData.familyFieldErrors?.name
+      ? (quickAddActionData.manualFieldErrors?.name ??
+        quickAddActionData.familyFieldErrors?.name)
       : undefined;
 
   function submitQuickAdd(fields: {
@@ -193,7 +202,9 @@ export function ManualShoppingQuickAdd({
 
       lastRequestedQueryRef.current = trimmedQuery;
       const params = new URLSearchParams({ q: trimmedQuery });
-      searchFetcherRef.current.load(`${ingredientSearchPath}?${params.toString()}`);
+      searchFetcherRef.current.load(
+        `${ingredientSearchPath}?${params.toString()}`,
+      );
     }, SEARCH_DEBOUNCE_MS);
 
     return () => {
@@ -254,18 +265,21 @@ export function ManualShoppingQuickAdd({
   }, [prefillRequest]);
 
   const isSearching =
-    searchFetcher.state === "loading" && trimmedQuery.length >= MIN_SEARCH_LENGTH;
+    searchFetcher.state === "loading" &&
+    trimmedQuery.length >= MIN_SEARCH_LENGTH;
 
   const hasExactMatch = useMemo(
     () =>
       displayedResults.some(
         (ingredient) =>
-          ingredient.canonicalName.trim().toLowerCase() === trimmedQuery.toLowerCase(),
+          ingredient.canonicalName.trim().toLowerCase() ===
+          trimmedQuery.toLowerCase(),
       ),
     [displayedResults, trimmedQuery],
   );
   const showDropdown = isListOpen && trimmedQuery.length >= MIN_SEARCH_LENGTH;
-  const showCreateOption = trimmedQuery.length > 0 && !hasExactMatch && !isSearching;
+  const showCreateOption =
+    trimmedQuery.length > 0 && !hasExactMatch && !isSearching;
   const isExpanded =
     !revealOnFocus || isInputFocused || trimmedQuery.length > 0;
   const recentsBlock =
@@ -294,7 +308,10 @@ export function ManualShoppingQuickAdd({
     ) : null;
 
   return (
-    <div className="flex min-w-0 max-w-full flex-col gap-3 overflow-x-clip" ref={containerRef}>
+    <div
+      className="flex min-w-0 max-w-full flex-col gap-3 overflow-x-clip"
+      ref={containerRef}
+    >
       <label
         className={revealOnFocus ? "sr-only" : styles.label}
         htmlFor={`${listboxId}-input`}
@@ -303,12 +320,17 @@ export function ManualShoppingQuickAdd({
       </label>
       {!revealOnFocus ? (
         <p className={styles.description}>
-          Søk i ingrediensregisteret, skriv et nytt navn, eller velg en nylig brukt vare.
+          Søk i ingrediensregisteret, skriv et nytt navn, eller velg en nylig
+          brukt vare.
         </p>
       ) : null}
 
-      {quickAddFormError ? <p className={styles.error}>{quickAddFormError}</p> : null}
-      {quickAddNameError ? <p className={styles.error}>{quickAddNameError}</p> : null}
+      {quickAddFormError ? (
+        <p className={styles.error}>{quickAddFormError}</p>
+      ) : null}
+      {quickAddNameError ? (
+        <p className={styles.error}>{quickAddNameError}</p>
+      ) : null}
 
       {revealOnFocus && recentsBlock ? (
         <div
@@ -410,7 +432,9 @@ export function ManualShoppingQuickAdd({
                   }}
                   type="button"
                 >
-                  <span className="font-medium">{ingredient.canonicalName}</span>
+                  <span className="font-medium">
+                    {ingredient.canonicalName}
+                  </span>
                   <span className={styles.optionMeta}>Fra register</span>
                 </button>
               </li>
