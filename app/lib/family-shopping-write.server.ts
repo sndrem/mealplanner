@@ -48,6 +48,7 @@ export function parseQuickAddFamilyShoppingItemInput(formData: FormData) {
   return {
     ingredientId: String(formData.get("ingredientId") ?? ""),
     name: String(formData.get("name") ?? ""),
+    quantity: String(formData.get("quantity") ?? ""),
     recentNameNormalized: String(formData.get("recentNameNormalized") ?? ""),
   } satisfies QuickAddManualShoppingItemInput;
 }

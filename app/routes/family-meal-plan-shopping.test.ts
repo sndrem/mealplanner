@@ -594,6 +594,7 @@ describe("family meal plan shopping route", () => {
       input: {
         ingredientId: "",
         name: "Tannkrem",
+        quantity: "",
         recentNameNormalized: "",
       },
       mealPlanId: "meal-plan-1",

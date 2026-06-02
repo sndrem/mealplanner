@@ -32,6 +32,11 @@ interface ManualShoppingQuickAddProps {
    */
   revealOnFocus?: boolean;
   searchFetcherKey?: string;
+  prefillRequest?: {
+    id: string;
+    name: string;
+    quantity?: string | null;
+  } | null;
 }
 
 const MIN_SEARCH_LENGTH = 2;
@@ -62,6 +67,8 @@ const quickAddStyles = {
     searchPending: "px-4 py-2 text-sm text-slate-500",
     submit:
       "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400",
+    quantityInput:
+      "w-24 shrink-0 rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
   },
   "store-mode": {
     createOption:
@@ -84,6 +91,8 @@ const quickAddStyles = {
     searchPending: "px-4 py-2 text-sm text-stone-500",
     submit:
       "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400",
+    quantityInput:
+      "w-24 shrink-0 rounded-2xl border border-stone-300 bg-stone-50 px-3 py-3 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
   },
 } as const satisfies Record<
   ManualShoppingQuickAddAppearance,
@@ -99,6 +108,7 @@ export function ManualShoppingQuickAdd({
   recentManualItems,
   revealOnFocus = false,
   searchFetcherKey = DEFAULT_SEARCH_FETCHER_KEY,
+  prefillRequest = null,
 }: ManualShoppingQuickAddProps) {
   const styles = quickAddStyles[appearance];
   const listboxId = useId();
@@ -109,6 +119,7 @@ export function ManualShoppingQuickAdd({
     key: searchFetcherKey,
   });
   const [query, setQuery] = useState("");
+  const [quantity, setQuantity] = useState("");
   const [isListOpen, setIsListOpen] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [displayedResults, setDisplayedResults] = useState<IngredientSearchResult[]>([]);
@@ -137,6 +148,7 @@ export function ManualShoppingQuickAdd({
   function submitQuickAdd(fields: {
     ingredientId?: string;
     name?: string;
+    quantity?: string;
     recentNameNormalized?: string;
   }) {
     const formData = new FormData();
@@ -152,6 +164,10 @@ export function ManualShoppingQuickAdd({
 
     if (fields.recentNameNormalized) {
       formData.set("recentNameNormalized", fields.recentNameNormalized);
+    }
+
+    if (typeof fields.quantity === "string") {
+      formData.set("quantity", fields.quantity);
     }
 
     quickAddFetcher.submit(formData, { method: "post" });
@@ -212,6 +228,7 @@ export function ManualShoppingQuickAdd({
     setIsListOpen(false);
     setIsInputFocused(false);
     setQuery("");
+    setQuantity("");
     lastRequestedQueryRef.current = null;
     onQuickAddSuccessRef.current?.(quickAddFetcher.data);
   }, [quickAddFetcher.data]);
@@ -223,6 +240,18 @@ export function ManualShoppingQuickAdd({
 
     inputRef.current?.focus({ preventScroll: true });
   }, [autoFocus]);
+
+  useEffect(() => {
+    if (!prefillRequest) {
+      return;
+    }
+
+    setQuery(prefillRequest.name);
+    setQuantity(prefillRequest.quantity?.trim() ?? "");
+    setIsListOpen(false);
+    setIsInputFocused(true);
+    inputRef.current?.focus({ preventScroll: true });
+  }, [prefillRequest]);
 
   const isSearching =
     searchFetcher.state === "loading" && trimmedQuery.length >= MIN_SEARCH_LENGTH;
@@ -250,7 +279,10 @@ export function ManualShoppingQuickAdd({
               className={styles.recentButton}
               disabled={isQuickAdding}
               onClick={() => {
-                submitQuickAdd({ recentNameNormalized: item.nameNormalized });
+                submitQuickAdd({
+                  quantity,
+                  recentNameNormalized: item.nameNormalized,
+                });
               }}
               type="button"
             >
@@ -318,18 +350,35 @@ export function ManualShoppingQuickAdd({
 
               if (event.key === "Enter" && trimmedQuery && !isQuickAdding) {
                 event.preventDefault();
-                submitQuickAdd({ name: trimmedQuery });
+                submitQuickAdd({ name: trimmedQuery, quantity });
               }
             }}
             placeholder="For eksempel melk"
             type="search"
             value={query}
           />
+          <label className="sr-only" htmlFor={`${listboxId}-quantity`}>
+            Mengde
+          </label>
+          <input
+            className={styles.quantityInput}
+            id={`${listboxId}-quantity`}
+            inputMode="text"
+            onChange={(event) => {
+              setQuantity(event.target.value);
+            }}
+            onFocus={() => {
+              setIsInputFocused(true);
+            }}
+            placeholder="Mengde"
+            type="text"
+            value={quantity}
+          />
           <button
             className={styles.submit}
             disabled={!trimmedQuery || isQuickAdding}
             onClick={() => {
-              submitQuickAdd({ name: trimmedQuery });
+              submitQuickAdd({ name: trimmedQuery, quantity });
             }}
             type="button"
           >
@@ -354,7 +403,10 @@ export function ManualShoppingQuickAdd({
                   className={styles.option}
                   disabled={isQuickAdding}
                   onClick={() => {
-                    submitQuickAdd({ ingredientId: ingredient.id });
+                    submitQuickAdd({
+                      ingredientId: ingredient.id,
+                      quantity,
+                    });
                   }}
                   type="button"
                 >
@@ -369,7 +421,7 @@ export function ManualShoppingQuickAdd({
                   className={styles.createOption}
                   disabled={isQuickAdding}
                   onClick={() => {
-                    submitQuickAdd({ name: trimmedQuery });
+                    submitQuickAdd({ name: trimmedQuery, quantity });
                   }}
                   type="button"
                 >

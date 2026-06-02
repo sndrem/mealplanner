@@ -375,6 +375,11 @@ export default function FamilyMealPlanStoreModeRoute({
   const [recentManualItems, setRecentManualItems] = useState(
     loaderData.recentManualItems,
   );
+  const [quickAddPrefillRequest, setQuickAddPrefillRequest] = useState<{
+    id: string;
+    name: string;
+    quantity: string | null;
+  } | null>(null);
   const [recentlyAddedSourceKey, setRecentlyAddedSourceKey] = useState<
     string | null
   >(null);
@@ -399,9 +404,21 @@ export default function FamilyMealPlanStoreModeRoute({
         prependRecentManualItem(currentRecents, payload.recentManualItem),
       );
       setRecentlyAddedSourceKey(payload.item.sourceKey);
+      setQuickAddPrefillRequest(null);
       scheduleRevalidate();
     },
     [scheduleRevalidate],
+  );
+
+  const handleQuickAddFromCard = useCallback(
+    (item: { name: string; quantityLabel: string | null }) => {
+      setQuickAddPrefillRequest({
+        id: `${Date.now()}-${item.name}`,
+        name: item.name,
+        quantity: item.quantityLabel,
+      });
+    },
+    [],
   );
 
   useEffect(() => {
@@ -690,6 +707,7 @@ export default function FamilyMealPlanStoreModeRoute({
                   <StoreModeItemGrid
                     items={section.items}
                     layout={shoppingView}
+                    onQuickAddFromCard={handleQuickAddFromCard}
                     onToggleItem={handleToggle}
                     recentlyAddedSourceKey={recentlyAddedSourceKey}
                     selectedStoreId={loaderData.selectedStore?.id}
@@ -721,6 +739,7 @@ export default function FamilyMealPlanStoreModeRoute({
                 <StoreModeItemGrid
                   items={boughtItems}
                   layout={shoppingView}
+                  onQuickAddFromCard={handleQuickAddFromCard}
                   onToggleItem={handleToggle}
                   recentlyAddedSourceKey={recentlyAddedSourceKey}
                   selectedStoreId={loaderData.selectedStore?.id}
@@ -778,6 +797,7 @@ export default function FamilyMealPlanStoreModeRoute({
               appearance="store-mode"
               ingredientSearchPath={ingredientSearchPath}
               onQuickAddSuccess={handleQuickAddSuccess}
+              prefillRequest={quickAddPrefillRequest}
               quickAddIntent="quick-add-family-shopping-item"
               recentManualItems={recentManualItems}
               revealOnFocus
@@ -884,12 +904,14 @@ function StoreModeItemGrid<
 >({
   items,
   layout,
+  onQuickAddFromCard,
   onToggleItem,
   recentlyAddedSourceKey,
   selectedStoreId,
 }: {
   items: TItem[];
   layout: StoreModeShoppingView;
+  onQuickAddFromCard: (item: { name: string; quantityLabel: string | null }) => void;
   onToggleItem: (item: TItem) => void;
   recentlyAddedSourceKey: string | null;
   selectedStoreId?: string;
@@ -908,6 +930,7 @@ function StoreModeItemGrid<
           isRecentlyAdded={recentlyAddedSourceKey === item.sourceKey}
           item={item}
           layout={layout}
+          onQuickAddFromCard={onQuickAddFromCard}
           onToggle={() => onToggleItem(item)}
           selectedStoreId={selectedStoreId}
         />

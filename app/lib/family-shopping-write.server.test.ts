@@ -37,6 +37,7 @@ vi.mock("./shopping-write.server", () => ({
 import { resolveQuickAddManualShoppingItemValues } from "./shopping-write.server";
 import {
   createFamilyShoppingItem,
+  parseQuickAddFamilyShoppingItemInput,
   toggleFamilyShoppingItemChecked,
 } from "./family-shopping-write.server";
 
@@ -190,6 +191,19 @@ describe("family-shopping-write.server", () => {
         quantity: "1",
       },
       status: "CREATED",
+    });
+  });
+
+  it("parses quick-add input quantity from form data", () => {
+    const formData = new FormData();
+    formData.set("name", "Melk");
+    formData.set("quantity", "4 flasker");
+
+    expect(parseQuickAddFamilyShoppingItemInput(formData)).toEqual({
+      ingredientId: "",
+      name: "Melk",
+      quantity: "4 flasker",
+      recentNameNormalized: "",
     });
   });
 });
