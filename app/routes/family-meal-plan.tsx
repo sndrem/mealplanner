@@ -8,6 +8,7 @@ import {
 } from "react-router";
 
 import { requireUser } from "../lib/auth.server";
+import { listFamilyMembers } from "../lib/family.server";
 import {
   buildMealPlanEntriesSnapshot,
   COLLABORATION_CONFLICT_MESSAGE,
@@ -58,9 +59,15 @@ interface MealPlanNoticeMeta {
 
 const CALENDAR_DOWNLOAD_TARGET = "meal-plan-calendar-download";
 
+interface MealPlanFamilyMemberOption {
+  displayName: string;
+  id: string;
+}
+
 interface MealPlanEntryFormState {
   note: string;
   recipeId: string;
+  responsibleUserId: string;
   updatedAt: string;
 }
 
@@ -116,11 +123,18 @@ export async function loader({
     params.mealPlanId,
     "Fant ikke ukeplanen.",
   );
-  const result = await getMealPlanPlanningData({
-    familyId,
-    mealPlanId,
-    userId: user.id,
-  });
+  const [result, members] = await Promise.all([
+    getMealPlanPlanningData({
+      familyId,
+      mealPlanId,
+      userId: user.id,
+    }),
+    listFamilyMembers(familyId),
+  ]);
+  const familyMembers: MealPlanFamilyMemberOption[] = members.map((member) => ({
+    displayName: member.user.displayName,
+    id: member.user.id,
+  }));
 
   const entriesByDate = Object.fromEntries(
     result.visibleDates.map((date) => {
@@ -135,6 +149,7 @@ export async function loader({
         {
           note: entry?.note ?? "",
           recipeId: entry?.recipeId ?? "",
+          responsibleUserId: entry?.responsibleUserId ?? "",
           updatedAt: entry?.updatedAt.toISOString() ?? "",
         },
       ];
@@ -186,6 +201,7 @@ export async function loader({
       updatedAt: result.mealPlan.updatedAt.toISOString(),
     },
     entriesSnapshot,
+    familyMembers,
     notice: getMealPlanNotice(request),
     noticeMeta: getMealPlanNoticeMeta(request),
     recipes: result.recipes,
@@ -691,6 +707,7 @@ export default function FamilyMealPlanRoute({
                   const entry = entryValues[date] ?? {
                     note: "",
                     recipeId: "",
+                    responsibleUserId: "",
                     updatedAt: "",
                   };
 
@@ -702,6 +719,7 @@ export default function FamilyMealPlanRoute({
                       date={date}
                       entry={entry}
                       familyId={loaderData.family.id}
+                      familyMembers={loaderData.familyMembers}
                       isToday={isPlanDateToday(date)}
                       mealPlanId={loaderData.mealPlan.id}
                       recipes={loaderData.recipes}
@@ -1607,6 +1625,7 @@ function MealPlanDayRow({
   date,
   entry,
   familyId,
+  familyMembers,
   isToday,
   mealPlanId,
   recipes,
@@ -1616,20 +1635,32 @@ function MealPlanDayRow({
   date: string;
   entry: MealPlanEntryFormState;
   familyId: string;
+  familyMembers: MealPlanFamilyMemberOption[];
   isToday: boolean;
   mealPlanId: string;
   recipes: MealPlanRecipeOption[];
 }) {
   const [selectedRecipeId, setSelectedRecipeId] = useState(entry.recipeId);
+  const [selectedResponsibleUserId, setSelectedResponsibleUserId] = useState(
+    entry.responsibleUserId,
+  );
 
   useEffect(() => {
     setSelectedRecipeId(entry.recipeId);
   }, [entry.recipeId]);
 
+  useEffect(() => {
+    setSelectedResponsibleUserId(entry.responsibleUserId);
+  }, [entry.responsibleUserId]);
+
   const selectedRecipe =
     recipes.find((recipe) => recipe.id === entry.recipeId) ?? null;
   const mealLabel = getMealDaySummaryLabel(entry, selectedRecipe);
   const hasNoteOnly = !entry.recipeId && Boolean(entry.note.trim());
+  const responsibleMember =
+    familyMembers.find(
+      (member) => member.id === selectedResponsibleUserId,
+    ) ?? null;
 
   return (
     <details
@@ -1658,6 +1689,11 @@ function MealPlanDayRow({
           {hasNoteOnly ? (
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
               Notat
+            </span>
+          ) : null}
+          {responsibleMember ? (
+            <span className="max-w-[8rem] truncate rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
+              {responsibleMember.displayName}
             </span>
           ) : null}
           <span className="text-xs text-slate-400 group-open:hidden">Åpne</span>
@@ -1708,6 +1744,25 @@ function MealPlanDayRow({
               Se oppskrift
             </Link>
           ) : null}
+        </label>
+
+        <label className="block min-w-0 text-sm font-medium text-slate-700">
+          Ansvarlig
+          <select
+            className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            name={`responsibleUserId:${date}`}
+            onChange={(event) =>
+              setSelectedResponsibleUserId(event.target.value)
+            }
+            value={selectedResponsibleUserId}
+          >
+            <option value="">Ingen valgt</option>
+            {familyMembers.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.displayName}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label className="block min-w-0 text-sm font-medium text-slate-700">
@@ -1796,6 +1851,9 @@ function parseMealPlanEntries(formData: FormData): MealPlanEntryValues[] {
       date,
       note: String(formData.get(`note:${date}`) ?? ""),
       recipeId: String(formData.get(`recipeId:${date}`) ?? ""),
+      responsibleUserId: String(
+        formData.get(`responsibleUserId:${date}`) ?? "",
+      ),
     };
   });
 }
@@ -1805,6 +1863,7 @@ function buildResetMealPlanEntries(formData: FormData): MealPlanEntryValues[] {
     date: String(dateValue),
     note: "",
     recipeId: "",
+    responsibleUserId: "",
   }));
 }
 
@@ -1828,6 +1887,7 @@ function indexMealPlanEntryValues(
       {
         note: entry.note,
         recipeId: entry.recipeId,
+        responsibleUserId: entry.responsibleUserId,
         updatedAt: entryVersions[entry.date] ?? "",
       },
     ]),

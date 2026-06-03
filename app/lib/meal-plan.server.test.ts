@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { dbMock, requireFamilyAdminMock, requireFamilyMembershipMock } = vi.hoisted(() => {
+const {
+  dbMock,
+  listFamilyMembersMock,
+  requireFamilyAdminMock,
+  requireFamilyMembershipMock,
+} = vi.hoisted(() => {
   return {
     dbMock: {
       $transaction: vi.fn(),
@@ -26,6 +31,7 @@ const { dbMock, requireFamilyAdminMock, requireFamilyMembershipMock } = vi.hoist
         findMany: vi.fn(),
       },
     },
+    listFamilyMembersMock: vi.fn(),
     requireFamilyAdminMock: vi.fn(),
     requireFamilyMembershipMock: vi.fn(),
   };
@@ -39,6 +45,7 @@ vi.mock("./db.server", () => {
 
 vi.mock("./family.server", () => {
   return {
+    listFamilyMembers: listFamilyMembersMock,
     requireFamilyAdmin: requireFamilyAdminMock,
     requireFamilyMembership: requireFamilyMembershipMock,
   };
@@ -260,11 +267,13 @@ describe("meal-plan.server", () => {
           date: new Date("2026-05-15T00:00:00.000Z"),
           note: "Rester til lunsj",
           recipeId: "kylling-taco",
+          responsibleUserId: "user-2",
         },
         {
           date: new Date("2026-05-17T00:00:00.000Z"),
           note: null,
           recipeId: "tomatsuppe",
+          responsibleUserId: null,
         },
       ],
       id: "meal-plan-source",
@@ -301,6 +310,7 @@ describe("meal-plan.server", () => {
             date: true,
             note: true,
             recipeId: true,
+            responsibleUserId: true,
           },
           where: {
             mealType: "DINNER",
@@ -345,6 +355,7 @@ describe("meal-plan.server", () => {
           mealType: "DINNER",
           note: "Rester til lunsj",
           recipeId: "kylling-taco",
+          responsibleUserId: "user-2",
         },
         {
           date: new Date("2026-05-22T00:00:00.000Z"),
@@ -352,6 +363,7 @@ describe("meal-plan.server", () => {
           mealType: "DINNER",
           note: null,
           recipeId: "tomatsuppe",
+          responsibleUserId: null,
         },
       ],
     });
@@ -770,6 +782,7 @@ describe("meal-plan.server", () => {
           date: "2026-05-15",
           note: "",
           recipeId: "kylling-taco",
+          responsibleUserId: "",
         },
       ],
       familyId: "family-1",
@@ -786,6 +799,7 @@ describe("meal-plan.server", () => {
           date: "2026-05-15",
           note: "",
           recipeId: "kylling-taco",
+          responsibleUserId: "",
         },
       ],
     });
@@ -806,11 +820,13 @@ describe("meal-plan.server", () => {
           date: "2026-05-15",
           note: "",
           recipeId: "kylling-taco",
+          responsibleUserId: "",
         },
         {
           date: "2026-05-16",
           note: "",
           recipeId: "",
+          responsibleUserId: "",
         },
       ],
       entryVersions: {},
@@ -845,6 +861,7 @@ describe("meal-plan.server", () => {
           date: "2026-05-15",
           note: "Bruk rester til lunsj",
           recipeId: "",
+          responsibleUserId: "",
         },
       ],
       entryVersions: {},
@@ -863,11 +880,13 @@ describe("meal-plan.server", () => {
         mealType: "DINNER",
         note: "Bruk rester til lunsj",
         recipeId: null,
+        responsibleUserId: null,
         updatedByUserId: "user-1",
       },
       update: {
         note: "Bruk rester til lunsj",
         recipeId: null,
+        responsibleUserId: null,
         updatedByUserId: "user-1",
       },
       where: {
@@ -899,6 +918,7 @@ describe("meal-plan.server", () => {
           date: "2026-05-15",
           note: "Oppdatert notat",
           recipeId: "",
+          responsibleUserId: "",
         },
       ],
       entryVersions: {
@@ -918,6 +938,7 @@ describe("meal-plan.server", () => {
           date: "2026-05-15",
           note: "Oppdatert notat",
           recipeId: "",
+          responsibleUserId: "",
         },
       ],
     });
@@ -938,6 +959,7 @@ describe("meal-plan.server", () => {
           date: "2026-05-15",
           note: "",
           recipeId: "ukjent-rett",
+          responsibleUserId: "",
         },
       ],
       entryVersions: {},
@@ -954,8 +976,147 @@ describe("meal-plan.server", () => {
           date: "2026-05-15",
           note: "",
           recipeId: "ukjent-rett",
+          responsibleUserId: "",
         },
       ],
+    });
+    expect(dbMock.mealPlanEntry.upsert).not.toHaveBeenCalled();
+  });
+
+  it("persists responsible family members on dinner entries", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-15T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.recipe.findMany.mockResolvedValue([{ id: "kylling-taco" }]);
+    listFamilyMembersMock.mockResolvedValue([
+      {
+        user: {
+          displayName: "Ola",
+          email: "ola@example.com",
+          id: "user-2",
+        },
+      },
+    ]);
+
+    const result = await saveMealPlanEntries({
+      entries: [
+        {
+          date: "2026-05-15",
+          note: "",
+          recipeId: "kylling-taco",
+          responsibleUserId: "user-2",
+        },
+      ],
+      entryVersions: {},
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "UPDATED",
+    });
+    expect(listFamilyMembersMock).toHaveBeenCalledWith("family-1");
+    expect(dbMock.mealPlanEntry.upsert).toHaveBeenCalledWith({
+      create: expect.objectContaining({
+        responsibleUserId: "user-2",
+      }),
+      update: expect.objectContaining({
+        responsibleUserId: "user-2",
+      }),
+      where: expect.any(Object),
+    });
+  });
+
+  it("rejects responsible users who are not family members", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-15T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.recipe.findMany.mockResolvedValue([{ id: "kylling-taco" }]);
+    listFamilyMembersMock.mockResolvedValue([
+      {
+        user: {
+          displayName: "Ola",
+          email: "ola@example.com",
+          id: "user-2",
+        },
+      },
+    ]);
+
+    const result = await saveMealPlanEntries({
+      entries: [
+        {
+          date: "2026-05-15",
+          note: "",
+          recipeId: "kylling-taco",
+          responsibleUserId: "user-99",
+        },
+      ],
+      entryVersions: {},
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      formError: "Minst en valgt ansvarlig er ikke medlem av familien.",
+      status: "VALIDATION_ERROR",
+      values: [
+        {
+          date: "2026-05-15",
+          note: "",
+          recipeId: "kylling-taco",
+          responsibleUserId: "user-99",
+        },
+      ],
+    });
+    expect(dbMock.mealPlanEntry.upsert).not.toHaveBeenCalled();
+  });
+
+  it("deletes days that only have a responsible member without a meal", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-15T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    listFamilyMembersMock.mockResolvedValue([
+      {
+        user: {
+          displayName: "Ola",
+          email: "ola@example.com",
+          id: "user-2",
+        },
+      },
+    ]);
+
+    const result = await saveMealPlanEntries({
+      entries: [
+        {
+          date: "2026-05-15",
+          note: "",
+          recipeId: "",
+          responsibleUserId: "user-2",
+        },
+      ],
+      entryVersions: {},
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "UPDATED",
+    });
+    expect(dbMock.mealPlanEntry.deleteMany).toHaveBeenCalledWith({
+      where: {
+        date: new Date("2026-05-15T00:00:00.000Z"),
+        mealPlanId: "meal-plan-1",
+        mealType: "DINNER",
+      },
     });
     expect(dbMock.mealPlanEntry.upsert).not.toHaveBeenCalled();
   });

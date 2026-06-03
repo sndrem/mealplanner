@@ -10,7 +10,10 @@ import {
   matchesExpectedUpdatedAt,
 } from "./collaboration.server";
 import { db } from "./db.server";
-import { requireFamilyMembership } from "./family.server";
+import {
+  listFamilyMembers,
+  requireFamilyMembership,
+} from "./family.server";
 import { formatDateOnly } from "./meal-plan-dates";
 import {
   logCollaborationFailure,
@@ -60,6 +63,13 @@ const mealPlanEntrySelect = Prisma.validator<Prisma.MealPlanEntrySelect>()({
     select: recipeOptionSelect,
   },
   recipeId: true,
+  responsibleUser: {
+    select: {
+      displayName: true,
+      id: true,
+    },
+  },
+  responsibleUserId: true,
   updatedAt: true,
 });
 
@@ -122,6 +132,7 @@ export interface MealPlanEntryValues {
   date: string;
   note: string;
   recipeId: string;
+  responsibleUserId: string;
 }
 
 interface SaveMealPlanEntriesInput {
@@ -448,6 +459,7 @@ export async function copyMealPlan(input: CopyMealPlanInput) {
             date: true,
             note: true,
             recipeId: true,
+            responsibleUserId: true,
           },
           where: {
             mealType: PLANNING_MEAL_TYPE,
@@ -503,6 +515,7 @@ export async function copyMealPlan(input: CopyMealPlanInput) {
           mealType: PLANNING_MEAL_TYPE,
           note: entry.note,
           recipeId: entry.recipeId,
+          responsibleUserId: entry.responsibleUserId,
         },
       ];
     });
@@ -871,6 +884,7 @@ export async function autoFillMealPlanEntries({
         date,
         note: "",
         recipeId: assignedRecipeId,
+        responsibleUserId: existingEntry?.responsibleUserId ?? "",
       };
     }
 
@@ -878,6 +892,7 @@ export async function autoFillMealPlanEntries({
       date,
       note: existingEntry?.note ?? "",
       recipeId: existingEntry?.recipeId ?? "",
+      responsibleUserId: existingEntry?.responsibleUserId ?? "",
     };
   });
   const entryVersions = Object.fromEntries(
@@ -1001,6 +1016,34 @@ export async function saveMealPlanEntries({
     }
   }
 
+  const responsibleUserIds = [
+    ...new Set(values.map((entry) => entry.responsibleUserId).filter(Boolean)),
+  ];
+
+  if (responsibleUserIds.length > 0) {
+    const members = await listFamilyMembers(familyId);
+    const memberUserIds = new Set(members.map((member) => member.user.id));
+
+    if (responsibleUserIds.some((userId) => !memberUserIds.has(userId))) {
+      logCollaborationWrite({
+        action: "save-meal-plan-entries",
+        domain: "meal-plan",
+        entityType: "meal-plan-entry",
+        familyId,
+        mealPlanId: mealPlan.id,
+        outcome: "VALIDATION_ERROR",
+        userId,
+      });
+
+      return {
+        formError:
+          "Minst en valgt ansvarlig er ikke medlem av familien.",
+        status: "VALIDATION_ERROR" as const,
+        values,
+      };
+    }
+  }
+
   const submittedDates = values
     .map((entry) => parseDateOnly(entry.date)!)
     .filter(Boolean);
@@ -1083,11 +1126,13 @@ export async function saveMealPlanEntries({
             mealType: PLANNING_MEAL_TYPE,
             note: entry.note || null,
             recipeId: entry.recipeId || null,
+            responsibleUserId: entry.responsibleUserId || null,
             ...buildActorUpdate(userId),
           },
           update: {
             note: entry.note || null,
             recipeId: entry.recipeId || null,
+            responsibleUserId: entry.responsibleUserId || null,
             ...buildActorUpdate(userId),
           },
           where: {
@@ -1419,6 +1464,7 @@ function normalizeMealPlanEntryValues(
     date: entry.date.trim(),
     note: entry.note.trim(),
     recipeId: entry.recipeId.trim(),
+    responsibleUserId: entry.responsibleUserId.trim(),
   };
 }
 

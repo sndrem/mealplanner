@@ -178,6 +178,11 @@ function WeekDayMenuCard({
       <p className="mt-3 text-base font-semibold leading-snug text-slate-950">
         {day.menuLabel}
       </p>
+      {day.responsibleDisplayName ? (
+        <span className="mt-2 inline-flex max-w-full truncate rounded-full bg-sky-100 px-2 py-1 text-xs font-medium text-sky-800">
+          {day.responsibleDisplayName}
+        </span>
+      ) : null}
       {day.mealPlanTitle ? (
         <p className="mt-2 text-xs text-slate-500">{day.mealPlanTitle}</p>
       ) : null}

@@ -27,7 +27,12 @@ vi.mock("../lib/meal-plan-share.server", () => ({
   markReviewCommentAddressed: vi.fn(),
 }));
 
+vi.mock("../lib/family.server", () => ({
+  listFamilyMembers: vi.fn(),
+}));
+
 import { requireUser } from "../lib/auth.server";
+import { listFamilyMembers } from "../lib/family.server";
 import {
   approveMealPlan,
   getMealPlanPlanningData,
@@ -84,6 +89,8 @@ describe("family meal plan route", () => {
             note: "Bruk rester til lunsj",
             recipe: null,
             recipeId: "",
+            responsibleUser: null,
+            responsibleUserId: null,
             updatedAt: new Date("2026-05-01T12:00:00.000Z"),
           },
         ],
@@ -113,6 +120,26 @@ describe("family meal plan route", () => {
       openShares: [],
     });
     vi.mocked(listSharesForMealPlan).mockResolvedValue([]);
+    vi.mocked(listFamilyMembers).mockResolvedValue([
+      {
+        id: "membership-1",
+        role: "ADMIN",
+        user: {
+          displayName: "Ola",
+          email: "ola@example.com",
+          id: "user-1",
+        },
+      },
+      {
+        id: "membership-2",
+        role: "MEMBER",
+        user: {
+          displayName: "Kari",
+          email: "kari@example.com",
+          id: "user-2",
+        },
+      },
+    ]);
 
     const result = await loader({
       params: {
@@ -127,6 +154,7 @@ describe("family meal plan route", () => {
       mealPlanId: "meal-plan-1",
       userId: "user-1",
     });
+    expect(listFamilyMembers).toHaveBeenCalledWith("family-1");
     expect(result).toEqual({
       activeOpenShare: null,
       calendarExportDates: [],
@@ -150,6 +178,10 @@ describe("family meal plan route", () => {
       },
       entriesSnapshot:
         "2026-05-15T00:00:00.000Z:DINNER:2026-05-01T12:00:00.000Z",
+      familyMembers: [
+        { displayName: "Ola", id: "user-1" },
+        { displayName: "Kari", id: "user-2" },
+      ],
       feedbackShares: [],
       notice: "meal-plan-created",
       noticeMeta: null,
@@ -170,21 +202,25 @@ describe("family meal plan route", () => {
         "2026-05-15": {
           note: "Bruk rester til lunsj",
           recipeId: "",
+          responsibleUserId: "",
           updatedAt: "2026-05-01T12:00:00.000Z",
         },
         "2026-05-16": {
           note: "",
           recipeId: "",
+          responsibleUserId: "",
           updatedAt: "",
         },
         "2026-05-17": {
           note: "",
           recipeId: "",
+          responsibleUserId: "",
           updatedAt: "",
         },
         "2026-05-18": {
           note: "",
           recipeId: "",
+          responsibleUserId: "",
           updatedAt: "",
         },
       },
@@ -201,11 +237,13 @@ describe("family meal plan route", () => {
           date: "2026-05-15",
           note: "Bruk rester til lunsj",
           recipeId: "",
+          responsibleUserId: "user-2",
         },
         {
           date: "2026-05-16",
           note: "",
           recipeId: "kylling-taco",
+          responsibleUserId: "",
         },
       ],
     });
@@ -216,8 +254,10 @@ describe("family meal plan route", () => {
     formData.append("entryDate", "2026-05-16");
     formData.set("note:2026-05-15", "Bruk rester til lunsj");
     formData.set("recipeId:2026-05-15", "");
+    formData.set("responsibleUserId:2026-05-15", "user-2");
     formData.set("note:2026-05-16", "");
     formData.set("recipeId:2026-05-16", "kylling-taco");
+    formData.set("responsibleUserId:2026-05-16", "");
 
     const result = await action({
       params: {
@@ -233,11 +273,13 @@ describe("family meal plan route", () => {
           date: "2026-05-15",
           note: "Bruk rester til lunsj",
           recipeId: "",
+          responsibleUserId: "user-2",
         },
         {
           date: "2026-05-16",
           note: "",
           recipeId: "kylling-taco",
+          responsibleUserId: "",
         },
       ],
       entryVersions: {
@@ -254,11 +296,13 @@ describe("family meal plan route", () => {
         "2026-05-15": {
           note: "Bruk rester til lunsj",
           recipeId: "",
+          responsibleUserId: "user-2",
           updatedAt: "",
         },
         "2026-05-16": {
           note: "",
           recipeId: "kylling-taco",
+          responsibleUserId: "",
           updatedAt: "",
         },
       },
@@ -326,11 +370,13 @@ describe("family meal plan route", () => {
           date: "2026-05-15",
           note: "",
           recipeId: "",
+          responsibleUserId: "",
         },
         {
           date: "2026-05-16",
           note: "",
           recipeId: "",
+          responsibleUserId: "",
         },
       ],
       entryVersions: {
@@ -360,6 +406,7 @@ describe("family meal plan route", () => {
           date: "2026-05-15",
           note: "",
           recipeId: "",
+          responsibleUserId: "",
         },
       ],
     });
@@ -385,6 +432,7 @@ describe("family meal plan route", () => {
         "2026-05-15": {
           note: "",
           recipeId: "",
+          responsibleUserId: "",
           updatedAt: "2026-05-01T12:00:00.000Z",
         },
       },
