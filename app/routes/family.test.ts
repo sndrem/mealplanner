@@ -98,6 +98,7 @@ const mockWeekDays = [
     mealPlanId: "meal-plan-1",
     mealPlanTitle: "Uke 23",
     menuLabel: "Ikke planlagt",
+    responsibleDisplayName: null,
     weekdayLabel: "mandag",
   },
   {
@@ -107,6 +108,7 @@ const mockWeekDays = [
     mealPlanId: "meal-plan-1",
     mealPlanTitle: "Uke 23",
     menuLabel: "Taco",
+    responsibleDisplayName: "Kari",
     weekdayLabel: "torsdag",
   },
 ];

@@ -80,6 +80,7 @@ model User {
   mealPlanShareRecipients      MealPlanShareRecipient[]
   mealPlanReviewComments       MealPlanReviewComment[] @relation("MealPlanReviewCommentAuthor")
   addressedMealPlanReviewComments MealPlanReviewComment[] @relation("MealPlanReviewCommentAddressedBy")
+  responsibleMealPlanEntries      MealPlanEntry[]        @relation("MealPlanEntryResponsible")
 
   @@index([displayName])
 }
@@ -256,19 +257,22 @@ model MealPlanEntry {
   date       DateTime @db.Date
   mealType   MealType @default(DINNER)
   recipeId   String?
-  note              String?
-  locked            Boolean  @default(false)
-  updatedByUserId   String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  mealPlan          MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
-  recipe            Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
-  updatedByUser     User?    @relation("MealPlanEntryUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  note                String?
+  locked              Boolean  @default(false)
+  responsibleUserId   String?
+  updatedByUserId     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  mealPlan            MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe              Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  responsibleUser     User?    @relation("MealPlanEntryResponsible", fields: [responsibleUserId], references: [id], onDelete: SetNull)
+  updatedByUser       User?    @relation("MealPlanEntryUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
   @@unique([mealPlanId, date, mealType])
   @@index([updatedByUserId])
   @@index([mealPlanId, date])
   @@index([recipeId])
+  @@index([responsibleUserId])
 }
 
 model MealPlanShare {

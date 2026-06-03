@@ -47,12 +47,14 @@ describe("getFamilyWeekDinnerMenu", () => {
             note: null,
             recipe: { title: "Taco" },
             recipeId: "recipe-1",
+            responsibleUser: { displayName: "Kari" },
           },
           {
             date: new Date("2026-06-05T00:00:00.000Z"),
             note: "Restemat",
             recipe: null,
             recipeId: null,
+            responsibleUser: null,
           },
         ],
         id: "meal-plan-1",
@@ -73,10 +75,12 @@ describe("getFamilyWeekDinnerMenu", () => {
       mealPlanId: "meal-plan-1",
       mealPlanTitle: "Uke 23",
       menuLabel: "Taco",
+      responsibleDisplayName: "Kari",
     });
     expect(result[4]).toMatchObject({
       date: "2026-06-05",
       menuLabel: "Restemat",
+      responsibleDisplayName: null,
     });
     expect(result[0]).toMatchObject({
       date: "2026-06-01",

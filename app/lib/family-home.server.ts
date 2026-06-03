@@ -20,6 +20,7 @@ export type FamilyWeekDayMenu = {
   mealPlanId: string | null;
   mealPlanTitle: string | null;
   menuLabel: string;
+  responsibleDisplayName: string | null;
   weekdayLabel: string;
 };
 
@@ -56,6 +57,11 @@ export async function getFamilyWeekDinnerMenu({
             },
           },
           recipeId: true,
+          responsibleUser: {
+            select: {
+              displayName: true,
+            },
+          },
         },
         where: {
           mealType: MealType.DINNER,
@@ -92,6 +98,8 @@ export async function getFamilyWeekDinnerMenu({
       mealPlanId: coveringPlan?.id ?? null,
       mealPlanTitle: coveringPlan?.title ?? null,
       menuLabel: coveringPlan ? getDinnerMenuLabel(dinnerEntry) : "Ingen ukeplan",
+      responsibleDisplayName:
+        dinnerEntry?.responsibleUser?.displayName ?? null,
       weekdayLabel: formatWeekdayLabel(date),
     } satisfies FamilyWeekDayMenu;
   });
