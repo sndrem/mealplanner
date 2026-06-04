@@ -111,6 +111,29 @@ export function insertProjectedItemIntoStoreGroups(
   });
 }
 
+export function removeProjectedItemFromSectionGroups(
+  sections: SerializedProjectedShoppingSectionGroup[],
+  sourceKey: string,
+): SerializedProjectedShoppingSectionGroup[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((existingItem) => existingItem.sourceKey !== sourceKey),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
+export function relocateProjectedItemInSectionGroups(
+  sections: SerializedProjectedShoppingSectionGroup[],
+  sourceKey: string,
+  updatedItem: SerializedProjectedShoppingItem,
+): SerializedProjectedShoppingSectionGroup[] {
+  return insertProjectedItemIntoSectionGroups(
+    removeProjectedItemFromSectionGroups(sections, sourceKey),
+    updatedItem,
+  );
+}
+
 export function insertProjectedItemIntoSectionGroups(
   sections: SerializedProjectedShoppingSectionGroup[],
   item: SerializedProjectedShoppingItem,

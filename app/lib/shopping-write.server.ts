@@ -40,6 +40,19 @@ export interface QuickAddManualShoppingItemInput {
   recentNameNormalized?: string;
 }
 
+export function parseManualShoppingItemValues(
+  formData: FormData,
+): ManualShoppingItemValues {
+  return {
+    buyOnDate: String(formData.get("buyOnDate") ?? ""),
+    categoryId: String(formData.get("categoryId") ?? ""),
+    name: String(formData.get("name") ?? ""),
+    note: String(formData.get("note") ?? ""),
+    preferredStoreId: String(formData.get("preferredStoreId") ?? ""),
+    quantity: String(formData.get("quantity") ?? ""),
+  };
+}
+
 const OTHER_INGREDIENT_CATEGORY_KEY = "other";
 const QUICK_ADD_DEFAULT_QUANTITY = "1";
 

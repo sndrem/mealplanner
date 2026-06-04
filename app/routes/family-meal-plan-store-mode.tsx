@@ -15,13 +15,18 @@ import {
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
 import { ShoppingDateSelect } from "../components/shopping-list-item-expanded";
 import { StoreModeDeprioritizeBoughtToggle } from "../components/store-mode-deprioritize-bought-toggle";
-import { StoreModeShoppingItemCard } from "../components/store-mode-shopping-item-card";
+import {
+  StoreModeShoppingItemCard,
+  type StoreModeCategoryUpdateRequest,
+} from "../components/store-mode-shopping-item-card";
 import { StoreModeShoppingViewToggle } from "../components/store-mode-shopping-view-toggle";
 import { requireUser } from "../lib/auth.server";
 import {
   createQuickFamilyShoppingItem,
+  parseFamilyShoppingItemValues,
   parseQuickAddFamilyShoppingItemInput,
   toggleFamilyShoppingItemChecked,
+  updateFamilyShoppingItem,
   updateFamilyShoppingItemQuantity,
 } from "../lib/family-shopping-write.server";
 import {
@@ -38,6 +43,7 @@ import {
 import {
   insertProjectedItemIntoSectionGroups,
   prependRecentManualItem,
+  relocateProjectedItemInSectionGroups,
 } from "../lib/shopping-list-client";
 import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
 import { scrollToShoppingItem } from "../lib/shopping-quick-add-feedback.client";
@@ -45,12 +51,17 @@ import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
 import {
   getMealPlanStoreModeData,
   listRecentManualShoppingItemsForFamily,
+  projectCreatedFamilyShoppingItem,
+  projectCreatedManualShoppingItem,
   type RecentManualShoppingItem,
 } from "../lib/shopping.server";
 import {
+  parseManualShoppingItemValues,
   toggleShoppingItemChecked,
   updateActiveShoppingDate,
+  updateManualShoppingItem,
 } from "../lib/shopping-write.server";
+import { listIngredientCategories } from "../lib/store.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
 import {
   getStoreModeBannerClass,
@@ -82,7 +93,9 @@ type StoreModeNotice =
 
 type StoreModeIntent =
   | "quick-add-family-shopping-item"
+  | "update-family-shopping-item-category"
   | "update-family-shopping-item-quantity"
+  | "update-manual-shopping-item-category"
   | "toggle-family-shopping-item-checked"
   | "toggle-shopping-item-checked"
   | "update-active-shopping-date"
@@ -93,6 +106,9 @@ interface StoreModeActionData {
     activeShoppingDate?: string;
   };
   activeShoppingDateValue?: string;
+  categoryFieldErrors?: {
+    categoryId?: string;
+  };
   formError?: string;
   intent?: StoreModeIntent;
   item?: QuickAddShoppingSuccess["item"];
@@ -135,7 +151,7 @@ export async function loader({
     params.mealPlanId,
     "Fant ikke ukeplanen.",
   );
-  const [result, recentManualItems] = await Promise.all([
+  const [result, recentManualItems, categories] = await Promise.all([
     getMealPlanStoreModeData({
       familyId,
       mealPlanId,
@@ -144,10 +160,12 @@ export async function loader({
     listRecentManualShoppingItemsForFamily({
       familyId,
     }),
+    listIngredientCategories(),
   ]);
 
   return {
     activeShoppingDate: formatDateOnly(result.activeShoppingDate),
+    categories,
     dueSectionGroups: result.dueSectionGroups.map((section) => ({
       ...section,
       items: section.items.map(serializeProjectedShoppingItem),
@@ -353,6 +371,123 @@ export async function action({
     } satisfies StoreModeActionData;
   }
 
+  if (intent === "update-family-shopping-item-category") {
+    const familyItemId = String(formData.get("sourceKey") ?? "").trim();
+
+    if (!familyItemId) {
+      return {
+        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    const result = await updateFamilyShoppingItem({
+      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
+      familyId,
+      familyItemId,
+      userId: user.id,
+      values: parseFamilyShoppingItemValues(formData),
+    });
+
+    if (result.status === "NOT_FOUND") {
+      return {
+        formError: "Fant ikke varelinjen som skulle oppdateres.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        categoryFieldErrors: result.fieldErrors,
+        formError: result.fieldErrors.categoryId,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    const item = await projectCreatedFamilyShoppingItem({
+      familyId,
+      familyItemId,
+    });
+
+    if (!item) {
+      return {
+        formError: "Fant ikke varelinjen etter oppdatering.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    return {
+      intent,
+      item: serializeProjectedShoppingItem(item),
+      ok: true,
+    } satisfies StoreModeActionData;
+  }
+
+  if (intent === "update-manual-shopping-item-category") {
+    const manualItemId = String(formData.get("sourceKey") ?? "").trim();
+
+    if (!manualItemId) {
+      return {
+        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    const result = await updateManualShoppingItem({
+      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
+      familyId,
+      manualItemId,
+      mealPlanId,
+      userId: user.id,
+      values: parseManualShoppingItemValues(formData),
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        categoryFieldErrors: result.fieldErrors,
+        formError: result.fieldErrors.categoryId,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    const item = await projectCreatedManualShoppingItem({
+      familyId,
+      manualItemId,
+      mealPlanId,
+    });
+
+    if (!item) {
+      return {
+        formError: "Fant ikke varelinjen etter oppdatering.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    return {
+      intent,
+      item: serializeProjectedShoppingItem(item),
+      ok: true,
+    } satisfies StoreModeActionData;
+  }
+
   if (intent === "toggle-shopping-item-checked") {
     const sourceKey = String(formData.get("sourceKey") ?? "").trim();
     const sourceType = parseShoppingItemSource(formData.get("sourceType"));
@@ -407,6 +542,7 @@ export default function FamilyMealPlanStoreModeRoute({
   const scheduleRevalidate = useDebouncedRevalidate(revalidator.revalidate);
   const toggleFetcher = useFetcher<StoreModeActionData>();
   const quantityFetcher = useFetcher<StoreModeActionData>();
+  const categoryFetcher = useFetcher<StoreModeActionData>();
   const pendingIntent = navigation.formData?.get("intent");
   const [dueSectionGroups, setDueSectionGroups] = useState(
     loaderData.dueSectionGroups,
@@ -491,6 +627,79 @@ export default function FamilyMealPlanStoreModeRoute({
 
     scheduleRevalidate();
   }, [quantityFetcher.data, quantityFetcher.state, scheduleRevalidate]);
+
+  const handleUpdateCategory = useCallback(
+    (request: StoreModeCategoryUpdateRequest) => {
+      const formData = new FormData();
+      formData.set(
+        "intent",
+        request.sourceType === "FAMILY"
+          ? "update-family-shopping-item-category"
+          : "update-manual-shopping-item-category",
+      );
+      formData.set("sourceKey", request.sourceKey);
+      formData.set("expectedUpdatedAt", request.expectedUpdatedAt);
+      formData.set("categoryId", request.categoryId);
+      formData.set("name", request.name);
+      formData.set("note", request.note);
+      formData.set("preferredStoreId", request.preferredStoreId);
+      formData.set("quantity", request.quantity);
+
+      if (request.sourceType === "MANUAL") {
+        formData.set("buyOnDate", request.buyOnDate);
+      }
+
+      categoryFetcher.submit(formData, { method: "post" });
+    },
+    [categoryFetcher],
+  );
+
+  useEffect(() => {
+    if (categoryFetcher.state !== "idle") {
+      return;
+    }
+
+    const data = categoryFetcher.data;
+
+    if (
+      data?.intent !== "update-family-shopping-item-category" &&
+      data?.intent !== "update-manual-shopping-item-category"
+    ) {
+      return;
+    }
+
+    if (!data.ok) {
+      return;
+    }
+
+    const updatedItem = data.item;
+
+    if (!updatedItem) {
+      return;
+    }
+
+    setDueSectionGroups((currentSections) =>
+      relocateProjectedItemInSectionGroups(
+        currentSections,
+        updatedItem.sourceKey,
+        updatedItem,
+      ),
+    );
+    setRecentlyAddedSourceKey(updatedItem.sourceKey);
+    scheduleRevalidate();
+  }, [categoryFetcher.data, categoryFetcher.state, scheduleRevalidate]);
+
+  const categoryInteractionSourceKey = categoryFetcher.formData
+    ? String(categoryFetcher.formData.get("sourceKey") ?? "")
+    : "";
+  const isSavingCategorySourceKey =
+    categoryFetcher.state !== "idle" ? categoryInteractionSourceKey : null;
+  const categoryFetcherError =
+    categoryFetcher.data?.formError &&
+    (categoryFetcher.data.intent === "update-family-shopping-item-category" ||
+      categoryFetcher.data.intent === "update-manual-shopping-item-category")
+      ? categoryFetcher.data.formError
+      : null;
 
   useEffect(() => {
     if (!recentlyAddedSourceKey) {
@@ -612,10 +821,11 @@ export default function FamilyMealPlanStoreModeRoute({
       : loaderData.activeShoppingDate;
   const ingredientSearchPath = `/families/${loaderData.family.id}/shopping/ingredient-search`;
   const generalFormError =
-    actionData?.formError &&
+    categoryFetcherError ??
+    (actionData?.formError &&
     actionData.intent !== "quick-add-family-shopping-item"
       ? actionData.formError
-      : undefined;
+      : undefined);
 
   return (
     <main className={storeModePageClass}>
@@ -776,9 +986,14 @@ export default function FamilyMealPlanStoreModeRoute({
                   </div>
 
                   <StoreModeItemGrid
+                    categories={loaderData.categories}
+                    categoryFetcherError={categoryFetcherError}
+                    categoryInteractionSourceKey={categoryInteractionSourceKey}
+                    isSavingCategorySourceKey={isSavingCategorySourceKey}
                     items={section.items}
                     layout={shoppingView}
                     onQuickAddFromCard={handleQuickAddFromCard}
+                    onUpdateCategory={handleUpdateCategory}
                     onUpdateQuantity={handleUpdateQuantity}
                     onToggleItem={handleToggle}
                     recentlyAddedSourceKey={recentlyAddedSourceKey}
@@ -809,9 +1024,14 @@ export default function FamilyMealPlanStoreModeRoute({
                 </summary>
 
                 <StoreModeItemGrid
+                  categories={loaderData.categories}
+                  categoryFetcherError={categoryFetcherError}
+                  categoryInteractionSourceKey={categoryInteractionSourceKey}
+                  isSavingCategorySourceKey={isSavingCategorySourceKey}
                   items={boughtItems}
                   layout={shoppingView}
                   onQuickAddFromCard={handleQuickAddFromCard}
+                  onUpdateCategory={handleUpdateCategory}
                   onUpdateQuantity={handleUpdateQuantity}
                   onToggleItem={handleToggle}
                   recentlyAddedSourceKey={recentlyAddedSourceKey}
@@ -975,17 +1195,27 @@ function buildStoreModeRedirect({
 function StoreModeItemGrid<
   TItem extends ComponentProps<typeof StoreModeShoppingItemCard>["item"],
 >({
+  categories,
+  categoryFetcherError,
+  categoryInteractionSourceKey,
+  isSavingCategorySourceKey,
   items,
   layout,
   onQuickAddFromCard,
+  onUpdateCategory,
   onUpdateQuantity,
   onToggleItem,
   recentlyAddedSourceKey,
   selectedStoreId,
 }: {
+  categories: ComponentProps<typeof StoreModeShoppingItemCard>["categories"];
+  categoryFetcherError: string | null;
+  categoryInteractionSourceKey: string;
+  isSavingCategorySourceKey: string | null;
   items: TItem[];
   layout: StoreModeShoppingView;
   onQuickAddFromCard: (item: { name: string; quantityLabel: string | null }) => void;
+  onUpdateCategory: (request: StoreModeCategoryUpdateRequest) => void;
   onUpdateQuantity: (item: {
     expectedUpdatedAt: string;
     quantity: string;
@@ -1006,10 +1236,18 @@ function StoreModeItemGrid<
       {items.map((item) => (
         <StoreModeShoppingItemCard
           key={item.sourceKey}
+          categories={categories}
+          categoryError={
+            categoryInteractionSourceKey === item.sourceKey
+              ? categoryFetcherError
+              : null
+          }
           isRecentlyAdded={recentlyAddedSourceKey === item.sourceKey}
+          isSavingCategory={isSavingCategorySourceKey === item.sourceKey}
           item={item}
           layout={layout}
           onQuickAddFromCard={onQuickAddFromCard}
+          onUpdateCategory={onUpdateCategory}
           onUpdateQuantity={onUpdateQuantity}
           onToggle={() => onToggleItem(item)}
           selectedStoreId={selectedStoreId}
