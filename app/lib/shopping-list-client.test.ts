@@ -5,6 +5,7 @@ import {
   insertProjectedItemIntoStoreGroups,
   mergeQuickAddedItemsIntoList,
   prependRecentManualItem,
+  relocateProjectedItemInSectionGroups,
 } from "./shopping-list-client";
 import type { SerializedProjectedShoppingItem } from "./shopping-serialize";
 
@@ -141,6 +142,37 @@ describe("shopping-list-client", () => {
     );
 
     expect(result.map((item) => item.nameNormalized)).toEqual(["melk", "brod"]);
+  });
+
+  it("relocates an item into a new section group", () => {
+    const existingItem = createFamilyItem({
+      category: { id: "category-other", name: "Annet" },
+      name: "Bananer",
+      section: { displayName: "Annet", sortOrder: 99 },
+      sourceKey: "item-1",
+    });
+    const updatedItem = createFamilyItem({
+      category: { id: "category-produce", name: "Frukt og grønt" },
+      name: "Bananer",
+      section: { displayName: "Frukt og grønt", sortOrder: 2 },
+      sourceKey: "item-1",
+    });
+
+    const result = relocateProjectedItemInSectionGroups(
+      [
+        {
+          category: existingItem.category,
+          displayName: existingItem.section.displayName,
+          items: [existingItem],
+        },
+      ],
+      "item-1",
+      updatedItem,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.displayName).toBe("Frukt og grønt");
+    expect(result[0]?.items[0]?.category.id).toBe("category-produce");
   });
 
   it("merges quick-added items by source key", () => {

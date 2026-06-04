@@ -2,34 +2,33 @@
 
 ## Current Objective
 
-Issue #141 — PR ready on `issue/141-meal-plan-responsible-member`.
+Issue #143 — PR ready on `issue/143-store-mode-category`: change shopping section/category from store mode without leaving the page.
 
 ## Completed
 
-- Optional `responsibleUserId` on dinner `MealPlanEntry` (migration `20260603120000_meal_plan_entry_responsible_user`).
-- Meal plan editor: assign/clear responsible, visible in collapsed day row.
-- Family home `WeekDayMenuCard`: shows responsible display name chip on weekly overview.
-- Save validates family membership; copy preserves assignments; responsible-only days deleted on save.
+- In-place category editor on `StoreModeShoppingItemCard` for FAMILY and MANUAL items (info panel).
+- Auto-save on dropdown change; item relocates to the correct store-mode section optimistically.
+- Store-mode actions: `update-family-shopping-item-category`, `update-manual-shopping-item-category`.
+- Client helper `relocateProjectedItemInSectionGroups`; exported `parseManualShoppingItemValues`.
+- Details panel width fix (`open:w-1/2`); category select at 50% card width when open.
 
 ## Files To Read First
 
-- `prisma/schema.prisma` — `MealPlanEntry.responsibleUserId`
-- `app/lib/meal-plan.server.ts` — save/copy/validation
-- `app/routes/family-meal-plan.tsx` — editor UI
-- `app/lib/family-home.server.ts` — week overview data
+- `app/components/store-mode-shopping-item-card.tsx` — category UI and auto-save
+- `app/routes/family-meal-plan-store-mode.tsx` — loader categories, actions, fetcher regroup
+- `app/lib/shopping-list-client.ts` — `relocateProjectedItemInSectionGroups`
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (52 files, 308 tests)
+- `npm run test:run` — passed (52 files, 311 tests)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Deploy: `npm run prisma:migrate:deploy`
-- Manual QA on meal plan editor and family home week cards
+- Manual QA in store mode: quick-add item in wrong section → change dropdown → confirm move; verify on mobile grid and list layouts.
 
 ## Next Step
 
-Merge PR; issue closes via `Closes #141`.
+Merge PR; issue closes via `Closes #143`.

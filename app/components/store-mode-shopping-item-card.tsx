@@ -1,12 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   formatGeneratedOccurrenceAttribution,
   formatGeneratedQuantityBadge,
 } from "../lib/shopping-display";
 import type { StoreModeShoppingView } from "../lib/shopping-store-mode-client";
+import type { StoreCategory } from "../lib/store.server";
 
 interface StoreModeShoppingItemCardBase {
+  category: {
+    id: string;
+    name: string;
+  };
   checked: boolean;
   collaborationVersion: string;
   name: string;
@@ -15,6 +20,7 @@ interface StoreModeShoppingItemCardBase {
     id: string;
     name: string;
   } | null;
+  quantity?: string | null;
   quantityLabel: string | null;
   sourceKey: string;
 }
@@ -43,14 +49,41 @@ export type StoreModeShoppingItemCardItem =
   | StoreModeShoppingItemCardManual
   | StoreModeShoppingItemCardFamily;
 
+export type StoreModeCategoryUpdateRequest =
+  | {
+      buyOnDate: string;
+      categoryId: string;
+      expectedUpdatedAt: string;
+      name: string;
+      note: string;
+      preferredStoreId: string;
+      quantity: string;
+      sourceKey: string;
+      sourceType: "MANUAL";
+    }
+  | {
+      categoryId: string;
+      expectedUpdatedAt: string;
+      name: string;
+      note: string;
+      preferredStoreId: string;
+      quantity: string;
+      sourceKey: string;
+      sourceType: "FAMILY";
+    };
+
 interface StoreModeShoppingItemCardProps {
+  categories: StoreCategory[];
+  categoryError?: string | null;
   isRecentlyAdded?: boolean;
+  isSavingCategory?: boolean;
   item: StoreModeShoppingItemCardItem;
   layout: StoreModeShoppingView;
   onQuickAddFromCard?: (item: {
     name: string;
     quantityLabel: string | null;
   }) => void;
+  onUpdateCategory?: (request: StoreModeCategoryUpdateRequest) => void;
   onUpdateQuantity?: (item: {
     expectedUpdatedAt: string;
     quantity: string;
@@ -63,10 +96,14 @@ interface StoreModeShoppingItemCardProps {
 const badgeClass = "rounded-full px-2 py-0.5 text-[11px] font-medium leading-4";
 
 export function StoreModeShoppingItemCard({
+  categories,
+  categoryError = null,
   isRecentlyAdded = false,
+  isSavingCategory = false,
   item,
   layout: _layout,
   onQuickAddFromCard,
+  onUpdateCategory,
   onUpdateQuantity,
   onToggle,
   selectedStoreId,
@@ -75,7 +112,59 @@ export function StoreModeShoppingItemCard({
   const shouldAutoOpenDetails = shouldAutoOpenStoreModeDetails(item);
   const [isQuantityModalOpen, setIsQuantityModalOpen] = useState(false);
   const [quantityDraft, setQuantityDraft] = useState(item.quantityLabel ?? "");
+  const [categoryDraft, setCategoryDraft] = useState(item.category.id);
   const quantityInputRef = useRef<HTMLInputElement>(null);
+  const showCategoryEdit =
+    item.sourceType === "FAMILY" || item.sourceType === "MANUAL";
+
+  useEffect(() => {
+    setCategoryDraft(item.category.id);
+  }, [item.category.id]);
+
+  useEffect(() => {
+    if (categoryError) {
+      setCategoryDraft(item.category.id);
+    }
+  }, [categoryError, item.category.id]);
+
+  const handleCategoryChange = useCallback(
+    (nextCategoryId: string) => {
+      if (nextCategoryId === item.category.id || isSavingCategory) {
+        return;
+      }
+
+      setCategoryDraft(nextCategoryId);
+
+      if (item.sourceType === "FAMILY") {
+        onUpdateCategory?.({
+          categoryId: nextCategoryId,
+          expectedUpdatedAt: item.collaborationVersion,
+          name: item.name,
+          note: item.note ?? "",
+          preferredStoreId: item.preferredStore?.id ?? "",
+          quantity: item.quantity?.trim() || item.quantityLabel || "",
+          sourceKey: item.sourceKey,
+          sourceType: "FAMILY",
+        });
+        return;
+      }
+
+      if (item.sourceType === "MANUAL") {
+        onUpdateCategory?.({
+          buyOnDate: item.buyOnDate ?? "",
+          categoryId: nextCategoryId,
+          expectedUpdatedAt: item.collaborationVersion,
+          name: item.name,
+          note: item.note ?? "",
+          preferredStoreId: item.preferredStore?.id ?? "",
+          quantity: item.quantity?.trim() || item.quantityLabel || "",
+          sourceKey: item.sourceKey,
+          sourceType: "MANUAL",
+        });
+      }
+    },
+    [isSavingCategory, item, onUpdateCategory],
+  );
 
   const cardStateClass = isRecentlyAdded
     ? "border-emerald-300 bg-emerald-100"
@@ -172,18 +261,18 @@ export function StoreModeShoppingItemCard({
         </div>
 
         <details
-          className="group mt-auto flex w-0 min-w-0 flex-col-reverse items-start pointer-events-auto"
+          className="group mt-auto flex w-7 min-w-7 flex-col-reverse items-stretch self-start pointer-events-auto open:w-1/2 open:min-w-[50%] open:max-w-full"
           open={shouldAutoOpenDetails}
         >
           <summary
             aria-label={`Vis informasjon om ${item.name}`}
-            className="mt-1 flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition hover:bg-stone-100 hover:text-stone-950 group-open:border-store-accent group-open:bg-store-accent-light group-open:text-store-accent-text marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent [&::-webkit-details-marker]:hidden"
+            className="mt-1 flex h-7 w-7 shrink-0 cursor-pointer list-none items-center justify-center self-start rounded-full border border-stone-200 bg-white text-stone-600 transition hover:bg-stone-100 hover:text-stone-950 group-open:border-store-accent group-open:bg-store-accent-light group-open:text-store-accent-text marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent [&::-webkit-details-marker]:hidden"
           >
             <StoreModeInfoIcon className="h-3.5 w-3.5" />
             <span className="sr-only">Vis informasjon</span>
           </summary>
           <div
-            className="mb-1 w-full min-w-0 max-w-full space-y-1 border-b border-stone-200 pb-1.5 pointer-events-auto"
+            className="mb-1 w-full min-w-0 space-y-1.5 border-b border-stone-200 pb-1.5 pointer-events-auto"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
           >
@@ -194,6 +283,34 @@ export function StoreModeShoppingItemCard({
               <p className="break-words text-xs leading-4 text-stone-700">
                 Notat: {item.note}
               </p>
+            ) : null}
+            {showCategoryEdit ? (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-stone-700">
+                  Endre seksjon
+                  <select
+                    aria-busy={isSavingCategory}
+                    className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:opacity-70"
+                    disabled={isSavingCategory}
+                    onChange={(event) =>
+                      handleCategoryChange(event.currentTarget.value)
+                    }
+                    value={categoryDraft}
+                  >
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {categoryError ? (
+                  <p className="text-xs text-rose-600">{categoryError}</p>
+                ) : null}
+                {isSavingCategory ? (
+                  <p className="text-xs text-stone-500">Lagrer...</p>
+                ) : null}
+              </div>
             ) : null}
             <button
               className="inline-flex w-fit rounded-full border border-store-accent/40 bg-store-accent-light px-2.5 py-1 text-xs font-medium text-store-accent-text transition hover:border-store-accent hover:bg-store-accent-light/80"

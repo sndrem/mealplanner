@@ -13,22 +13,34 @@ vi.mock("../lib/shopping.server", () => {
   return {
     getMealPlanStoreModeData: vi.fn(),
     listRecentManualShoppingItemsForFamily: vi.fn(),
+    projectCreatedFamilyShoppingItem: vi.fn(),
+    projectCreatedManualShoppingItem: vi.fn(),
   };
 });
 
 vi.mock("../lib/family-shopping-write.server", () => {
   return {
     createQuickFamilyShoppingItem: vi.fn(),
+    parseFamilyShoppingItemValues: vi.fn(),
     parseQuickAddFamilyShoppingItemInput: vi.fn(),
     toggleFamilyShoppingItemChecked: vi.fn(),
+    updateFamilyShoppingItem: vi.fn(),
     updateFamilyShoppingItemQuantity: vi.fn(),
   };
 });
 
 vi.mock("../lib/shopping-write.server", () => {
   return {
+    parseManualShoppingItemValues: vi.fn(),
     toggleShoppingItemChecked: vi.fn(),
     updateActiveShoppingDate: vi.fn(),
+    updateManualShoppingItem: vi.fn(),
+  };
+});
+
+vi.mock("../lib/store.server", () => {
+  return {
+    listIngredientCategories: vi.fn(),
   };
 });
 
@@ -40,15 +52,25 @@ vi.mock("../lib/store-write.server", () => {
 
 import {
   createQuickFamilyShoppingItem,
+  parseFamilyShoppingItemValues,
   parseQuickAddFamilyShoppingItemInput,
+  updateFamilyShoppingItem,
   updateFamilyShoppingItemQuantity,
 } from "../lib/family-shopping-write.server";
 import { requireUser } from "../lib/auth.server";
 import {
   getMealPlanStoreModeData,
   listRecentManualShoppingItemsForFamily,
+  projectCreatedFamilyShoppingItem,
+  projectCreatedManualShoppingItem,
 } from "../lib/shopping.server";
-import { toggleShoppingItemChecked, updateActiveShoppingDate } from "../lib/shopping-write.server";
+import {
+  parseManualShoppingItemValues,
+  toggleShoppingItemChecked,
+  updateActiveShoppingDate,
+  updateManualShoppingItem,
+} from "../lib/shopping-write.server";
+import { listIngredientCategories } from "../lib/store.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
 import { action, loader } from "./family-meal-plan-store-mode";
 
@@ -76,6 +98,12 @@ describe("family meal plan store mode route", () => {
 
   it("loads and serializes store mode data", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(listIngredientCategories).mockResolvedValue([
+      {
+        displayName: "Meieri",
+        id: "category-dairy",
+      },
+    ]);
     vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([
       {
         categoryId: "",
@@ -197,6 +225,13 @@ describe("family meal plan store mode route", () => {
     expect(listRecentManualShoppingItemsForFamily).toHaveBeenCalledWith({
       familyId: "family-1",
     });
+    expect(listIngredientCategories).toHaveBeenCalled();
+    expect(result.categories).toEqual([
+      {
+        displayName: "Meieri",
+        id: "category-dairy",
+      },
+    ]);
     expect(result.recentManualItems).toEqual([
       {
         categoryId: "",
@@ -411,6 +446,170 @@ describe("family meal plan store mode route", () => {
     });
     expect(result).toEqual({
       intent: "update-family-shopping-item-quantity",
+      ok: true,
+    });
+  });
+
+  it("updates family item category without redirecting", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseFamilyShoppingItemValues).mockReturnValue({
+      categoryId: "category-produce",
+      name: "Bananer",
+      note: "",
+      preferredStoreId: "",
+      quantity: "1",
+    });
+    vi.mocked(updateFamilyShoppingItem).mockResolvedValue({
+      status: "UPDATED",
+    });
+    vi.mocked(projectCreatedFamilyShoppingItem).mockResolvedValue({
+      category: { id: "category-produce", name: "Frukt og gront" },
+      checked: false,
+      collaborationVersion: "2026-05-31T00:00:00.000Z",
+      name: "Bananer",
+      note: null,
+      preferredStore: null,
+      quantity: "1",
+      quantityLabel: "1",
+      section: { displayName: "Frukt og gront", sortOrder: 1 },
+      sourceKey: "family-item-1",
+      sourceType: "FAMILY",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-family-shopping-item-category");
+    formData.set("sourceKey", "family-item-1");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+    formData.set("categoryId", "category-produce");
+    formData.set("name", "Bananer");
+    formData.set("note", "");
+    formData.set("preferredStoreId", "");
+    formData.set("quantity", "1");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(undefined, formData),
+    });
+
+    expect(updateFamilyShoppingItem).toHaveBeenCalledWith({
+      expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
+      familyId: "family-1",
+      familyItemId: "family-item-1",
+      userId: "user-1",
+      values: {
+        categoryId: "category-produce",
+        name: "Bananer",
+        note: "",
+        preferredStoreId: "",
+        quantity: "1",
+      },
+    });
+    expect(projectCreatedFamilyShoppingItem).toHaveBeenCalledWith({
+      familyId: "family-1",
+      familyItemId: "family-item-1",
+    });
+    expect(result).toEqual({
+      intent: "update-family-shopping-item-category",
+      item: {
+        category: { id: "category-produce", name: "Frukt og gront" },
+        checked: false,
+        collaborationVersion: "2026-05-31T00:00:00.000Z",
+        name: "Bananer",
+        note: null,
+        preferredStore: null,
+        quantity: "1",
+        quantityLabel: "1",
+        section: { displayName: "Frukt og gront", sortOrder: 1 },
+        sourceKey: "family-item-1",
+        sourceType: "FAMILY",
+      },
+      ok: true,
+    });
+  });
+
+  it("updates manual item category without redirecting", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseManualShoppingItemValues).mockReturnValue({
+      buyOnDate: "",
+      categoryId: "category-produce",
+      name: "Bananer",
+      note: "",
+      preferredStoreId: "",
+      quantity: "2 kg",
+    });
+    vi.mocked(updateManualShoppingItem).mockResolvedValue({
+      status: "UPDATED",
+    });
+    vi.mocked(projectCreatedManualShoppingItem).mockResolvedValue({
+      buyOnDate: null,
+      category: { id: "category-produce", name: "Frukt og gront" },
+      checked: false,
+      collaborationVersion: "2026-05-31T00:00:00.000Z",
+      name: "Bananer",
+      note: null,
+      overrideVersion: "",
+      preferredStore: null,
+      quantity: "2 kg",
+      quantityLabel: "2 kg",
+      section: { displayName: "Frukt og gront", sortOrder: 1 },
+      sourceKey: "manual-item-1",
+      sourceType: "MANUAL",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-manual-shopping-item-category");
+    formData.set("sourceKey", "manual-item-1");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+    formData.set("categoryId", "category-produce");
+    formData.set("name", "Bananer");
+    formData.set("note", "");
+    formData.set("preferredStoreId", "");
+    formData.set("quantity", "2 kg");
+    formData.set("buyOnDate", "");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(undefined, formData),
+    });
+
+    expect(updateManualShoppingItem).toHaveBeenCalledWith({
+      expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
+      familyId: "family-1",
+      manualItemId: "manual-item-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+      values: {
+        buyOnDate: "",
+        categoryId: "category-produce",
+        name: "Bananer",
+        note: "",
+        preferredStoreId: "",
+        quantity: "2 kg",
+      },
+    });
+    expect(result).toEqual({
+      intent: "update-manual-shopping-item-category",
+      item: {
+        buyOnDate: null,
+        category: { id: "category-produce", name: "Frukt og gront" },
+        checked: false,
+        collaborationVersion: "2026-05-31T00:00:00.000Z",
+        name: "Bananer",
+        note: null,
+        overrideVersion: "",
+        preferredStore: null,
+        quantity: "2 kg",
+        quantityLabel: "2 kg",
+        section: { displayName: "Frukt og gront", sortOrder: 1 },
+        sourceKey: "manual-item-1",
+        sourceType: "MANUAL",
+      },
       ok: true,
     });
   });
