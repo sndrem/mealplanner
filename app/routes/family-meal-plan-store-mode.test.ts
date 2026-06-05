@@ -9,9 +9,13 @@ vi.mock("../lib/auth.server", async () => {
   };
 });
 
+vi.mock("../lib/meal-plan-for-date.server", () => ({
+  resolveStoreModeAnchorMealPlan: vi.fn(),
+}));
+
 vi.mock("../lib/shopping.server", () => {
   return {
-    getMealPlanStoreModeData: vi.fn(),
+    getFamilyStoreModeData: vi.fn(),
     listRecentManualShoppingItemsForFamily: vi.fn(),
     projectCreatedFamilyShoppingItem: vi.fn(),
     projectCreatedManualShoppingItem: vi.fn(),
@@ -58,8 +62,9 @@ import {
   updateFamilyShoppingItemQuantity,
 } from "../lib/family-shopping-write.server";
 import { requireUser } from "../lib/auth.server";
+import { resolveStoreModeAnchorMealPlan } from "../lib/meal-plan-for-date.server";
 import {
-  getMealPlanStoreModeData,
+  getFamilyStoreModeData,
   listRecentManualShoppingItemsForFamily,
   projectCreatedFamilyShoppingItem,
   projectCreatedManualShoppingItem,
@@ -82,7 +87,7 @@ const mockUser = {
 };
 
 function buildRequest(
-  url = "http://localhost/families/family-1/meal-plans/meal-plan-1/store-mode",
+  url = "http://localhost/families/family-1/store-mode",
   formData?: FormData,
 ) {
   return new Request(url, {
@@ -91,7 +96,7 @@ function buildRequest(
   });
 }
 
-describe("family meal plan store mode route", () => {
+describe("family store mode route", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -112,7 +117,7 @@ describe("family meal plan store mode route", () => {
         quantity: "",
       },
     ]);
-    vi.mocked(getMealPlanStoreModeData).mockResolvedValue({
+    vi.mocked(getFamilyStoreModeData).mockResolvedValue({
       activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
       dueSectionGroups: [
         {
@@ -221,14 +226,12 @@ describe("family meal plan store mode route", () => {
     const result = await loader({
       params: {
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       },
       request: buildRequest(),
-    });
+    } as never);
 
-    expect(getMealPlanStoreModeData).toHaveBeenCalledWith({
+    expect(getFamilyStoreModeData).toHaveBeenCalledWith({
       familyId: "family-1",
-      mealPlanId: "meal-plan-1",
       userId: "user-1",
     });
     expect(listRecentManualShoppingItemsForFamily).toHaveBeenCalledWith({
@@ -277,8 +280,32 @@ describe("family meal plan store mode route", () => {
     );
   });
 
+  it("redirects to meal plans when the family has none", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(getFamilyStoreModeData).mockResolvedValue(null);
+
+    try {
+      await loader({
+        params: {
+          familyId: "family-1",
+        },
+        request: buildRequest(),
+      } as never);
+      expect.fail("Expected redirect");
+    } catch (response) {
+      expect(response).toBeInstanceOf(Response);
+      expect((response as Response).status).toBe(302);
+      expect((response as Response).headers.get("Location")).toBe(
+        "/families/family-1/meal-plans",
+      );
+    }
+  });
+
   it("returns active shopping date validation errors from the server module", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
     vi.mocked(updateActiveShoppingDate).mockResolvedValue({
       fieldErrors: {
         activeShoppingDate: "Datoen må ligge innenfor ukeplanens aktive periode.",
@@ -292,14 +319,14 @@ describe("family meal plan store mode route", () => {
     const formData = new FormData();
     formData.set("intent", "update-active-shopping-date");
     formData.set("activeShoppingDate", "2026-05-20");
+    formData.set("mealPlanId", "meal-plan-1");
 
     const result = await action({
       params: {
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       },
       request: buildRequest(undefined, formData),
-    });
+    } as never);
 
     expect(updateActiveShoppingDate).toHaveBeenCalledWith({
       activeShoppingDate: "2026-05-20",
@@ -319,6 +346,9 @@ describe("family meal plan store mode route", () => {
 
   it("returns quick-add success data without redirecting", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
     vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
       ingredientId: "ingredient-1",
       name: "Melk",
@@ -357,10 +387,9 @@ describe("family meal plan store mode route", () => {
     const result = await action({
       params: {
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       },
       request: buildRequest(undefined, formData),
-    });
+    } as never);
 
     expect(createQuickFamilyShoppingItem).toHaveBeenCalledWith({
       familyId: "family-1",
@@ -401,6 +430,9 @@ describe("family meal plan store mode route", () => {
 
   it("returns quick-add validation errors without redirecting", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
     vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
       ingredientId: "",
       name: "",
@@ -428,10 +460,9 @@ describe("family meal plan store mode route", () => {
     const result = await action({
       params: {
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       },
       request: buildRequest(undefined, formData),
-    });
+    } as never);
 
     expect(result).toEqual({
       formError: "Kunne ikke legge til varen.",
@@ -441,6 +472,9 @@ describe("family meal plan store mode route", () => {
 
   it("updates family item quantity without redirecting", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
     vi.mocked(updateFamilyShoppingItemQuantity).mockResolvedValue({
       status: "UPDATED",
     });
@@ -454,10 +488,9 @@ describe("family meal plan store mode route", () => {
     const result = await action({
       params: {
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       },
       request: buildRequest(undefined, formData),
-    });
+    } as never);
 
     expect(updateFamilyShoppingItemQuantity).toHaveBeenCalledWith({
       expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
@@ -474,6 +507,9 @@ describe("family meal plan store mode route", () => {
 
   it("updates family item category without redirecting", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
     vi.mocked(parseFamilyShoppingItemValues).mockReturnValue({
       categoryId: "category-produce",
       name: "Bananer",
@@ -513,10 +549,9 @@ describe("family meal plan store mode route", () => {
     const result = await action({
       params: {
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       },
       request: buildRequest(undefined, formData),
-    });
+    } as never);
 
     expect(updateFamilyShoppingItem).toHaveBeenCalledWith({
       expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
@@ -558,6 +593,9 @@ describe("family meal plan store mode route", () => {
 
   it("updates manual item category without redirecting", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
     vi.mocked(parseManualShoppingItemValues).mockReturnValue({
       buyOnDate: "",
       categoryId: "category-produce",
@@ -602,10 +640,9 @@ describe("family meal plan store mode route", () => {
     const result = await action({
       params: {
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       },
       request: buildRequest(undefined, formData),
-    });
+    } as never);
 
     expect(updateManualShoppingItem).toHaveBeenCalledWith({
       expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
@@ -647,6 +684,9 @@ describe("family meal plan store mode route", () => {
 
   it("uses itemMealPlanId when toggling meal-plan shopping items", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
     vi.mocked(toggleShoppingItemChecked).mockResolvedValue({
       status: "UPDATED",
     });
@@ -662,10 +702,9 @@ describe("family meal plan store mode route", () => {
     const result = await action({
       params: {
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       },
       request: buildRequest(undefined, formData),
-    });
+    } as never);
 
     expect(toggleShoppingItemChecked).toHaveBeenCalledWith({
       checked: true,
@@ -684,6 +723,9 @@ describe("family meal plan store mode route", () => {
 
   it("redirects after updating the selected store", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
     vi.mocked(updateSelectedStorePreference).mockResolvedValue({
       status: "UPDATED",
     });
@@ -695,10 +737,9 @@ describe("family meal plan store mode route", () => {
     const result = await action({
       params: {
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       },
       request: buildRequest(undefined, formData),
-    });
+    } as never);
 
     expect(updateSelectedStorePreference).toHaveBeenCalledWith({
       familyId: "family-1",
@@ -707,7 +748,7 @@ describe("family meal plan store mode route", () => {
     });
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).headers.get("Location")).toBe(
-      "http://localhost/families/family-1/meal-plans/meal-plan-1/store-mode?notice=selected-store-updated",
+      "http://localhost/families/family-1/store-mode?notice=selected-store-updated",
     );
     expect(toggleShoppingItemChecked).not.toHaveBeenCalled();
   });

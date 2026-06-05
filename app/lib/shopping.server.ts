@@ -3,7 +3,10 @@ import { MealType, Prisma, ShoppingItemSource } from "@prisma/client";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
-import { findMealPlanCoveringDate } from "./meal-plan-for-date.server";
+import {
+  findMealPlanCoveringDate,
+  resolveStoreModeAnchorMealPlan,
+} from "./meal-plan-for-date.server";
 import {
   getMealPlanDateRange,
   unionMealPlanDateRanges,
@@ -822,6 +825,28 @@ export async function getFamilyShoppingData({
           },
     userRole: membership.role,
   };
+}
+
+export async function getFamilyStoreModeData({
+  familyId,
+  userId,
+}: {
+  familyId: string;
+  userId: string;
+}) {
+  const anchorMealPlan = await resolveStoreModeAnchorMealPlan({
+    familyId,
+  });
+
+  if (!anchorMealPlan) {
+    return null;
+  }
+
+  return getMealPlanStoreModeData({
+    familyId,
+    mealPlanId: anchorMealPlan.id,
+    userId,
+  });
 }
 
 export async function getMealPlanStoreModeData({

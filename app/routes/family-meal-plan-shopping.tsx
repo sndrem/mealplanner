@@ -664,7 +664,7 @@ export default function FamilyMealPlanShoppingRoute({
             <div className="flex flex-wrap gap-3">
               <Link
                 className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
-                to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/store-mode`}
+                to={`/families/${loaderData.family.id}/store-mode`}
               >
                 Åpne butikkmodus
               </Link>
