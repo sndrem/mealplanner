@@ -31,11 +31,7 @@ function bottomNavLinkClassName({ isActive }: { isActive: boolean }) {
 }
 
 function isStoreModeShoppingNavActive(pathname: string, familyId: string) {
-  return (
-    pathname === `/families/${familyId}/store-mode` ||
-    (pathname.startsWith(`/families/${familyId}/meal-plans/`) &&
-      pathname.endsWith("/store-mode"))
-  );
+  return pathname === `/families/${familyId}/store-mode`;
 }
 
 export function AppMobileBottomNav({ familyId }: { familyId: string | null }) {

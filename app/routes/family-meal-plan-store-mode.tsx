@@ -8,6 +8,7 @@ import {
   useFetcher,
   useNavigation,
   useRevalidator,
+  redirect,
   useSubmit,
   type MetaFunction,
 } from "react-router";
@@ -48,8 +49,9 @@ import {
 import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
 import { scrollToShoppingItem } from "../lib/shopping-quick-add-feedback.client";
 import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
+import { resolveStoreModeAnchorMealPlan } from "../lib/meal-plan-for-date.server";
 import {
-  getMealPlanStoreModeData,
+  getFamilyStoreModeData,
   listRecentManualShoppingItemsForFamily,
   projectCreatedFamilyShoppingItem,
   projectCreatedManualShoppingItem,
@@ -84,6 +86,7 @@ import {
   useStoreModeToggleSync,
 } from "../lib/use-store-mode-toggle-sync";
 import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
+import type { Route } from "./+types/family-meal-plan-store-mode";
 
 type StoreModeNotice =
   | "active-shopping-date-updated"
@@ -135,33 +138,24 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export async function loader({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-    mealPlanId?: string;
-  };
-  request: Request;
-}) {
+export async function loader({ params, request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const familyId = requireRouteParam(params.familyId, "Fant ikke familien.");
-  const mealPlanId = requireRouteParam(
-    params.mealPlanId,
-    "Fant ikke ukeplanen.",
-  );
+  const storeModeDataPromise = getFamilyStoreModeData({
+    familyId,
+    userId: user.id,
+  });
   const [result, recentManualItems, categories] = await Promise.all([
-    getMealPlanStoreModeData({
-      familyId,
-      mealPlanId,
-      userId: user.id,
-    }),
+    storeModeDataPromise,
     listRecentManualShoppingItemsForFamily({
       familyId,
     }),
     listIngredientCategories(),
   ]);
+
+  if (!result) {
+    throw redirect(`/families/${familyId}/meal-plans`);
+  }
 
   return {
     activeShoppingDate: formatDateOnly(result.activeShoppingDate),
@@ -196,24 +190,15 @@ export async function loader({
   };
 }
 
-export async function action({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-    mealPlanId?: string;
-  };
-  request: Request;
-}) {
+export async function action({ params, request }: Route.ActionArgs) {
   const user = await requireUser(request);
   const familyId = requireRouteParam(params.familyId, "Fant ikke familien.");
-  const mealPlanId = requireRouteParam(
-    params.mealPlanId,
-    "Fant ikke ukeplanen.",
-  );
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
+  const anchorMealPlanId = await resolveStoreModeAnchorMealPlanId({
+    familyId,
+    formData,
+  });
 
   if (intent === "update-active-shopping-date") {
     const activeShoppingDate = String(formData.get("activeShoppingDate") ?? "");
@@ -223,7 +208,7 @@ export async function action({
         formData.get("mealPlanUpdatedAt") ?? "",
       ),
       familyId,
-      mealPlanId,
+      mealPlanId: anchorMealPlanId,
       userId: user.id,
     });
 
@@ -246,9 +231,8 @@ export async function action({
       } satisfies StoreModeActionData;
     }
 
-    return buildStoreModeRedirect({
+    return buildFamilyStoreModeRedirect({
       familyId,
-      mealPlanId,
       notice: "active-shopping-date-updated",
       request,
     });
@@ -270,9 +254,8 @@ export async function action({
       } satisfies StoreModeActionData;
     }
 
-    return buildStoreModeRedirect({
+    return buildFamilyStoreModeRedirect({
       familyId,
-      mealPlanId,
       notice: "selected-store-updated",
       request,
     });
@@ -441,7 +424,7 @@ export async function action({
       } satisfies StoreModeActionData;
     }
 
-    const itemMealPlanId = resolveItemMealPlanId(formData, mealPlanId);
+    const itemMealPlanId = resolveItemMealPlanId(formData, anchorMealPlanId);
     const result = await updateManualShoppingItem({
       expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
       familyId,
@@ -502,7 +485,7 @@ export async function action({
       } satisfies StoreModeActionData;
     }
 
-    const itemMealPlanId = resolveItemMealPlanId(formData, mealPlanId);
+    const itemMealPlanId = resolveItemMealPlanId(formData, anchorMealPlanId);
     const result = await toggleShoppingItemChecked({
       checked,
       expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
@@ -875,6 +858,11 @@ export default function FamilyMealPlanStoreModeRoute({
               value="update-active-shopping-date"
             />
             <input
+              name="mealPlanId"
+              type="hidden"
+              value={loaderData.mealPlan.id}
+            />
+            <input
               name="mealPlanUpdatedAt"
               type="hidden"
               value={loaderData.mealPlan.updatedAt}
@@ -976,19 +964,20 @@ export default function FamilyMealPlanStoreModeRoute({
             </div>
             {activeSections.length > 0 ? (
               activeSections.map((section) => (
-                <article
+                <details
                   key={`${loaderData.selectedStore?.id ?? "no-store"}:${section.category.id}`}
                   className={storeModeSectionCardClass}
+                  open
                 >
                   <div aria-hidden="true" className={storeModeAccentBarClass} />
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-semibold tracking-tight text-stone-950">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent [&::-webkit-details-marker]:hidden">
+                    <span className="text-lg font-semibold tracking-tight text-stone-950">
                       {section.displayName}
-                    </h2>
+                    </span>
                     <span className={storeModeCountChipClass}>
                       {section.items.length} varer
                     </span>
-                  </div>
+                  </summary>
 
                   <StoreModeItemGrid
                     categories={loaderData.categories}
@@ -1004,7 +993,7 @@ export default function FamilyMealPlanStoreModeRoute({
                     recentlyAddedSourceKey={recentlyAddedSourceKey}
                     selectedStoreId={loaderData.selectedStore?.id}
                   />
-                </article>
+                </details>
               ))
             ) : deprioritizeBought ? (
               <article className={`${storeModeSurfaceCardClass} p-6`}>
@@ -1177,24 +1166,43 @@ function getStoreModeNoticeContent(notice: StoreModeNotice) {
   }
 }
 
-function buildStoreModeRedirect({
+function buildFamilyStoreModeRedirect({
   familyId,
-  mealPlanId,
   notice,
   request,
 }: {
   familyId: string;
-  mealPlanId: string;
   notice: StoreModeNotice;
   request: Request;
 }) {
-  const url = new URL(
-    `/families/${familyId}/meal-plans/${mealPlanId}/store-mode`,
-    request.url,
-  );
+  const url = new URL(`/families/${familyId}/store-mode`, request.url);
   url.searchParams.set("notice", notice);
 
   return Response.redirect(url, 302);
+}
+
+async function resolveStoreModeAnchorMealPlanId({
+  familyId,
+  formData,
+}: {
+  familyId: string;
+  formData: FormData;
+}) {
+  const mealPlanIdFromForm = String(formData.get("mealPlanId") ?? "").trim();
+
+  if (mealPlanIdFromForm) {
+    return mealPlanIdFromForm;
+  }
+
+  const anchorMealPlan = await resolveStoreModeAnchorMealPlan({
+    familyId,
+  });
+
+  if (!anchorMealPlan) {
+    throw buildMealPlanNotFoundResponse();
+  }
+
+  return anchorMealPlan.id;
 }
 
 function StoreModeItemGrid<

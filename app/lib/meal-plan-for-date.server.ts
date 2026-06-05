@@ -1,6 +1,10 @@
 import { db } from "./db.server";
 import { formatDateOnly } from "./meal-plan-dates";
 
+const storeModeAnchorMealPlanSelect = {
+  id: true,
+} as const;
+
 export const FAMILY_SHOPPING_LIST_MODES = ["GLOBAL", "COMBINED"] as const;
 
 const mealPlanForDateSelect = {
@@ -41,6 +45,26 @@ export async function findMealPlanCoveringDate({
         lte: dateAtUtcMidnight,
       },
     },
+  });
+}
+
+export async function resolveStoreModeAnchorMealPlan({
+  familyId,
+}: {
+  familyId: string;
+}): Promise<{ id: string } | null> {
+  const todayMealPlan = await findMealPlanCoveringDate({
+    familyId,
+  });
+
+  if (todayMealPlan) {
+    return { id: todayMealPlan.id };
+  }
+
+  return db.mealPlan.findFirst({
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    select: storeModeAnchorMealPlanSelect,
+    where: { familyId },
   });
 }
 

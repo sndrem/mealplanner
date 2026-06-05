@@ -617,7 +617,7 @@ export default function FamilyMealPlanRoute({
                 </Link>
                 <Link
                   className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                  to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/store-mode`}
+                  to={`/families/${loaderData.family.id}/store-mode`}
                 >
                   Åpne butikkmodus
                 </Link>
