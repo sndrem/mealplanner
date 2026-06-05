@@ -5,6 +5,7 @@ export type StoreModeItemSource = ShoppingItemSource | "FAMILY";
 export interface StoreModeToggleOp {
   checked: boolean;
   expectedUpdatedAt: string;
+  mealPlanId?: string | null;
   sourceKey: string;
   sourceType: StoreModeItemSource;
 }
@@ -12,6 +13,7 @@ export interface StoreModeToggleOp {
 export interface StoreModeToggleItem {
   checked: boolean;
   collaborationVersion: string;
+  mealPlanId?: string | null;
   overrideVersion?: string;
   sourceKey: string;
   sourceType: StoreModeItemSource;
@@ -31,12 +33,10 @@ const STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX =
 
 export function buildStoreModeViewStorageKey({
   familyId,
-  mealPlanId,
 }: {
   familyId: string;
-  mealPlanId: string;
 }) {
-  return `${STORE_MODE_VIEW_KEY_PREFIX}:${familyId}:${mealPlanId}`;
+  return `${STORE_MODE_VIEW_KEY_PREFIX}:${familyId}`;
 }
 
 export function readStoreModeShoppingView(
@@ -76,12 +76,10 @@ export function writeStoreModeShoppingView(
 
 export function buildStoreModeDeprioritizeBoughtStorageKey({
   familyId,
-  mealPlanId,
 }: {
   familyId: string;
-  mealPlanId: string;
 }) {
-  return `${STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX}:${familyId}:${mealPlanId}`;
+  return `${STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX}:${familyId}`;
 }
 
 export function readStoreModeDeprioritizeBought(storageKey: string): boolean {
@@ -169,13 +167,11 @@ export function partitionStoreModeSections<
 export function buildStoreModeQueueStorageKey({
   activeShoppingDate,
   familyId,
-  mealPlanId,
 }: {
   activeShoppingDate: string;
   familyId: string;
-  mealPlanId: string;
 }) {
-  return `${STORE_MODE_QUEUE_KEY_PREFIX}:${familyId}:${mealPlanId}:${activeShoppingDate}`;
+  return `${STORE_MODE_QUEUE_KEY_PREFIX}:${familyId}:${activeShoppingDate}`;
 }
 
 export function readStoreModeToggleQueue(storageKey: string): StoreModeToggleOp[] {
@@ -282,7 +278,8 @@ export function areToggleQueuesEqual(
       op.sourceKey === other.sourceKey &&
       op.sourceType === other.sourceType &&
       op.checked === other.checked &&
-      op.expectedUpdatedAt === other.expectedUpdatedAt
+      op.expectedUpdatedAt === other.expectedUpdatedAt &&
+      (op.mealPlanId ?? null) === (other.mealPlanId ?? null)
     );
   });
 }

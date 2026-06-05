@@ -159,6 +159,8 @@ describe("family meal plan store mode route", () => {
               },
               sourceKey: "entry-1:ingredient-1",
               collaborationVersion: "",
+              mealPlanId: "meal-plan-1",
+              mealPlanTitle: "Langhelg",
               preferredStoreConflict: false,
         sourceType: "GENERATED",
               unit: "stk",
@@ -170,6 +172,13 @@ describe("family meal plan store mode route", () => {
         id: "family-1",
         name: "Solberg",
       },
+      includedMealPlans: [
+        {
+          id: "meal-plan-1",
+          status: "DRAFT",
+          title: "Langhelg",
+        },
+      ],
       laterItems: [],
       mealPlan: {
         activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
@@ -250,10 +259,19 @@ describe("family meal plan store mode route", () => {
       "2026-05-23",
     ]);
     expect(result.mealPlan.activeShoppingDate).toBe("2026-05-16");
+    expect(result.includedMealPlans).toEqual([
+      {
+        id: "meal-plan-1",
+        status: "DRAFT",
+        title: "Langhelg",
+      },
+    ]);
     expect(result.dueSectionGroups[0]?.items[0]).toEqual(
       expect.objectContaining({
         firstDate: "2026-05-15",
         lastDate: "2026-05-15",
+        mealPlanId: "meal-plan-1",
+        mealPlanTitle: "Langhelg",
         name: "Paprika",
       }),
     );
@@ -312,6 +330,8 @@ describe("family meal plan store mode route", () => {
         category: { id: "category-dairy", name: "Meieri" },
         checked: false,
         collaborationVersion: "2026-05-31T00:00:00.000Z",
+        mealPlanId: null,
+        mealPlanTitle: null,
         name: "Melk",
         note: null,
         preferredStore: null,
@@ -358,6 +378,8 @@ describe("family meal plan store mode route", () => {
         category: { id: "category-dairy", name: "Meieri" },
         checked: false,
         collaborationVersion: "2026-05-31T00:00:00.000Z",
+        mealPlanId: null,
+        mealPlanTitle: null,
         name: "Melk",
         note: null,
         preferredStore: null,
@@ -466,6 +488,8 @@ describe("family meal plan store mode route", () => {
       category: { id: "category-produce", name: "Frukt og gront" },
       checked: false,
       collaborationVersion: "2026-05-31T00:00:00.000Z",
+      mealPlanId: null,
+      mealPlanTitle: null,
       name: "Bananer",
       note: null,
       preferredStore: null,
@@ -517,6 +541,8 @@ describe("family meal plan store mode route", () => {
         category: { id: "category-produce", name: "Frukt og gront" },
         checked: false,
         collaborationVersion: "2026-05-31T00:00:00.000Z",
+        mealPlanId: null,
+        mealPlanTitle: null,
         name: "Bananer",
         note: null,
         preferredStore: null,
@@ -548,6 +574,8 @@ describe("family meal plan store mode route", () => {
       category: { id: "category-produce", name: "Frukt og gront" },
       checked: false,
       collaborationVersion: "2026-05-31T00:00:00.000Z",
+      mealPlanId: "meal-plan-2",
+      mealPlanTitle: "Neste uke",
       name: "Bananer",
       note: null,
       overrideVersion: "",
@@ -569,6 +597,7 @@ describe("family meal plan store mode route", () => {
     formData.set("preferredStoreId", "");
     formData.set("quantity", "2 kg");
     formData.set("buyOnDate", "");
+    formData.set("itemMealPlanId", "meal-plan-2");
 
     const result = await action({
       params: {
@@ -582,7 +611,7 @@ describe("family meal plan store mode route", () => {
       expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
       familyId: "family-1",
       manualItemId: "manual-item-1",
-      mealPlanId: "meal-plan-1",
+      mealPlanId: "meal-plan-2",
       userId: "user-1",
       values: {
         buyOnDate: "",
@@ -600,6 +629,8 @@ describe("family meal plan store mode route", () => {
         category: { id: "category-produce", name: "Frukt og gront" },
         checked: false,
         collaborationVersion: "2026-05-31T00:00:00.000Z",
+        mealPlanId: "meal-plan-2",
+        mealPlanTitle: "Neste uke",
         name: "Bananer",
         note: null,
         overrideVersion: "",
@@ -610,6 +641,43 @@ describe("family meal plan store mode route", () => {
         sourceKey: "manual-item-1",
         sourceType: "MANUAL",
       },
+      ok: true,
+    });
+  });
+
+  it("uses itemMealPlanId when toggling meal-plan shopping items", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(toggleShoppingItemChecked).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "toggle-shopping-item-checked");
+    formData.set("sourceKey", "entry-2:ingredient-2");
+    formData.set("sourceType", "GENERATED");
+    formData.set("checked", "true");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+    formData.set("itemMealPlanId", "meal-plan-2");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(undefined, formData),
+    });
+
+    expect(toggleShoppingItemChecked).toHaveBeenCalledWith({
+      checked: true,
+      expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-2",
+      sourceKey: "entry-2:ingredient-2",
+      sourceType: "GENERATED",
+      userId: "user-1",
+    });
+    expect(result).toEqual({
+      intent: "toggle-shopping-item-checked",
       ok: true,
     });
   });

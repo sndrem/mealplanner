@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Station detail — readability proposals</title>
+    <style>
+      :root {
+        --bg: #f4f6f8;
+        --surface: #fff;
+        --text: #1a2332;
+        --muted: #5c6b7a;
+        --border: #d8e0e8;
+        --accent: #0d5c8c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+        padding: 2rem 1.5rem 3rem;
+      }
+      .wrap {
+        max-width: 42rem;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 650;
+        margin: 0 0 0.35rem;
+      }
+      .lead {
+        color: var(--muted);
+        margin: 0 0 2rem;
+        font-size: 0.95rem;
+      }
+      nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      a.card-link {
+        display: block;
+        padding: 1rem 1.15rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        text-decoration: none;
+        color: inherit;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      a.card-link:hover {
+        border-color: var(--accent);
+        box-shadow: 0 4px 14px rgba(13, 92, 140, 0.1);
+      }
+      a.card-link strong {
+        display: block;
+        color: var(--accent);
+        font-size: 1.05rem;
+        margin-bottom: 0.2rem;
+      }
+      a.card-link span {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+      .compare {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+      }
+      a.compare-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-weight: 600;
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a.compare-link:hover {
+        text-decoration: underline;
+      }
+      .back {
+        margin-top: 2rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Station detail — readability proposals</h1>
+      <p class="lead">
+        Three standalone layouts for the sample/station panel. Same hardcoded data in each;
+        empty fields are handled differently per design.
+      </p>
+      <nav>
+        <a class="card-link" href="proposal-1-cards.html">
+          <strong>Proposal 1 — Card sections</strong>
+          <span>Side-by-side start/stop cards, metadata grid, prominent footer actions.</span>
+        </a>
+        <a class="card-link" href="proposal-2-typography.html">
+          <strong>Proposal 2 — Typography &amp; rhythm</strong>
+          <span>Definition-list layout, grouped coordinates, minimal chrome.</span>
+        </a>
+        <a class="card-link" href="proposal-3-timeline.html">
+          <strong>Proposal 3 — Timeline &amp; highlights</strong>
+          <span>Start→stop flow, stat chips for key numbers, notes callout.</span>
+        </a>
+      </nav>
+      <div class="compare">
+        <a class="compare-link" href="compare-all.html">Compare all three side by side →</a>
+      </div>
+      <p class="back">Folder: <code>temp-delete-later/station-detail-proposals/</code></p>
+    </div>
+  </body>
+</html>

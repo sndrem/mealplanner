@@ -26,7 +26,6 @@ import {
 const storageKey = buildStoreModeQueueStorageKey({
   activeShoppingDate: "2026-05-16",
   familyId: "family-1",
-  mealPlanId: "meal-plan-1",
 });
 
 const sampleItem = {
@@ -46,13 +45,22 @@ describe("shopping-store-mode-client", () => {
       buildStoreModeQueueStorageKey({
         activeShoppingDate: "2026-05-16",
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       }),
     ).not.toBe(
       buildStoreModeQueueStorageKey({
         activeShoppingDate: "2026-05-17",
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
+      }),
+    );
+    expect(
+      buildStoreModeQueueStorageKey({
+        activeShoppingDate: "2026-05-16",
+        familyId: "family-1",
+      }),
+    ).not.toBe(
+      buildStoreModeQueueStorageKey({
+        activeShoppingDate: "2026-05-16",
+        familyId: "family-2",
       }),
     );
   });
@@ -246,16 +254,14 @@ describe("shopping-store-mode-client", () => {
     expect(readStoreModeToggleQueue(storageKey)).toEqual([]);
   });
 
-  it("builds isolated view storage keys per meal plan", () => {
+  it("builds isolated view storage keys per family", () => {
     expect(
       buildStoreModeViewStorageKey({
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       }),
     ).not.toBe(
       buildStoreModeViewStorageKey({
-        familyId: "family-1",
-        mealPlanId: "meal-plan-2",
+        familyId: "family-2",
       }),
     );
   });
@@ -263,7 +269,6 @@ describe("shopping-store-mode-client", () => {
   it("defaults shopping view to list", () => {
     const viewStorageKey = buildStoreModeViewStorageKey({
       familyId: "family-1",
-      mealPlanId: "meal-plan-1",
     });
 
     expect(readStoreModeShoppingView(viewStorageKey)).toBe("list");
@@ -272,7 +277,6 @@ describe("shopping-store-mode-client", () => {
   it("persists and reads shopping view preference", () => {
     const viewStorageKey = buildStoreModeViewStorageKey({
       familyId: "family-1",
-      mealPlanId: "meal-plan-1",
     });
 
     writeStoreModeShoppingView(viewStorageKey, "grid");
@@ -283,7 +287,6 @@ describe("shopping-store-mode-client", () => {
   it("falls back to list for invalid stored shopping views", () => {
     const viewStorageKey = buildStoreModeViewStorageKey({
       familyId: "family-1",
-      mealPlanId: "meal-plan-1",
     });
 
     window.localStorage.setItem(viewStorageKey, "table");
@@ -291,16 +294,14 @@ describe("shopping-store-mode-client", () => {
     expect(readStoreModeShoppingView(viewStorageKey)).toBe("list");
   });
 
-  it("builds isolated deprioritize-bought storage keys per meal plan", () => {
+  it("builds isolated deprioritize-bought storage keys per family", () => {
     expect(
       buildStoreModeDeprioritizeBoughtStorageKey({
         familyId: "family-1",
-        mealPlanId: "meal-plan-1",
       }),
     ).not.toBe(
       buildStoreModeDeprioritizeBoughtStorageKey({
-        familyId: "family-1",
-        mealPlanId: "meal-plan-2",
+        familyId: "family-2",
       }),
     );
   });
@@ -308,7 +309,6 @@ describe("shopping-store-mode-client", () => {
   it("defaults deprioritize-bought preference to true", () => {
     const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
       familyId: "family-1",
-      mealPlanId: "meal-plan-1",
     });
 
     expect(readStoreModeDeprioritizeBought(storageKey)).toBe(true);
@@ -317,7 +317,6 @@ describe("shopping-store-mode-client", () => {
   it("persists and reads deprioritize-bought preference when enabled", () => {
     const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
       familyId: "family-1",
-      mealPlanId: "meal-plan-1",
     });
 
     writeStoreModeDeprioritizeBought(storageKey, true);
@@ -328,7 +327,6 @@ describe("shopping-store-mode-client", () => {
   it("persists and reads deprioritize-bought preference when disabled", () => {
     const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
       familyId: "family-1",
-      mealPlanId: "meal-plan-1",
     });
 
     writeStoreModeDeprioritizeBought(storageKey, false);
@@ -339,7 +337,6 @@ describe("shopping-store-mode-client", () => {
   it("falls back to true for invalid stored deprioritize-bought values", () => {
     const storageKey = buildStoreModeDeprioritizeBoughtStorageKey({
       familyId: "family-1",
-      mealPlanId: "meal-plan-1",
     });
 
     window.localStorage.setItem(storageKey, "yes");

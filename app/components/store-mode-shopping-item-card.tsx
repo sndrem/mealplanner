@@ -14,6 +14,8 @@ interface StoreModeShoppingItemCardBase {
   };
   checked: boolean;
   collaborationVersion: string;
+  mealPlanId?: string | null;
+  mealPlanTitle?: string | null;
   name: string;
   note: string | null;
   preferredStore: {
@@ -54,6 +56,7 @@ export type StoreModeCategoryUpdateRequest =
       buyOnDate: string;
       categoryId: string;
       expectedUpdatedAt: string;
+      mealPlanId: string;
       name: string;
       note: string;
       preferredStoreId: string;
@@ -150,10 +153,15 @@ export function StoreModeShoppingItemCard({
       }
 
       if (item.sourceType === "MANUAL") {
+        if (!item.mealPlanId) {
+          return;
+        }
+
         onUpdateCategory?.({
           buyOnDate: item.buyOnDate ?? "",
           categoryId: nextCategoryId,
           expectedUpdatedAt: item.collaborationVersion,
+          mealPlanId: item.mealPlanId,
           name: item.name,
           note: item.note ?? "",
           preferredStoreId: item.preferredStore?.id ?? "",
@@ -211,7 +219,14 @@ export function StoreModeShoppingItemCard({
       <div className="relative z-10 flex h-full min-h-[36px] min-w-0 flex-col pointer-events-none">
         <div className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5">
-            <span className={nameClass}>{item.name}</span>
+            <span className="min-w-0">
+              <span className={nameClass}>{item.name}</span>
+              {item.sourceType !== "FAMILY" && item.mealPlanTitle ? (
+                <span className="mt-0.5 block text-xs font-normal text-stone-500">
+                  {item.mealPlanTitle}
+                </span>
+              ) : null}
+            </span>
             {quantityBadge ? (
               showQuantityEdit ? (
                 <button
@@ -415,6 +430,10 @@ function formatStoreModeItemSourceLine(item: StoreModeShoppingItemCardItem) {
     return "Følger familien på tvers av ukeplaner.";
   }
 
+  const mealPlanAttribution = item.mealPlanTitle
+    ? `Ukeplan: ${item.mealPlanTitle}. `
+    : "";
+
   if (item.sourceType === "GENERATED") {
     const recipeAttribution =
       item.occurrenceCount === 1
@@ -422,13 +441,13 @@ function formatStoreModeItemSourceLine(item: StoreModeShoppingItemCardItem) {
         : formatGeneratedOccurrenceAttribution(item.occurrences);
 
     return item.occurrenceCount === 1
-      ? `Fra ${recipeAttribution} fram til ${formatDateLabel(item.lastDate)}.`
-      : `Brukt i ${recipeAttribution}.`;
+      ? `${mealPlanAttribution}Fra ${recipeAttribution} fram til ${formatDateLabel(item.lastDate)}.`
+      : `${mealPlanAttribution}Brukt i ${recipeAttribution}.`;
   }
 
   return item.buyOnDate
-    ? `Manuell vare planlagt for ${formatDateLabel(item.buyOnDate)}.`
-    : "Manuell vare uten spesifikk handledato.";
+    ? `${mealPlanAttribution}Manuell vare planlagt for ${formatDateLabel(item.buyOnDate)}.`
+    : `${mealPlanAttribution}Manuell vare uten spesifikk handledato.`;
 }
 
 function formatDateLabel(value: string) {

@@ -30,7 +30,6 @@ interface UseStoreModeToggleSyncOptions<T extends StoreModeToggleItem> {
   activeShoppingDate: string;
   familyId: string;
   loaderItems: T[];
-  mealPlanId: string;
   revalidate: () => void;
   toggleFetcher: FetcherWithComponents<StoreModeToggleActionData>;
 }
@@ -39,7 +38,6 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
   activeShoppingDate,
   familyId,
   loaderItems,
-  mealPlanId,
   revalidate,
   toggleFetcher,
 }: UseStoreModeToggleSyncOptions<T>) {
@@ -48,9 +46,8 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
       buildStoreModeQueueStorageKey({
         activeShoppingDate,
         familyId,
-        mealPlanId,
       }),
-    [activeShoppingDate, familyId, mealPlanId],
+    [activeShoppingDate, familyId],
   );
   const [queue, setQueue] = useState<StoreModeToggleOp[]>([]);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -100,6 +97,11 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
     formData.set("sourceType", nextOp.sourceType);
     formData.set("checked", nextOp.checked ? "true" : "false");
     formData.set("expectedUpdatedAt", nextOp.expectedUpdatedAt);
+
+    if (nextOp.mealPlanId) {
+      formData.set("itemMealPlanId", nextOp.mealPlanId);
+    }
+
     fetcher.submit(formData, { method: "post" });
   }, []);
 
@@ -250,6 +252,7 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
       const op: StoreModeToggleOp = {
         checked,
         expectedUpdatedAt: getToggleExpectedVersion(displayItem),
+        mealPlanId: item.mealPlanId ?? null,
         sourceKey: item.sourceKey,
         sourceType: item.sourceType,
       };

@@ -15,7 +15,6 @@ import { useStoreModeToggleSync } from "./use-store-mode-toggle-sync";
 const syncContext = {
   activeShoppingDate: "2026-05-16",
   familyId: "family-1",
-  mealPlanId: "meal-plan-1",
 };
 
 const storageKey = buildStoreModeQueueStorageKey(syncContext);
@@ -23,6 +22,7 @@ const storageKey = buildStoreModeQueueStorageKey(syncContext);
 const loaderItem = {
   checked: false,
   collaborationVersion: "2026-05-01T12:00:00.000Z",
+  mealPlanId: "meal-plan-2",
   sourceKey: "entry-1:ingredient-1",
   sourceType: ShoppingItemSource.GENERATED,
 } as const;
@@ -30,6 +30,7 @@ const loaderItem = {
 const queueOp = {
   checked: true,
   expectedUpdatedAt: "2026-05-01T12:00:00.000Z",
+  mealPlanId: "meal-plan-2",
   sourceKey: loaderItem.sourceKey,
   sourceType: loaderItem.sourceType,
 };
@@ -89,6 +90,23 @@ describe("useStoreModeToggleSync", () => {
   afterEach(() => {
     window.localStorage.clear();
     vi.clearAllMocks();
+  });
+
+  it("submits itemMealPlanId for meal-plan items", async () => {
+    writeStoreModeToggleQueue(storageKey, [queueOp]);
+
+    const { result } = renderHook(() => useToggleSyncTestHarness());
+
+    await waitFor(() => {
+      expect(result.current.submit).toHaveBeenCalled();
+    });
+
+    const submitCall = vi.mocked(result.current.submit).mock.calls.at(-1) as
+      | [FormData]
+      | undefined;
+
+    expect(submitCall?.[0]).toBeInstanceOf(FormData);
+    expect(submitCall?.[0].get("itemMealPlanId")).toBe("meal-plan-2");
   });
 
   it("drains the queue when the fetcher settles via loading to idle", async () => {

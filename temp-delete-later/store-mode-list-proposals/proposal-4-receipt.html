@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forslag 4 — Kvitteringsstripe</title>
+    <style>
+      :root {
+        --paper: #f8f6f2;
+        --ink: #1c1917;
+        --fade: #78716c;
+        --dash: #a8a29e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "SF Mono", "Menlo", "Consolas", monospace;
+        background: #d6d3d1;
+        color: var(--ink);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .nav-top {
+        padding: 0.65rem 1rem;
+        font-family: system-ui, sans-serif;
+        font-size: 0.78rem;
+      }
+      .nav-top a {
+        color: #57534e;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .tape {
+        max-width: 340px;
+        margin: 0 auto;
+        min-height: 100vh;
+        background: var(--paper);
+        padding: 1rem 1.1rem 5.5rem;
+        box-shadow: 0 2px 24px rgba(0, 0, 0, 0.12);
+      }
+      .tape::before,
+      .tape::after {
+        content: "";
+        display: block;
+        height: 8px;
+        margin: 0 -1.1rem 0.75rem;
+        background: repeating-linear-gradient(
+          -45deg,
+          transparent,
+          transparent 4px,
+          #e7e5e4 4px,
+          #e7e5e4 8px
+        );
+      }
+      .tape::after {
+        margin: 1.5rem -1.1rem 0;
+      }
+      .center {
+        text-align: center;
+      }
+      .meta h1 {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .meta .sub {
+        margin: 0.35rem 0 0;
+        color: var(--fade);
+        font-size: 11px;
+      }
+      .meta select {
+        font: inherit;
+        border: none;
+        background: transparent;
+        color: var(--ink);
+        text-decoration: underline;
+        text-decoration-style: dotted;
+      }
+      .rule {
+        border: none;
+        border-top: 1px dashed var(--dash);
+        margin: 0.65rem 0;
+      }
+      .rule.solid {
+        border-top-style: solid;
+        border-color: var(--ink);
+      }
+      .progress-line {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+      }
+      .progress-line .bar {
+        letter-spacing: -0.05em;
+        color: var(--fade);
+      }
+      .toolbar {
+        font-size: 11px;
+        color: var(--fade);
+      }
+      .toolbar b {
+        color: var(--ink);
+        font-weight: 700;
+      }
+      .section-hdr {
+        margin: 0.75rem 0 0.35rem;
+        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+      }
+      .section-hdr::before {
+        content: "[ ";
+      }
+      .section-hdr::after {
+        content: " ] " attr(data-count);
+        font-weight: 400;
+        letter-spacing: 0;
+        color: var(--fade);
+      }
+      .line {
+        display: grid;
+        grid-template-columns: 1.1rem 1fr auto;
+        gap: 0.35rem;
+        padding: 0.2rem 0;
+        align-items: start;
+      }
+      .line .box {
+        font-size: 10px;
+        line-height: 1;
+        padding-top: 0.1rem;
+      }
+      .line.checked .item-name {
+        text-decoration: line-through;
+        color: var(--fade);
+      }
+      .line .item-name {
+        font-weight: 600;
+        word-break: break-word;
+      }
+      .line .item-qty {
+        text-align: right;
+        white-space: nowrap;
+        color: var(--fade);
+      }
+      .line .meta-line {
+        grid-column: 2 / -1;
+        font-size: 10px;
+        color: var(--fade);
+        padding-bottom: 0.15rem;
+      }
+      .line .meta-line .hi {
+        color: #b45309;
+      }
+      .links {
+        text-align: center;
+        font-size: 10px;
+        margin-top: 0.35rem;
+      }
+      .links a {
+        color: var(--fade);
+        margin: 0 0.35rem;
+      }
+      .bought summary {
+        cursor: pointer;
+        font-weight: 700;
+        margin-top: 0.5rem;
+      }
+      .later .section-hdr {
+        margin-top: 1rem;
+      }
+      .quick-add {
+        position: fixed;
+        inset: auto 0 0;
+        padding: 0.5rem;
+        font-family: system-ui, sans-serif;
+      }
+      .quick-add .inner {
+        max-width: 340px;
+        margin: 0 auto;
+        background: var(--paper);
+        padding: 0.5rem;
+        text-align: center;
+        font-size: 11px;
+        border: 1px dashed var(--dash);
+        font-family: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="nav-top"><a href="index.html">← Alle forslag</a></p>
+    <div class="tape">
+      <header class="meta center">
+        <h1>UKE 12 – MIDDAGER</h1>
+        <p class="sub">
+          <select><option>KIWI</option></select>
+          ·
+          <select><option>04.JUN</option></select>
+        </p>
+      </header>
+      <hr class="rule solid" />
+      <div class="progress-line">
+        <span>FREMDRIFT</span>
+        <span class="bar">█████░░░░░░░</span>
+        <span>5/12</span>
+      </div>
+      <p class="links">
+        <a href="#">HANDLELISTE</a>
+        <a href="#">BUTIKKER</a>
+      </p>
+      <hr class="rule" />
+      <p class="toolbar"><b>VARER AA HANDLE</b> · FLYTT KJØPTE NED · LISTE/RUTENETT</p>
+      <hr class="rule" />
+
+      <p class="section-hdr" data-count="x4">FRUKT OG GRONT</p>
+      <div class="line">
+        <span class="box">[ ]</span>
+        <span class="item-name">Bananer</span>
+        <span class="item-qty">6 stk</span>
+      </div>
+      <div class="line">
+        <span class="box">[ ]</span>
+        <span class="item-name">Spinat</span>
+        <span class="item-qty">—</span>
+        <span class="meta-line">! NOTAT: babyspinat</span>
+      </div>
+      <div class="line">
+        <span class="box">[ ]</span>
+        <span class="item-name">Tomater</span>
+        <span class="item-qty">500g</span>
+        <span class="meta-line">* 2 oppskr</span>
+      </div>
+
+      <p class="section-hdr" data-count="x3">MEIERI</p>
+      <div class="line">
+        <span class="box">[ ]</span>
+        <span class="item-name">Melk</span>
+        <span class="item-qty">1.5L*</span>
+        <span class="meta-line">familie · seksjon▼</span>
+      </div>
+      <div class="line">
+        <span class="box">[ ]</span>
+        <span class="item-name">Norvegia</span>
+        <span class="item-qty">200g</span>
+        <span class="meta-line"><span class="hi">! REMA</span></span>
+      </div>
+
+      <p class="section-hdr" data-count="x2">TORRVARER</p>
+      <div class="line">
+        <span class="box">[ ]</span>
+        <span class="item-name">Pasta</span>
+        <span class="item-qty">500g</span>
+      </div>
+      <div class="line">
+        <span class="box">[ ]</span>
+        <span class="item-name">Havregryn</span>
+        <span class="item-qty">1pk</span>
+      </div>
+
+      <hr class="rule" />
+      <details class="bought" open>
+        <summary>KJOPT (2)</summary>
+        <div class="line checked">
+          <span class="box">[x]</span>
+          <span class="item-name">Epler</span>
+          <span class="item-qty">4stk</span>
+        </div>
+        <div class="line checked">
+          <span class="box">[x]</span>
+          <span class="item-name">Yoghurt</span>
+          <span class="item-qty">4stk</span>
+        </div>
+      </details>
+
+      <section class="later">
+        <hr class="rule" />
+        <p class="section-hdr" data-count="">FOR HANDLEDATO</p>
+        <div class="line">
+          <span class="box"> </span>
+          <span class="item-name">Kyllingfilet</span>
+          <span class="item-qty">08.jun</span>
+        </div>
+        <div class="line">
+          <span class="box"> </span>
+          <span class="item-name">Olivenolje</span>
+          <span class="item-qty">alltid</span>
+        </div>
+      </section>
+
+      <footer class="quick-add">
+        <div class="inner">&gt;&gt; LEGG TIL VARE &lt;&lt;</div>
+      </footer>
+    </div>
+  </body>
+</html>

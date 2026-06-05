@@ -2,33 +2,33 @@
 
 ## Current Objective
 
-Issue #143 — PR ready on `issue/143-store-mode-category`: change shopping section/category from store mode without leaving the page.
+Issue #145 — PR ready on `issue/145-merged-store-list`: store mode shows one merged shopping list across all non-past family meal plans, filtered by the anchor plan’s shopping date.
 
 ## Completed
 
-- In-place category editor on `StoreModeShoppingItemCard` for FAMILY and MANUAL items (info panel).
-- Auto-save on dropdown change; item relocates to the correct store-mode section optimistically.
-- Store-mode actions: `update-family-shopping-item-category`, `update-manual-shopping-item-category`.
-- Client helper `relocateProjectedItemInSectionGroups`; exported `parseManualShoppingItemValues`.
-- Details panel width fix (`open:w-1/2`); category select at 50% card width when open.
+- Refactored `getMealPlanStoreModeData` to aggregate due/later items from every non-past meal plan (draft + approved) using the anchor plan’s `activeShoppingDate`.
+- Stamped `mealPlanId` / `mealPlanTitle` on generated and manual projected items for traceability and per-plan actions.
+- Store-mode toggle/category actions accept `itemMealPlanId`; toggle queue and UI preferences are family-scoped.
+- Header and item cards communicate combined-list context and source meal plan.
 
 ## Files To Read First
 
-- `app/components/store-mode-shopping-item-card.tsx` — category UI and auto-save
-- `app/routes/family-meal-plan-store-mode.tsx` — loader categories, actions, fetcher regroup
-- `app/lib/shopping-list-client.ts` — `relocateProjectedItemInSectionGroups`
+- `app/lib/shopping.server.ts` — multi-plan aggregation, `buildStoreModeItemsForPlan`, family dedup in store mode
+- `app/routes/family-meal-plan-store-mode.tsx` — loader shape, `itemMealPlanId` actions, combined header
+- `app/lib/use-store-mode-toggle-sync.ts` — family-scoped queue key and `mealPlanId` on toggle ops
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (52 files, 311 tests)
+- `npm run test:run` — passed (52 files, 315 tests)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Manual QA in store mode: quick-add item in wrong section → change dropdown → confirm move; verify on mobile grid and list layouts.
+- Manual QA: two overlapping meal plans in store mode; toggle/check items from each plan; change shopping date on anchor and confirm list updates.
+- Local `vite.config.ts` port change (5173 → 5174) left unstaged — unrelated to this issue.
 
 ## Next Step
 
-Merge PR; issue closes via `Closes #143`.
+Merge PR; issue closes via `Closes #145`.

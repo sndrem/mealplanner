@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forslag 3 — Punktum-ledere</title>
+    <style>
+      :root {
+        --cream: #faf8f5;
+        --ink: #292524;
+        --muted: #a8a29e;
+        --dot: #d6d3d1;
+        --store-text: #57534e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        background: #e7e5e4;
+        color: var(--ink);
+      }
+      .nav-top {
+        padding: 0.65rem 1rem;
+        font-family: system-ui, sans-serif;
+        font-size: 0.78rem;
+      }
+      .nav-top a {
+        color: #a89988;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .page {
+        max-width: 420px;
+        margin: 0 auto;
+        min-height: 100vh;
+        background: var(--cream);
+        padding: 0 1.25rem 5.5rem;
+        font-size: 1rem;
+      }
+      .meta {
+        padding: 1.1rem 0 0.85rem;
+        font-family: system-ui, sans-serif;
+        font-size: 0.78rem;
+        border-bottom: 1px solid var(--dot);
+      }
+      .meta h1 {
+        margin: 0 0 0.4rem;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 650;
+      }
+      .meta .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        color: var(--muted);
+      }
+      .meta select {
+        font: inherit;
+        border: none;
+        background: transparent;
+        color: var(--ink);
+        font-weight: 500;
+      }
+      .meta .progress {
+        color: var(--store-text);
+        font-weight: 700;
+      }
+      .toolbar {
+        font-family: system-ui, sans-serif;
+        padding: 0.85rem 0 0.5rem;
+        font-size: 0.72rem;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+      }
+      .toolbar strong {
+        color: var(--ink);
+        font-size: 0.9rem;
+        display: block;
+        margin-bottom: 0.15rem;
+      }
+      .aisle {
+        margin-top: 1.1rem;
+      }
+      .aisle h3 {
+        margin: 0 0 0.55rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        font-family: system-ui, sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--store-text);
+      }
+      .aisle h3 span {
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: 0;
+        color: var(--muted);
+      }
+      .row-line {
+        display: flex;
+        align-items: baseline;
+        gap: 0.35rem;
+        padding: 0.4rem 0;
+        min-height: 2rem;
+      }
+      .row-line .tap {
+        flex-shrink: 0;
+        width: 1rem;
+        height: 1rem;
+        border: 1.5px solid var(--ink);
+        border-radius: 2px;
+        margin-top: 0.15rem;
+        align-self: flex-start;
+      }
+      .row-line.checked .tap {
+        background: var(--ink);
+      }
+      .row-line.checked .name {
+        text-decoration: line-through;
+        color: var(--muted);
+      }
+      .row-line .flex {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: baseline;
+        gap: 0.25rem;
+      }
+      .row-line .name {
+        flex-shrink: 0;
+        font-weight: 600;
+        font-size: 1.02rem;
+      }
+      .row-line .dots {
+        flex: 1;
+        min-width: 1.5rem;
+        border-bottom: 1px dotted var(--dot);
+        margin: 0 0.15rem 0.2rem;
+        height: 0.55em;
+      }
+      .row-line .qty {
+        flex-shrink: 0;
+        font-variant-numeric: tabular-nums;
+        font-size: 0.95rem;
+        color: var(--store-text);
+      }
+      .footnote {
+        margin: 0 0 0 1.35rem;
+        padding: 0 0 0.35rem;
+        font-family: system-ui, sans-serif;
+        font-size: 0.68rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .footnote .tag {
+        margin-right: 0.5rem;
+      }
+      .footnote .tag.warn {
+        color: #b45309;
+      }
+      details.footnote-block {
+        margin-left: 1.35rem;
+        font-family: system-ui, sans-serif;
+        font-size: 0.68rem;
+      }
+      details.footnote-block summary {
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .bought {
+        margin-top: 1.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--dot);
+        font-family: system-ui, sans-serif;
+      }
+      .bought summary {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .later {
+        margin-top: 1.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--dot);
+        font-family: system-ui, sans-serif;
+        font-size: 0.78rem;
+      }
+      .later h3 {
+        margin: 0 0 0.45rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+      .later .row-line .dots {
+        max-width: 4rem;
+      }
+      .quick-add {
+        position: fixed;
+        inset: auto 0 0;
+        padding: 0.65rem 1.25rem 1rem;
+        font-family: system-ui, sans-serif;
+        background: linear-gradient(transparent, var(--cream) 40%);
+      }
+      .quick-add .inner {
+        max-width: 420px;
+        margin: 0 auto;
+        text-align: center;
+        font-size: 0.82rem;
+        color: var(--muted);
+        border-top: 1px solid var(--store-text);
+        padding-top: 0.65rem;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="nav-top"><a href="index.html">← Alle forslag</a></p>
+    <div class="page">
+      <header class="meta">
+        <h1>Uke 12 – middager</h1>
+        <div class="row">
+          <select><option>Kiwi</option></select>
+          <select><option>4. juni</option></select>
+          <span class="progress">5 / 12</span>
+          <a href="#" style="margin-left: auto; color: var(--muted)">Handleliste</a>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <div><strong>Varer å handle</strong> Flytt kjøpte ned</div>
+        <div>Liste · <strong>Rutenett</strong></div>
+      </div>
+
+      <section class="aisle">
+        <h3>Frukt og grønt <span>— 4 varer</span></h3>
+        <div class="row-line">
+          <span class="tap"></span>
+          <div class="flex">
+            <span class="name">Bananer</span>
+            <span class="dots" aria-hidden="true"></span>
+            <span class="qty">6 stk</span>
+          </div>
+        </div>
+        <p class="footnote"><span class="tag">Smoothie-bowl</span></p>
+
+        <div class="row-line">
+          <span class="tap"></span>
+          <div class="flex"><span class="name">Spinat</span><span class="dots"></span><span class="qty">—</span></div>
+        </div>
+        <p class="footnote">Notat: Babyspinat · Pasta primavera</p>
+
+        <div class="row-line">
+          <span class="tap"></span>
+          <div class="flex">
+            <span class="name">Tomater</span>
+            <span class="dots"></span>
+            <span class="qty">500 g</span>
+          </div>
+        </div>
+        <p class="footnote"><span class="tag">2 oppskrifter</span></p>
+      </section>
+
+      <section class="aisle">
+        <h3>Meieri <span>— 3 varer</span></h3>
+        <div class="row-line">
+          <span class="tap"></span>
+          <div class="flex">
+            <span class="name">Melk</span>
+            <span class="dots"></span>
+            <span class="qty">1,5 L ✎</span>
+          </div>
+        </div>
+        <details class="footnote-block">
+          <summary>Familievare · detaljer</summary>
+          Endre seksjon · Hurtiglegg til
+        </details>
+
+        <div class="row-line">
+          <span class="tap"></span>
+          <div class="flex">
+            <span class="name">Norvegia</span>
+            <span class="dots"></span>
+            <span class="qty">200 g</span>
+          </div>
+        </div>
+        <p class="footnote"><span class="tag warn">Foretrekker Rema</span></p>
+      </section>
+
+      <section class="aisle">
+        <h3>Tørrvarer <span>— 2 varer</span></h3>
+        <div class="row-line">
+          <span class="tap"></span>
+          <div class="flex">
+            <span class="name">Pasta</span>
+            <span class="dots"></span>
+            <span class="qty">500 g</span>
+          </div>
+        </div>
+        <div class="row-line">
+          <span class="tap"></span>
+          <div class="flex">
+            <span class="name">Havregryn</span>
+            <span class="dots"></span>
+            <span class="qty">1 pk</span>
+          </div>
+        </div>
+      </section>
+
+      <details class="bought" open>
+        <summary>Kjøpt (2)</summary>
+        <div class="row-line checked" style="margin-top: 0.5rem">
+          <span class="tap"></span>
+          <div class="flex">
+            <span class="name">Epler</span>
+            <span class="dots"></span>
+            <span class="qty">4 stk</span>
+          </div>
+        </div>
+        <div class="row-line checked">
+          <span class="tap"></span>
+          <div class="flex">
+            <span class="name">Yoghurt naturell</span>
+            <span class="dots"></span>
+            <span class="qty">4 stk</span>
+          </div>
+        </div>
+      </details>
+
+      <section class="later">
+        <h3>Før handledato</h3>
+        <div class="row-line" style="padding: 0.25rem 0">
+          <div class="flex" style="margin-left: 0">
+            <span class="name" style="font-weight: 500; font-size: 0.88rem">Kyllingfilet</span>
+            <span class="dots"></span>
+            <span class="qty" style="font-size: 0.82rem">8. juni</span>
+          </div>
+        </div>
+        <div class="row-line" style="padding: 0.25rem 0">
+          <div class="flex">
+            <span class="name" style="font-weight: 500; font-size: 0.88rem">Olivenolje</span>
+            <span class="dots"></span>
+            <span class="qty" style="font-size: 0.82rem">Alltid</span>
+          </div>
+        </div>
+      </section>
+
+      <footer class="quick-add">
+        <div class="inner">+ Legg til vare</div>
+      </footer>
+    </div>
+  </body>
+</html>
