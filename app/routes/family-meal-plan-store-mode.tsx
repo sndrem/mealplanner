@@ -171,6 +171,7 @@ export async function loader({
       items: section.items.map(serializeProjectedShoppingItem),
     })),
     family: result.family,
+    includedMealPlans: result.includedMealPlans,
     laterItems: result.laterItems.map(serializeProjectedShoppingItem),
     mealPlan: {
       ...result.mealPlan,
@@ -440,11 +441,12 @@ export async function action({
       } satisfies StoreModeActionData;
     }
 
+    const itemMealPlanId = resolveItemMealPlanId(formData, mealPlanId);
     const result = await updateManualShoppingItem({
       expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
       familyId,
       manualItemId,
-      mealPlanId,
+      mealPlanId: itemMealPlanId,
       userId: user.id,
       values: parseManualShoppingItemValues(formData),
     });
@@ -471,7 +473,7 @@ export async function action({
     const item = await projectCreatedManualShoppingItem({
       familyId,
       manualItemId,
-      mealPlanId,
+      mealPlanId: itemMealPlanId,
     });
 
     if (!item) {
@@ -500,11 +502,12 @@ export async function action({
       } satisfies StoreModeActionData;
     }
 
+    const itemMealPlanId = resolveItemMealPlanId(formData, mealPlanId);
     const result = await toggleShoppingItemChecked({
       checked,
       expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
       familyId,
-      mealPlanId,
+      mealPlanId: itemMealPlanId,
       sourceKey,
       sourceType,
       userId: user.id,
@@ -647,6 +650,7 @@ export default function FamilyMealPlanStoreModeRoute({
 
       if (request.sourceType === "MANUAL") {
         formData.set("buyOnDate", request.buyOnDate);
+        formData.set("itemMealPlanId", request.mealPlanId);
       }
 
       categoryFetcher.submit(formData, { method: "post" });
@@ -728,7 +732,6 @@ export default function FamilyMealPlanStoreModeRoute({
       activeShoppingDate: loaderData.activeShoppingDate,
       familyId: loaderData.family.id,
       loaderItems: loaderDueItems,
-      mealPlanId: loaderData.mealPlan.id,
       revalidate: revalidator.revalidate,
       toggleFetcher,
     });
@@ -757,17 +760,15 @@ export default function FamilyMealPlanStoreModeRoute({
     () =>
       buildStoreModeViewStorageKey({
         familyId: loaderData.family.id,
-        mealPlanId: loaderData.mealPlan.id,
       }),
-    [loaderData.family.id, loaderData.mealPlan.id],
+    [loaderData.family.id],
   );
   const deprioritizeBoughtStorageKey = useMemo(
     () =>
       buildStoreModeDeprioritizeBoughtStorageKey({
         familyId: loaderData.family.id,
-        mealPlanId: loaderData.mealPlan.id,
       }),
-    [loaderData.family.id, loaderData.mealPlan.id],
+    [loaderData.family.id],
   );
   const [shoppingView, setShoppingView] = useState<StoreModeShoppingView>(() =>
     readStoreModeShoppingView(viewStorageKey),
@@ -831,9 +832,13 @@ export default function FamilyMealPlanStoreModeRoute({
     <main className={storeModePageClass}>
       <div className="mx-auto flex max-w-4xl flex-col gap-5">
         <section className={storeModeMetaStripClass}>
-          <h1 className="min-w-0 truncate font-semibold text-stone-950">
-            {loaderData.mealPlan.title}
-          </h1>
+          <div className="min-w-0">
+            <h1 className="truncate font-semibold text-stone-950">Butikkmodus</h1>
+            <p className="truncate text-xs text-stone-500">
+              Samlet fra {loaderData.includedMealPlans.length}{" "}
+              {loaderData.includedMealPlans.length === 1 ? "ukeplan" : "ukeplaner"}
+            </p>
+          </div>
           <span className="hidden text-stone-300 sm:inline" aria-hidden="true">
             ·
           </span>
@@ -1291,6 +1296,15 @@ function buildMealPlanNotFoundResponse() {
     status: 404,
     statusText: "Not Found",
   });
+}
+
+function resolveItemMealPlanId(
+  formData: FormData,
+  fallbackMealPlanId: string,
+) {
+  const value = String(formData.get("itemMealPlanId") ?? "").trim();
+
+  return value || fallbackMealPlanId;
 }
 
 function requireRouteParam(value: string | undefined, message: string) {

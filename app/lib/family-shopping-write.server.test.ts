@@ -173,6 +173,8 @@ describe("family-shopping-write.server", () => {
         category: { id: "category-other", name: "Annet" },
         checked: false,
         collaborationVersion: "2026-05-31T00:00:00.000Z",
+        mealPlanId: null,
+        mealPlanTitle: null,
         name: "Batterier",
         note: null,
         preferredStore: null,

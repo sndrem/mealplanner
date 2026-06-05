@@ -232,6 +232,8 @@ interface ProjectedShoppingItemBase {
   };
   checked: boolean;
   collaborationVersion: string;
+  mealPlanId: string | null;
+  mealPlanTitle: string | null;
   name: string;
   note: string | null;
   preferredStore: StoreSummary;
@@ -584,7 +586,7 @@ export async function projectCreatedManualShoppingItem({
   manualItemId: string;
   mealPlanId: string;
 }) {
-  const [stores, item, override] = await Promise.all([
+  const [stores, item, mealPlan, override] = await Promise.all([
     loadShoppingStoresForFamily(familyId),
     db.manualShoppingItem.findFirst({
       select: manualShoppingItemSelect,
@@ -594,6 +596,16 @@ export async function projectCreatedManualShoppingItem({
           familyId,
           id: mealPlanId,
         },
+      },
+    }),
+    db.mealPlan.findFirst({
+      select: {
+        id: true,
+        title: true,
+      },
+      where: {
+        familyId,
+        id: mealPlanId,
       },
     }),
     db.shoppingItemOverride.findFirst({
@@ -606,12 +618,13 @@ export async function projectCreatedManualShoppingItem({
     }),
   ]);
 
-  if (!item) {
+  if (!item || !mealPlan) {
     return null;
   }
 
   return projectSingleManualShoppingItemRow({
     item,
+    mealPlan,
     override,
     stores,
   });
@@ -825,101 +838,117 @@ export async function getMealPlanStoreModeData({
     userId,
   });
 
-  const [mealPlan, stores, selectedStorePreference, stockMatchSet, familyMealPlanRanges] =
-    await Promise.all([
-      db.mealPlan.findFirst({
-        select: shoppingMealPlanSelect,
-        where: {
-          familyId,
-          id: mealPlanId,
-        },
-      }),
-      db.store.findMany({
-        orderBy: [{ name: "asc" }],
-        select: shoppingStoreSelect,
-        where: {
-          OR: [{ familyId: null }, { familyId }],
-        },
-      }),
-      db.userStorePreference.findUnique({
-        select: {
-          selectedStoreId: true,
-        },
-        where: {
-          userId_familyId: {
-            familyId,
-            userId,
-          },
-        },
-      }),
-      getFamilyStockMatchSet(familyId),
-      db.mealPlan.findMany({
-        orderBy: [{ startDate: "asc" }, { id: "asc" }],
-        select: {
-          endDate: true,
-          startDate: true,
-        },
-        where: {
-          familyId,
-        },
-      }),
-    ]);
+  const todayAtUtcMidnight = getUtcToday();
 
-  if (!mealPlan) {
+  const [
+    anchorMealPlan,
+    includedMealPlans,
+    stores,
+    selectedStorePreference,
+    stockMatchSet,
+    familyMealPlanDateRanges,
+  ] = await Promise.all([
+    db.mealPlan.findFirst({
+      select: shoppingMealPlanSelect,
+      where: {
+        familyId,
+        id: mealPlanId,
+      },
+    }),
+    db.mealPlan.findMany({
+      orderBy: [{ startDate: "asc" }, { id: "asc" }],
+      select: shoppingMealPlanSelect,
+      where: {
+        endDate: {
+          gte: todayAtUtcMidnight,
+        },
+        familyId,
+      },
+    }),
+    db.store.findMany({
+      orderBy: [{ name: "asc" }],
+      select: shoppingStoreSelect,
+      where: {
+        OR: [{ familyId: null }, { familyId }],
+      },
+    }),
+    db.userStorePreference.findUnique({
+      select: {
+        selectedStoreId: true,
+      },
+      where: {
+        userId_familyId: {
+          familyId,
+          userId,
+        },
+      },
+    }),
+    getFamilyStockMatchSet(familyId),
+    db.mealPlan.findMany({
+      orderBy: [{ startDate: "asc" }, { id: "asc" }],
+      select: {
+        endDate: true,
+        startDate: true,
+      },
+      where: {
+        familyId,
+      },
+    }),
+  ]);
+
+  if (!anchorMealPlan) {
     throw new Response("Fant ikke ukeplanen.", {
       status: 404,
       statusText: "Not Found",
     });
   }
 
-  const includeDespiteStockKeys = buildIncludeDespiteStockKeys(
-    mealPlan.shoppingOverrides,
-  );
-  const generatedItems = projectGeneratedShoppingItems({
-    includeDespiteStockKeys,
-    mealPlan,
-    stockMatchSet,
-    stores,
+  const mealPlansForStoreMode = ensureAnchorMealPlanIncluded({
+    anchorMealPlan,
+    includedMealPlans,
   });
-  const manualItems = projectManualShoppingItems({
-    mealPlan,
-    stores,
-  });
-  const projectedItems = [...generatedItems, ...manualItems];
-  const activeShoppingDate = mealPlan.activeShoppingDate ?? mealPlan.startDate;
+  const activeShoppingDate =
+    anchorMealPlan.activeShoppingDate ?? anchorMealPlan.startDate;
   const selectedStore = resolveSelectedStoreSummary(
     stores,
     selectedStorePreference?.selectedStoreId ?? null,
   );
   const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
-  const todayAtUtcMidnight = getUtcToday();
-  const dueItems = projectedItems
-    .filter((item) =>
-      isProjectedItemInStoreModeTrip(
-        item,
-        activeShoppingDate,
-        mealPlan.endDate,
+  const aggregatedItems = mealPlansForStoreMode.reduce(
+    (accumulator, plan) => {
+      const planItems = buildStoreModeItemsForPlan({
+        globalShoppingDate: activeShoppingDate,
+        mealPlan: plan,
+        stockMatchSet,
+        stores,
         todayAtUtcMidnight,
-      ),
-    )
-    .sort((left, right) =>
-      compareProjectedItemsForStoreMode(
-        left,
-        right,
-        selectedStore,
-        storeSectionsByStoreId,
-      ),
-    );
-  const laterItems = projectedItems
-    .filter((item) =>
-      isProjectedItemBeforeShoppingDate(
-        item,
-        activeShoppingDate,
-        mealPlan.endDate,
-        todayAtUtcMidnight,
-      ),
-    )
-    .sort(compareProjectedItemsByRelevantDate);
+      });
+
+      accumulator.dueItems.push(...planItems.dueItems);
+      accumulator.laterItems.push(...planItems.laterItems);
+
+      return accumulator;
+    },
+    {
+      dueItems: [] as Array<
+        ProjectedGeneratedShoppingItem | ProjectedManualShoppingItem
+      >,
+      laterItems: [] as Array<
+        ProjectedGeneratedShoppingItem | ProjectedManualShoppingItem
+      >,
+    },
+  );
+  const dueItems = aggregatedItems.dueItems.sort((left, right) =>
+    compareProjectedItemsForStoreMode(
+      left,
+      right,
+      selectedStore,
+      storeSectionsByStoreId,
+    ),
+  );
+  const laterItems = aggregatedItems.laterItems.sort(
+    compareProjectedItemsByRelevantDate,
+  );
   const uncheckedFamilyItems = await loadFamilyShoppingItems({
     checked: false,
     familyId,
@@ -928,13 +957,20 @@ export async function getMealPlanStoreModeData({
     items: uncheckedFamilyItems,
     stores,
   });
-  const mergedDueItems = [...dueItems, ...familyDueItems].sort((left, right) =>
-    compareProjectedItemsForStoreMode(
-      left,
-      right,
-      selectedStore,
-      storeSectionsByStoreId,
-    ),
+  const familyKeys = new Set(
+    familyDueItems.map((item) => buildFamilyShoppingCrossSourceDedupKey(item)),
+  );
+  const dedupedMealPlanDueItems = dueItems.filter(
+    (item) => !familyKeys.has(buildFamilyShoppingCrossSourceDedupKey(item)),
+  );
+  const mergedDueItems = [...familyDueItems, ...dedupedMealPlanDueItems].sort(
+    (left, right) =>
+      compareProjectedItemsForStoreMode(
+        left,
+        right,
+        selectedStore,
+        storeSectionsByStoreId,
+      ),
   );
 
   return {
@@ -948,8 +984,13 @@ export async function getMealPlanStoreModeData({
       id: membership.family.id,
       name: membership.family.name,
     },
+    includedMealPlans: mealPlansForStoreMode.map((plan) => ({
+      id: plan.id,
+      status: plan.status,
+      title: plan.title,
+    })),
     laterItems,
-    mealPlan,
+    mealPlan: anchorMealPlan,
     progress: buildStoreModeProgress(mergedDueItems),
     selectedStore,
     stores: stores.map((store) => ({
@@ -957,8 +998,13 @@ export async function getMealPlanStoreModeData({
       name: store.name,
     })),
     userRole: membership.role,
-    selectableShoppingDates: unionMealPlanDateRanges(familyMealPlanRanges),
-    visibleDates: getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate),
+    selectableShoppingDates: unionMealPlanDateRanges(familyMealPlanDateRanges),
+    visibleDates: unionMealPlanDateRanges(
+      mealPlansForStoreMode.map((plan) => ({
+        endDate: plan.endDate,
+        startDate: plan.startDate,
+      })),
+    ),
   };
 }
 
@@ -1028,6 +1074,7 @@ function projectGeneratedShoppingItems({
     .map((bucket) =>
       mapGeneratedProjectionBucketToItem({
         bucket,
+        mealPlan,
         overrideBySourceKey,
         stores,
       }),
@@ -1056,6 +1103,7 @@ function projectExcludedGeneratedShoppingItems({
     return [
       mapGeneratedProjectionBucketToItem({
         bucket,
+        mealPlan,
         overrideBySourceKey,
         stores,
       }),
@@ -1065,10 +1113,12 @@ function projectExcludedGeneratedShoppingItems({
 
 function mapGeneratedProjectionBucketToItem({
   bucket,
+  mealPlan,
   overrideBySourceKey,
   stores,
 }: {
   bucket: GeneratedProjectionBucket;
+  mealPlan: ShoppingMealPlan;
   overrideBySourceKey: Map<string, ShoppingOverride>;
   stores: ShoppingStore[];
 }) {
@@ -1090,6 +1140,8 @@ function mapGeneratedProjectionBucketToItem({
     checked: override?.checked ?? false,
     firstDate: occurrences[0]!.date,
     lastDate: occurrences[occurrences.length - 1]!.date,
+    mealPlanId: mealPlan.id,
+    mealPlanTitle: mealPlan.title,
     name: bucket.name,
     note: override?.note ?? null,
     occurrenceCount: occurrences.length,
@@ -1229,6 +1281,8 @@ function projectSingleFamilyShoppingItemRow({
     },
     checked: item.checked,
     collaborationVersion: item.updatedAt.toISOString(),
+    mealPlanId: null,
+    mealPlanTitle: null,
     name: item.name,
     note: item.note,
     preferredStore,
@@ -1242,10 +1296,12 @@ function projectSingleFamilyShoppingItemRow({
 
 function projectSingleManualShoppingItemRow({
   item,
+  mealPlan,
   override,
   stores,
 }: {
   item: ManualShoppingItemRow;
+  mealPlan: Pick<ShoppingMealPlan, "id" | "title">;
   override?: ShoppingOverride | null;
   stores: ShoppingStore[];
 }) {
@@ -1268,6 +1324,8 @@ function projectSingleManualShoppingItemRow({
     },
     checked: override?.checked ?? false,
     collaborationVersion: item.updatedAt?.toISOString() ?? "",
+    mealPlanId: mealPlan.id,
+    mealPlanTitle: mealPlan.title,
     name: item.name,
     note: item.note,
     overrideVersion: override?.updatedAt?.toISOString() ?? "",
@@ -1295,10 +1353,80 @@ function projectManualShoppingItems({
   return mealPlan.manualShoppingItems.map((item) =>
     projectSingleManualShoppingItemRow({
       item,
+      mealPlan,
       override: overrideBySourceKey.get(item.id),
       stores,
     }),
   );
+}
+
+function ensureAnchorMealPlanIncluded({
+  anchorMealPlan,
+  includedMealPlans,
+}: {
+  anchorMealPlan: ShoppingMealPlan;
+  includedMealPlans: ShoppingMealPlan[];
+}) {
+  if (includedMealPlans.some((plan) => plan.id === anchorMealPlan.id)) {
+    return includedMealPlans;
+  }
+
+  return [...includedMealPlans, anchorMealPlan].sort((left, right) => {
+    if (left.startDate.getTime() !== right.startDate.getTime()) {
+      return left.startDate.getTime() - right.startDate.getTime();
+    }
+
+    return left.id.localeCompare(right.id, "nb");
+  });
+}
+
+function buildStoreModeItemsForPlan({
+  globalShoppingDate,
+  mealPlan,
+  stockMatchSet,
+  stores,
+  todayAtUtcMidnight,
+}: {
+  globalShoppingDate: Date;
+  mealPlan: ShoppingMealPlan;
+  stockMatchSet: FamilyStockMatchSet;
+  stores: ShoppingStore[];
+  todayAtUtcMidnight: Date;
+}) {
+  const includeDespiteStockKeys = buildIncludeDespiteStockKeys(
+    mealPlan.shoppingOverrides,
+  );
+  const projectedItems = [
+    ...projectGeneratedShoppingItems({
+      includeDespiteStockKeys,
+      mealPlan,
+      stockMatchSet,
+      stores,
+    }),
+    ...projectManualShoppingItems({
+      mealPlan,
+      stores,
+    }),
+  ];
+
+  return {
+    dueItems: projectedItems.filter((item) =>
+      isProjectedItemInStoreModeTrip(
+        item,
+        globalShoppingDate,
+        mealPlan.endDate,
+        todayAtUtcMidnight,
+      ),
+    ),
+    laterItems: projectedItems.filter((item) =>
+      isProjectedItemBeforeShoppingDate(
+        item,
+        globalShoppingDate,
+        mealPlan.endDate,
+        todayAtUtcMidnight,
+      ),
+    ),
+  };
 }
 
 function buildProjectedStoreGroups(

@@ -1189,6 +1189,42 @@ describe("shopping.server", () => {
   });
 
   describe("getMealPlanStoreModeData", () => {
+    function registerStoreModePlans(
+      anchorPlan: Record<string, unknown>,
+      extraPlans: Record<string, unknown>[] = [],
+    ) {
+      const plans = [...extraPlans];
+
+      if (!plans.some((plan) => plan.id === anchorPlan.id)) {
+        plans.push(anchorPlan);
+      }
+
+      plans.sort((left, right) => {
+        const leftStart = (left.startDate as Date).getTime();
+        const rightStart = (right.startDate as Date).getTime();
+
+        if (leftStart !== rightStart) {
+          return leftStart - rightStart;
+        }
+
+        return String(left.id).localeCompare(String(right.id), "nb");
+      });
+
+      dbMock.mealPlan.findFirst.mockResolvedValue(anchorPlan);
+      dbMock.mealPlan.findMany.mockImplementation(
+        (args: { select?: Record<string, unknown> }) => {
+          if (args.select && "entries" in args.select) {
+            return plans;
+          }
+
+          return plans.map((plan) => ({
+            endDate: plan.endDate,
+            startDate: plan.startDate,
+          }));
+        },
+      );
+    }
+
     beforeEach(() => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-05-14T09:30:45.000Z"));
@@ -1199,7 +1235,7 @@ describe("shopping.server", () => {
     });
 
   it("builds store mode with all due items ordered by the selected store layout", async () => {
-    dbMock.mealPlan.findFirst.mockResolvedValue({
+    registerStoreModePlans({
       activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
       endDate: new Date("2026-05-18T00:00:00.000Z"),
       entries: [
@@ -1370,10 +1406,23 @@ describe("shopping.server", () => {
       "2026-05-17",
       "2026-05-18",
     ]);
+    expect(result.includedMealPlans).toEqual([
+      {
+        id: "meal-plan-1",
+        status: "DRAFT",
+        title: "Helgehandel",
+      },
+    ]);
+    expect(result.dueSectionGroups[0]?.items[0]).toEqual(
+      expect.objectContaining({
+        mealPlanId: "meal-plan-1",
+        mealPlanTitle: "Helgehandel",
+      }),
+    );
   });
 
   it("includes all items from the shopping date through the end of the meal plan", async () => {
-    dbMock.mealPlan.findFirst.mockResolvedValue({
+    registerStoreModePlans({
       activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
       endDate: new Date("2026-05-17T00:00:00.000Z"),
       entries: [
@@ -1504,7 +1553,7 @@ describe("shopping.server", () => {
   it("excludes past meals from both the trip list and the before-shopping-date list", async () => {
     vi.setSystemTime(new Date("2026-05-16T09:30:45.000Z"));
 
-    dbMock.mealPlan.findFirst.mockResolvedValue({
+    registerStoreModePlans({
       activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
       endDate: new Date("2026-05-17T00:00:00.000Z"),
       entries: [
@@ -1599,7 +1648,7 @@ describe("shopping.server", () => {
   });
 
   it("includes merged cross-day ingredients on a last-day-only shopping trip", async () => {
-    dbMock.mealPlan.findFirst.mockResolvedValue({
+    registerStoreModePlans({
       activeShoppingDate: new Date("2026-05-18T00:00:00.000Z"),
       endDate: new Date("2026-05-18T00:00:00.000Z"),
       entries: [
@@ -1708,7 +1757,7 @@ describe("shopping.server", () => {
   });
 
   it("includes a postponed generated item when postponedUntilDate matches the last-day trip", async () => {
-    dbMock.mealPlan.findFirst.mockResolvedValue({
+    registerStoreModePlans({
       activeShoppingDate: new Date("2026-05-18T00:00:00.000Z"),
       endDate: new Date("2026-05-18T00:00:00.000Z"),
       entries: [
@@ -1788,7 +1837,7 @@ describe("shopping.server", () => {
   it("keeps merged cross-day ingredients on the trip when today is after the first occurrence", async () => {
     vi.setSystemTime(new Date("2026-05-16T09:30:45.000Z"));
 
-    dbMock.mealPlan.findFirst.mockResolvedValue({
+    registerStoreModePlans({
       activeShoppingDate: new Date("2026-05-18T00:00:00.000Z"),
       endDate: new Date("2026-05-18T00:00:00.000Z"),
       entries: [
@@ -1879,7 +1928,7 @@ describe("shopping.server", () => {
   it("does not pull generated items into the trip when all effective dates are in the past", async () => {
     vi.setSystemTime(new Date("2026-05-18T09:30:45.000Z"));
 
-    dbMock.mealPlan.findFirst.mockResolvedValue({
+    registerStoreModePlans({
       activeShoppingDate: new Date("2026-05-18T00:00:00.000Z"),
       endDate: new Date("2026-05-18T00:00:00.000Z"),
       entries: [
@@ -1941,6 +1990,227 @@ describe("shopping.server", () => {
       result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
     ).toEqual([]);
     expect(result.laterItems.map((item) => item.name)).toEqual([]);
+  });
+
+  it("merges due items from multiple non-past meal plans using the anchor shopping date", async () => {
+    const anchorPlan = {
+      activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-17T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-bakery", name: "Brod" },
+                categoryId: "category-bakery",
+                displayName: "Wraps",
+                id: "ingredient-1",
+                ingredientId: "canonical-wraps",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "pk",
+              },
+            ],
+            title: "Tacofredag",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Helgehandel",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    };
+    const nextWeekPlan = {
+      activeShoppingDate: new Date("2026-05-19T00:00:00.000Z"),
+      endDate: new Date("2026-05-25T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-19T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-pasta", name: "Pasta" },
+                categoryId: "category-pasta",
+                displayName: "Spaghetti",
+                id: "ingredient-2",
+                ingredientId: "canonical-spaghetti",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "pk",
+              },
+            ],
+            title: "Pasta mandag",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-2",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-19T00:00:00.000Z"),
+      status: "APPROVED",
+      title: "Neste uke",
+      updatedAt: new Date("2026-05-02T12:00:00.000Z"),
+    };
+
+    registerStoreModePlans(anchorPlan, [nextWeekPlan]);
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-bakery",
+            displayName: "Brod",
+            id: "section-1",
+            sortOrder: 1,
+          },
+          {
+            categoryId: "category-pasta",
+            displayName: "Pasta",
+            id: "section-2",
+            sortOrder: 2,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.includedMealPlans).toEqual([
+      {
+        id: "meal-plan-1",
+        status: "DRAFT",
+        title: "Helgehandel",
+      },
+      {
+        id: "meal-plan-2",
+        status: "APPROVED",
+        title: "Neste uke",
+      },
+    ]);
+    expect(
+      result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
+    ).toEqual(["Wraps", "Spaghetti"]);
+    expect(result.dueSectionGroups.flatMap((section) => section.items)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          mealPlanId: "meal-plan-1",
+          mealPlanTitle: "Helgehandel",
+          name: "Wraps",
+        }),
+        expect.objectContaining({
+          mealPlanId: "meal-plan-2",
+          mealPlanTitle: "Neste uke",
+          name: "Spaghetti",
+        }),
+      ]),
+    );
+  });
+
+  it("dedupes meal-plan items against family items in merged store mode", async () => {
+    registerStoreModePlans({
+      activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-17T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-dairy", name: "Meieri" },
+                categoryId: "category-dairy",
+                displayName: "Melk",
+                id: "ingredient-1",
+                ingredientId: "canonical-milk",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "l",
+              },
+            ],
+            title: "Frokost",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Helgehandel",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    });
+    dbMock.familyShoppingItem.findMany.mockResolvedValue([
+      {
+        category: {
+          displayName: "Meieri",
+          id: "category-dairy",
+        },
+        categoryId: "category-dairy",
+        checked: false,
+        id: "family-item-1",
+        name: "Melk",
+        note: null,
+        preferredStore: null,
+        preferredStoreId: null,
+        quantity: "1",
+        updatedAt: new Date("2026-05-10T00:00:00.000Z"),
+      },
+    ]);
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-dairy",
+            displayName: "Meieri",
+            id: "section-1",
+            sortOrder: 1,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(
+      result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
+    ).toEqual(["Melk"]);
+    expect(result.dueSectionGroups.flatMap((section) => section.items)[0]?.sourceType).toBe(
+      "FAMILY",
+    );
   });
   });
 
@@ -2327,6 +2597,8 @@ describe("shopping.server", () => {
         category: { id: "category-dairy", name: "Meieri" },
         checked: false,
         collaborationVersion: "v1",
+        mealPlanId: null,
+        mealPlanTitle: null,
         name: "Melk",
         note: null,
         preferredStore: null,
@@ -2346,6 +2618,8 @@ describe("shopping.server", () => {
         collaborationVersion: "v2",
         firstDate: new Date("2026-05-16T00:00:00.000Z"),
         lastDate: new Date("2026-05-16T00:00:00.000Z"),
+        mealPlanId: "meal-plan-1",
+        mealPlanTitle: "Uke 20",
         name: "Melk",
         note: null,
         occurrenceCount: 1,
@@ -2365,6 +2639,8 @@ describe("shopping.server", () => {
         category: { id: "category-other", name: "Annet" },
         checked: false,
         collaborationVersion: "v3",
+        mealPlanId: "meal-plan-1",
+        mealPlanTitle: "Uke 20",
         name: "Lime",
         note: null,
         overrideVersion: "",

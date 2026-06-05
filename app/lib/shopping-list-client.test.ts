@@ -30,6 +30,8 @@ function createFamilyItem(
     },
     checked: overrides.checked ?? false,
     collaborationVersion: overrides.collaborationVersion ?? "2026-05-31T00:00:00.000Z",
+    mealPlanId: null,
+    mealPlanTitle: null,
     name: overrides.name,
     note: overrides.note ?? null,
     preferredStore: ("preferredStore" in overrides
