@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sammenlign alle — butikkmodus</title>
+    <style>
+      :root {
+        --bg: #e7e5e4;
+        --text: #1c1917;
+        --muted: #78716c;
+        --accent: #a89988;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      header.page {
+        padding: 1rem 1.25rem;
+        background: #fafaf9;
+        border-bottom: 1px solid #d6d3d1;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      header.page h1 {
+        margin: 0;
+        font-size: 1.15rem;
+      }
+      header.page p {
+        margin: 0.3rem 0 0;
+        font-size: 0.82rem;
+        color: var(--muted);
+        max-width: 52rem;
+        line-height: 1.45;
+      }
+      header.page a {
+        color: var(--accent);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      header.page a:hover {
+        text-decoration: underline;
+      }
+      .scroll {
+        overflow-x: auto;
+        padding: 1rem 1.25rem 1.5rem;
+        -webkit-overflow-scrolling: touch;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(272px, 1fr));
+        gap: 0.85rem;
+        align-items: start;
+        min-width: min(100%, 1420px);
+      }
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+          min-width: 0;
+          max-width: 400px;
+          margin: 0 auto;
+        }
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        min-width: 0;
+      }
+      .col-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--accent);
+        padding: 0 0.1rem;
+        line-height: 1.3;
+      }
+      .col-label a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .col-label a:hover {
+        text-decoration: underline;
+      }
+      .col-label span {
+        display: block;
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.68rem;
+        margin-top: 0.1rem;
+      }
+      .frame-wrap {
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(28, 25, 23, 0.08);
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 780px;
+        border: 0;
+        background: #fff;
+      }
+      @media (max-width: 900px) {
+        iframe {
+          height: 720px;
+        }
+        .scroll {
+          overflow-x: visible;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="page">
+      <h1>Butikkmodus — fem forslag side om side</h1>
+      <p>
+        <a href="index.html">← Tilbake til oversikt</a>
+        · Samme mock-data i alle. Scroll horisontalt på bred skjerm, eller
+        stakk på smal. Åpne enkeltforslag i egen fane via lenkene over hver kolonne.
+      </p>
+    </header>
+
+    <div class="scroll">
+      <div class="grid">
+        <div class="col">
+          <div class="col-label">
+            <a href="proposal-1-notebook.html" target="_blank" rel="noopener"
+              >1 — Notatblokk</a
+            >
+            <span>Linjer, rød marg, sirkel-avhuking</span>
+          </div>
+          <div class="frame-wrap">
+            <iframe
+              title="Forslag 1"
+              src="proposal-1-notebook.html"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </div>
+        <div class="col">
+          <div class="col-label">
+            <a href="proposal-2-dividers.html" target="_blank" rel="noopener"
+              >2 — Seksjonsskiller</a
+            >
+            <span>Tynne linjer, uppercase-avdelinger</span>
+          </div>
+          <div class="frame-wrap">
+            <iframe
+              title="Forslag 2"
+              src="proposal-2-dividers.html"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </div>
+        <div class="col">
+          <div class="col-label">
+            <a href="proposal-3-dot-leaders.html" target="_blank" rel="noopener"
+              >3 — Punktum-ledere</a
+            >
+            <span>Navn … mengde, serif-følelse</span>
+          </div>
+          <div class="frame-wrap">
+            <iframe
+              title="Forslag 3"
+              src="proposal-3-dot-leaders.html"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </div>
+        <div class="col">
+          <div class="col-label">
+            <a href="proposal-4-receipt.html" target="_blank" rel="noopener"
+              >4 — Kvittering</a
+            >
+            <span>Smal stripe, monospace</span>
+          </div>
+          <div class="frame-wrap">
+            <iframe
+              title="Forslag 4"
+              src="proposal-4-receipt.html"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </div>
+        <div class="col">
+          <div class="col-label">
+            <a href="proposal-5-flow.html" target="_blank" rel="noopener"
+              >5 — Flytende kolonne</a
+            >
+            <span>Inline metadata, ingen piller</span>
+          </div>
+          <div class="frame-wrap">
+            <iframe
+              title="Forslag 5"
+              src="proposal-5-flow.html"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

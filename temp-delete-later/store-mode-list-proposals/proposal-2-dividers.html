@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forslag 2 — Seksjonsskiller</title>
+    <style>
+      :root {
+        --bg: #f5f5f4;
+        --ink: #1c1917;
+        --muted: #78716c;
+        --hair: #d6d3d1;
+        --store: #c9bfb0;
+        --store-text: #57534e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .nav-top {
+        padding: 0.65rem 1rem;
+        font-size: 0.78rem;
+      }
+      .nav-top a {
+        color: #a89988;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .page {
+        max-width: 420px;
+        margin: 0 auto;
+        min-height: 100vh;
+        background: #fff;
+        padding-bottom: 5.5rem;
+      }
+      .meta {
+        padding: 1rem 1.15rem;
+        border-bottom: 1px solid var(--hair);
+        font-size: 0.82rem;
+      }
+      .meta h1 {
+        margin: 0 0 0.5rem;
+        font-size: 1.1rem;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+      }
+      .meta .inline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 0.75rem;
+        align-items: center;
+        color: var(--muted);
+      }
+      .meta select {
+        font: inherit;
+        color: var(--ink);
+        border: none;
+        padding: 0;
+        background: transparent;
+        font-weight: 500;
+        text-decoration: underline;
+        text-decoration-color: var(--hair);
+        text-underline-offset: 3px;
+      }
+      .meta .progress {
+        color: var(--store-text);
+        font-weight: 650;
+        font-variant-numeric: tabular-nums;
+      }
+      .meta .links {
+        margin-top: 0.5rem;
+        font-size: 0.78rem;
+      }
+      .meta .links a {
+        color: var(--muted);
+        margin-right: 0.85rem;
+      }
+      .toolbar {
+        padding: 1rem 1.15rem 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+      }
+      .toolbar h2 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+      }
+      .toolbar .controls {
+        font-size: 0.72rem;
+        color: var(--muted);
+        text-align: right;
+      }
+      .aisle {
+        border-top: 3px solid var(--ink);
+        margin: 0 1.15rem;
+      }
+      .aisle + .aisle {
+        margin-top: 1.75rem;
+      }
+      .aisle-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 0.65rem 0 0.35rem;
+      }
+      .aisle-head h3 {
+        margin: 0;
+        font-size: 0.88rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .aisle-head .count {
+        font-size: 0.72rem;
+        color: var(--muted);
+        font-weight: 500;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      .list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .item {
+        display: flex;
+        gap: 0.65rem;
+        padding: 0.7rem 0;
+        border-bottom: 1px solid var(--hair);
+        align-items: flex-start;
+      }
+      .item:last-child {
+        border-bottom: none;
+      }
+      .item input[type="checkbox"] {
+        width: 1.15rem;
+        height: 1.15rem;
+        margin-top: 0.1rem;
+        accent-color: var(--ink);
+        flex-shrink: 0;
+      }
+      .item.checked .primary {
+        text-decoration: line-through;
+        color: var(--muted);
+      }
+      .primary {
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+      .secondary {
+        margin-top: 0.15rem;
+        font-size: 0.75rem;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .secondary .pill {
+        display: inline;
+        color: var(--store-text);
+      }
+      .secondary .warn {
+        color: #b45309;
+      }
+      .item details {
+        margin-top: 0.25rem;
+      }
+      .item summary {
+        font-size: 0.72rem;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .bought {
+        margin: 2rem 1.15rem 0;
+        padding-top: 1rem;
+        border-top: 1px solid var(--hair);
+      }
+      .bought summary {
+        font-size: 0.88rem;
+        font-weight: 650;
+        cursor: pointer;
+        color: var(--muted);
+      }
+      .later {
+        margin: 2rem 1.15rem 0;
+        padding-top: 1rem;
+        border-top: 1px solid var(--hair);
+      }
+      .later h3 {
+        margin: 0 0 0.5rem;
+        font-size: 0.88rem;
+        font-weight: 650;
+      }
+      .later ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .later li + li {
+        margin-top: 0.25rem;
+      }
+      .quick-add {
+        position: fixed;
+        inset: auto 0 0;
+        padding: 0.75rem 1.15rem 1.1rem;
+        background: linear-gradient(transparent, #fff 30%);
+      }
+      .quick-add .inner {
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 0.75rem 0;
+        border-top: 2px solid var(--store);
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <p class="nav-top"><a href="index.html">← Alle forslag</a></p>
+    <div class="page">
+      <header class="meta">
+        <h1>Uke 12 – middager</h1>
+        <div class="inline">
+          <select><option>Kiwi</option></select>
+          <select><option>4. juni</option></select>
+          <span class="progress">5 / 12</span>
+          <span class="links" style="margin: 0; width: auto; margin-left: auto">
+            <a href="#">Handleliste</a>
+            <a href="#">Butikker</a>
+          </span>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <h2>Varer å handle</h2>
+        <div class="controls">
+          Flytt kjøpte ned ✓<br />
+          <strong>Liste</strong> · Rutenett
+        </div>
+      </div>
+
+      <section class="aisle">
+        <div class="aisle-head">
+          <h3>Frukt og grønt</h3>
+          <span class="count">4 varer</span>
+        </div>
+        <ul class="list">
+          <li class="item">
+            <input type="checkbox" />
+            <div>
+              <div class="primary">Bananer <span class="pill">6 stk</span></div>
+              <details>
+                <summary>Detaljer</summary>
+                <p class="secondary">Fra Smoothie-bowl · Hurtiglegg til</p>
+              </details>
+            </div>
+          </li>
+          <li class="item">
+            <input type="checkbox" />
+            <div>
+              <div class="primary">Spinat</div>
+              <p class="secondary">Notat: Babyspinat, økologisk</p>
+            </div>
+          </li>
+          <li class="item">
+            <input type="checkbox" />
+            <div>
+              <div class="primary">Tomater <span class="pill">500 g</span></div>
+              <p class="secondary"><span class="pill">2 oppskrifter</span></p>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="aisle">
+        <div class="aisle-head">
+          <h3>Meieri</h3>
+          <span class="count">3 varer</span>
+        </div>
+        <ul class="list">
+          <li class="item">
+            <input type="checkbox" />
+            <div>
+              <div class="primary">Melk <span class="pill">1,5 L ✎</span></div>
+              <p class="secondary">Familievare · Endre seksjon i detaljer</p>
+            </div>
+          </li>
+          <li class="item">
+            <input type="checkbox" />
+            <div>
+              <div class="primary">Norvegia <span class="pill">200 g</span></div>
+              <p class="secondary"><span class="warn">Foretrekker Rema</span></p>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="aisle">
+        <div class="aisle-head">
+          <h3>Tørrvarer</h3>
+          <span class="count">2 varer</span>
+        </div>
+        <ul class="list">
+          <li class="item">
+            <input type="checkbox" />
+            <div class="primary">Pasta <span class="pill">500 g</span></div>
+          </li>
+          <li class="item">
+            <input type="checkbox" />
+            <div class="primary">Havregryn <span class="pill">1 pk</span></div>
+          </li>
+        </ul>
+      </section>
+
+      <details class="bought" open>
+        <summary>Kjøpt — 2 varer</summary>
+        <ul class="list" style="margin-top: 0.75rem">
+          <li class="item checked">
+            <input checked type="checkbox" />
+            <div class="primary">Epler <span class="pill">4 stk</span></div>
+          </li>
+          <li class="item checked">
+            <input checked type="checkbox" />
+            <div class="primary">Yoghurt naturell <span class="pill">4 stk</span></div>
+          </li>
+        </ul>
+      </details>
+
+      <section class="later">
+        <h3>Før handledato</h3>
+        <ul>
+          <li>Kyllingfilet — 8. juni</li>
+          <li>Olivenolje — Alltid på listen</li>
+        </ul>
+      </section>
+
+      <footer class="quick-add">
+        <div class="inner"><strong>Legg til vare</strong> — søk ingrediens eller skriv navn</div>
+      </footer>
+    </div>
+  </body>
+</html>

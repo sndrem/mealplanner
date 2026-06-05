@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forslag 5 — Flytende kolonne</title>
+    <style>
+      :root {
+        --bg: #fafaf9;
+        --ink: #1c1917;
+        --muted: #78716c;
+        --soft: #e7e5e4;
+        --store: #a89988;
+        --store-text: #57534e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        font-size: 15px;
+        line-height: 1.5;
+      }
+      .nav-top {
+        padding: 0.65rem 1rem;
+        font-size: 0.78rem;
+      }
+      .nav-top a {
+        color: var(--store);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .page {
+        max-width: 480px;
+        margin: 0 auto;
+        min-height: 100vh;
+        padding: 0 1.25rem 5.75rem;
+      }
+      .meta {
+        padding: 1rem 0 0.75rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+      .meta h1 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 650;
+        letter-spacing: -0.03em;
+      }
+      .meta .strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      .meta select {
+        font: inherit;
+        color: var(--ink);
+        border: none;
+        padding: 0;
+        background: none;
+        border-bottom: 2px solid var(--soft);
+      }
+      .meta .progress {
+        color: var(--store-text);
+        font-weight: 650;
+      }
+      .meta a {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+      .intro {
+        margin: 0.5rem 0 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--soft);
+      }
+      .intro h2 {
+        margin: 0 0 0.35rem;
+        font-size: 1.05rem;
+        font-weight: 650;
+      }
+      .intro .opts {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .flow-section {
+        margin-bottom: 1.75rem;
+      }
+      .flow-section > p.lead {
+        margin: 0 0 0.65rem;
+        font-size: 0.95rem;
+        line-height: 1.35;
+      }
+      .flow-section > p.lead strong {
+        font-weight: 700;
+        color: var(--store-text);
+      }
+      .flow-section > p.lead .count {
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.85em;
+      }
+      .items-flow {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .items-flow > li {
+        position: relative;
+        padding: 0.55rem 0 0.55rem 1.75rem;
+        border-bottom: 1px solid transparent;
+      }
+      .items-flow > li + li {
+        border-top: 1px solid var(--soft);
+      }
+      .items-flow > li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0.72rem;
+        width: 1.1rem;
+        height: 1.1rem;
+        border: 2px solid var(--soft);
+        border-radius: 3px;
+      }
+      .items-flow > li.checked::before {
+        background: var(--store);
+        border-color: var(--store);
+      }
+      .items-flow > li.checked .title {
+        text-decoration: line-through;
+        color: var(--muted);
+      }
+      .title {
+        font-weight: 600;
+      }
+      .inline-meta {
+        font-size: 0.82rem;
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .inline-meta .sep::before {
+        content: " · ";
+      }
+      .inline-meta .warn {
+        color: #b45309;
+      }
+      .inline-meta .edit {
+        color: var(--store-text);
+        text-decoration: underline;
+        text-decoration-style: wavy;
+        text-underline-offset: 2px;
+      }
+      .expand {
+        display: block;
+        margin-top: 0.2rem;
+        font-size: 0.78rem;
+        color: var(--store);
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        cursor: default;
+        text-align: left;
+      }
+      .grid-view-hint {
+        margin-top: 0.75rem;
+        font-size: 0.72rem;
+        color: var(--muted);
+        font-style: italic;
+      }
+      .bought-block {
+        margin-top: 2rem;
+        color: var(--muted);
+      }
+      .bought-block summary {
+        font-weight: 650;
+        color: var(--ink);
+        cursor: pointer;
+        font-size: 0.95rem;
+      }
+      .later-block {
+        margin-top: 2rem;
+        padding-top: 1rem;
+      }
+      .later-block h3 {
+        margin: 0 0 0.5rem;
+        font-size: 0.95rem;
+        font-weight: 650;
+      }
+      .later-block p {
+        margin: 0;
+        font-size: 0.88rem;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+      .quick-add {
+        position: fixed;
+        inset: auto 0 0;
+        padding: 0.75rem 1.25rem 1rem;
+        background: linear-gradient(180deg, transparent, var(--bg) 25%);
+      }
+      .quick-add .inner {
+        max-width: 480px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+        border-bottom: 3px solid var(--store);
+        padding-bottom: 0.5rem;
+      }
+      .quick-add .plus {
+        font-size: 1.35rem;
+        font-weight: 300;
+        color: var(--store);
+        line-height: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="nav-top"><a href="index.html">← Alle forslag</a></p>
+    <div class="page">
+      <header class="meta">
+        <h1>Uke 12 – middager</h1>
+        <div class="strip">
+          <select><option>Kiwi</option></select>
+          <select><option>4. juni</option></select>
+          <span class="progress">5 av 12</span>
+          <a href="#">Handleliste</a>
+          <a href="#">Butikker</a>
+        </div>
+      </header>
+
+      <div class="intro">
+        <h2>Varer å handle</h2>
+        <p class="opts">Flytt kjøpte ned er på · Visning: liste (rutenett beholder kompakt rader uten kort)</p>
+      </div>
+
+      <section class="flow-section">
+        <p class="lead"><strong>Frukt og grønt</strong> <span class="count">(4)</span></p>
+        <ul class="items-flow">
+          <li>
+            <span class="title">Bananer</span>
+            <span class="inline-meta"><span>6 stk</span></span>
+            <button class="expand" type="button">Smoothie-bowl · hurtiglegg</button>
+          </li>
+          <li>
+            <span class="title">Spinat</span>
+            <span class="inline-meta"><span class="warn">notat: babyspinat</span></span>
+          </li>
+          <li>
+            <span class="title">Tomater</span>
+            <span class="inline-meta"
+              ><span>500 g</span><span class="sep"></span><span>2 oppskrifter</span></span
+            >
+          </li>
+        </ul>
+      </section>
+
+      <section class="flow-section">
+        <p class="lead"><strong>Meieri</strong> <span class="count">(3)</span></p>
+        <ul class="items-flow">
+          <li>
+            <span class="title">Melk</span>
+            <span class="inline-meta"
+              ><span class="edit">1,5 L</span><span class="sep"></span><span>familie</span></span
+            >
+            <button class="expand" type="button">Endre seksjon · detaljer</button>
+          </li>
+          <li>
+            <span class="title">Norvegia</span>
+            <span class="inline-meta"
+              ><span>200 g</span><span class="sep"></span><span class="warn">Foretrekker Rema</span></span
+            >
+          </li>
+        </ul>
+      </section>
+
+      <section class="flow-section">
+        <p class="lead"><strong>Tørrvarer</strong> <span class="count">(2)</span></p>
+        <ul class="items-flow">
+          <li>
+            <span class="title">Pasta</span>
+            <span class="inline-meta">500 g</span>
+          </li>
+          <li>
+            <span class="title">Havregryn</span>
+            <span class="inline-meta">1 pk</span>
+          </li>
+        </ul>
+        <p class="grid-view-hint">I rutenett: samme rad-informasjon i tett 2–4 kolonner uten rammer.</p>
+      </section>
+
+      <details class="bought-block" open>
+        <summary>Kjøpt (2)</summary>
+        <ul class="items-flow" style="margin-top: 0.65rem">
+          <li class="checked">
+            <span class="title">Epler</span>
+            <span class="inline-meta">4 stk</span>
+          </li>
+          <li class="checked">
+            <span class="title">Yoghurt naturell</span>
+            <span class="inline-meta">4 stk</span>
+          </li>
+        </ul>
+      </details>
+
+      <section class="later-block">
+        <h3>Før handledato</h3>
+        <p>
+          Kyllingfilet <em>8. juni</em> — Olivenolje <em>alltid på listen</em> (som løpende
+          tekst, ikke egne «bokser»).
+        </p>
+      </section>
+
+      <footer class="quick-add">
+        <div class="inner">
+          <span class="plus">+</span>
+          <span>Legg til vare — ingredienssøk eller fritekst</span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

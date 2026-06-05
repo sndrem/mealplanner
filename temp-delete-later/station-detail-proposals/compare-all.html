@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Compare all proposals</title>
+    <style>
+      :root {
+        --bg: #e8edf2;
+        --text: #1a2332;
+        --muted: #5c6b7a;
+        --accent: #0d5c8c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      header.page {
+        padding: 1.25rem 1.5rem;
+        background: #fff;
+        border-bottom: 1px solid #d0dae4;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      header.page h1 {
+        margin: 0;
+        font-size: 1.2rem;
+      }
+      header.page p {
+        margin: 0.25rem 0 0;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      header.page a {
+        color: var(--accent);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      header.page a:hover {
+        text-decoration: underline;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(280px, 1fr));
+        gap: 1rem;
+        padding: 1.25rem;
+        align-items: start;
+      }
+      @media (max-width: 1100px) {
+        .grid {
+          grid-template-columns: 1fr;
+          max-width: 520px;
+          margin: 0 auto;
+        }
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 0;
+      }
+      .col-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--accent);
+        padding: 0 0.15rem;
+      }
+      .col-label a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .col-label a:hover {
+        text-decoration: underline;
+      }
+      .frame-wrap {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #d0dae4;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 720px;
+        border: 0;
+        background: #fff;
+      }
+      @media (max-width: 1100px) {
+        iframe {
+          height: 680px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="page">
+      <h1>Side-by-side comparison</h1>
+      <p>
+        <a href="index.html">← Back to index</a>
+        · Resize the window — layout stacks below ~1100px.
+      </p>
+    </header>
+
+    <div class="grid">
+      <div class="col">
+        <div class="col-label">
+          <a href="proposal-1-cards.html" target="_blank" rel="noopener"
+            >Proposal 1 — Cards</a
+          >
+        </div>
+        <div class="frame-wrap">
+          <iframe
+            title="Proposal 1 — Card sections"
+            src="proposal-1-cards.html"
+            loading="lazy"
+          ></iframe>
+        </div>
+      </div>
+      <div class="col">
+        <div class="col-label">
+          <a href="proposal-2-typography.html" target="_blank" rel="noopener"
+            >Proposal 2 — Typography</a
+          >
+        </div>
+        <div class="frame-wrap">
+          <iframe
+            title="Proposal 2 — Typography and rhythm"
+            src="proposal-2-typography.html"
+            loading="lazy"
+          ></iframe>
+        </div>
+      </div>
+      <div class="col">
+        <div class="col-label">
+          <a href="proposal-3-timeline.html" target="_blank" rel="noopener"
+            >Proposal 3 — Timeline</a
+          >
+        </div>
+        <div class="frame-wrap">
+          <iframe
+            title="Proposal 3 — Timeline and highlights"
+            src="proposal-3-timeline.html"
+            loading="lazy"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

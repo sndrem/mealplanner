@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proposal 2 — Typography &amp; rhythm</title>
+    <style>
+      :root {
+        --bg: #faf9f7;
+        --surface: #fff;
+        --text: #1c1917;
+        --muted: #78716c;
+        --line: #e7e5e4;
+        --start-accent: #166534;
+        --stop-accent: #9a3412;
+        --link: #1d4ed8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        background: var(--bg);
+        color: var(--text);
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .nav-top {
+        width: 100%;
+        max-width: 480px;
+        margin-bottom: 1rem;
+        font-family: system-ui, sans-serif;
+        font-size: 0.85rem;
+      }
+      .nav-top a {
+        color: var(--link);
+        text-decoration: none;
+      }
+      .panel {
+        width: 100%;
+        max-width: 480px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        padding: 0;
+      }
+      .sample-bar {
+        padding: 1.1rem 1.4rem;
+        border-bottom: 2px solid var(--text);
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      .sample-bar h1 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 400;
+        font-family: system-ui, sans-serif;
+        letter-spacing: 0.02em;
+      }
+      .sample-bar .num {
+        font-size: 1.75rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      section.block {
+        padding: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      section.block:last-of-type {
+        border-bottom: none;
+      }
+      .block-title {
+        margin: 0;
+        padding: 0.65rem 1.4rem;
+        font-family: system-ui, sans-serif;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        background: #f5f5f4;
+        border-bottom: 1px solid var(--line);
+      }
+      .block-title--start {
+        border-left: 4px solid var(--start-accent);
+        padding-left: calc(1.4rem - 4px);
+      }
+      .block-title--stop {
+        border-left: 4px solid var(--stop-accent);
+        padding-left: calc(1.4rem - 4px);
+      }
+      dl.fields {
+        margin: 0;
+        padding: 0.35rem 0;
+      }
+      .field {
+        display: grid;
+        grid-template-columns: 11.5rem 1fr;
+        gap: 0.75rem;
+        padding: 0.55rem 1.4rem;
+        font-size: 0.95rem;
+        line-height: 1.45;
+        border-bottom: 1px solid #f5f5f4;
+      }
+      .field:last-child {
+        border-bottom: none;
+      }
+      .field dt {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .field dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .field--coords dd {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 1rem;
+      }
+      .coord-part {
+        white-space: nowrap;
+      }
+      .coord-part span {
+        font-family: system-ui, sans-serif;
+        font-size: 0.72rem;
+        color: var(--muted);
+        margin-right: 0.25rem;
+      }
+      .field--note dd {
+        font-style: italic;
+      }
+      .field.is-empty {
+        opacity: 0.45;
+      }
+      .field.is-empty dd::after {
+        content: "—";
+        font-style: normal;
+        color: var(--muted);
+      }
+      .actions {
+        padding: 1.15rem 1.4rem 1.35rem;
+        font-family: system-ui, sans-serif;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem 1.25rem;
+        border-top: 2px solid var(--text);
+        background: #fafaf9;
+      }
+      .actions a {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--link);
+        text-decoration: none;
+        padding: 0.35rem 0;
+        border-bottom: 2px solid transparent;
+      }
+      .actions a:hover {
+        border-bottom-color: var(--link);
+      }
+      .actions .sep {
+        color: var(--line);
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="nav-top"><a href="index.html">← All proposals</a> · <strong>Proposal 2</strong></p>
+
+    <article class="panel" aria-label="Station sample details">
+      <div class="sample-bar">
+        <h1>Sample</h1>
+        <span class="num" aria-label="Sample number 6">6</span>
+      </div>
+
+      <section class="block" aria-labelledby="sec-start">
+        <h2 id="sec-start" class="block-title block-title--start">Start</h2>
+        <dl class="fields">
+          <div class="field">
+            <dt>Start time</dt>
+            <dd>25.05.2006 17:29</dd>
+          </div>
+          <div class="field field--coords">
+            <dt>Position</dt>
+            <dd>
+              <span class="coord-part"><span>Lat</span>70°27.17283</span>
+              <span class="coord-part"><span>Lon</span>21°39.5728</span>
+            </dd>
+          </div>
+          <div class="field">
+            <dt>Depth</dt>
+            <dd>487.0</dd>
+          </div>
+          <div class="field">
+            <dt>Shiplog start</dt>
+            <dd>6145.391</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="block" aria-labelledby="sec-stop">
+        <h2 id="sec-stop" class="block-title block-title--stop">Stop</h2>
+        <dl class="fields">
+          <div class="field">
+            <dt>Stop time</dt>
+            <dd>25.05.2006 17:34</dd>
+          </div>
+          <div class="field field--coords">
+            <dt>Position</dt>
+            <dd>
+              <span class="coord-part"><span>Lat</span>70°27.08178</span>
+              <span class="coord-part"><span>Lon</span>21°39.8684</span>
+            </dd>
+          </div>
+          <div class="field">
+            <dt>Depth stop</dt>
+            <dd>486.96</dd>
+          </div>
+          <div class="field is-empty">
+            <dt>Shiplog stop</dt>
+            <dd></dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="block" aria-labelledby="sec-meta">
+        <h2 id="sec-meta" class="block-title">Additional</h2>
+        <dl class="fields">
+          <div class="field field--note">
+            <dt>Notes</dt>
+            <dd>Probably no sample?</dd>
+          </div>
+          <div class="field is-empty">
+            <dt>Sediment notes</dt>
+            <dd></dd>
+          </div>
+          <div class="field">
+            <dt>Number of containers</dt>
+            <dd>tot. ??</dd>
+          </div>
+          <div class="field is-empty">
+            <dt>Total sample size</dt>
+            <dd></dd>
+          </div>
+          <div class="field">
+            <dt>Ship direction</dt>
+            <dd>123</dd>
+          </div>
+          <div class="field">
+            <dt>Ship speed</dt>
+            <dd>1.6</dd>
+          </div>
+          <div class="field">
+            <dt>Cruise log event</dt>
+            <dd>6</dd>
+          </div>
+          <div class="field is-empty">
+            <dt>Warp length</dt>
+            <dd></dd>
+          </div>
+          <div class="field">
+            <dt>Bottom temperature</dt>
+            <dd>5.637</dd>
+          </div>
+          <div class="field">
+            <dt>Bottom salinity</dt>
+            <dd>35.1189</dd>
+          </div>
+        </dl>
+      </section>
+
+      <footer class="actions">
+        <a href="#">View catch details</a>
+        <span class="sep" aria-hidden="true">|</span>
+        <a href="#">Edit station</a>
+      </footer>
+    </article>
+  </body>
+</html>
