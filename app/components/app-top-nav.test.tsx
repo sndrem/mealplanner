@@ -28,6 +28,10 @@ describe("AppTopNav", () => {
       "href",
       "/families/family-1/stores",
     );
+    expect(screen.getByRole("link", { name: "Kassalapp" })).toHaveAttribute(
+      "href",
+      "/families/family-1/kassalapp",
+    );
     expect(screen.getByRole("link", { name: "Oppskrifter" })).toHaveAttribute(
       "href",
       "/families/family-1/recipes",
