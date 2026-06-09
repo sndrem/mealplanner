@@ -90,9 +90,7 @@ DATABASE_URL="postgresql://mealplanner:mealplanner@localhost:5466/mealplanner?sc
 SESSION_SECRET="replace-this-with-a-long-random-string-of-at-least-32-characters"
 ```
 
-`SESSION_SECRET` must be at least 32 characters and is used to sign the login session cookie. It is also used to encrypt per-family Kassalapp API tokens stored in the database.
-
-Kassalapp price estimation is opt-in per family: a family administrator adds their API key at `/families/:familyId/kassalapp`.
+`SESSION_SECRET` must be at least 32 characters and is used to sign the login session cookie.
 
 If any required variable is missing or invalid, the server fails fast during startup instead of waiting until the first database access.
 

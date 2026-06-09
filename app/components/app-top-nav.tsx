@@ -30,7 +30,6 @@ function buildFamilyNavItems(
       to: `/families/${familyId}/store-mode`,
     },
     { end: true, label: "Butikker", to: `/families/${familyId}/stores` },
-    { end: true, label: "Kassalapp", to: `/families/${familyId}/kassalapp` },
     { end: false, label: "Oppskrifter", to: `/families/${familyId}/recipes` },
     {
       end: true,
