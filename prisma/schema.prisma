@@ -76,7 +76,6 @@ model User {
   updatedShoppingItemOverrides ShoppingItemOverride[] @relation("ShoppingItemOverrideUpdatedBy")
   storePreferences             UserStorePreference[]
   familyShoppingPreferences    UserFamilyShoppingPreference[]
-  updatedKassalappIntegrations FamilyKassalappIntegration[] @relation("FamilyKassalappIntegrationUpdatedBy")
   sharedMealPlans              MealPlanShare[]        @relation("MealPlanShareSharedBy")
   mealPlanShareRecipients      MealPlanShareRecipient[]
   mealPlanReviewComments       MealPlanReviewComment[] @relation("MealPlanReviewCommentAuthor")
@@ -102,24 +101,9 @@ model Family {
   familyShoppingPreferences  UserFamilyShoppingPreference[]
   stockIngredients           FamilyStockIngredient[]
   shoppingItems       FamilyShoppingItem[]
-  kassalappIntegration FamilyKassalappIntegration?
 
   @@index([createdByUserId])
   @@index([name])
-}
-
-model FamilyKassalappIntegration {
-  id                String   @id @default(cuid())
-  familyId          String   @unique
-  encryptedApiToken String
-  tokenLastFour     String
-  updatedByUserId   String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  family            Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  updatedByUser     User?    @relation("FamilyKassalappIntegrationUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
-
-  @@index([updatedByUserId])
 }
 
 model FamilyMembership {

@@ -39,7 +39,6 @@ export default [
       "routes/family-shopping-ingredient-search.ts",
     ),
     route("families/:familyId/stores", "routes/family-stores.tsx"),
-    route("families/:familyId/kassalapp", "routes/family-kassalapp.tsx"),
     route("families/:familyId/stock-ingredients", "routes/family-stock-ingredients.tsx"),
     route("families/:familyId/recipes", "routes/family-recipes.tsx"),
     route("families/:familyId/recipes/:recipeId", "routes/family-recipe.tsx"),

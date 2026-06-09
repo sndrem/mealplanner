@@ -2196,15 +2196,3 @@ function getProjectedItemSortTimestamp(item: ProjectedShoppingItem) {
 function getProjectedItemRelevantTimestamp(item: ProjectedShoppingItem) {
   return getProjectedItemRelevantDate(item)?.getTime() ?? Number.MIN_SAFE_INTEGER;
 }
-
-export async function getStoreModeCostEstimate({
-  familyId,
-  items,
-}: {
-  familyId: string;
-  items: ProjectedShoppingItem[];
-}) {
-  const { estimateShoppingListCost } = await import("./kassalapp-cost.server");
-
-  return estimateShoppingListCost({ familyId, items });
-}
