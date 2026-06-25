@@ -21,6 +21,11 @@ import {
 } from "../lib/meal-plan-share.server";
 import { isPlanDateToday } from "../lib/meal-plan-dates";
 import {
+  encodeMealSelection,
+  getDinnerMenuLabel,
+  parseMealSelection,
+} from "../lib/meal-plan-display";
+import {
   approveMealPlan,
   autoFillMealPlanEntries,
   formatDateOnly,
@@ -65,6 +70,7 @@ interface MealPlanFamilyMemberOption {
 }
 
 interface MealPlanEntryFormState {
+  freezerItemId: string;
   note: string;
   recipeId: string;
   responsibleUserId: string;
@@ -147,6 +153,7 @@ export async function loader({
       return [
         date,
         {
+          freezerItemId: entry?.freezerItemId ?? "",
           note: entry?.note ?? "",
           recipeId: entry?.recipeId ?? "",
           responsibleUserId: entry?.responsibleUserId ?? "",
@@ -159,7 +166,11 @@ export async function loader({
     result.mealPlan.entries.filter((entry) => entry.mealType === "DINNER"),
   );
   const calendarExportDates = result.mealPlan.entries.flatMap((entry) => {
-    if (entry.mealType !== "DINNER" || !entry.recipe) {
+    if (entry.mealType !== "DINNER") {
+      return [];
+    }
+
+    if (!entry.recipe && !entry.freezerItem) {
       return [];
     }
 
@@ -210,6 +221,7 @@ export async function loader({
     userRole: result.userRole,
     visibleDates: result.visibleDates,
     entriesByDate,
+    freezerItems: result.freezerItems,
   };
 }
 
@@ -540,7 +552,7 @@ export default function FamilyMealPlanRoute({
   const emptyDayCount = loaderData.visibleDates.filter((date) => {
     const entry = loaderData.entriesByDate[date];
 
-    return !entry?.recipeId && !entry?.note;
+    return !entry?.recipeId && !entry?.freezerItemId && !entry?.note;
   }).length;
   const canAutoFillEntries =
     loaderData.mealPlan.status === "DRAFT" && emptyDayCount > 0;
@@ -697,6 +709,64 @@ export default function FamilyMealPlanRoute({
               </p>
             </div>
 
+            <details className="group mt-2 min-w-0">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-slate-950">Fryser</p>
+                  <p className="text-sm text-slate-600">
+                    {formatFreezerStockCount(loaderData.freezerItems)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="text-xs text-slate-400 group-open:hidden">
+                    Åpne
+                  </span>
+                  <span className="hidden text-xs text-slate-400 group-open:inline">
+                    Lukk
+                  </span>
+                </div>
+              </summary>
+
+              <div className="mt-3 min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                {loaderData.freezerItems.length > 0 ? (
+                  <ul className="grid gap-2">
+                    {loaderData.freezerItems.map((item) => (
+                      <li
+                        key={item.id}
+                        className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium text-slate-950">
+                              {item.label}
+                            </p>
+                            {item.note ? (
+                              <p className="mt-1 text-sm leading-6 text-slate-600">
+                                {item.note}
+                              </p>
+                            ) : null}
+                          </div>
+                          <span className="shrink-0 rounded-full bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-800">
+                            {item.quantity} igjen
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm leading-6 text-slate-600">
+                    Ingen fryserretter er registrert ennå.
+                  </p>
+                )}
+                <Link
+                  className="mt-4 inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+                  to={`/families/${loaderData.family.id}/freezer`}
+                >
+                  Administrer fryser
+                </Link>
+              </div>
+            </details>
+
             <Form
               key={loaderData.entriesSnapshot}
               className="mt-4 min-w-0 space-y-3"
@@ -705,6 +775,7 @@ export default function FamilyMealPlanRoute({
               <div className="grid min-w-0 gap-2">
                 {loaderData.visibleDates.map((date) => {
                   const entry = entryValues[date] ?? {
+                    freezerItemId: "",
                     note: "",
                     recipeId: "",
                     responsibleUserId: "",
@@ -720,6 +791,7 @@ export default function FamilyMealPlanRoute({
                       entry={entry}
                       familyId={loaderData.family.id}
                       familyMembers={loaderData.familyMembers}
+                      freezerItems={loaderData.freezerItems}
                       isToday={isPlanDateToday(date)}
                       mealPlanId={loaderData.mealPlan.id}
                       recipes={loaderData.recipes}
@@ -1150,6 +1222,13 @@ interface MealPlanRecipeOption {
   title: string;
 }
 
+interface MealPlanFreezerOption {
+  id: string;
+  label: string;
+  note: string | null;
+  quantity: number;
+}
+
 interface ShareMemberOption {
   displayName: string;
   id: string;
@@ -1549,6 +1628,24 @@ function formatRecipeCount(count: number) {
   return count === 1 ? "1 oppskrift" : `${count} oppskrifter`;
 }
 
+function formatFreezerStockCount(
+  items: Array<{
+    quantity: number;
+  }>,
+) {
+  const availableCount = items.filter((item) => item.quantity > 0).length;
+
+  if (availableCount === 0) {
+    return items.length === 0
+      ? "Ingen fryserretter registrert"
+      : "Ingen porsjoner tilgjengelig";
+  }
+
+  return availableCount === 1
+    ? "1 rett med porsjoner i fryseren"
+    : `${availableCount} retter med porsjoner i fryseren`;
+}
+
 function RecipeBankContent({
   familyId,
   recipes,
@@ -1626,6 +1723,7 @@ function MealPlanDayRow({
   entry,
   familyId,
   familyMembers,
+  freezerItems,
   isToday,
   mealPlanId,
   recipes,
@@ -1636,31 +1734,58 @@ function MealPlanDayRow({
   entry: MealPlanEntryFormState;
   familyId: string;
   familyMembers: MealPlanFamilyMemberOption[];
+  freezerItems: MealPlanFreezerOption[];
   isToday: boolean;
   mealPlanId: string;
   recipes: MealPlanRecipeOption[];
 }) {
-  const [selectedRecipeId, setSelectedRecipeId] = useState(entry.recipeId);
+  const [mealSelection, setMealSelection] = useState(
+    encodeMealSelection({
+      freezerItemId: entry.freezerItemId,
+      recipeId: entry.recipeId,
+    }),
+  );
   const [selectedResponsibleUserId, setSelectedResponsibleUserId] = useState(
     entry.responsibleUserId,
   );
 
   useEffect(() => {
-    setSelectedRecipeId(entry.recipeId);
-  }, [entry.recipeId]);
+    setMealSelection(
+      encodeMealSelection({
+        freezerItemId: entry.freezerItemId,
+        recipeId: entry.recipeId,
+      }),
+    );
+  }, [entry.freezerItemId, entry.recipeId]);
 
   useEffect(() => {
     setSelectedResponsibleUserId(entry.responsibleUserId);
   }, [entry.responsibleUserId]);
 
+  const parsedSelection = parseMealSelection(mealSelection);
   const selectedRecipe =
-    recipes.find((recipe) => recipe.id === entry.recipeId) ?? null;
-  const mealLabel = getMealDaySummaryLabel(entry, selectedRecipe);
-  const hasNoteOnly = !entry.recipeId && Boolean(entry.note.trim());
+    recipes.find((recipe) => recipe.id === parsedSelection.recipeId) ?? null;
+  const selectedFreezerItem =
+    freezerItems.find((item) => item.id === parsedSelection.freezerItemId) ??
+    null;
+  const mealLabel = getMealDaySummaryLabel(
+    entry,
+    selectedRecipe,
+    selectedFreezerItem,
+  );
+  const hasNoteOnly =
+    !parsedSelection.recipeId &&
+    !parsedSelection.freezerItemId &&
+    Boolean(entry.note.trim());
+  const hasFreezerSelection = Boolean(parsedSelection.freezerItemId);
   const responsibleMember =
     familyMembers.find(
       (member) => member.id === selectedResponsibleUserId,
     ) ?? null;
+  const selectableFreezerItems = freezerItems.filter(
+    (item) =>
+      item.quantity > 0 || item.id === parsedSelection.freezerItemId,
+  );
 
   return (
     <details
@@ -1689,6 +1814,11 @@ function MealPlanDayRow({
           {hasNoteOnly ? (
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
               Notat
+            </span>
+          ) : null}
+          {hasFreezerSelection ? (
+            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
+              Fryser
             </span>
           ) : null}
           {responsibleMember ? (
@@ -1722,24 +1852,37 @@ function MealPlanDayRow({
         ) : null}
 
         <label className="block min-w-0 text-sm font-medium text-slate-700">
-          Oppskrift
+          Middag
           <select
             className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-            name={`recipeId:${date}`}
-            onChange={(event) => setSelectedRecipeId(event.target.value)}
-            value={selectedRecipeId}
+            name={`mealSelection:${date}`}
+            onChange={(event) => setMealSelection(event.target.value)}
+            value={mealSelection}
           >
             <option value="">Velg middag</option>
-            {recipes.map((recipe) => (
-              <option key={recipe.id} value={recipe.id}>
-                {recipe.title}
-              </option>
-            ))}
+            {recipes.length > 0 ? (
+              <optgroup label="Oppskrifter">
+                {recipes.map((recipe) => (
+                  <option key={recipe.id} value={`recipe:${recipe.id}`}>
+                    {recipe.title}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+            {selectableFreezerItems.length > 0 ? (
+              <optgroup label="Fryser">
+                {selectableFreezerItems.map((item) => (
+                  <option key={item.id} value={`freezer:${item.id}`}>
+                    Fryser · {item.label} ({item.quantity} igjen)
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
           </select>
-          {selectedRecipeId ? (
+          {parsedSelection.recipeId ? (
             <Link
               className="mt-2 inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
-              to={`/families/${familyId}/recipes/${selectedRecipeId}`}
+              to={`/families/${familyId}/recipes/${parsedSelection.recipeId}`}
             >
               Se oppskrift
             </Link>
@@ -1779,9 +1922,13 @@ function MealPlanDayRow({
           <p className="break-words text-sm leading-6 text-slate-600">
             {selectedRecipe
               ? `${selectedRecipe.description ?? "Ingen beskrivelse."} · ${selectedRecipe.prepMinutes ?? "?"} min · ${selectedRecipe.defaultServings ?? "?"} personer`
-              : entry.note
-                ? "Bare notat lagres for denne dagen."
-                : "Ingen rett valgt enda."}
+              : selectedFreezerItem
+                ? selectedFreezerItem.note
+                  ? `Fryserrett. ${selectedFreezerItem.note}`
+                  : "Fryserrett valgt for denne dagen."
+                : entry.note
+                  ? "Bare notat lagres for denne dagen."
+                  : "Ingen rett valgt enda."}
           </p>
 
           {selectedRecipe?.tags.length ? (
@@ -1805,20 +1952,19 @@ function MealPlanDayRow({
 function getMealDaySummaryLabel(
   entry: MealPlanEntryFormState,
   selectedRecipe: MealPlanRecipeOption | null,
+  selectedFreezerItem: MealPlanFreezerOption | null,
 ) {
-  if (selectedRecipe) {
-    return selectedRecipe.title;
-  }
-
-  const trimmedNote = entry.note.trim();
-
-  if (trimmedNote) {
-    return trimmedNote.length > 48
-      ? `${trimmedNote.slice(0, 48)}…`
-      : trimmedNote;
-  }
-
-  return "Ikke planlagt";
+  return getDinnerMenuLabel({
+    freezerItem: selectedFreezerItem
+      ? { label: selectedFreezerItem.label }
+      : entry.freezerItemId
+        ? { label: "Fryserrett" }
+        : null,
+    freezerItemId: entry.freezerItemId || null,
+    note: entry.note,
+    recipe: selectedRecipe ? { title: selectedRecipe.title } : null,
+    recipeId: entry.recipeId || null,
+  });
 }
 
 function formatMealPlanWindow(startDate: string, endDate: string) {
@@ -1846,11 +1992,15 @@ function formatApprovalTimestamp(value: string) {
 function parseMealPlanEntries(formData: FormData): MealPlanEntryValues[] {
   return formData.getAll("entryDate").map((dateValue) => {
     const date = String(dateValue);
+    const selection = parseMealSelection(
+      String(formData.get(`mealSelection:${date}`) ?? ""),
+    );
 
     return {
       date,
+      freezerItemId: selection.freezerItemId,
       note: String(formData.get(`note:${date}`) ?? ""),
-      recipeId: String(formData.get(`recipeId:${date}`) ?? ""),
+      recipeId: selection.recipeId,
       responsibleUserId: String(
         formData.get(`responsibleUserId:${date}`) ?? "",
       ),
@@ -1861,6 +2011,7 @@ function parseMealPlanEntries(formData: FormData): MealPlanEntryValues[] {
 function buildResetMealPlanEntries(formData: FormData): MealPlanEntryValues[] {
   return formData.getAll("entryDate").map((dateValue) => ({
     date: String(dateValue),
+    freezerItemId: "",
     note: "",
     recipeId: "",
     responsibleUserId: "",
@@ -1885,6 +2036,7 @@ function indexMealPlanEntryValues(
     entries.map((entry) => [
       entry.date,
       {
+        freezerItemId: entry.freezerItemId,
         note: entry.note,
         recipeId: entry.recipeId,
         responsibleUserId: entry.responsibleUserId,

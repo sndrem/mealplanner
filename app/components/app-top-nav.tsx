@@ -36,6 +36,11 @@ function buildFamilyNavItems(
       label: "Basisvarer",
       to: `/families/${familyId}/stock-ingredients`,
     },
+    {
+      end: true,
+      label: "Fryser",
+      to: `/families/${familyId}/freezer`,
+    },
     { end: true, label: "Oversikt", to: "/app" },
   ];
 }

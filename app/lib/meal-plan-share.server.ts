@@ -67,6 +67,13 @@ const reviewCommentSelect = PrismaRuntime.validator<Prisma.MealPlanReviewComment
 
 const mealPlanReviewEntrySelect = PrismaRuntime.validator<Prisma.MealPlanEntrySelect>()({
   date: true,
+  freezerItem: {
+    select: {
+      id: true,
+      label: true,
+    },
+  },
+  freezerItemId: true,
   mealType: true,
   note: true,
   recipe: {
@@ -461,6 +468,8 @@ export async function getMealPlanShareReviewData({
         date,
         dinner: entry
           ? {
+              freezerItemId: entry.freezerItemId,
+              freezerItemLabel: entry.freezerItem?.label ?? null,
               note: entry.note,
               recipeId: entry.recipeId,
               recipeTitle: entry.recipe?.title ?? null,

@@ -13,6 +13,13 @@ const mealPlanCalendarSelect = Prisma.validator<Prisma.MealPlanSelect>()({
     orderBy: [{ date: "asc" }],
     select: {
       date: true,
+      freezerItem: {
+        select: {
+          label: true,
+          note: true,
+        },
+      },
+      freezerItemId: true,
       recipe: {
         select: {
           description: true,
@@ -146,12 +153,21 @@ async function getMealPlanCalendarData({ familyId, mealPlanId, userId }: MealPla
 function buildMealPlanEvents(mealPlan: Awaited<ReturnType<typeof getMealPlanCalendarData>>) {
   return mealPlan.entries.flatMap((entry) => {
     const date = formatDateOnly(entry.date);
+    const meal = getCalendarMealDetails(entry);
 
-    if (!entry.recipeId || !entry.recipe) {
+    if (!meal) {
       return [];
     }
 
-    return [createMealPlanEvent({ date, mealPlanId: mealPlan.id, mealPlanTitle: mealPlan.title, recipe: entry.recipe })];
+    return [
+      createMealPlanEvent({
+        date,
+        description: meal.description,
+        mealPlanId: mealPlan.id,
+        mealPlanTitle: mealPlan.title,
+        title: meal.title,
+      }),
+    ];
   });
 }
 
@@ -160,37 +176,58 @@ function buildMealPlanEventForDate(
   date: string,
 ) {
   const entry = mealPlan.entries.find((mealPlanEntry) => formatDateOnly(mealPlanEntry.date) === date);
+  const meal = entry ? getCalendarMealDetails(entry) : null;
 
-  if (!entry?.recipeId || !entry.recipe) {
+  if (!meal) {
     return null;
   }
 
   return createMealPlanEvent({
     date,
+    description: meal.description,
     mealPlanId: mealPlan.id,
     mealPlanTitle: mealPlan.title,
-    recipe: entry.recipe,
+    title: meal.title,
   });
+}
+
+function getCalendarMealDetails(
+  entry: Awaited<ReturnType<typeof getMealPlanCalendarData>>["entries"][number],
+) {
+  if (entry.recipeId && entry.recipe) {
+    return {
+      description: entry.recipe.description,
+      title: entry.recipe.title,
+    };
+  }
+
+  if (entry.freezerItemId && entry.freezerItem) {
+    return {
+      description: entry.freezerItem.note,
+      title: entry.freezerItem.label,
+    };
+  }
+
+  return null;
 }
 
 function createMealPlanEvent({
   date,
+  description,
   mealPlanId,
   mealPlanTitle,
-  recipe,
+  title,
 }: {
   date: string;
+  description: string | null;
   mealPlanId: string;
   mealPlanTitle: string;
-  recipe: {
-    description: string | null;
-    title: string;
-  };
+  title: string;
 }): CalendarEventInput {
   return {
     date,
-    description: createMealPlanDescription(date, mealPlanTitle, recipe.description),
-    title: `Middag: ${recipe.title}`,
+    description: createMealPlanDescription(date, mealPlanTitle, description),
+    title: `Middag: ${title}`,
     uid: `${mealPlanId}-${date}@mealplanner`,
   };
 }

@@ -50,6 +50,12 @@ export async function getFamilyWeekDinnerMenu({
       entries: {
         select: {
           date: true,
+          freezerItem: {
+            select: {
+              label: true,
+            },
+          },
+          freezerItemId: true,
           note: true,
           recipe: {
             select: {

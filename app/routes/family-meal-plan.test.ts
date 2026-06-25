@@ -72,6 +72,7 @@ describe("family meal plan route", () => {
         id: "family-1",
         name: "Solberg",
       },
+      freezerItems: [],
       mealPlan: {
         activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
         approvedAt: null,
@@ -87,6 +88,8 @@ describe("family meal plan route", () => {
             locked: false,
             mealType: "DINNER",
             note: "Bruk rester til lunsj",
+            freezerItem: null,
+            freezerItemId: null,
             recipe: null,
             recipeId: "",
             responsibleUser: null,
@@ -183,6 +186,7 @@ describe("family meal plan route", () => {
         { displayName: "Kari", id: "user-2" },
       ],
       feedbackShares: [],
+      freezerItems: [],
       notice: "meal-plan-created",
       noticeMeta: null,
       recipes: [
@@ -201,24 +205,32 @@ describe("family meal plan route", () => {
       entriesByDate: {
         "2026-05-15": {
           note: "Bruk rester til lunsj",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
           updatedAt: "2026-05-01T12:00:00.000Z",
         },
         "2026-05-16": {
           note: "",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
           updatedAt: "",
         },
         "2026-05-17": {
           note: "",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
           updatedAt: "",
         },
         "2026-05-18": {
           note: "",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
           updatedAt: "",
@@ -236,12 +248,16 @@ describe("family meal plan route", () => {
         {
           date: "2026-05-15",
           note: "Bruk rester til lunsj",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "user-2",
         },
         {
           date: "2026-05-16",
           note: "",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
           responsibleUserId: "",
         },
@@ -253,10 +269,10 @@ describe("family meal plan route", () => {
     formData.append("entryDate", "2026-05-15");
     formData.append("entryDate", "2026-05-16");
     formData.set("note:2026-05-15", "Bruk rester til lunsj");
-    formData.set("recipeId:2026-05-15", "");
+    formData.set("mealSelection:2026-05-15", "");
     formData.set("responsibleUserId:2026-05-15", "user-2");
     formData.set("note:2026-05-16", "");
-    formData.set("recipeId:2026-05-16", "kylling-taco");
+    formData.set("mealSelection:2026-05-16", "recipe:kylling-taco");
     formData.set("responsibleUserId:2026-05-16", "");
 
     const result = await action({
@@ -272,12 +288,16 @@ describe("family meal plan route", () => {
         {
           date: "2026-05-15",
           note: "Bruk rester til lunsj",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "user-2",
         },
         {
           date: "2026-05-16",
           note: "",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
           responsibleUserId: "",
         },
@@ -295,12 +315,16 @@ describe("family meal plan route", () => {
       entryValues: {
         "2026-05-15": {
           note: "Bruk rester til lunsj",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "user-2",
           updatedAt: "",
         },
         "2026-05-16": {
           note: "",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
           responsibleUserId: "",
           updatedAt: "",
@@ -319,7 +343,7 @@ describe("family meal plan route", () => {
     const formData = new FormData();
     formData.set("intent", "save-meal-plan-entries");
     formData.append("entryDate", "2026-05-15");
-    formData.set("recipeId:2026-05-15", "kylling-taco");
+    formData.set("mealSelection:2026-05-15", "recipe:kylling-taco");
     formData.set("note:2026-05-15", "");
 
     const result = await action({
@@ -352,9 +376,9 @@ describe("family meal plan route", () => {
     formData.set("entryUpdatedAt:2026-05-15", "2026-05-01T12:00:00.000Z");
     formData.set("entryUpdatedAt:2026-05-16", "2026-05-02T12:00:00.000Z");
     formData.set("note:2026-05-15", "Bruk rester til lunsj");
-    formData.set("recipeId:2026-05-15", "");
+    formData.set("mealSelection:2026-05-15", "");
     formData.set("note:2026-05-16", "");
-    formData.set("recipeId:2026-05-16", "kylling-taco");
+    formData.set("mealSelection:2026-05-16", "recipe:kylling-taco");
 
     const result = await action({
       params: {
@@ -369,12 +393,16 @@ describe("family meal plan route", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
         },
         {
           date: "2026-05-16",
           note: "",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
         },
@@ -405,6 +433,8 @@ describe("family meal plan route", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
         },
@@ -416,7 +446,7 @@ describe("family meal plan route", () => {
     formData.append("entryDate", "2026-05-15");
     formData.set("entryUpdatedAt:2026-05-15", "2026-05-01T12:00:00.000Z");
     formData.set("note:2026-05-15", "Skal ignoreres");
-    formData.set("recipeId:2026-05-15", "kylling-taco");
+    formData.set("mealSelection:2026-05-15", "recipe:kylling-taco");
 
     const result = await action({
       params: {
@@ -431,6 +461,8 @@ describe("family meal plan route", () => {
       entryValues: {
         "2026-05-15": {
           note: "",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
           updatedAt: "2026-05-01T12:00:00.000Z",
@@ -606,7 +638,7 @@ describe("family meal plan route", () => {
     const formData = new FormData();
     formData.set("intent", "save-meal-plan-entries");
     formData.append("entryDate", "2026-05-15");
-    formData.set("recipeId:2026-05-15", "kylling-taco");
+    formData.set("mealSelection:2026-05-15", "recipe:kylling-taco");
     formData.set("note:2026-05-15", "");
 
     await expect(

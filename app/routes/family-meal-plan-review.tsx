@@ -307,13 +307,18 @@ export default function FamilyMealPlanReviewRoute({
                   </p>
                 </header>
 
-                {day.dinner?.recipeTitle ? (
+                {day.dinner?.recipeTitle || day.dinner?.freezerItemLabel ? (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 ring-1 ring-emerald-100">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
                       Middag
                     </p>
+                    {day.dinner.freezerItemLabel ? (
+                      <span className="mt-2 inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-800">
+                        Fryser
+                      </span>
+                    ) : null}
                     <p className="mt-2 text-lg font-semibold leading-snug text-slate-950">
-                      {day.dinner.recipeTitle}
+                      {day.dinner.recipeTitle ?? day.dinner.freezerItemLabel}
                     </p>
                     {day.dinner.note ? (
                       <p className="mt-2 text-sm leading-6 text-slate-600">

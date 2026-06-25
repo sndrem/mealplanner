@@ -14,6 +14,11 @@ import {
   listFamilyMembers,
   requireFamilyMembership,
 } from "./family.server";
+import {
+  computeFreezerStockDelta,
+  validateFreezerStockDelta,
+} from "./freezer-stock.server";
+import { listActiveFreezerItemsForPlanning } from "./freezer.server";
 import { formatDateOnly } from "./meal-plan-dates";
 import {
   logCollaborationFailure,
@@ -52,9 +57,20 @@ const recipeOptionSelect = Prisma.validator<Prisma.RecipeSelect>()({
   title: true,
 });
 
+const freezerItemOptionSelect = Prisma.validator<Prisma.FamilyFreezerItemSelect>()({
+  id: true,
+  label: true,
+  note: true,
+  quantity: true,
+});
+
 const mealPlanEntrySelect = Prisma.validator<Prisma.MealPlanEntrySelect>()({
   createdAt: true,
   date: true,
+  freezerItem: {
+    select: freezerItemOptionSelect,
+  },
+  freezerItemId: true,
   id: true,
   locked: true,
   mealType: true,
@@ -130,6 +146,7 @@ interface CopyMealPlanInput extends MealPlanMutationInput {
 
 export interface MealPlanEntryValues {
   date: string;
+  freezerItemId: string;
   note: string;
   recipeId: string;
   responsibleUserId: string;
@@ -384,12 +401,22 @@ export async function getMealPlanPlanningData({
       ],
     },
   });
+  const assignedFreezerItemIds = mealPlan.entries
+    .filter((entry) => entry.mealType === PLANNING_MEAL_TYPE)
+    .map((entry) => entry.freezerItemId)
+    .filter((freezerItemId): freezerItemId is string => Boolean(freezerItemId));
+  const freezerItems = await listActiveFreezerItemsForPlanning({
+    familyId,
+    includeItemIds: assignedFreezerItemIds,
+    userId,
+  });
 
   return {
     family: {
       id: membership.family.id,
       name: membership.family.name,
     },
+    freezerItems,
     mealPlan,
     recipes,
     userRole: membership.role,
@@ -825,7 +852,7 @@ export async function autoFillMealPlanEntries({
   const targetDates = visibleDates.filter((date) => {
     const entry = dinnerEntriesByDate.get(date);
 
-    return !entry?.recipeId && !entry?.note;
+    return !entry?.recipeId && !entry?.note && !entry?.freezerItemId;
   });
 
   if (targetDates.length === 0) {
@@ -882,6 +909,7 @@ export async function autoFillMealPlanEntries({
     if (assignedRecipeId) {
       return {
         date,
+        freezerItemId: "",
         note: "",
         recipeId: assignedRecipeId,
         responsibleUserId: existingEntry?.responsibleUserId ?? "",
@@ -890,6 +918,7 @@ export async function autoFillMealPlanEntries({
 
     return {
       date,
+      freezerItemId: existingEntry?.freezerItemId ?? "",
       note: existingEntry?.note ?? "",
       recipeId: existingEntry?.recipeId ?? "",
       responsibleUserId: existingEntry?.responsibleUserId ?? "",
@@ -1016,6 +1045,124 @@ export async function saveMealPlanEntries({
     }
   }
 
+  if (values.some((entry) => entry.recipeId && entry.freezerItemId)) {
+    logCollaborationWrite({
+      action: "save-meal-plan-entries",
+      domain: "meal-plan",
+      entityType: "meal-plan-entry",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    return {
+      formError: "En dag kan ikke ha både oppskrift og fryserrett.",
+      status: "VALIDATION_ERROR" as const,
+      values,
+    };
+  }
+
+  const freezerItemIds = [
+    ...new Set(values.map((entry) => entry.freezerItemId).filter(Boolean)),
+  ];
+
+  if (freezerItemIds.length > 0) {
+    const freezerItems = await db.familyFreezerItem.findMany({
+      select: {
+        id: true,
+      },
+      where: {
+        familyId,
+        id: {
+          in: freezerItemIds,
+        },
+      },
+    });
+
+    if (freezerItems.length !== freezerItemIds.length) {
+      logCollaborationWrite({
+        action: "save-meal-plan-entries",
+        domain: "meal-plan",
+        entityType: "meal-plan-entry",
+        familyId,
+        mealPlanId: mealPlan.id,
+        outcome: "VALIDATION_ERROR",
+        userId,
+      });
+
+      return {
+        formError: "Minst en valgt fryserrett er ikke tilgjengelig for familien.",
+        status: "VALIDATION_ERROR" as const,
+        values,
+      };
+    }
+  }
+
+  const previousFreezerEntries = await db.mealPlanEntry.findMany({
+    select: {
+      date: true,
+      freezerItemId: true,
+    },
+    where: {
+      mealPlanId: mealPlan.id,
+      mealType: PLANNING_MEAL_TYPE,
+    },
+  });
+  const previousFreezerByDate = new Map(
+    previousFreezerEntries.map((entry) => [
+      formatDateOnly(entry.date),
+      entry.freezerItemId,
+    ]),
+  );
+  const nextFreezerByDate = new Map(
+    values.map((entry) => [entry.date, entry.freezerItemId || null]),
+  );
+  const freezerStockDelta = computeFreezerStockDelta({
+    nextEntries: nextFreezerByDate,
+    previousEntries: previousFreezerByDate,
+  });
+
+  if (freezerStockDelta.size > 0) {
+    const affectedFreezerItems = await db.familyFreezerItem.findMany({
+      select: {
+        id: true,
+        quantity: true,
+      },
+      where: {
+        familyId,
+        id: {
+          in: [...freezerStockDelta.keys()],
+        },
+      },
+    });
+    const currentQuantities = new Map(
+      affectedFreezerItems.map((item) => [item.id, item.quantity]),
+    );
+    const stockValidation = validateFreezerStockDelta({
+      currentQuantities,
+      deltaByItemId: freezerStockDelta,
+    });
+
+    if (stockValidation.status === "INSUFFICIENT_STOCK") {
+      logCollaborationWrite({
+        action: "save-meal-plan-entries",
+        domain: "meal-plan",
+        entityType: "meal-plan-entry",
+        familyId,
+        mealPlanId: mealPlan.id,
+        outcome: "VALIDATION_ERROR",
+        userId,
+      });
+
+      return {
+        formError: stockValidation.formError,
+        status: "VALIDATION_ERROR" as const,
+        values,
+      };
+    }
+  }
+
   const responsibleUserIds = [
     ...new Set(values.map((entry) => entry.responsibleUserId).filter(Boolean)),
   ];
@@ -1099,6 +1246,35 @@ export async function saveMealPlanEntries({
 
   try {
     await db.$transaction(async (tx) => {
+      for (const [freezerItemId, delta] of freezerStockDelta) {
+        if (delta === 0) {
+          continue;
+        }
+
+        const updated = await tx.familyFreezerItem.updateMany({
+          data: {
+            quantity: {
+              increment: delta,
+            },
+          },
+          where: {
+            familyId,
+            id: freezerItemId,
+            ...(delta < 0
+              ? {
+                  quantity: {
+                    gte: -delta,
+                  },
+                }
+              : {}),
+          },
+        });
+
+        if (updated.count === 0) {
+          throw new Error("INSUFFICIENT_FREEZER_STOCK");
+        }
+      }
+
       for (let entry of values) {
         const date = parseDateOnly(entry.date);
 
@@ -1108,7 +1284,7 @@ export async function saveMealPlanEntries({
           );
         }
 
-        if (!entry.note && !entry.recipeId) {
+        if (!entry.note && !entry.recipeId && !entry.freezerItemId) {
           await tx.mealPlanEntry.deleteMany({
             where: {
               date,
@@ -1122,6 +1298,7 @@ export async function saveMealPlanEntries({
         await tx.mealPlanEntry.upsert({
           create: {
             date,
+            freezerItemId: entry.freezerItemId || null,
             mealPlanId: mealPlan.id,
             mealType: PLANNING_MEAL_TYPE,
             note: entry.note || null,
@@ -1130,6 +1307,7 @@ export async function saveMealPlanEntries({
             ...buildActorUpdate(userId),
           },
           update: {
+            freezerItemId: entry.freezerItemId || null,
             note: entry.note || null,
             recipeId: entry.recipeId || null,
             responsibleUserId: entry.responsibleUserId || null,
@@ -1462,6 +1640,7 @@ function normalizeMealPlanEntryValues(
 ): MealPlanEntryValues {
   return {
     date: entry.date.trim(),
+    freezerItemId: entry.freezerItemId.trim(),
     note: entry.note.trim(),
     recipeId: entry.recipeId.trim(),
     responsibleUserId: entry.responsibleUserId.trim(),

@@ -2,32 +2,36 @@
 
 ## Current Objective
 
-Issue #153 — Remove Kassal.app integration (revert #150) on branch `revert-kassalapp-api`. PR ready to merge.
+Issue #155 — Family freezer register on branch `issue/155-freezer-register`. Ready for PR.
 
 ## Completed
 
-- Deleted all `app/lib/kassalapp*` modules, `secret-encryption.server.ts`, and related tests.
-- Removed `/families/:familyId/kassalapp` route, nav link, and `getStoreModeCostEstimate` from `shopping.server.ts`.
-- Dropped `FamilyKassalappIntegration` from Prisma schema with forward migration `20260609100000_remove_family_kassalapp_integration`.
-- Updated `README.md` to remove Kassal/encryption documentation.
-- Closed #151 (pricing UI superseded by removal).
+- Added `FamilyFreezerItem` model and `MealPlanEntry.freezerItemId` with migration `20260625120000_add_family_freezer_items`.
+- Implemented `freezer.server.ts`, `freezer-write.server.ts`, `freezer-stock.server.ts` with stock delta on meal-plan save.
+- Extended `saveMealPlanEntries` / `getMealPlanPlanningData` for freezer validation, decrement on save, and reset restore.
+- Added admin route `/families/:familyId/freezer` with add/update/remove and Fryser nav link.
+- Updated meal-plan UI: closed-by-default freezer panel, unified `mealSelection` picker with Fryser marking.
+- Updated downstream labels: `getDinnerMenuLabel`, family home, calendar export, meal-plan review.
 
 ## Files To Read First
 
-- `prisma/migrations/20260609100000_remove_family_kassalapp_integration/migration.sql` — drops `FamilyKassalappIntegration` table
-- `prisma/schema.prisma` — confirm model and relations removed
+- `prisma/schema.prisma` — `FamilyFreezerItem`, `MealPlanEntry.freezerItemId`
+- `app/lib/meal-plan.server.ts` — save pipeline stock delta
+- `app/routes/family-meal-plan.tsx` — freezer panel + picker
+- `app/routes/family-freezer.tsx` — admin CRUD
 
 ## Validation
 
 - `npm run prisma:generate` — passed
-- `npm run lint` — passed
-- `npm run test:run` — passed (52 files, 317 tests)
+- `npm run lint` — passed (after fixing unused imports)
+- `npm run test:run` — passed (55 files, 334 tests)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- None
+- Migration not applied to local DB (drift detected); migration SQL file is committed for deploy/CI.
+- Plan copy does not copy `freezerItemId` (intentional v1 safety).
 
 ## Next Step
 
-Merge PR (`Closes #153`).
+Open PR with `Closes #155`.

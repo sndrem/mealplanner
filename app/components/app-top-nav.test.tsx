@@ -36,6 +36,10 @@ describe("AppTopNav", () => {
       "href",
       "/families/family-1/stock-ingredients",
     );
+    expect(screen.getByRole("link", { name: "Fryser" })).toHaveAttribute(
+      "href",
+      "/families/family-1/freezer",
+    );
     expect(screen.getByRole("link", { name: "Oversikt" })).toHaveAttribute("href", "/app");
   });
 
