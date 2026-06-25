@@ -26,6 +26,10 @@ export function formatShortDateLabel(date: string) {
 }
 
 type DinnerMenuEntry = {
+  freezerItem?: {
+    label: string;
+  } | null;
+  freezerItemId?: string | null;
   note: string | null;
   recipe?: {
     title: string;
@@ -38,6 +42,10 @@ export function getDinnerMenuLabel(entry: DinnerMenuEntry | null | undefined) {
     return entry.recipe.title;
   }
 
+  if (entry?.freezerItem?.label) {
+    return entry.freezerItem.label;
+  }
+
   const trimmedNote = entry?.note?.trim() ?? "";
 
   if (trimmedNote) {
@@ -45,4 +53,45 @@ export function getDinnerMenuLabel(entry: DinnerMenuEntry | null | undefined) {
   }
 
   return "Ikke planlagt";
+}
+
+export function encodeMealSelection({
+  freezerItemId,
+  recipeId,
+}: {
+  freezerItemId: string;
+  recipeId: string;
+}) {
+  if (recipeId) {
+    return `recipe:${recipeId}`;
+  }
+
+  if (freezerItemId) {
+    return `freezer:${freezerItemId}`;
+  }
+
+  return "";
+}
+
+export function parseMealSelection(value: string) {
+  const trimmed = value.trim();
+
+  if (trimmed.startsWith("recipe:")) {
+    return {
+      freezerItemId: "",
+      recipeId: trimmed.slice("recipe:".length),
+    };
+  }
+
+  if (trimmed.startsWith("freezer:")) {
+    return {
+      freezerItemId: trimmed.slice("freezer:".length),
+      recipeId: "",
+    };
+  }
+
+  return {
+    freezerItemId: "",
+    recipeId: "",
+  };
 }

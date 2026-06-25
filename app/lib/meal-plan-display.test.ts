@@ -23,6 +23,18 @@ describe("getDinnerMenuLabel", () => {
     ).toBe("Pizza");
   });
 
+  it("prefers freezer label over note when recipe is missing", () => {
+    expect(
+      getDinnerMenuLabel({
+        freezerItem: { label: "Chili fra fryseren" },
+        freezerItemId: "freezer-1",
+        note: "Takeaway",
+        recipe: null,
+        recipeId: null,
+      }),
+    ).toBe("Chili fra fryseren");
+  });
+
   it("returns default label when entry is empty", () => {
     expect(getDinnerMenuLabel(null)).toBe("Ikke planlagt");
   });

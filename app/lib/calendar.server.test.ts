@@ -73,12 +73,14 @@ describe("calendar.server", () => {
     expect(content).toContain("DTEND;TZID=Europe/Oslo:20260515T170000");
   });
 
-  it("exports only recipe-backed meal-plan dinners", async () => {
+  it("exports recipe-backed and freezer-backed meal-plan dinners", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue({
       endDate: new Date("2026-05-18T00:00:00.000Z"),
       entries: [
         {
           date: new Date("2026-05-15T00:00:00.000Z"),
+          freezerItem: null,
+          freezerItemId: null,
           recipe: {
             description: null,
             title: "Taco fredag",
@@ -87,6 +89,18 @@ describe("calendar.server", () => {
         },
         {
           date: new Date("2026-05-16T00:00:00.000Z"),
+          freezerItem: {
+            label: "Chili fra fryseren",
+            note: "Tina i micro",
+          },
+          freezerItemId: "freezer-1",
+          recipe: null,
+          recipeId: null,
+        },
+        {
+          date: new Date("2026-05-17T00:00:00.000Z"),
+          freezerItem: null,
+          freezerItemId: null,
           recipe: null,
           recipeId: "",
         },
@@ -107,10 +121,10 @@ describe("calendar.server", () => {
       userId: "user-1",
     });
     expect(result.fileName).toBe("langhelg-ukeplan.ics");
-    expect(result.content.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+    expect(result.content.match(/BEGIN:VEVENT/g)).toHaveLength(2);
     expect(result.content).toContain("SUMMARY:Middag: Taco fredag");
-    expect(result.content).toContain("DESCRIPTION:Planlagt for");
-    expect(result.content).toContain("i Langhelg. Ingen beskrivelse.");
+    expect(result.content).toContain("SUMMARY:Middag: Chili fra fryseren");
+    expect(result.content).toContain("Tina i micro");
   });
 
   it("exports a single day as a timed dinner calendar file", async () => {
@@ -119,6 +133,8 @@ describe("calendar.server", () => {
       entries: [
         {
           date: new Date("2026-05-16T00:00:00.000Z"),
+          freezerItem: null,
+          freezerItemId: null,
           recipe: {
             description: "Rask middagsfavoritt.",
             title: "Kyllingtaco",

@@ -27,6 +27,10 @@ const {
         findMany: vi.fn(),
         upsert: vi.fn(),
       },
+      familyFreezerItem: {
+        findMany: vi.fn(),
+        updateMany: vi.fn(),
+      },
       recipe: {
         findMany: vi.fn(),
       },
@@ -55,6 +59,12 @@ vi.mock("./write-observability.server", () => {
   return {
     logCollaborationFailure: vi.fn(),
     logCollaborationWrite: vi.fn(),
+  };
+});
+
+vi.mock("./freezer.server", () => {
+  return {
+    listActiveFreezerItemsForPlanning: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -97,6 +107,8 @@ describe("meal-plan.server", () => {
       callback(dbMock),
     );
     dbMock.mealPlanEntry.findMany.mockResolvedValue([]);
+    dbMock.familyFreezerItem.findMany.mockResolvedValue([]);
+    dbMock.familyFreezerItem.updateMany.mockResolvedValue({ count: 1 });
     dbMock.mealPlan.updateMany.mockResolvedValue({ count: 1 });
     dbMock.mealPlanShare.updateMany.mockResolvedValue({ count: 0 });
     dbMock.mealPlan.findUniqueOrThrow.mockResolvedValue({
@@ -266,12 +278,16 @@ describe("meal-plan.server", () => {
         {
           date: new Date("2026-05-15T00:00:00.000Z"),
           note: "Rester til lunsj",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
           responsibleUserId: "user-2",
         },
         {
           date: new Date("2026-05-17T00:00:00.000Z"),
           note: null,
+          freezerItemId: "",
+
           recipeId: "tomatsuppe",
           responsibleUserId: null,
         },
@@ -375,16 +391,22 @@ describe("meal-plan.server", () => {
         {
           date: new Date("2026-05-15T00:00:00.000Z"),
           note: "",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
         },
         {
           date: new Date("2026-05-16T00:00:00.000Z"),
           note: "Bare notat",
+          freezerItemId: "",
+
           recipeId: null,
         },
         {
           date: new Date("2026-05-17T00:00:00.000Z"),
           note: "",
+          freezerItemId: "",
+
           recipeId: "tomatsuppe",
         },
       ],
@@ -421,6 +443,7 @@ describe("meal-plan.server", () => {
           mealType: "DINNER",
           note: "",
           recipeId: "kylling-taco",
+          responsibleUserId: undefined,
         },
         {
           date: new Date("2026-05-21T00:00:00.000Z"),
@@ -428,6 +451,7 @@ describe("meal-plan.server", () => {
           mealType: "DINNER",
           note: "Bare notat",
           recipeId: null,
+          responsibleUserId: undefined,
         },
       ],
     });
@@ -482,6 +506,8 @@ describe("meal-plan.server", () => {
           locked: false,
           mealType: "DINNER",
           note: "Bruk rester",
+          freezerItem: null,
+          freezerItemId: null,
           recipe: null,
           recipeId: null,
           updatedAt: new Date("2026-05-01T12:00:00.000Z"),
@@ -781,6 +807,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
           responsibleUserId: "",
         },
@@ -798,6 +826,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
           responsibleUserId: "",
         },
@@ -819,12 +849,16 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
           responsibleUserId: "",
         },
         {
           date: "2026-05-16",
           note: "",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
         },
@@ -848,6 +882,90 @@ describe("meal-plan.server", () => {
     });
   });
 
+  it("decrements freezer stock when assigning a freezer item", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-15T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.mealPlanEntry.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    dbMock.familyFreezerItem.findMany
+      .mockResolvedValueOnce([{ id: "freezer-1" }])
+      .mockResolvedValueOnce([{ id: "freezer-1", quantity: 2 }]);
+
+    const result = await saveMealPlanEntries({
+      entries: [
+        {
+          date: "2026-05-15",
+          freezerItemId: "freezer-1",
+          note: "",
+          recipeId: "",
+          responsibleUserId: "",
+        },
+      ],
+      entryVersions: {},
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "UPDATED",
+    });
+    expect(dbMock.familyFreezerItem.updateMany).toHaveBeenCalledWith({
+      data: {
+        quantity: {
+          increment: -1,
+        },
+      },
+      where: {
+        familyId: "family-1",
+        id: "freezer-1",
+        quantity: {
+          gte: 1,
+        },
+      },
+    });
+    expect(dbMock.mealPlanEntry.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          freezerItemId: "freezer-1",
+          recipeId: null,
+        }),
+      }),
+    );
+  });
+
+  it("rejects meal plans that assign unavailable freezer items", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-15T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.familyFreezerItem.findMany.mockResolvedValueOnce([]);
+
+    const result = await saveMealPlanEntries({
+      entries: [
+        {
+          date: "2026-05-15",
+          freezerItemId: "freezer-1",
+          note: "",
+          recipeId: "",
+          responsibleUserId: "",
+        },
+      ],
+      entryVersions: {},
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.status).toBe("VALIDATION_ERROR");
+    expect(result.formError).toContain("fryserrett");
+  });
+
   it("supports note-only entries while keeping recipe optional", async () => {
     dbMock.mealPlan.findFirst.mockResolvedValue({
       endDate: new Date("2026-05-15T00:00:00.000Z"),
@@ -860,6 +978,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "Bruk rester til lunsj",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
         },
@@ -879,12 +999,16 @@ describe("meal-plan.server", () => {
         mealPlanId: "meal-plan-1",
         mealType: "DINNER",
         note: "Bruk rester til lunsj",
+        freezerItemId: null,
+
         recipeId: null,
         responsibleUserId: null,
         updatedByUserId: "user-1",
       },
       update: {
         note: "Bruk rester til lunsj",
+        freezerItemId: null,
+
         recipeId: null,
         responsibleUserId: null,
         updatedByUserId: "user-1",
@@ -917,6 +1041,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "Oppdatert notat",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
         },
@@ -937,6 +1063,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "Oppdatert notat",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "",
         },
@@ -958,6 +1086,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "ukjent-rett",
           responsibleUserId: "",
         },
@@ -975,6 +1105,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "ukjent-rett",
           responsibleUserId: "",
         },
@@ -1005,6 +1137,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
           responsibleUserId: "user-2",
         },
@@ -1052,6 +1186,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
           responsibleUserId: "user-99",
         },
@@ -1069,6 +1205,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "kylling-taco",
           responsibleUserId: "user-99",
         },
@@ -1098,6 +1236,8 @@ describe("meal-plan.server", () => {
         {
           date: "2026-05-15",
           note: "",
+          freezerItemId: "",
+
           recipeId: "",
           responsibleUserId: "user-2",
         },
@@ -1246,6 +1386,8 @@ describe("meal-plan.server", () => {
           locked: false,
           mealType: "DINNER",
           note: "",
+          freezerItem: null,
+          freezerItemId: null,
           recipe: null,
           recipeId: "kylling-taco",
           updatedAt: new Date("2026-05-01T12:00:00.000Z"),
@@ -1257,6 +1399,8 @@ describe("meal-plan.server", () => {
           locked: false,
           mealType: "DINNER",
           note: "Bruk rester",
+          freezerItem: null,
+          freezerItemId: null,
           recipe: null,
           recipeId: null,
           updatedAt: new Date("2026-05-01T12:00:00.000Z"),
@@ -1332,6 +1476,8 @@ describe("meal-plan.server", () => {
           locked: false,
           mealType: "DINNER",
           note: "",
+          freezerItem: null,
+          freezerItemId: null,
           recipe: null,
           recipeId: "recipe-d",
           updatedAt: new Date("2026-05-01T12:00:00.000Z"),
