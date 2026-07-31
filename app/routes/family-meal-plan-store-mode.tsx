@@ -67,6 +67,7 @@ import { listIngredientCategories } from "../lib/store.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
 import {
   getStoreModeBannerClass,
+  getStoreModeSyncOverlayClass,
   storeModeAccentBarClass,
   storeModeCountChipClass,
   storeModeLaterChipClass,
@@ -80,6 +81,7 @@ import {
   storeModeQuickAddDockClass,
   storeModeSectionCardClass,
   storeModeSurfaceCardClass,
+  storeModeSyncOverlayShellClass,
 } from "../lib/store-mode-theme";
 import {
   STORE_MODE_SYNC_PROGRESS_MESSAGE,
@@ -919,23 +921,6 @@ export default function FamilyMealPlanStoreModeRoute({
           </section>
         ) : null}
 
-        {syncBannerMessage ? (
-          <section
-            className={getStoreModeBannerClass(
-              syncBannerMessage === STORE_MODE_SYNC_PROGRESS_MESSAGE
-                ? "sync"
-                : "error",
-            )}
-          >
-            <h2 className="text-base font-semibold">
-              {syncBannerMessage === STORE_MODE_SYNC_PROGRESS_MESSAGE
-                ? "Synkroniserer"
-                : "Kunne ikke synkronisere"}
-            </h2>
-            <p className="mt-2 text-sm leading-6">{syncBannerMessage}</p>
-          </section>
-        ) : null}
-
         {generalFormError ? (
           <section className={getStoreModeBannerClass("error")}>
             <h2 className="text-base font-semibold">
@@ -1076,6 +1061,29 @@ export default function FamilyMealPlanStoreModeRoute({
           </div>
         </section>
       </div>
+
+      {syncBannerMessage ? (
+        <div
+          aria-live="polite"
+          className={storeModeSyncOverlayShellClass}
+          role="status"
+        >
+          <div
+            className={getStoreModeSyncOverlayClass(
+              syncBannerMessage === STORE_MODE_SYNC_PROGRESS_MESSAGE
+                ? "sync"
+                : "error",
+            )}
+          >
+            <p className="font-semibold">
+              {syncBannerMessage === STORE_MODE_SYNC_PROGRESS_MESSAGE
+                ? "Synkroniserer"
+                : "Kunne ikke synkronisere"}
+            </p>
+            <p className="mt-0.5 leading-5">{syncBannerMessage}</p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 overflow-x-clip px-4 pb-4 pt-3">
         <div className="pointer-events-auto mx-auto max-w-4xl min-w-0">

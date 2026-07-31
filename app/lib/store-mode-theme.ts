@@ -42,6 +42,12 @@ export const storeModeQuickAddDockClass =
 
 export type StoreModeBannerTone = "success" | "sync" | "error";
 
+export type StoreModeSyncOverlayTone = "sync" | "error";
+
+/** Fixed shell under sticky app top nav — out of document flow to avoid list shift. */
+export const storeModeSyncOverlayShellClass =
+  "pointer-events-none fixed inset-x-0 top-16 z-[60] px-4";
+
 export function getStoreModeBannerClass(tone: StoreModeBannerTone) {
   switch (tone) {
     case "success":
@@ -50,5 +56,17 @@ export function getStoreModeBannerClass(tone: StoreModeBannerTone) {
       return "rounded-[28px] border border-amber-200/80 bg-amber-50 px-6 py-5 text-amber-950 shadow-sm";
     case "error":
       return "rounded-[28px] border border-rose-200/80 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm";
+  }
+}
+
+export function getStoreModeSyncOverlayClass(tone: StoreModeSyncOverlayTone) {
+  const base =
+    "mx-auto max-w-4xl rounded-2xl border px-4 py-3 text-sm shadow-lg backdrop-blur-sm";
+
+  switch (tone) {
+    case "sync":
+      return `${base} border-amber-200/80 bg-amber-50/95 text-amber-950`;
+    case "error":
+      return `${base} border-rose-200/80 bg-rose-50/95 text-rose-900`;
   }
 }
