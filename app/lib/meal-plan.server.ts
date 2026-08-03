@@ -19,20 +19,20 @@ import {
   validateFreezerStockDelta,
 } from "./freezer-stock.server";
 import { listActiveFreezerItemsForPlanning } from "./freezer.server";
-import { formatDateOnly } from "./meal-plan-dates";
+import { formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS, getMealPlanMaxSpanMessage } from "./meal-plan-dates";
 import {
   logCollaborationFailure,
   logCollaborationWrite,
 } from "./write-observability.server";
 
-export { formatDateOnly, isPlanDateToday } from "./meal-plan-dates";
+export {
+  formatDateOnly,
+  getMealPlanMaxSpanMessage,
+  isPlanDateToday,
+  MEAL_PLAN_MAX_SPAN_DAYS,
+} from "./meal-plan-dates";
 
-export const MEAL_PLAN_MAX_SPAN_DAYS = 14;
 const MEAL_PLAN_MAX_DAY_OFFSET = MEAL_PLAN_MAX_SPAN_DAYS - 1;
-
-export function getMealPlanMaxSpanMessage() {
-  return `Datointervallet kan være maks ${MEAL_PLAN_MAX_SPAN_DAYS} dager.`;
-}
 
 const mealPlanSummarySelect = {
   activeShoppingDate: true,

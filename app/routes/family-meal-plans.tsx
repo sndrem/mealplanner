@@ -7,9 +7,9 @@ import {
   createMealPlan,
   deleteMealPlan,
   formatDateOnly,
-  MEAL_PLAN_MAX_SPAN_DAYS,
   listMealPlansForFamily,
 } from "../lib/meal-plan.server";
+import { MEAL_PLAN_MAX_SPAN_DAYS } from "../lib/meal-plan-dates";
 
 type MealPlanNotice =
   | "meal-plan-copied"

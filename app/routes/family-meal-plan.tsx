@@ -19,7 +19,7 @@ import {
   listSharesForMealPlan,
   markReviewCommentAddressed,
 } from "../lib/meal-plan-share.server";
-import { isPlanDateToday } from "../lib/meal-plan-dates";
+import { isPlanDateToday, formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS } from "../lib/meal-plan-dates";
 import {
   encodeMealSelection,
   getDinnerMenuLabel,
@@ -28,9 +28,7 @@ import {
 import {
   approveMealPlan,
   autoFillMealPlanEntries,
-  formatDateOnly,
   getMealPlanPlanningData,
-  MEAL_PLAN_MAX_SPAN_DAYS,
   reopenMealPlan,
   saveMealPlanEntries,
   type MealPlanEntryValues,
