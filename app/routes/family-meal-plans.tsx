@@ -7,6 +7,7 @@ import {
   createMealPlan,
   deleteMealPlan,
   formatDateOnly,
+  MEAL_PLAN_MAX_SPAN_DAYS,
   listMealPlansForFamily,
 } from "../lib/meal-plan.server";
 
@@ -271,9 +272,9 @@ export default function FamilyMealPlansRoute({
                 Opprett ukeplan
               </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Velg et navn og et datointervall på maks 7 dager. Du kan starte
-                fra en tom ukeplan eller gjenbruke middager og notater fra en
-                tidligere plan.
+                Velg et navn og et datointervall på maks {MEAL_PLAN_MAX_SPAN_DAYS}{" "}
+                dager. Du kan starte fra en tom ukeplan eller gjenbruke middager
+                og notater fra en tidligere plan.
               </p>
             </div>
 
@@ -325,7 +326,8 @@ export default function FamilyMealPlansRoute({
 
               <p className="text-sm leading-6 text-slate-500">
                 Velg en tidligere ukeplan for å kopiere middager og notater til
-                samme relative dager i den nye perioden.
+                samme relative dager i den nye perioden. Dager som faller utenfor
+                det nye intervallet blir ikke kopiert.
               </p>
 
               <div className="grid gap-4 sm:grid-cols-2">

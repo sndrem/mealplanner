@@ -527,7 +527,8 @@ export default function FamilyRoute({
                   Denne uken
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Middagsmeny for hver dag i inneværende kalenderuke.
+                  Viser bare inneværende kalenderuke (man–søn), også når
+                  ukeplanen strekker seg over flere uker.
                 </p>
 
                 {loaderData.weekDays.some((day) => day.mealPlanId) ? (

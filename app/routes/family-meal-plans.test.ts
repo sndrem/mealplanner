@@ -107,11 +107,11 @@ describe("family meal plans route", () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(createMealPlan).mockResolvedValue({
       fieldErrors: {
-        endDate: "Datointervallet kan være maks 7 dager.",
+        endDate: "Datointervallet kan være maks 14 dager.",
       },
       status: "VALIDATION_ERROR",
       values: {
-        endDate: "2026-05-20",
+        endDate: "2026-05-26",
         startDate: "2026-05-12",
         title: "Uke 20",
       },
@@ -121,7 +121,7 @@ describe("family meal plans route", () => {
     formData.set("intent", "create-meal-plan");
     formData.set("title", "Uke 20");
     formData.set("startDate", "2026-05-12");
-    formData.set("endDate", "2026-05-20");
+    formData.set("endDate", "2026-05-26");
 
     const result = await action({
       params: {
@@ -131,7 +131,7 @@ describe("family meal plans route", () => {
     });
 
     expect(createMealPlan).toHaveBeenCalledWith({
-      endDate: "2026-05-20",
+      endDate: "2026-05-26",
       familyId: "family-1",
       startDate: "2026-05-12",
       title: "Uke 20",
@@ -139,11 +139,11 @@ describe("family meal plans route", () => {
     });
     expect(result).toEqual({
       fieldErrors: {
-        endDate: "Datointervallet kan være maks 7 dager.",
+        endDate: "Datointervallet kan være maks 14 dager.",
       },
       intent: "create-meal-plan",
       values: {
-        endDate: "2026-05-20",
+        endDate: "2026-05-26",
         sourceMealPlanId: "",
         startDate: "2026-05-12",
         title: "Uke 20",
