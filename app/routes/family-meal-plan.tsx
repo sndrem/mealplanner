@@ -19,7 +19,7 @@ import {
   listSharesForMealPlan,
   markReviewCommentAddressed,
 } from "../lib/meal-plan-share.server";
-import { isPlanDateToday } from "../lib/meal-plan-dates";
+import { isPlanDateToday, formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS } from "../lib/meal-plan-dates";
 import {
   encodeMealSelection,
   getDinnerMenuLabel,
@@ -28,7 +28,6 @@ import {
 import {
   approveMealPlan,
   autoFillMealPlanEntries,
-  formatDateOnly,
   getMealPlanPlanningData,
   reopenMealPlan,
   saveMealPlanEntries,
@@ -773,7 +772,7 @@ export default function FamilyMealPlanRoute({
               method="post"
             >
               <div className="grid min-w-0 gap-2">
-                {loaderData.visibleDates.map((date) => {
+                {loaderData.visibleDates.map((date, index) => {
                   const entry = entryValues[date] ?? {
                     freezerItemId: "",
                     note: "",
@@ -781,21 +780,30 @@ export default function FamilyMealPlanRoute({
                     responsibleUserId: "",
                     updatedAt: "",
                   };
+                  const showWeekSeparator =
+                    loaderData.visibleDates.length > 7 &&
+                    (index === 0 || isUtcMonday(date));
 
                   return (
-                    <MealPlanDayRow
-                      key={date}
-                      calendarDownloadTarget={CALENDAR_DOWNLOAD_TARGET}
-                      canExportDay={calendarExportDateSet.has(date)}
-                      date={date}
-                      entry={entry}
-                      familyId={loaderData.family.id}
-                      familyMembers={loaderData.familyMembers}
-                      freezerItems={loaderData.freezerItems}
-                      isToday={isPlanDateToday(date)}
-                      mealPlanId={loaderData.mealPlan.id}
-                      recipes={loaderData.recipes}
-                    />
+                    <div key={date} className="grid min-w-0 gap-2">
+                      {showWeekSeparator ? (
+                        <p className="pt-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+                          {formatWeekChunkLabel(date)}
+                        </p>
+                      ) : null}
+                      <MealPlanDayRow
+                        calendarDownloadTarget={CALENDAR_DOWNLOAD_TARGET}
+                        canExportDay={calendarExportDateSet.has(date)}
+                        date={date}
+                        entry={entry}
+                        familyId={loaderData.family.id}
+                        familyMembers={loaderData.familyMembers}
+                        freezerItems={loaderData.freezerItems}
+                        isToday={isPlanDateToday(date)}
+                        mealPlanId={loaderData.mealPlan.id}
+                        recipes={loaderData.recipes}
+                      />
+                    </div>
                   );
                 })}
               </div>
@@ -938,7 +946,9 @@ export default function FamilyMealPlanRoute({
               </h2>
               <p className="text-sm leading-6 text-slate-600">
                 Du kan fortsatt endre navn og datointervall her. Datointervallet
-                kan være maks 7 dager.
+                kan være maks {MEAL_PLAN_MAX_SPAN_DAYS} dager. Middager og
+                handledatoer utenfor det nye intervallet fjernes eller justeres
+                automatisk.
               </p>
             </div>
 
@@ -2061,4 +2071,19 @@ function formatWeekdayLabel(date: string) {
   }).format(new Date(`${date}T00:00:00.000Z`));
 
   return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function isUtcMonday(date: string) {
+  return new Date(`${date}T00:00:00.000Z`).getUTCDay() === 1;
+}
+
+function formatWeekChunkLabel(date: string) {
+  const parsedDate = new Date(`${date}T00:00:00.000Z`);
+  const dayOffset = (parsedDate.getUTCDay() + 6) % 7;
+  const weekStart = new Date(parsedDate.getTime());
+  weekStart.setUTCDate(weekStart.getUTCDate() - dayOffset);
+  const weekEnd = new Date(weekStart.getTime());
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+
+  return `${formatDateLabel(formatDateOnly(weekStart))} – ${formatDateLabel(formatDateOnly(weekEnd))}`;
 }

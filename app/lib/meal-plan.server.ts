@@ -19,15 +19,19 @@ import {
   validateFreezerStockDelta,
 } from "./freezer-stock.server";
 import { listActiveFreezerItemsForPlanning } from "./freezer.server";
-import { formatDateOnly } from "./meal-plan-dates";
+import { formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS, getMealPlanMaxSpanMessage } from "./meal-plan-dates";
 import {
   logCollaborationFailure,
   logCollaborationWrite,
 } from "./write-observability.server";
 
-export { formatDateOnly, isPlanDateToday } from "./meal-plan-dates";
+export {
+  formatDateOnly,
+  getMealPlanMaxSpanMessage,
+  isPlanDateToday,
+  MEAL_PLAN_MAX_SPAN_DAYS,
+} from "./meal-plan-dates";
 
-const MEAL_PLAN_MAX_SPAN_DAYS = 7;
 const MEAL_PLAN_MAX_DAY_OFFSET = MEAL_PLAN_MAX_SPAN_DAYS - 1;
 
 const mealPlanSummarySelect = {
@@ -192,7 +196,7 @@ type MealPlanApprovalAction = "APPROVE" | "REOPEN";
 const AUTO_FILL_NOT_DRAFT_MESSAGE =
   "Godkjente ukeplaner kan ikke fylles automatisk.";
 const AUTO_FILL_NO_ELIGIBLE_RECIPES_MESSAGE =
-  "Ingen tilgjengelige oppskrifter etter a ha utelatt middager fra de to forrige ukeplanene.";
+  `Ingen tilgjengelige oppskrifter etter a ha utelatt middager fra de siste ${MEAL_PLAN_MAX_SPAN_DAYS} dagene.`;
 const AUTO_FILL_REPEAT_WARNING_MESSAGE =
   "Noen middager ble valgt flere ganger fordi det var for fa oppskrifter igjen.";
 
@@ -291,7 +295,7 @@ export function validateMealPlanRange(
   if (spanInDays > MEAL_PLAN_MAX_DAY_OFFSET) {
     return {
       fieldErrors: {
-        endDate: "Datointervallet kan være maks 7 dager.",
+        endDate: getMealPlanMaxSpanMessage(),
       },
       ok: false,
       values,
@@ -653,25 +657,74 @@ export async function updateMealPlan(input: UpdateMealPlanInput) {
   const nextEndDate = parseDateOnly(validation.values.endDate)!;
 
   try {
-    const updateResult = await db.mealPlan.updateMany({
-      data: {
-        activeShoppingDate: clampShoppingDateToRange(
-          existingMealPlan.activeShoppingDate,
-          nextStartDate,
-          nextEndDate,
-        ),
-        endDate: nextEndDate,
-        startDate: nextStartDate,
-        title: validation.values.title,
-        ...buildActorUpdate(input.userId),
-      },
-      where: {
-        id: existingMealPlan.id,
-        updatedAt: existingMealPlan.updatedAt,
-      },
+    const mealPlan = await db.$transaction(async (tx) => {
+      const updateResult = await tx.mealPlan.updateMany({
+        data: {
+          activeShoppingDate: clampShoppingDateToRange(
+            existingMealPlan.activeShoppingDate,
+            nextStartDate,
+            nextEndDate,
+          ),
+          endDate: nextEndDate,
+          startDate: nextStartDate,
+          title: validation.values.title,
+          ...buildActorUpdate(input.userId),
+        },
+        where: {
+          id: existingMealPlan.id,
+          updatedAt: existingMealPlan.updatedAt,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        return null;
+      }
+
+      await tx.mealPlanEntry.deleteMany({
+        where: {
+          mealPlanId: existingMealPlan.id,
+          OR: [
+            { date: { lt: nextStartDate } },
+            { date: { gt: nextEndDate } },
+          ],
+        },
+      });
+
+      await tx.manualShoppingItem.updateMany({
+        data: {
+          buyOnDate: nextStartDate,
+        },
+        where: {
+          mealPlanId: existingMealPlan.id,
+          OR: [
+            { buyOnDate: { lt: nextStartDate } },
+            { buyOnDate: { gt: nextEndDate } },
+          ],
+        },
+      });
+
+      await tx.shoppingItemOverride.updateMany({
+        data: {
+          postponedUntilDate: nextStartDate,
+        },
+        where: {
+          mealPlanId: existingMealPlan.id,
+          OR: [
+            { postponedUntilDate: { lt: nextStartDate } },
+            { postponedUntilDate: { gt: nextEndDate } },
+          ],
+        },
+      });
+
+      return tx.mealPlan.findUniqueOrThrow({
+        select: mealPlanDetailSelect,
+        where: {
+          id: existingMealPlan.id,
+        },
+      });
     });
 
-    if (updateResult.count === 0) {
+    if (!mealPlan) {
       logCollaborationWrite({
         action: "update-meal-plan",
         domain: "meal-plan",
@@ -688,13 +741,6 @@ export async function updateMealPlan(input: UpdateMealPlanInput) {
         status: "CONFLICT" as const,
       };
     }
-
-    const mealPlan = await db.mealPlan.findUniqueOrThrow({
-      select: mealPlanDetailSelect,
-      where: {
-        id: existingMealPlan.id,
-      },
-    });
 
     logCollaborationWrite({
       action: "update-meal-plan",
@@ -768,44 +814,41 @@ export async function deleteMealPlan({
 }
 
 export async function getRecentlyUsedRecipeIds({
+  beforeDate,
   currentMealPlanId,
   familyId,
 }: {
+  beforeDate: Date;
   currentMealPlanId: string;
   familyId: string;
 }) {
-  const priorPlans = await db.mealPlan.findMany({
-    orderBy: {
-      endDate: "desc",
-    },
+  const lookbackStart = addUtcDays(beforeDate, -MEAL_PLAN_MAX_SPAN_DAYS);
+  const recentEntries = await db.mealPlanEntry.findMany({
     select: {
-      entries: {
-        select: {
-          recipeId: true,
-        },
-        where: {
-          mealType: PLANNING_MEAL_TYPE,
-          recipeId: {
-            not: null,
-          },
+      recipeId: true,
+    },
+    where: {
+      date: {
+        gte: lookbackStart,
+        lt: beforeDate,
+      },
+      mealPlan: {
+        familyId,
+        id: {
+          not: currentMealPlanId,
         },
       },
-    },
-    take: 2,
-    where: {
-      familyId,
-      id: {
-        not: currentMealPlanId,
+      mealType: PLANNING_MEAL_TYPE,
+      recipeId: {
+        not: null,
       },
     },
   });
 
   return new Set(
-    priorPlans.flatMap((plan) =>
-      plan.entries
-        .map((entry) => entry.recipeId)
-        .filter((recipeId): recipeId is string => Boolean(recipeId)),
-    ),
+    recentEntries
+      .map((entry) => entry.recipeId)
+      .filter((recipeId): recipeId is string => Boolean(recipeId)),
   );
 }
 
@@ -875,6 +918,7 @@ export async function autoFillMealPlanEntries({
     },
   });
   const excludedRecipeIds = await getRecentlyUsedRecipeIds({
+    beforeDate: mealPlan.startDate,
     currentMealPlanId: mealPlan.id,
     familyId,
   });

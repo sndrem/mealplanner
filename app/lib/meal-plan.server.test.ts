@@ -27,6 +27,12 @@ const {
         findMany: vi.fn(),
         upsert: vi.fn(),
       },
+      manualShoppingItem: {
+        updateMany: vi.fn(),
+      },
+      shoppingItemOverride: {
+        updateMany: vi.fn(),
+      },
       familyFreezerItem: {
         findMany: vi.fn(),
         updateMany: vi.fn(),
@@ -76,9 +82,11 @@ import {
   deleteMealPlan,
   formatDateOnly,
   getMealPlanForFamily,
+  getMealPlanMaxSpanMessage,
   getMealPlanPlanningData,
   getRecentlyUsedRecipeIds,
   listMealPlansForFamily,
+  MEAL_PLAN_MAX_SPAN_DAYS,
   reopenMealPlan,
   saveMealPlanEntries,
   updateMealPlan,
@@ -111,6 +119,9 @@ describe("meal-plan.server", () => {
     dbMock.familyFreezerItem.updateMany.mockResolvedValue({ count: 1 });
     dbMock.mealPlan.updateMany.mockResolvedValue({ count: 1 });
     dbMock.mealPlanShare.updateMany.mockResolvedValue({ count: 0 });
+    dbMock.manualShoppingItem.updateMany.mockResolvedValue({ count: 0 });
+    dbMock.shoppingItemOverride.updateMany.mockResolvedValue({ count: 0 });
+    dbMock.mealPlanEntry.deleteMany.mockResolvedValue({ count: 0 });
     dbMock.mealPlan.findUniqueOrThrow.mockResolvedValue({
       id: "meal-plan-1",
       title: "Langhelg",
@@ -146,14 +157,25 @@ describe("meal-plan.server", () => {
     });
   });
 
-  it("rejects ranges longer than seven days", () => {
-    expect(validateMealPlanRange("2026-05-12", "2026-05-20")).toEqual({
+  it("rejects ranges longer than fourteen days", () => {
+    expect(validateMealPlanRange("2026-05-12", "2026-05-26")).toEqual({
       fieldErrors: {
-        endDate: "Datointervallet kan være maks 7 dager.",
+        endDate: getMealPlanMaxSpanMessage(),
       },
       ok: false,
       values: {
-        endDate: "2026-05-20",
+        endDate: "2026-05-26",
+        startDate: "2026-05-12",
+        title: "",
+      },
+    });
+  });
+
+  it("accepts fourteen-day ranges", () => {
+    expect(validateMealPlanRange("2026-05-12", "2026-05-25")).toEqual({
+      ok: true,
+      values: {
+        endDate: "2026-05-25",
         startDate: "2026-05-12",
         title: "",
       },
@@ -250,7 +272,7 @@ describe("meal-plan.server", () => {
 
   it("returns validation errors instead of creating invalid meal plans", async () => {
     const result = await createMealPlan({
-      endDate: "2026-05-20",
+      endDate: "2026-05-26",
       familyId: "family-1",
       startDate: "2026-05-12",
       title: " ",
@@ -259,12 +281,12 @@ describe("meal-plan.server", () => {
 
     expect(result).toEqual({
       fieldErrors: {
-        endDate: "Datointervallet kan være maks 7 dager.",
+        endDate: getMealPlanMaxSpanMessage(),
         title: "Skriv inn et navn for ukeplanen.",
       },
       status: "VALIDATION_ERROR",
       values: {
-        endDate: "2026-05-20",
+        endDate: "2026-05-26",
         startDate: "2026-05-12",
         title: "",
       },
@@ -580,6 +602,85 @@ describe("meal-plan.server", () => {
       status: "NOT_FOUND",
     });
     expect(dbMock.mealPlan.update).not.toHaveBeenCalled();
+  });
+
+  it("prunes out-of-range entries and clamps shopping dates when shrinking a meal plan", async () => {
+    const existingUpdatedAt = new Date("2026-05-01T12:00:00.000Z");
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-24T00:00:00.000Z"),
+      id: "meal-plan-1",
+      updatedAt: existingUpdatedAt,
+    });
+    dbMock.mealPlan.findUniqueOrThrow.mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
+      approvedAt: null,
+      approvedByUserId: null,
+      copiedFromMealPlanId: null,
+      createdAt: existingUpdatedAt,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+      updatedAt: new Date("2026-05-01T13:00:00.000Z"),
+    });
+
+    const result = await updateMealPlan({
+      endDate: "2026-05-18",
+      expectedMealPlanUpdatedAt: existingUpdatedAt.toISOString(),
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      startDate: "2026-05-15",
+      title: "Langhelg",
+      userId: "user-1",
+    });
+
+    expect(result.status).toBe("UPDATED");
+    expect(dbMock.mealPlan.updateMany).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
+        endDate: new Date("2026-05-18T00:00:00.000Z"),
+        startDate: new Date("2026-05-15T00:00:00.000Z"),
+        title: "Langhelg",
+      }),
+      where: {
+        id: "meal-plan-1",
+        updatedAt: existingUpdatedAt,
+      },
+    });
+    expect(dbMock.mealPlanEntry.deleteMany).toHaveBeenCalledWith({
+      where: {
+        mealPlanId: "meal-plan-1",
+        OR: [
+          { date: { lt: new Date("2026-05-15T00:00:00.000Z") } },
+          { date: { gt: new Date("2026-05-18T00:00:00.000Z") } },
+        ],
+      },
+    });
+    expect(dbMock.manualShoppingItem.updateMany).toHaveBeenCalledWith({
+      data: {
+        buyOnDate: new Date("2026-05-15T00:00:00.000Z"),
+      },
+      where: {
+        mealPlanId: "meal-plan-1",
+        OR: [
+          { buyOnDate: { lt: new Date("2026-05-15T00:00:00.000Z") } },
+          { buyOnDate: { gt: new Date("2026-05-18T00:00:00.000Z") } },
+        ],
+      },
+    });
+    expect(dbMock.shoppingItemOverride.updateMany).toHaveBeenCalledWith({
+      data: {
+        postponedUntilDate: new Date("2026-05-15T00:00:00.000Z"),
+      },
+      where: {
+        mealPlanId: "meal-plan-1",
+        OR: [
+          { postponedUntilDate: { lt: new Date("2026-05-15T00:00:00.000Z") } },
+          { postponedUntilDate: { gt: new Date("2026-05-18T00:00:00.000Z") } },
+        ],
+      },
+    });
   });
 
   it("approves a draft meal plan as a family member", async () => {
@@ -1300,47 +1401,43 @@ describe("meal-plan.server", () => {
     });
   });
 
-  it("collects recipe ids from the two most recent other meal plans", async () => {
-    dbMock.mealPlan.findMany.mockResolvedValue([
-      {
-        entries: [{ recipeId: "recipe-a" }, { recipeId: "recipe-b" }],
-      },
-      {
-        entries: [{ recipeId: "recipe-c" }],
-      },
+  it("collects recipe ids from dinners in the lookback window before the plan starts", async () => {
+    dbMock.mealPlanEntry.findMany.mockResolvedValue([
+      { recipeId: "recipe-a" },
+      { recipeId: "recipe-b" },
+      { recipeId: "recipe-c" },
     ]);
 
+    const beforeDate = new Date("2026-05-22T00:00:00.000Z");
     const result = await getRecentlyUsedRecipeIds({
+      beforeDate,
       currentMealPlanId: "meal-plan-3",
       familyId: "family-1",
     });
 
     expect(result).toEqual(new Set(["recipe-a", "recipe-b", "recipe-c"]));
-    expect(dbMock.mealPlan.findMany).toHaveBeenCalledWith({
-      orderBy: {
-        endDate: "desc",
-      },
+    expect(dbMock.mealPlanEntry.findMany).toHaveBeenCalledWith({
       select: {
-        entries: {
-          select: {
-            recipeId: true,
-          },
-          where: {
-            mealType: "DINNER",
-            recipeId: {
-              not: null,
-            },
+        recipeId: true,
+      },
+      where: {
+        date: {
+          gte: new Date("2026-05-08T00:00:00.000Z"),
+          lt: beforeDate,
+        },
+        mealPlan: {
+          familyId: "family-1",
+          id: {
+            not: "meal-plan-3",
           },
         },
-      },
-      take: 2,
-      where: {
-        familyId: "family-1",
-        id: {
-          not: "meal-plan-3",
+        mealType: "DINNER",
+        recipeId: {
+          not: null,
         },
       },
     });
+    expect(MEAL_PLAN_MAX_SPAN_DAYS).toBe(14);
   });
 
   it("rejects auto-fill for approved meal plans", async () => {
@@ -1440,10 +1537,8 @@ describe("meal-plan.server", () => {
       title: "Uke 22",
       updatedAt: new Date("2026-05-01T12:00:00.000Z"),
     });
-    dbMock.mealPlan.findMany.mockResolvedValue([
-      {
-        entries: [{ recipeId: "kylling-taco" }],
-      },
+    dbMock.mealPlanEntry.findMany.mockResolvedValue([
+      { recipeId: "kylling-taco" },
     ]);
     dbMock.recipe.findMany.mockResolvedValue([{ id: "kylling-taco" }]);
 
@@ -1455,7 +1550,7 @@ describe("meal-plan.server", () => {
 
     expect(result).toEqual({
       formError:
-        "Ingen tilgjengelige oppskrifter etter a ha utelatt middager fra de to forrige ukeplanene.",
+        `Ingen tilgjengelige oppskrifter etter a ha utelatt middager fra de siste ${MEAL_PLAN_MAX_SPAN_DAYS} dagene.`,
       status: "NO_ELIGIBLE_RECIPES",
     });
     expect(dbMock.mealPlanEntry.upsert).not.toHaveBeenCalled();
@@ -1497,11 +1592,14 @@ describe("meal-plan.server", () => {
         id: planningMealPlan.id,
         startDate: planningMealPlan.startDate,
       });
-    dbMock.mealPlan.findMany.mockResolvedValue([
-      {
-        entries: [{ recipeId: "recipe-a" }],
-      },
-    ]);
+    dbMock.mealPlanEntry.findMany
+      .mockResolvedValueOnce([{ recipeId: "recipe-a" }])
+      .mockResolvedValue([
+        {
+          date: new Date("2026-05-22T00:00:00.000Z"),
+          updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+        },
+      ]);
     dbMock.recipe.findMany
       .mockResolvedValueOnce([
         { id: "recipe-a" },
@@ -1509,12 +1607,6 @@ describe("meal-plan.server", () => {
         { id: "recipe-c" },
       ])
       .mockResolvedValueOnce([{ id: "recipe-b" }, { id: "recipe-c" }, { id: "recipe-d" }]);
-    dbMock.mealPlanEntry.findMany.mockResolvedValue([
-      {
-        date: new Date("2026-05-22T00:00:00.000Z"),
-        updatedAt: new Date("2026-05-01T12:00:00.000Z"),
-      },
-    ]);
 
     const result = await autoFillMealPlanEntries({
       familyId: "family-1",
@@ -1561,7 +1653,7 @@ describe("meal-plan.server", () => {
         id: planningMealPlan.id,
         startDate: planningMealPlan.startDate,
       });
-    dbMock.mealPlan.findMany.mockResolvedValue([]);
+    dbMock.mealPlanEntry.findMany.mockResolvedValue([]);
     dbMock.recipe.findMany
       .mockResolvedValueOnce([{ id: "recipe-b" }])
       .mockResolvedValueOnce([{ id: "recipe-b" }]);

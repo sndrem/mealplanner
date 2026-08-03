@@ -1,3 +1,9 @@
+export const MEAL_PLAN_MAX_SPAN_DAYS = 14;
+
+export function getMealPlanMaxSpanMessage() {
+  return `Datointervallet kan være maks ${MEAL_PLAN_MAX_SPAN_DAYS} dager.`;
+}
+
 export function formatDateOnly(date: Date) {
   return [
     date.getUTCFullYear().toString().padStart(4, "0"),
