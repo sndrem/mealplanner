@@ -2,32 +2,32 @@
 
 ## Current Objective
 
-Issue #162 — Distinguish past, active, and upcoming meal plans under Lagrede ukeplaner, on branch `issue/162-distinguish-meal-plan-status`.
+Issue #164 — Auto-generate `Uke N` title from Opprett ukeplan date range, on branch `issue/164-auto-uke-title`.
 
 ## Completed
 
-- Added `getMealPlanTimeStatus` and `partitionMealPlansByTimeStatus` in `meal-plan-week.ts` (Oslo today, date-window classification).
-- Regrouped Lagrede ukeplaner into Kommende → Aktiv → Tidligere with visual hierarchy; past plans collapse after three behind Vis flere / Vis færre.
-- Active cards keep emerald emphasis; copy-from select remains a flat list of all plans.
+- Added `getIsoWeekNumber`, `formatMealPlanAutoTitle`, `resolveAutoMealPlanTitle`, and `getNextCalendarWeekBounds` in `meal-plan-week.ts`.
+- Prefills create form with next Oslo calendar week and syncs title from `startDate` unless the user customized it.
+- Reordered Opprett ukeplan to dates → Navn → source copy via controlled `CreateMealPlanForm`.
 
 ## Files To Read First
 
-- `app/lib/meal-plan-week.ts` — time-status helpers and partition/sort rules
-- `app/routes/family-meal-plans.tsx` — Lagrede ukeplaner sections and MealPlanListCard
-- `app/lib/meal-plan-week.test.ts` — classification and partition coverage
+- `app/lib/meal-plan-week.ts` — ISO week / auto-title helpers and next-week bounds
+- `app/routes/family-meal-plans.tsx` — `CreateMealPlanForm` and form field order
+- `app/lib/meal-plan-week.test.ts` — coverage for week number, title resolve, next week
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (344 tests)
+- `npm run test:run` — passed (354 tests)
 - `npm run typecheck` — passed
 - `npm run build` — passed
 
 ## Open Items
 
-- Manual UI smoke still useful: active + upcoming + >3 past (Vis flere), empty categories omitted, delete in each section
+- Manual UI smoke after merge: prefilled next week + title, customize title then change dates, clear title then change dates, validation re-show, create-from-copy
 
 ## Next Step
 
-Merge PR after CI is green (issue closes via `Closes #162`).
+Merge PR after CI is green (issue closes via `Closes #164`).
