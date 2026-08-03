@@ -1,0 +1,35 @@
+---
+description: Never import .server modules into React Router client route UI
+globs: app/routes/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# React Router server/client boundary
+
+React Router strips `.server` imports from `loader` / `action` / `middleware` / `headers` only. **Any other route export** (especially the default component) must not depend on `*.server` modules. Violations fail `npm run build` with `Server-only module referenced by client`.
+
+## Rules
+
+- In route modules, import from `*.server` **only** for values used inside `loader` / `action` (and other server-only exports).
+- Shared constants, formatters, and copy helpers used in JSX or client helpers belong in non-`.server` modules (e.g. `meal-plan-dates.ts`, `meal-plan-display.ts`).
+- Before shipping route UI that needs a constant from a server file: **extract it** to a shared module, then import that shared module from both server and client.
+- Run `npm run build` after adding client-visible imports to routes; lint/typecheck alone will not catch this.
+
+```tsx
+// BAD — default component uses a value imported from *.server
+import { MEAL_PLAN_MAX_SPAN_DAYS, createMealPlan } from "../lib/meal-plan.server";
+
+export async function action() { /* createMealPlan ok here */ }
+export default function Route() {
+  return <p>Maks {MEAL_PLAN_MAX_SPAN_DAYS} dager</p>; // breaks production build
+}
+
+// GOOD — shared module for client-visible values
+import { MEAL_PLAN_MAX_SPAN_DAYS } from "../lib/meal-plan-dates";
+import { createMealPlan } from "../lib/meal-plan.server";
+
+export async function action() { /* server-only import stays in action */ }
+export default function Route() {
+  return <p>Maks {MEAL_PLAN_MAX_SPAN_DAYS} dager</p>;
+}
+```
