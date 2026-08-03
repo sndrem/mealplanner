@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Form, Link, useNavigation, type MetaFunction } from "react-router";
 
 import { requireUser } from "../lib/auth.server";
@@ -10,6 +11,12 @@ import {
   listMealPlansForFamily,
 } from "../lib/meal-plan.server";
 import { MEAL_PLAN_MAX_SPAN_DAYS } from "../lib/meal-plan-dates";
+import {
+  partitionMealPlansByTimeStatus,
+  type MealPlanTimeStatus,
+} from "../lib/meal-plan-week";
+
+const PAST_MEAL_PLANS_VISIBLE_COUNT = 3;
 
 type MealPlanNotice =
   | "meal-plan-copied"
@@ -192,6 +199,7 @@ export default function FamilyMealPlansRoute({
   loaderData,
 }: MealPlanListRouteProps) {
   const navigation = useNavigation();
+  const [showAllPastMealPlans, setShowAllPastMealPlans] = useState(false);
   const noticeContent = loaderData.notice
     ? getMealPlanNoticeContent(loaderData.notice)
     : null;
@@ -207,6 +215,14 @@ export default function FamilyMealPlansRoute({
     actionData?.intent === "create-meal-plan"
       ? (actionData.values?.sourceMealPlanId ?? "")
       : "";
+  const partitionedMealPlans = partitionMealPlansByTimeStatus(
+    loaderData.mealPlans,
+  );
+  const visiblePastMealPlans = showAllPastMealPlans
+    ? partitionedMealPlans.past
+    : partitionedMealPlans.past.slice(0, PAST_MEAL_PLANS_VISIBLE_COUNT);
+  const hiddenPastMealPlanCount =
+    partitionedMealPlans.past.length - PAST_MEAL_PLANS_VISIBLE_COUNT;
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -394,90 +410,110 @@ export default function FamilyMealPlansRoute({
                 Lagrede ukeplaner
               </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Velg en ukeplan for å redigere navn og datoer, eller slett
-                planer familien ikke trenger lenger.
+                Kommende planer vises før den aktive, deretter tidligere planer.
+                Åpne eller slett det familien ikke trenger lenger.
               </p>
             </div>
 
             {loaderData.mealPlans.length > 0 ? (
-              <div className="mt-6 grid gap-4">
-                {loaderData.mealPlans.map((mealPlan) => {
-                  const isPendingDelete =
-                    isDeletingMealPlan && pendingMealPlanId === mealPlan.id;
-                  const deleteError =
-                    actionData?.targetMealPlanId === mealPlan.id
-                      ? actionData.formError
-                      : undefined;
+              <div className="mt-6 grid gap-6">
+                {partitionedMealPlans.upcoming.length > 0 ? (
+                  <div className="grid gap-3">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Kommende
+                    </h3>
+                    <div className="grid gap-4">
+                      {partitionedMealPlans.upcoming.map((mealPlan) => (
+                        <MealPlanListCard
+                          key={mealPlan.id}
+                          deleteError={
+                            actionData?.targetMealPlanId === mealPlan.id
+                              ? actionData.formError
+                              : undefined
+                          }
+                          familyId={loaderData.family.id}
+                          isDeletingMealPlan={isDeletingMealPlan}
+                          isPendingDelete={
+                            isDeletingMealPlan &&
+                            pendingMealPlanId === mealPlan.id
+                          }
+                          mealPlan={mealPlan}
+                          timeStatus="upcoming"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
-                  return (
-                    <article
-                      key={mealPlan.id}
-                      className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
-                    >
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="text-base font-semibold text-slate-950">
-                              {mealPlan.title}
-                            </h3>
-                            <span
-                              className={
-                                mealPlan.status === "APPROVED"
-                                  ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200"
-                                  : "rounded-full bg-white px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600 ring-1 ring-slate-200"
-                              }
-                            >
-                              {mealPlan.status === "APPROVED"
-                                ? "Godkjent"
-                                : "Utkast"}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm leading-6 text-slate-600">
-                            {formatMealPlanWindow(
-                              mealPlan.startDate,
-                              mealPlan.endDate,
-                            )}
-                          </p>
-                        </div>
+                {partitionedMealPlans.active.length > 0 ? (
+                  <div className="grid gap-3">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                      Aktiv
+                    </h3>
+                    <div className="grid gap-4">
+                      {partitionedMealPlans.active.map((mealPlan) => (
+                        <MealPlanListCard
+                          key={mealPlan.id}
+                          deleteError={
+                            actionData?.targetMealPlanId === mealPlan.id
+                              ? actionData.formError
+                              : undefined
+                          }
+                          familyId={loaderData.family.id}
+                          isDeletingMealPlan={isDeletingMealPlan}
+                          isPendingDelete={
+                            isDeletingMealPlan &&
+                            pendingMealPlanId === mealPlan.id
+                          }
+                          mealPlan={mealPlan}
+                          timeStatus="active"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
-                        <div className="flex flex-wrap gap-3">
-                          <Link
-                            className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
-                            to={`/families/${loaderData.family.id}/meal-plans/${mealPlan.id}`}
-                          >
-                            Åpne ukeplan
-                          </Link>
-
-                          <Form method="post">
-                            <input
-                              name="intent"
-                              type="hidden"
-                              value="delete-meal-plan"
-                            />
-                            <input
-                              name="mealPlanId"
-                              type="hidden"
-                              value={mealPlan.id}
-                            />
-                            <button
-                              className="inline-flex items-center justify-center rounded-2xl bg-rose-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300"
-                              disabled={isDeletingMealPlan}
-                              type="submit"
-                            >
-                              {isPendingDelete ? "Sletter..." : "Slett"}
-                            </button>
-                          </Form>
-                        </div>
-                      </div>
-
-                      {deleteError ? (
-                        <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                          {deleteError}
-                        </p>
-                      ) : null}
-                    </article>
-                  );
-                })}
+                {partitionedMealPlans.past.length > 0 ? (
+                  <div className="grid gap-3">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Tidligere
+                    </h3>
+                    <div className="grid gap-4">
+                      {visiblePastMealPlans.map((mealPlan) => (
+                        <MealPlanListCard
+                          key={mealPlan.id}
+                          deleteError={
+                            actionData?.targetMealPlanId === mealPlan.id
+                              ? actionData.formError
+                              : undefined
+                          }
+                          familyId={loaderData.family.id}
+                          isDeletingMealPlan={isDeletingMealPlan}
+                          isPendingDelete={
+                            isDeletingMealPlan &&
+                            pendingMealPlanId === mealPlan.id
+                          }
+                          mealPlan={mealPlan}
+                          timeStatus="past"
+                        />
+                      ))}
+                    </div>
+                    {hiddenPastMealPlanCount > 0 ? (
+                      <button
+                        aria-expanded={showAllPastMealPlans}
+                        className="justify-self-start text-sm font-medium text-slate-600 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-950"
+                        onClick={() =>
+                          setShowAllPastMealPlans((current) => !current)
+                        }
+                        type="button"
+                      >
+                        {showAllPastMealPlans
+                          ? "Vis færre"
+                          : `Vis flere (${hiddenPastMealPlanCount})`}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="mt-6 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-5 py-6">
@@ -494,6 +530,115 @@ export default function FamilyMealPlansRoute({
         </section>
       </div>
     </main>
+  );
+}
+
+type MealPlanListItem = MealPlanListRouteProps["loaderData"]["mealPlans"][number];
+
+function MealPlanListCard({
+  deleteError,
+  familyId,
+  isDeletingMealPlan,
+  isPendingDelete,
+  mealPlan,
+  timeStatus,
+}: {
+  deleteError?: string;
+  familyId: string;
+  isDeletingMealPlan: boolean;
+  isPendingDelete: boolean;
+  mealPlan: MealPlanListItem;
+  timeStatus: MealPlanTimeStatus;
+}) {
+  const articleClassName =
+    timeStatus === "active"
+      ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-5 shadow-sm"
+      : timeStatus === "upcoming"
+        ? "rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+        : "rounded-[24px] border border-slate-200 bg-slate-50/70 p-5 opacity-90";
+  const titleClassName =
+    timeStatus === "past"
+      ? "text-base font-semibold text-slate-700"
+      : "text-base font-semibold text-slate-950";
+  const windowClassName =
+    timeStatus === "past"
+      ? "mt-2 text-sm leading-6 text-slate-500"
+      : "mt-2 text-sm leading-6 text-slate-600";
+  const openLinkClassName =
+    timeStatus === "active"
+      ? "inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-emerald-950"
+      : timeStatus === "past"
+        ? "inline-flex items-center justify-center rounded-2xl bg-slate-700 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+        : "inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800";
+  const timeStatusBadge =
+    timeStatus === "active"
+      ? {
+          className:
+            "rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-950 ring-1 ring-emerald-300",
+          label: "Aktiv",
+        }
+      : timeStatus === "upcoming"
+        ? {
+            className:
+              "rounded-full bg-white px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-700 ring-1 ring-slate-200",
+            label: "Kommende",
+          }
+        : null;
+
+  return (
+    <article className={articleClassName}>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className={titleClassName}>{mealPlan.title}</h3>
+            {timeStatusBadge ? (
+              <span className={timeStatusBadge.className}>
+                {timeStatusBadge.label}
+              </span>
+            ) : null}
+            <span
+              className={
+                mealPlan.status === "APPROVED"
+                  ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200"
+                  : "rounded-full bg-white px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600 ring-1 ring-slate-200"
+              }
+            >
+              {mealPlan.status === "APPROVED" ? "Godkjent" : "Utkast"}
+            </span>
+          </div>
+          <p className={windowClassName}>
+            {formatMealPlanWindow(mealPlan.startDate, mealPlan.endDate)}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Link
+            className={openLinkClassName}
+            to={`/families/${familyId}/meal-plans/${mealPlan.id}`}
+          >
+            Åpne ukeplan
+          </Link>
+
+          <Form method="post">
+            <input name="intent" type="hidden" value="delete-meal-plan" />
+            <input name="mealPlanId" type="hidden" value={mealPlan.id} />
+            <button
+              className="inline-flex items-center justify-center rounded-2xl bg-rose-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300"
+              disabled={isDeletingMealPlan}
+              type="submit"
+            >
+              {isPendingDelete ? "Sletter..." : "Slett"}
+            </button>
+          </Form>
+        </div>
+      </div>
+
+      {deleteError ? (
+        <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {deleteError}
+        </p>
+      ) : null}
+    </article>
   );
 }
 

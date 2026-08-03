@@ -33,8 +33,73 @@ export function getTodayDateOnly(timeZone = "Europe/Oslo") {
   return formatDateOnlyInTimeZone(new Date(), timeZone);
 }
 
+export type MealPlanTimeStatus = "active" | "upcoming" | "past";
+
 export function isMealPlanPast(endDate: string, today = getTodayDateOnly()) {
   return endDate < today;
+}
+
+export function getMealPlanTimeStatus(
+  startDate: string,
+  endDate: string,
+  today = getTodayDateOnly(),
+): MealPlanTimeStatus {
+  if (isMealPlanPast(endDate, today)) {
+    return "past";
+  }
+
+  if (startDate > today) {
+    return "upcoming";
+  }
+
+  return "active";
+}
+
+export function partitionMealPlansByTimeStatus<T extends DateRange>(
+  plans: T[],
+  today = getTodayDateOnly(),
+) {
+  const active: T[] = [];
+  const upcoming: T[] = [];
+  const past: T[] = [];
+
+  for (const plan of plans) {
+    const status = getMealPlanTimeStatus(plan.startDate, plan.endDate, today);
+
+    if (status === "active") {
+      active.push(plan);
+    } else if (status === "upcoming") {
+      upcoming.push(plan);
+    } else {
+      past.push(plan);
+    }
+  }
+
+  active.sort((a, b) => {
+    if (a.startDate === b.startDate) {
+      return b.endDate.localeCompare(a.endDate);
+    }
+
+    return b.startDate.localeCompare(a.startDate);
+  });
+
+  upcoming.sort((a, b) => {
+    if (a.startDate === b.startDate) {
+      return a.endDate.localeCompare(b.endDate);
+    }
+
+    return a.startDate.localeCompare(b.startDate);
+  });
+
+  past.sort((a, b) => {
+    if (a.endDate === b.endDate) {
+      return b.startDate.localeCompare(a.startDate);
+    }
+
+    return b.endDate.localeCompare(a.endDate);
+  });
+
+  return { active, upcoming, past };
 }
 
 function getIsoWeekdayInTimeZone(date: Date, timeZone: string) {
