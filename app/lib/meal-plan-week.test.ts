@@ -3,11 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   dateRangesOverlap,
   filterMealPlansOverlappingWeek,
+  formatMealPlanAutoTitle,
   getCalendarWeekBounds,
   getCalendarWeekDates,
+  getIsoWeekNumber,
   getMealPlanTimeStatus,
+  getNextCalendarWeekBounds,
   isMealPlanPast,
   partitionMealPlansByTimeStatus,
+  resolveAutoMealPlanTitle,
 } from "./meal-plan-week";
 
 describe("getCalendarWeekBounds", () => {
@@ -21,6 +25,86 @@ describe("getCalendarWeekBounds", () => {
       weekEnd: "2026-06-07",
       weekStart: "2026-06-01",
     });
+  });
+});
+
+describe("getNextCalendarWeekBounds", () => {
+  it("returns the Monday through Sunday after the current Oslo week", () => {
+    const bounds = getNextCalendarWeekBounds(
+      new Date("2026-06-04T12:00:00.000Z"),
+      "Europe/Oslo",
+    );
+
+    expect(bounds).toEqual({
+      weekEnd: "2026-06-14",
+      weekStart: "2026-06-08",
+    });
+  });
+});
+
+describe("getIsoWeekNumber", () => {
+  it("returns the ISO week for a mid-year date", () => {
+    expect(getIsoWeekNumber("2026-06-01")).toBe(23);
+  });
+
+  it("handles year-boundary weeks that belong to the next year", () => {
+    expect(getIsoWeekNumber("2025-12-29")).toBe(1);
+  });
+
+  it("handles year-boundary weeks that belong to the previous year", () => {
+    expect(getIsoWeekNumber("2027-01-03")).toBe(53);
+  });
+});
+
+describe("formatMealPlanAutoTitle", () => {
+  it("returns an empty string when startDate is missing", () => {
+    expect(formatMealPlanAutoTitle("")).toBe("");
+  });
+
+  it("formats the ISO week as Uke N", () => {
+    expect(formatMealPlanAutoTitle("2026-06-01")).toBe("Uke 23");
+  });
+});
+
+describe("resolveAutoMealPlanTitle", () => {
+  it("fills an empty title with the auto title", () => {
+    expect(
+      resolveAutoMealPlanTitle({
+        currentTitle: "",
+        previousAutoTitle: "Uke 22",
+        startDate: "2026-06-01",
+      }),
+    ).toBe("Uke 23");
+  });
+
+  it("updates the title when it still matches the previous auto title", () => {
+    expect(
+      resolveAutoMealPlanTitle({
+        currentTitle: "Uke 22",
+        previousAutoTitle: "Uke 22",
+        startDate: "2026-06-01",
+      }),
+    ).toBe("Uke 23");
+  });
+
+  it("preserves a customized title", () => {
+    expect(
+      resolveAutoMealPlanTitle({
+        currentTitle: "Familieferie",
+        previousAutoTitle: "Uke 22",
+        startDate: "2026-06-01",
+      }),
+    ).toBe("Familieferie");
+  });
+
+  it("restores the auto title after the user clears a customized title", () => {
+    expect(
+      resolveAutoMealPlanTitle({
+        currentTitle: "",
+        previousAutoTitle: "Uke 22",
+        startDate: "2026-06-08",
+      }),
+    ).toBe("Uke 24");
   });
 });
 

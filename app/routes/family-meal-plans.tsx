@@ -12,7 +12,10 @@ import {
 } from "../lib/meal-plan.server";
 import { MEAL_PLAN_MAX_SPAN_DAYS } from "../lib/meal-plan-dates";
 import {
+  formatMealPlanAutoTitle,
+  getNextCalendarWeekBounds,
   partitionMealPlansByTimeStatus,
+  resolveAutoMealPlanTitle,
   type MealPlanTimeStatus,
 } from "../lib/meal-plan-week";
 
@@ -211,10 +214,6 @@ export default function FamilyMealPlansRoute({
     navigation.state === "submitting" && pendingIntent === "create-meal-plan";
   const isDeletingMealPlan =
     navigation.state === "submitting" && pendingIntent === "delete-meal-plan";
-  const sourceMealPlanValue =
-    actionData?.intent === "create-meal-plan"
-      ? (actionData.values?.sourceMealPlanId ?? "")
-      : "";
   const partitionedMealPlans = partitionMealPlansByTimeStatus(
     loaderData.mealPlans,
   );
@@ -288,120 +287,19 @@ export default function FamilyMealPlansRoute({
                 Opprett ukeplan
               </h2>
               <p className="text-sm leading-6 text-slate-600">
-                Velg et navn og et datointervall på maks {MEAL_PLAN_MAX_SPAN_DAYS}{" "}
-                dager. Du kan starte fra en tom ukeplan eller gjenbruke middager
-                og notater fra en tidligere plan.
+                Velg datointervall (maks {MEAL_PLAN_MAX_SPAN_DAYS} dager). Navnet
+                foreslås som Uke-nummer fra startdatoen. Du kan starte tomt eller
+                gjenbruke middager og notater fra en tidligere plan.
               </p>
             </div>
 
-            <Form className="mt-6 space-y-4" method="post">
-              <input name="intent" type="hidden" value="create-meal-plan" />
-
-              <label className="block text-sm font-medium text-slate-700">
-                Navn
-                <input
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                  defaultValue={
-                    actionData?.intent === "create-meal-plan"
-                      ? (actionData.values?.title ?? "")
-                      : ""
-                  }
-                  name="title"
-                  placeholder="For eksempel Uke 20"
-                  type="text"
-                />
-              </label>
-
-              {actionData?.intent === "create-meal-plan" &&
-              actionData.fieldErrors?.title ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.fieldErrors.title}
-                </p>
-              ) : null}
-
-              <label className="block text-sm font-medium text-slate-700">
-                Start med eksisterende ukeplan
-                <select
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                  defaultValue={sourceMealPlanValue}
-                  name="sourceMealPlanId"
-                >
-                  <option value="">Tom ukeplan</option>
-                  {loaderData.mealPlans.map((mealPlan) => (
-                    <option key={mealPlan.id} value={mealPlan.id}>
-                      {mealPlan.title} (
-                      {formatMealPlanWindow(
-                        mealPlan.startDate,
-                        mealPlan.endDate,
-                      )}
-                      )
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <p className="text-sm leading-6 text-slate-500">
-                Velg en tidligere ukeplan for å kopiere middager og notater til
-                samme relative dager i den nye perioden. Dager som faller utenfor
-                det nye intervallet blir ikke kopiert.
-              </p>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-medium text-slate-700">
-                  Startdato
-                  <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={
-                      actionData?.intent === "create-meal-plan"
-                        ? (actionData.values?.startDate ?? "")
-                        : ""
-                    }
-                    name="startDate"
-                    type="date"
-                  />
-                </label>
-
-                <label className="block text-sm font-medium text-slate-700">
-                  Sluttdato
-                  <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={
-                      actionData?.intent === "create-meal-plan"
-                        ? (actionData.values?.endDate ?? "")
-                        : ""
-                    }
-                    name="endDate"
-                    type="date"
-                  />
-                </label>
-              </div>
-
-              {actionData?.intent === "create-meal-plan" &&
-              actionData.fieldErrors?.startDate ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.fieldErrors.startDate}
-                </p>
-              ) : null}
-              {actionData?.intent === "create-meal-plan" &&
-              actionData.fieldErrors?.endDate ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.fieldErrors.endDate}
-                </p>
-              ) : null}
-              {actionData?.formError ? (
-                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {actionData.formError}
-                </p>
-              ) : null}
-
-              <button
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={isCreatingMealPlan}
-                type="submit"
-              >
-                {isCreatingMealPlan ? "Lagrer..." : "Opprett ukeplan"}
-              </button>
-            </Form>
+            <CreateMealPlanForm
+              actionData={
+                actionData?.intent === "create-meal-plan" ? actionData : undefined
+              }
+              isCreatingMealPlan={isCreatingMealPlan}
+              mealPlans={loaderData.mealPlans}
+            />
           </article>
 
           <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -534,6 +432,171 @@ export default function FamilyMealPlansRoute({
 }
 
 type MealPlanListItem = MealPlanListRouteProps["loaderData"]["mealPlans"][number];
+
+function getCreateMealPlanInitialState(actionData?: MealPlanActionData) {
+  if (actionData?.intent === "create-meal-plan") {
+    const startDate = actionData.values?.startDate ?? "";
+    const title = actionData.values?.title ?? "";
+    const autoTitle = formatMealPlanAutoTitle(startDate);
+
+    return {
+      endDate: actionData.values?.endDate ?? "",
+      previousAutoTitle: title === "" || title === autoTitle ? autoTitle : "",
+      sourceMealPlanId: actionData.values?.sourceMealPlanId ?? "",
+      startDate,
+      title,
+    };
+  }
+
+  const nextWeek = getNextCalendarWeekBounds();
+  const title = formatMealPlanAutoTitle(nextWeek.weekStart);
+
+  return {
+    endDate: nextWeek.weekEnd,
+    previousAutoTitle: title,
+    sourceMealPlanId: "",
+    startDate: nextWeek.weekStart,
+    title,
+  };
+}
+
+function CreateMealPlanForm({
+  actionData,
+  isCreatingMealPlan,
+  mealPlans,
+}: {
+  actionData?: MealPlanActionData;
+  isCreatingMealPlan: boolean;
+  mealPlans: MealPlanListItem[];
+}) {
+  const [formState, setFormState] = useState(() =>
+    getCreateMealPlanInitialState(actionData),
+  );
+  const { endDate, previousAutoTitle, sourceMealPlanId, startDate, title } =
+    formState;
+
+  function handleStartDateChange(nextStartDate: string) {
+    const nextTitle = resolveAutoMealPlanTitle({
+      currentTitle: title,
+      previousAutoTitle,
+      startDate: nextStartDate,
+    });
+    const nextAutoTitle = formatMealPlanAutoTitle(nextStartDate);
+
+    setFormState((current) => ({
+      ...current,
+      previousAutoTitle: nextAutoTitle,
+      startDate: nextStartDate,
+      title: nextTitle,
+    }));
+  }
+
+  return (
+    <Form className="mt-6 space-y-4" method="post">
+      <input name="intent" type="hidden" value="create-meal-plan" />
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-slate-700">
+          Startdato
+          <input
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            name="startDate"
+            onChange={(event) => handleStartDateChange(event.target.value)}
+            type="date"
+            value={startDate}
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-slate-700">
+          Sluttdato
+          <input
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            name="endDate"
+            onChange={(event) =>
+              setFormState((current) => ({
+                ...current,
+                endDate: event.target.value,
+              }))
+            }
+            type="date"
+            value={endDate}
+          />
+        </label>
+      </div>
+
+      {actionData?.fieldErrors?.startDate ? (
+        <p className="text-sm text-rose-600">{actionData.fieldErrors.startDate}</p>
+      ) : null}
+      {actionData?.fieldErrors?.endDate ? (
+        <p className="text-sm text-rose-600">{actionData.fieldErrors.endDate}</p>
+      ) : null}
+
+      <label className="block text-sm font-medium text-slate-700">
+        Navn
+        <input
+          className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          name="title"
+          onChange={(event) =>
+            setFormState((current) => ({
+              ...current,
+              title: event.target.value,
+            }))
+          }
+          placeholder="For eksempel Uke 20"
+          type="text"
+          value={title}
+        />
+      </label>
+
+      {actionData?.fieldErrors?.title ? (
+        <p className="text-sm text-rose-600">{actionData.fieldErrors.title}</p>
+      ) : null}
+
+      <label className="block text-sm font-medium text-slate-700">
+        Start med eksisterende ukeplan
+        <select
+          className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          name="sourceMealPlanId"
+          onChange={(event) =>
+            setFormState((current) => ({
+              ...current,
+              sourceMealPlanId: event.target.value,
+            }))
+          }
+          value={sourceMealPlanId}
+        >
+          <option value="">Tom ukeplan</option>
+          {mealPlans.map((mealPlan) => (
+            <option key={mealPlan.id} value={mealPlan.id}>
+              {mealPlan.title} (
+              {formatMealPlanWindow(mealPlan.startDate, mealPlan.endDate)})
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <p className="text-sm leading-6 text-slate-500">
+        Velg en tidligere ukeplan for å kopiere middager og notater til samme
+        relative dager i den nye perioden. Dager som faller utenfor det nye
+        intervallet blir ikke kopiert.
+      </p>
+
+      {actionData?.formError ? (
+        <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {actionData.formError}
+        </p>
+      ) : null}
+
+      <button
+        className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+        disabled={isCreatingMealPlan}
+        type="submit"
+      >
+        {isCreatingMealPlan ? "Lagrer..." : "Opprett ukeplan"}
+      </button>
+    </Form>
+  );
+}
 
 function MealPlanListCard({
   deleteError,

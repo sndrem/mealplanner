@@ -131,6 +131,53 @@ export function getCalendarWeekBounds(
   };
 }
 
+export function getNextCalendarWeekBounds(
+  referenceDate = new Date(),
+  timeZone = "Europe/Oslo",
+): CalendarWeekBounds {
+  const currentWeek = getCalendarWeekBounds(referenceDate, timeZone);
+
+  return {
+    weekEnd: addDaysToDateOnly(currentWeek.weekEnd, 7),
+    weekStart: addDaysToDateOnly(currentWeek.weekStart, 7),
+  };
+}
+
+export function getIsoWeekNumber(dateOnly: string) {
+  const date = new Date(`${dateOnly}T00:00:00.000Z`);
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+
+  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+}
+
+export function formatMealPlanAutoTitle(startDate: string) {
+  if (!startDate) {
+    return "";
+  }
+
+  return `Uke ${getIsoWeekNumber(startDate)}`;
+}
+
+export function resolveAutoMealPlanTitle({
+  currentTitle,
+  previousAutoTitle,
+  startDate,
+}: {
+  currentTitle: string;
+  previousAutoTitle: string;
+  startDate: string;
+}) {
+  const nextAutoTitle = formatMealPlanAutoTitle(startDate);
+
+  if (currentTitle === "" || currentTitle === previousAutoTitle) {
+    return nextAutoTitle;
+  }
+
+  return currentTitle;
+}
+
 export function dateRangesOverlap(
   rangeAStart: string,
   rangeAEnd: string,
