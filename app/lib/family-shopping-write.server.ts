@@ -6,6 +6,7 @@ import {
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
+import { recordShoppingCheckEvent } from "./shopping-check-history.server";
 import {
   buildRecentManualItemFromProjectedItem,
   projectCreatedFamilyShoppingItem,
@@ -388,6 +389,7 @@ export async function toggleFamilyShoppingItemChecked({
     select: {
       checked: true,
       id: true,
+      name: true,
       updatedAt: true,
     },
     where: {
@@ -411,19 +413,42 @@ export async function toggleFamilyShoppingItemChecked({
     });
   }
 
-  const updateResult = await db.familyShoppingItem.updateMany({
-    data: {
+  const outcome = await db.$transaction(async (tx) => {
+    const updateResult = await tx.familyShoppingItem.updateMany({
+      data: {
+        checked,
+        ...buildActorUpdate(userId),
+      },
+      where: {
+        familyId,
+        id: existingItem.id,
+        updatedAt: existingItem.updatedAt,
+      },
+    });
+
+    if (updateResult.count === 0) {
+      return {
+        status: "CONFLICT" as const,
+      };
+    }
+
+    await recordShoppingCheckEvent(tx, {
+      actorUserId: userId,
       checked,
-      ...buildActorUpdate(userId),
-    },
-    where: {
       familyId,
-      id: existingItem.id,
-      updatedAt: existingItem.updatedAt,
-    },
+      itemName: existingItem.name,
+      mealPlanId: null,
+      sourceType: null,
+      targetKey: existingItem.id,
+      targetType: "FAMILY_ITEM",
+    });
+
+    return {
+      status: "UPDATED" as const,
+    };
   });
 
-  if (updateResult.count === 0) {
+  if (outcome.status === "CONFLICT") {
     return buildFamilyShoppingConflictResult({
       action: "toggle-family-shopping-item-checked",
       entityId: existingItem.id,

@@ -9,6 +9,10 @@ import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import {
+  recordShoppingCheckEvent,
+  resolveMealPlanShoppingItemName,
+} from "./shopping-check-history.server";
+import {
   buildRecentManualItemFromProjectedItem,
   getStockIngredientsForMealPlan,
   loadShoppingMealPlan,
@@ -820,46 +824,70 @@ export async function toggleShoppingItemChecked({
         };
       }
 
-      if (shouldDeleteOverrideAfterUnchecked(existingOverride)) {
-        const deleteResult = await db.shoppingItemOverride.deleteMany({
-          where: {
-            id: existingOverride.id,
-            updatedAt: existingOverride.updatedAt,
-          },
+      const outcome = await db.$transaction(async (tx) => {
+        if (shouldDeleteOverrideAfterUnchecked(existingOverride)) {
+          const deleteResult = await tx.shoppingItemOverride.deleteMany({
+            where: {
+              id: existingOverride.id,
+              updatedAt: existingOverride.updatedAt,
+            },
+          });
+
+          if (deleteResult.count === 0) {
+            return {
+              status: "CONFLICT" as const,
+            };
+          }
+        } else {
+          const updateResult = await tx.shoppingItemOverride.updateMany({
+            data: {
+              checked: false,
+              ...buildActorUpdate(userId),
+            },
+            where: {
+              id: existingOverride.id,
+              updatedAt: existingOverride.updatedAt,
+            },
+          });
+
+          if (updateResult.count === 0) {
+            return {
+              status: "CONFLICT" as const,
+            };
+          }
+        }
+
+        const itemName = await resolveMealPlanShoppingItemName(tx, {
+          mealPlanId: mealPlan.id,
+          sourceKey,
+          sourceType,
         });
 
-        if (deleteResult.count === 0) {
-          return buildShoppingConflictResult({
-            action: "toggle-shopping-item-checked",
-            entityId: existingOverride.id,
-            entityType: "shopping-item-override",
-            familyId,
-            mealPlanId: mealPlan.id,
-            userId,
-          });
-        }
-      } else {
-        const updateResult = await db.shoppingItemOverride.updateMany({
-          data: {
-            checked: false,
-            ...buildActorUpdate(userId),
-          },
-          where: {
-            id: existingOverride.id,
-            updatedAt: existingOverride.updatedAt,
-          },
+        await recordShoppingCheckEvent(tx, {
+          actorUserId: userId,
+          checked: false,
+          familyId,
+          itemName,
+          mealPlanId: mealPlan.id,
+          sourceType,
+          targetKey: sourceKey,
+          targetType: "MEAL_PLAN_ITEM",
         });
 
-        if (updateResult.count === 0) {
-          return buildShoppingConflictResult({
-            action: "toggle-shopping-item-checked",
-            entityId: existingOverride.id,
-            entityType: "shopping-item-override",
-            familyId,
-            mealPlanId: mealPlan.id,
-            userId,
-          });
-        }
+        return {
+          status: "UPDATED" as const,
+        };
+      });
+
+      if (outcome.status === "CONFLICT") {
+        return buildShoppingConflictResult({
+          action: "toggle-shopping-item-checked",
+          entityId: existingOverride.id,
+          entityType: "shopping-item-override",
+          familyId,
+          mealPlanId: mealPlan.id,
+          userId,
+        });
       }
 
       logCollaborationWrite({
@@ -878,37 +906,66 @@ export async function toggleShoppingItemChecked({
       };
     }
 
-    if (existingOverride) {
-      const updateResult = await db.shoppingItemOverride.updateMany({
-        data: {
-          checked: true,
-          ...buildActorUpdate(userId),
-        },
-        where: {
-          id: existingOverride.id,
-          updatedAt: existingOverride.updatedAt,
-        },
-      });
+    const outcome = await db.$transaction(async (tx) => {
+      if (existingOverride) {
+        const updateResult = await tx.shoppingItemOverride.updateMany({
+          data: {
+            checked: true,
+            ...buildActorUpdate(userId),
+          },
+          where: {
+            id: existingOverride.id,
+            updatedAt: existingOverride.updatedAt,
+          },
+        });
 
-      if (updateResult.count === 0) {
-        return buildShoppingConflictResult({
-          action: "toggle-shopping-item-checked",
-          entityId: existingOverride.id,
-          entityType: "shopping-item-override",
-          familyId,
-          mealPlanId: mealPlan.id,
-          userId,
+        if (updateResult.count === 0) {
+          return {
+            status: "CONFLICT" as const,
+          };
+        }
+      } else {
+        await tx.shoppingItemOverride.create({
+          data: {
+            checked: true,
+            mealPlanId: mealPlan.id,
+            sourceKey,
+            sourceType,
+            ...buildActorUpdate(userId),
+          },
         });
       }
-    } else {
-      await db.shoppingItemOverride.create({
-        data: {
-          checked: true,
-          mealPlanId: mealPlan.id,
-          sourceKey,
-          sourceType,
-          ...buildActorUpdate(userId),
-        },
+
+      const itemName = await resolveMealPlanShoppingItemName(tx, {
+        mealPlanId: mealPlan.id,
+        sourceKey,
+        sourceType,
+      });
+
+      await recordShoppingCheckEvent(tx, {
+        actorUserId: userId,
+        checked: true,
+        familyId,
+        itemName,
+        mealPlanId: mealPlan.id,
+        sourceType,
+        targetKey: sourceKey,
+        targetType: "MEAL_PLAN_ITEM",
+      });
+
+      return {
+        status: "UPDATED" as const,
+      };
+    });
+
+    if (outcome.status === "CONFLICT") {
+      return buildShoppingConflictResult({
+        action: "toggle-shopping-item-checked",
+        entityId: existingOverride?.id ?? sourceKey,
+        entityType: "shopping-item-override",
+        familyId,
+        mealPlanId: mealPlan.id,
+        userId,
       });
     }
 

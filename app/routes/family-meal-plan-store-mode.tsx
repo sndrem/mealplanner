@@ -50,6 +50,7 @@ import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
 import { scrollToShoppingItem } from "../lib/shopping-quick-add-feedback.client";
 import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
 import { resolveStoreModeAnchorMealPlan } from "../lib/meal-plan-for-date.server";
+import { listShoppingCheckHistoryForStoreMode } from "../lib/shopping-check-history.server";
 import {
   getFamilyStoreModeData,
   listRecentManualShoppingItemsForFamily,
@@ -159,6 +160,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw redirect(`/families/${familyId}/meal-plans`);
   }
 
+  const shoppingHistory = await listShoppingCheckHistoryForStoreMode({
+    familyId,
+    mealPlanIds: result.includedMealPlans.map((plan) => plan.id),
+  });
+
   return {
     activeShoppingDate: formatDateOnly(result.activeShoppingDate),
     categories,
@@ -186,6 +192,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     recentManualItems,
     selectedStore: result.selectedStore,
     selectableShoppingDates: result.selectableShoppingDates,
+    shoppingHistory,
     stores: result.stores,
     userRole: result.userRole,
     visibleDates: result.visibleDates,
@@ -1060,6 +1067,47 @@ export default function FamilyMealPlanStoreModeRoute({
             )}
           </div>
         </section>
+
+        <details className={storeModeMutedPanelClass}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
+            <span className="text-lg font-semibold tracking-tight text-stone-950">
+              Handlehistorikk
+            </span>
+            <span className={storeModeCountChipClass}>
+              {loaderData.shoppingHistory.length} hendelser
+            </span>
+          </summary>
+
+          {loaderData.shoppingHistory.length > 0 ? (
+            <ul className="mt-4 space-y-3">
+              {loaderData.shoppingHistory.map((event) => (
+                <li
+                  key={event.id}
+                  className="border-t border-stone-200/80 pt-3 first:border-t-0 first:pt-0"
+                >
+                  <p className="text-sm leading-6 text-stone-800">
+                    <span className="font-medium text-stone-950">
+                      {event.actorDisplayName}
+                    </span>
+                    {event.checked
+                      ? " krysset av "
+                      : " fjernet avkryssing for "}
+                    <span className="font-medium text-stone-950">
+                      {event.itemName}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 text-xs leading-5 text-stone-500">
+                    {formatHistoryTimestamp(event.occurredAt)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm leading-6 text-stone-600">
+              Ingen handlehistorikk for denne turen ennå.
+            </p>
+          )}
+        </details>
       </div>
 
       {syncBannerMessage ? (
@@ -1348,4 +1396,13 @@ function formatDateLabel(value: string) {
     month: "long",
     timeZone: "UTC",
   }).format(new Date(`${value}T00:00:00.000Z`));
+}
+
+function formatHistoryTimestamp(value: string) {
+  return new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+  }).format(new Date(value));
 }

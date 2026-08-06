@@ -22,6 +22,12 @@ vi.mock("../lib/shopping.server", () => {
   };
 });
 
+vi.mock("../lib/shopping-check-history.server", () => {
+  return {
+    listShoppingCheckHistoryForStoreMode: vi.fn(),
+  };
+});
+
 vi.mock("../lib/family-shopping-write.server", () => {
   return {
     createQuickFamilyShoppingItem: vi.fn(),
@@ -63,6 +69,7 @@ import {
 } from "../lib/family-shopping-write.server";
 import { requireUser } from "../lib/auth.server";
 import { resolveStoreModeAnchorMealPlan } from "../lib/meal-plan-for-date.server";
+import { listShoppingCheckHistoryForStoreMode } from "../lib/shopping-check-history.server";
 import {
   getFamilyStoreModeData,
   listRecentManualShoppingItemsForFamily,
@@ -222,6 +229,7 @@ describe("family store mode route", () => {
       ],
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
+    vi.mocked(listShoppingCheckHistoryForStoreMode).mockResolvedValue([]);
 
     const result = await loader({
       params: {
@@ -234,6 +242,10 @@ describe("family store mode route", () => {
       familyId: "family-1",
       userId: "user-1",
     });
+    expect(listShoppingCheckHistoryForStoreMode).toHaveBeenCalledWith({
+      familyId: "family-1",
+      mealPlanIds: ["meal-plan-1"],
+    });
     expect(listRecentManualShoppingItemsForFamily).toHaveBeenCalledWith({
       familyId: "family-1",
     });
@@ -244,6 +256,7 @@ describe("family store mode route", () => {
         id: "category-dairy",
       },
     ]);
+    expect(result.shoppingHistory).toEqual([]);
     expect(result.recentManualItems).toEqual([
       {
         categoryId: "",
@@ -278,6 +291,87 @@ describe("family store mode route", () => {
         name: "Paprika",
       }),
     );
+  });
+
+  it("passes shopping history through the store-mode loader", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([]);
+    vi.mocked(listIngredientCategories).mockResolvedValue([]);
+    vi.mocked(getFamilyStoreModeData).mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+      dueSectionGroups: [],
+      family: {
+        id: "family-1",
+        name: "Solberg",
+      },
+      includedMealPlans: [
+        {
+          id: "meal-plan-1",
+          status: "DRAFT",
+          title: "Langhelg",
+        },
+      ],
+      laterItems: [],
+      mealPlan: {
+        activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+        endDate: new Date("2026-05-18T00:00:00.000Z"),
+        entries: [],
+        id: "meal-plan-1",
+        manualShoppingItems: [],
+        shoppingOverrides: [],
+        startDate: new Date("2026-05-15T00:00:00.000Z"),
+        status: "DRAFT",
+        title: "Langhelg",
+        updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+      },
+      progress: {
+        checkedCount: 0,
+        totalCount: 0,
+      },
+      selectedStore: {
+        id: "store-1",
+        name: "Meny",
+      },
+      stores: [
+        {
+          id: "store-1",
+          name: "Meny",
+        },
+      ],
+      userRole: "ADMIN",
+      selectableShoppingDates: ["2026-05-15", "2026-05-16"],
+      visibleDates: ["2026-05-15", "2026-05-16"],
+    });
+    vi.mocked(listShoppingCheckHistoryForStoreMode).mockResolvedValue([
+      {
+        actorDisplayName: "Sindre",
+        checked: true,
+        id: "event-1",
+        itemName: "Melk",
+        occurredAt: "2026-05-16T10:00:00.000Z",
+        sourceKey: "family-item-1",
+        sourceType: "FAMILY",
+      },
+    ]);
+
+    const result = await loader({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(),
+    } as never);
+
+    expect(result.shoppingHistory).toEqual([
+      {
+        actorDisplayName: "Sindre",
+        checked: true,
+        id: "event-1",
+        itemName: "Melk",
+        occurredAt: "2026-05-16T10:00:00.000Z",
+        sourceKey: "family-item-1",
+        sourceType: "FAMILY",
+      },
+    ]);
   });
 
   it("redirects to meal plans when the family has none", async () => {
