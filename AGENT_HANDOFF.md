@@ -2,19 +2,17 @@
 
 ## Current Objective
 
-Issue #172 — Add a Rediger control on family recipe list cards that opens the recipe editor in edit mode, on branch `issue/172-recipe-list-rediger-button`.
+Bump GitHub Actions off deprecated Node 20 runtimes on branch `chore/upgrade-github-actions-node24`.
 
 ## Completed
 
-- Restructured `RecipeListCard` so family cards show separate **Åpne** and **Rediger** links (no full-card link wrapper).
-- **Rediger** navigates to `?edit=1`; recipe loader sets `startInEditMode` and passes `initialEditing` into `FamilyRecipeEditorCard`.
-- Loader tests cover `edit=1` vs default view mode.
+- Upgraded `actions/checkout` from `@v4` to `@v7` and `actions/setup-node` from `@v4` to `@v7` in PR validation and Fly deploy workflows.
+- App CI still installs Node `20.19.0` for lint/test/build; only the action runtimes moved to Node 24.
 
 ## Files To Read First
 
-- `app/routes/family-recipes.tsx` — list card actions
-- `app/routes/family-recipe.tsx` — `startInEditMode` from query
-- `app/components/family-recipe-editor-card.tsx` — `initialEditing` prop
+- `.github/workflows/pr-validation.yml` — PR CI action versions
+- `.github/workflows/fly-deploy.yml` — deploy/validate action versions
 
 ## Validation
 
@@ -22,12 +20,11 @@ Issue #172 — Add a Rediger control on family recipe list cards that opens the 
 - `npm run lint` — passed
 - `npm run test:run` — passed (374 tests)
 - `npm run typecheck` — passed
-- `npm run build` — passed
 
 ## Open Items
 
-- Manual UI smoke after merge: family card **Åpne** → view mode; **Rediger** → edit form; global cards have no actions
+- Confirm GitHub Actions no longer warns about Node 20 deprecation on the next workflow run
 
 ## Next Step
 
-Merge PR after CI is green (issue closes via `Closes #172`).
+Merge PR after CI is green.
