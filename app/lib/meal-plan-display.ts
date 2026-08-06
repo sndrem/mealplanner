@@ -104,3 +104,27 @@ export function parseMealSelection(value: string) {
     recipeId: "",
   };
 }
+
+/** Swap or move encoded meal selections between two fixed dates (dates stay put). */
+export function swapOrMoveMealSelection(
+  selections: Record<string, string>,
+  fromDate: string,
+  toDate: string,
+): Record<string, string> {
+  if (fromDate === toDate) {
+    return selections;
+  }
+
+  const fromSelection = selections[fromDate] ?? "";
+  if (!fromSelection) {
+    return selections;
+  }
+
+  const toSelection = selections[toDate] ?? "";
+
+  return {
+    ...selections,
+    [fromDate]: toSelection,
+    [toDate]: fromSelection,
+  };
+}
