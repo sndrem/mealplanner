@@ -25,6 +25,7 @@ interface FamilyRecipeEditorCardProps {
   canManageRecipes: boolean;
   categories: RecipeCategory[];
   familyStores: RecipeStore[];
+  initialEditing?: boolean;
   mealPlanEntryCount: number;
   recipe: {
     defaultServings: number | null;
@@ -49,6 +50,7 @@ export function FamilyRecipeEditorCard({
   canManageRecipes,
   categories,
   familyStores,
+  initialEditing = false,
   mealPlanEntryCount,
   recipe,
   updateFieldErrors,
@@ -72,7 +74,9 @@ export function FamilyRecipeEditorCard({
   const [ignoreSubmittedValues, setIgnoreSubmittedValues] = useState(false);
   const sourceValues =
     updateValues && !ignoreSubmittedValues ? updateValues : persistedValues;
-  const [isEditing, setIsEditing] = useState(Boolean(updateValues));
+  const [isEditing, setIsEditing] = useState(
+    Boolean(updateValues) || initialEditing,
+  );
   const [draftValues, setDraftValues] = useState(sourceValues);
   const [focusIngredientIndex, setFocusIngredientIndex] = useState<number | null>(
     null,

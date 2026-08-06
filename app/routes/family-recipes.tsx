@@ -498,9 +498,20 @@ function RecipeListCard({
           ) : null}
         </div>
         {!readOnly && to ? (
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
-            Åpne
-          </span>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Link
+              className="rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200"
+              to={to}
+            >
+              Åpne
+            </Link>
+            <Link
+              className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-medium text-white"
+              to={`${to}?edit=1`}
+            >
+              Rediger
+            </Link>
+          </div>
         ) : null}
       </div>
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-slate-700">
@@ -524,14 +535,6 @@ function RecipeListCard({
       </div>
     </article>
   );
-
-  if (to) {
-    return (
-      <Link className="block" to={to}>
-        {content}
-      </Link>
-    );
-  }
 
   return content;
 }

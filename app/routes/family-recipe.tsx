@@ -76,6 +76,7 @@ export async function loader({
     mealPlanEntryCount: detail.mealPlanEntryCount,
     notice: getRecipeDetailNotice(request),
     recipe: detail.recipe,
+    startInEditMode: shouldStartInEditMode(request),
     userRole: managementData.userRole,
   };
 }
@@ -244,6 +245,7 @@ export default function FamilyRecipeRoute({
           canManageRecipes={canManageRecipes}
           categories={loaderData.categories}
           familyStores={loaderData.familyStores}
+          initialEditing={loaderData.startInEditMode}
           mealPlanEntryCount={loaderData.mealPlanEntryCount}
           recipe={loaderData.recipe}
           updateFieldErrors={
@@ -302,6 +304,10 @@ function getRecipeDetailNotice(request: Request): RecipeDetailNotice | null {
   }
 
   return null;
+}
+
+function shouldStartInEditMode(request: Request) {
+  return new URL(request.url).searchParams.get("edit") === "1";
 }
 
 function getRecipeDetailNoticeContent(notice: RecipeDetailNotice) {

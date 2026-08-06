@@ -2,32 +2,32 @@
 
 ## Current Objective
 
-Issue #170 — Show recipe tags in the meal plan day dinner `<select>` options, on branch `issue/170-meal-plan-select-tags`.
+Issue #172 — Add a Rediger control on family recipe list cards that opens the recipe editor in edit mode, on branch `issue/172-recipe-list-rediger-button`.
 
 ## Completed
 
-- Added `formatMealPlanRecipeSelectLabel` (`Title · tag1, tag2`; title-only when no tags).
-- Wired formatter into `MealPlanDayRow` recipe options.
-- Unit tests for empty, whitespace, single, and multiple tags.
+- Restructured `RecipeListCard` so family cards show separate **Åpne** and **Rediger** links (no full-card link wrapper).
+- **Rediger** navigates to `?edit=1`; recipe loader sets `startInEditMode` and passes `initialEditing` into `FamilyRecipeEditorCard`.
+- Loader tests cover `edit=1` vs default view mode.
 
 ## Files To Read First
 
-- `app/lib/meal-plan-display.ts` — select option label formatter
-- `app/routes/family-meal-plan.tsx` — dinner `<select>` usage
-- `app/lib/meal-plan-display.test.ts` — formatter coverage
+- `app/routes/family-recipes.tsx` — list card actions
+- `app/routes/family-recipe.tsx` — `startInEditMode` from query
+- `app/components/family-recipe-editor-card.tsx` — `initialEditing` prop
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (372 tests)
+- `npm run test:run` — passed (374 tests)
 - `npm run typecheck` — passed
 - `npm run build` — passed
 
 ## Open Items
 
-- Manual UI smoke after merge: open a day row → tagged recipes show `Title · tags`; untagged show title only; freezer options unchanged
+- Manual UI smoke after merge: family card **Åpne** → view mode; **Rediger** → edit form; global cards have no actions
 
 ## Next Step
 
-Merge PR after CI is green (issue closes via `Closes #170`).
+Merge PR after CI is green (issue closes via `Closes #172`).
