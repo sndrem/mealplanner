@@ -97,6 +97,7 @@ interface StoreModeShoppingItemCardProps {
 }
 
 const badgeClass = "rounded-full px-2 py-0.5 text-[11px] font-medium leading-4";
+const NOTE_SAVE_DEBOUNCE_MS = 450;
 
 export function StoreModeShoppingItemCard({
   categories,
@@ -113,37 +114,61 @@ export function StoreModeShoppingItemCard({
 }: StoreModeShoppingItemCardProps) {
   const quantityBadge = formatGeneratedQuantityBadge(item);
   const shouldAutoOpenDetails = shouldAutoOpenStoreModeDetails(item);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(shouldAutoOpenDetails);
   const [isQuantityModalOpen, setIsQuantityModalOpen] = useState(false);
   const [quantityDraft, setQuantityDraft] = useState(item.quantityLabel ?? "");
   const [categoryDraft, setCategoryDraft] = useState(item.category.id);
+  const [noteDraft, setNoteDraft] = useState(item.note ?? "");
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const showCategoryEdit =
     item.sourceType === "FAMILY" || item.sourceType === "MANUAL";
+  const savedNote = item.note ?? "";
+  const hasNote = Boolean(noteDraft.trim());
+  const isNoteDirty = noteDraft.trim() !== savedNote.trim();
 
   useEffect(() => {
     setCategoryDraft(item.category.id);
   }, [item.category.id]);
 
   useEffect(() => {
+    setNoteDraft(item.note ?? "");
+    setCategoryDraft(item.category.id);
+    // Only reset drafts when the card switches to a different item.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- item.note/category sync is handled elsewhere so typing is not clobbered mid-save
+  }, [item.sourceKey]);
+
+  useEffect(() => {
+    const saved = item.note ?? "";
+    setNoteDraft((current) =>
+      current.trim() === saved.trim() ? saved : current,
+    );
+  }, [item.note]);
+
+  useEffect(() => {
+    if (shouldAutoOpenDetails) {
+      setIsDetailsOpen(true);
+    }
+  }, [shouldAutoOpenDetails]);
+
+  useEffect(() => {
     if (categoryError) {
       setCategoryDraft(item.category.id);
+      setNoteDraft(item.note ?? "");
     }
-  }, [categoryError, item.category.id]);
+  }, [categoryError, item.category.id, item.note]);
 
-  const handleCategoryChange = useCallback(
-    (nextCategoryId: string) => {
-      if (nextCategoryId === item.category.id || isSavingCategory) {
+  const submitItemFields = useCallback(
+    (next: { categoryId: string; note: string }) => {
+      if (isSavingCategory) {
         return;
       }
 
-      setCategoryDraft(nextCategoryId);
-
       if (item.sourceType === "FAMILY") {
         onUpdateCategory?.({
-          categoryId: nextCategoryId,
+          categoryId: next.categoryId,
           expectedUpdatedAt: item.collaborationVersion,
           name: item.name,
-          note: item.note ?? "",
+          note: next.note,
           preferredStoreId: item.preferredStore?.id ?? "",
           quantity: item.quantity?.trim() || item.quantityLabel || "",
           sourceKey: item.sourceKey,
@@ -159,11 +184,11 @@ export function StoreModeShoppingItemCard({
 
         onUpdateCategory?.({
           buyOnDate: item.buyOnDate ?? "",
-          categoryId: nextCategoryId,
+          categoryId: next.categoryId,
           expectedUpdatedAt: item.collaborationVersion,
           mealPlanId: item.mealPlanId,
           name: item.name,
-          note: item.note ?? "",
+          note: next.note,
           preferredStoreId: item.preferredStore?.id ?? "",
           quantity: item.quantity?.trim() || item.quantityLabel || "",
           sourceKey: item.sourceKey,
@@ -173,6 +198,45 @@ export function StoreModeShoppingItemCard({
     },
     [isSavingCategory, item, onUpdateCategory],
   );
+
+  const handleCategoryChange = useCallback(
+    (nextCategoryId: string) => {
+      if (nextCategoryId === item.category.id || isSavingCategory) {
+        return;
+      }
+
+      setCategoryDraft(nextCategoryId);
+      submitItemFields({
+        categoryId: nextCategoryId,
+        note: noteDraft,
+      });
+    },
+    [isSavingCategory, item.category.id, noteDraft, submitItemFields],
+  );
+
+  useEffect(() => {
+    if (!showCategoryEdit || !isNoteDirty || isSavingCategory) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      submitItemFields({
+        categoryId: categoryDraft,
+        note: noteDraft,
+      });
+    }, NOTE_SAVE_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    categoryDraft,
+    isNoteDirty,
+    isSavingCategory,
+    noteDraft,
+    showCategoryEdit,
+    submitItemFields,
+  ]);
 
   const cardStateClass = isRecentlyAdded
     ? "border-emerald-300 bg-emerald-100"
@@ -272,12 +336,34 @@ export function StoreModeShoppingItemCard({
                 Foretrekker {item.preferredStore.name}
               </span>
             ) : null}
+            {hasNote ? (
+              <button
+                aria-expanded={isDetailsOpen}
+                aria-label={
+                  isDetailsOpen
+                    ? `Skjul notat for ${item.name}`
+                    : `Vis notat for ${item.name}`
+                }
+                className={`${badgeClass} pointer-events-auto inline-flex items-center gap-1 bg-sky-100 text-sky-900 ring-1 ring-sky-200 transition hover:bg-sky-200/80`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsDetailsOpen((open) => !open);
+                }}
+                type="button"
+              >
+                <StoreModeNoteIcon className="h-3 w-3" />
+                Notat
+              </button>
+            ) : null}
           </span>
         </div>
 
         <details
           className="group mt-auto flex w-7 min-w-7 flex-col-reverse items-stretch self-start pointer-events-auto open:w-1/2 open:min-w-[50%] open:max-w-full"
-          open={shouldAutoOpenDetails}
+          onToggle={(event) => {
+            setIsDetailsOpen(event.currentTarget.open);
+          }}
+          open={isDetailsOpen}
         >
           <summary
             aria-label={`Vis informasjon om ${item.name}`}
@@ -294,7 +380,7 @@ export function StoreModeShoppingItemCard({
             <p className="break-words text-xs leading-4 text-stone-600">
               {formatStoreModeItemSourceLine(item)}
             </p>
-            {item.note ? (
+            {!showCategoryEdit && item.note ? (
               <p className="break-words text-xs leading-4 text-stone-700">
                 Notat: {item.note}
               </p>
@@ -318,6 +404,17 @@ export function StoreModeShoppingItemCard({
                       </option>
                     ))}
                   </select>
+                </label>
+                <label className="block text-xs font-medium text-stone-700">
+                  Notat
+                  <input
+                    aria-busy={isSavingCategory}
+                    className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
+                    onChange={(event) => setNoteDraft(event.currentTarget.value)}
+                    placeholder="F.eks. Tine lettmelk"
+                    type="text"
+                    value={noteDraft}
+                  />
                 </label>
                 {categoryError ? (
                   <p className="text-xs text-rose-600">{categoryError}</p>
@@ -410,10 +507,6 @@ export function StoreModeShoppingItemCard({
 }
 
 function shouldAutoOpenStoreModeDetails(item: StoreModeShoppingItemCardItem) {
-  if (item.note) {
-    return true;
-  }
-
   if (item.sourceType === "GENERATED" && item.postponedUntilDate) {
     return true;
   }
@@ -423,6 +516,37 @@ function shouldAutoOpenStoreModeDetails(item: StoreModeShoppingItemCardItem) {
   }
 
   return false;
+}
+
+function StoreModeNoteIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M7 4h7l3 3v13H7V4Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.75"
+      />
+      <path
+        d="M14 4v3h3"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.75"
+      />
+      <path
+        d="M9 12h6M9 16h4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.75"
+      />
+    </svg>
+  );
 }
 
 function formatStoreModeItemSourceLine(item: StoreModeShoppingItemCardItem) {

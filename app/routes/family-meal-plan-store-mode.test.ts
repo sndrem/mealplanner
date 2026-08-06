@@ -682,6 +682,312 @@ describe("family store mode route", () => {
     });
   });
 
+  it("persists a note on manual item category update", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
+    vi.mocked(parseManualShoppingItemValues).mockReturnValue({
+      buyOnDate: "",
+      categoryId: "category-dairy",
+      name: "Melk",
+      note: "Tine lettmelk",
+      preferredStoreId: "",
+      quantity: "1",
+    });
+    vi.mocked(updateManualShoppingItem).mockResolvedValue({
+      status: "UPDATED",
+    });
+    vi.mocked(projectCreatedManualShoppingItem).mockResolvedValue({
+      buyOnDate: null,
+      category: { id: "category-dairy", name: "Meieri" },
+      checked: false,
+      collaborationVersion: "2026-05-31T00:00:00.000Z",
+      mealPlanId: "meal-plan-2",
+      mealPlanTitle: "Neste uke",
+      name: "Melk",
+      note: "Tine lettmelk",
+      overrideVersion: "",
+      preferredStore: null,
+      quantity: "1",
+      quantityLabel: "1",
+      section: { displayName: "Meieri", sortOrder: 1 },
+      sourceKey: "manual-item-1",
+      sourceType: "MANUAL",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-manual-shopping-item-category");
+    formData.set("sourceKey", "manual-item-1");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+    formData.set("categoryId", "category-dairy");
+    formData.set("name", "Melk");
+    formData.set("note", "Tine lettmelk");
+    formData.set("preferredStoreId", "");
+    formData.set("quantity", "1");
+    formData.set("buyOnDate", "");
+    formData.set("itemMealPlanId", "meal-plan-2");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(undefined, formData),
+    } as never);
+
+    expect(updateManualShoppingItem).toHaveBeenCalledWith({
+      expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
+      familyId: "family-1",
+      manualItemId: "manual-item-1",
+      mealPlanId: "meal-plan-2",
+      userId: "user-1",
+      values: {
+        buyOnDate: "",
+        categoryId: "category-dairy",
+        name: "Melk",
+        note: "Tine lettmelk",
+        preferredStoreId: "",
+        quantity: "1",
+      },
+    });
+    expect(result).toEqual({
+      intent: "update-manual-shopping-item-category",
+      item: {
+        buyOnDate: null,
+        category: { id: "category-dairy", name: "Meieri" },
+        checked: false,
+        collaborationVersion: "2026-05-31T00:00:00.000Z",
+        mealPlanId: "meal-plan-2",
+        mealPlanTitle: "Neste uke",
+        name: "Melk",
+        note: "Tine lettmelk",
+        overrideVersion: "",
+        preferredStore: null,
+        quantity: "1",
+        quantityLabel: "1",
+        section: { displayName: "Meieri", sortOrder: 1 },
+        sourceKey: "manual-item-1",
+        sourceType: "MANUAL",
+      },
+      ok: true,
+    });
+  });
+
+  it("clears a note on manual item category update", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
+    vi.mocked(parseManualShoppingItemValues).mockReturnValue({
+      buyOnDate: "",
+      categoryId: "category-dairy",
+      name: "Melk",
+      note: "",
+      preferredStoreId: "",
+      quantity: "1",
+    });
+    vi.mocked(updateManualShoppingItem).mockResolvedValue({
+      status: "UPDATED",
+    });
+    vi.mocked(projectCreatedManualShoppingItem).mockResolvedValue({
+      buyOnDate: null,
+      category: { id: "category-dairy", name: "Meieri" },
+      checked: false,
+      collaborationVersion: "2026-05-31T00:00:00.000Z",
+      mealPlanId: "meal-plan-2",
+      mealPlanTitle: "Neste uke",
+      name: "Melk",
+      note: null,
+      overrideVersion: "",
+      preferredStore: null,
+      quantity: "1",
+      quantityLabel: "1",
+      section: { displayName: "Meieri", sortOrder: 1 },
+      sourceKey: "manual-item-1",
+      sourceType: "MANUAL",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-manual-shopping-item-category");
+    formData.set("sourceKey", "manual-item-1");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+    formData.set("categoryId", "category-dairy");
+    formData.set("name", "Melk");
+    formData.set("note", "");
+    formData.set("preferredStoreId", "");
+    formData.set("quantity", "1");
+    formData.set("buyOnDate", "");
+    formData.set("itemMealPlanId", "meal-plan-2");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(undefined, formData),
+    } as never);
+
+    expect(updateManualShoppingItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        values: expect.objectContaining({
+          note: "",
+        }),
+      }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        intent: "update-manual-shopping-item-category",
+        item: expect.objectContaining({
+          note: null,
+        }),
+        ok: true,
+      }),
+    );
+  });
+
+  it("preserves an existing note when changing manual item category", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
+    vi.mocked(parseManualShoppingItemValues).mockReturnValue({
+      buyOnDate: "",
+      categoryId: "category-produce",
+      name: "Melk",
+      note: "Tine lettmelk",
+      preferredStoreId: "",
+      quantity: "1",
+    });
+    vi.mocked(updateManualShoppingItem).mockResolvedValue({
+      status: "UPDATED",
+    });
+    vi.mocked(projectCreatedManualShoppingItem).mockResolvedValue({
+      buyOnDate: null,
+      category: { id: "category-produce", name: "Frukt og gront" },
+      checked: false,
+      collaborationVersion: "2026-05-31T00:00:00.000Z",
+      mealPlanId: "meal-plan-2",
+      mealPlanTitle: "Neste uke",
+      name: "Melk",
+      note: "Tine lettmelk",
+      overrideVersion: "",
+      preferredStore: null,
+      quantity: "1",
+      quantityLabel: "1",
+      section: { displayName: "Frukt og gront", sortOrder: 1 },
+      sourceKey: "manual-item-1",
+      sourceType: "MANUAL",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-manual-shopping-item-category");
+    formData.set("sourceKey", "manual-item-1");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+    formData.set("categoryId", "category-produce");
+    formData.set("name", "Melk");
+    formData.set("note", "Tine lettmelk");
+    formData.set("preferredStoreId", "");
+    formData.set("quantity", "1");
+    formData.set("buyOnDate", "");
+    formData.set("itemMealPlanId", "meal-plan-2");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(undefined, formData),
+    } as never);
+
+    expect(updateManualShoppingItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        values: expect.objectContaining({
+          categoryId: "category-produce",
+          note: "Tine lettmelk",
+        }),
+      }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        item: expect.objectContaining({
+          category: expect.objectContaining({ id: "category-produce" }),
+          note: "Tine lettmelk",
+        }),
+        ok: true,
+      }),
+    );
+  });
+
+  it("persists a note on family item category update", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
+    vi.mocked(parseFamilyShoppingItemValues).mockReturnValue({
+      categoryId: "category-dairy",
+      name: "Melk",
+      note: "Helmelk",
+      preferredStoreId: "",
+      quantity: "1",
+    });
+    vi.mocked(updateFamilyShoppingItem).mockResolvedValue({
+      status: "UPDATED",
+    });
+    vi.mocked(projectCreatedFamilyShoppingItem).mockResolvedValue({
+      category: { id: "category-dairy", name: "Meieri" },
+      checked: false,
+      collaborationVersion: "2026-05-31T00:00:00.000Z",
+      mealPlanId: null,
+      mealPlanTitle: null,
+      name: "Melk",
+      note: "Helmelk",
+      preferredStore: null,
+      quantity: "1",
+      quantityLabel: "1",
+      section: { displayName: "Meieri", sortOrder: 1 },
+      sourceKey: "family-item-1",
+      sourceType: "FAMILY",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-family-shopping-item-category");
+    formData.set("sourceKey", "family-item-1");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+    formData.set("categoryId", "category-dairy");
+    formData.set("name", "Melk");
+    formData.set("note", "Helmelk");
+    formData.set("preferredStoreId", "");
+    formData.set("quantity", "1");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(undefined, formData),
+    } as never);
+
+    expect(updateFamilyShoppingItem).toHaveBeenCalledWith({
+      expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
+      familyId: "family-1",
+      familyItemId: "family-item-1",
+      userId: "user-1",
+      values: {
+        categoryId: "category-dairy",
+        name: "Melk",
+        note: "Helmelk",
+        preferredStoreId: "",
+        quantity: "1",
+      },
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        intent: "update-family-shopping-item-category",
+        item: expect.objectContaining({
+          note: "Helmelk",
+        }),
+        ok: true,
+      }),
+    );
+  });
+
   it("uses itemMealPlanId when toggling meal-plan shopping items", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
