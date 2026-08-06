@@ -21,6 +21,11 @@ function buildFamilyNavItems(
     { end: false, label: "Ukeplaner", to: `/families/${familyId}/meal-plans` },
     {
       end: true,
+      label: "Middagstats",
+      to: `/families/${familyId}/meal-plans/overview`,
+    },
+    {
+      end: true,
       label: reviewLabel,
       to: `/families/${familyId}/meal-plans/reviews`,
     },
