@@ -33,7 +33,7 @@ import {
   parseFamilyRecipeValues,
   updateFamilyRecipe,
 } from "../lib/recipe-write.server";
-import { action } from "./family-recipe";
+import { action, loader } from "./family-recipe";
 
 const mockUser = {
   displayName: "Ola",
@@ -86,6 +86,26 @@ describe("family recipe route", () => {
       },
       status: "FOUND",
     });
+  });
+
+  it("starts the recipe editor when edit=1 is present", async () => {
+    const data = await loader({
+      params: { familyId: "family-1", recipeId: "recipe-1" },
+      request: buildRequest(
+        "http://localhost/families/family-1/recipes/recipe-1?edit=1",
+      ),
+    });
+
+    expect(data.startInEditMode).toBe(true);
+  });
+
+  it("does not start the recipe editor without edit=1", async () => {
+    const data = await loader({
+      params: { familyId: "family-1", recipeId: "recipe-1" },
+      request: buildRequest(),
+    });
+
+    expect(data.startInEditMode).toBe(false);
   });
 
   it("returns a visible error when delete is blocked by meal plan usage", async () => {
