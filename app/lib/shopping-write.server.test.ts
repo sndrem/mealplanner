@@ -13,9 +13,18 @@ const {
   const transactionMock = {
     manualShoppingItem: {
       delete: vi.fn(),
+      findFirst: vi.fn(),
+    },
+    recipeIngredient: {
+      findUnique: vi.fn(),
+    },
+    shoppingItemCheckEvent: {
+      create: vi.fn(),
     },
     shoppingItemOverride: {
+      create: vi.fn(),
       deleteMany: vi.fn(),
+      updateMany: vi.fn(),
     },
   };
 
@@ -151,6 +160,24 @@ describe("shopping-write.server", () => {
     dbMock.$transaction.mockImplementation(async (callback: (tx: typeof transactionMock) => unknown) =>
       callback(transactionMock),
     );
+    transactionMock.shoppingItemOverride.create.mockResolvedValue({
+      id: "override-created",
+    });
+    transactionMock.shoppingItemOverride.deleteMany.mockResolvedValue({
+      count: 1,
+    });
+    transactionMock.shoppingItemOverride.updateMany.mockResolvedValue({
+      count: 1,
+    });
+    transactionMock.shoppingItemCheckEvent.create.mockResolvedValue({
+      id: "check-event-1",
+    });
+    transactionMock.manualShoppingItem.findFirst.mockResolvedValue({
+      name: "Kaffe",
+    });
+    transactionMock.recipeIngredient.findUnique.mockResolvedValue({
+      displayName: "Paprika",
+    });
   });
 
   it("returns manual item validation errors before writing", async () => {
@@ -529,15 +556,89 @@ describe("shopping-write.server", () => {
     expect(result).toEqual({
       status: "UPDATED",
     });
-    expect(dbMock.shoppingItemOverride.deleteMany).toHaveBeenCalledWith({
+    expect(transactionMock.shoppingItemOverride.deleteMany).toHaveBeenCalledWith({
       where: {
         id: "override-1",
         updatedAt: new Date("2026-05-15T00:00:00.000Z"),
       },
     });
-    expect(dbMock.shoppingItemOverride.updateMany).not.toHaveBeenCalled();
+    expect(transactionMock.shoppingItemOverride.updateMany).not.toHaveBeenCalled();
+    expect(transactionMock.shoppingItemCheckEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorUserId: "user-1",
+        checked: false,
+        familyId: "family-1",
+        itemName: "Kaffe",
+        mealPlanId: "meal-plan-1",
+        sourceType: ShoppingItemSource.MANUAL,
+        targetKey: "manual-item-1",
+        targetType: "MEAL_PLAN_ITEM",
+      }),
+    });
   });
 
+  it("records history when checking a generated shopping item", async () => {
+    dbMock.shoppingItemOverride.findUnique.mockResolvedValue(null);
+
+    const result = await toggleShoppingItemChecked({
+      checked: true,
+      expectedUpdatedAt: "",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      sourceKey: "entry-1:ingredient-1",
+      sourceType: ShoppingItemSource.GENERATED,
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "UPDATED",
+    });
+    expect(transactionMock.shoppingItemOverride.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        checked: true,
+        sourceKey: "entry-1:ingredient-1",
+        sourceType: ShoppingItemSource.GENERATED,
+      }),
+    });
+    expect(transactionMock.recipeIngredient.findUnique).toHaveBeenCalledWith({
+      select: {
+        displayName: true,
+      },
+      where: {
+        id: "ingredient-1",
+      },
+    });
+    expect(transactionMock.shoppingItemCheckEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorUserId: "user-1",
+        checked: true,
+        itemName: "Paprika",
+        sourceType: ShoppingItemSource.GENERATED,
+        targetKey: "entry-1:ingredient-1",
+        targetType: "MEAL_PLAN_ITEM",
+      }),
+    });
+  });
+
+  it("does not record history for no-op uncheck without an override", async () => {
+    dbMock.shoppingItemOverride.findUnique.mockResolvedValue(null);
+
+    const result = await toggleShoppingItemChecked({
+      checked: false,
+      expectedUpdatedAt: "",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      sourceKey: "entry-1:ingredient-1",
+      sourceType: ShoppingItemSource.GENERATED,
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "UPDATED",
+    });
+    expect(dbMock.$transaction).not.toHaveBeenCalled();
+    expect(transactionMock.shoppingItemCheckEvent.create).not.toHaveBeenCalled();
+  });
   it("upserts generated override fields while preserving checked state", async () => {
     dbMock.store.findFirst.mockResolvedValue({
       id: "store-2",

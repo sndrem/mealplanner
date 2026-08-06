@@ -22,6 +22,9 @@ const {
           findFirst: vi.fn(),
           findMany: vi.fn(),
         },
+        shoppingItemCheckEvent: {
+          findMany: vi.fn(),
+        },
         store: {
           findMany: vi.fn(),
         },
@@ -89,6 +92,7 @@ describe("shopping.server", () => {
     });
     dbMock.userStorePreference.findUnique.mockResolvedValue(null);
     dbMock.familyShoppingItem.findMany.mockResolvedValue([]);
+    dbMock.shoppingItemCheckEvent.findMany.mockResolvedValue([]);
     dbMock.mealPlan.findMany.mockResolvedValue([
       {
         endDate: new Date("2026-05-18T00:00:00.000Z"),

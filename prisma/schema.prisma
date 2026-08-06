@@ -57,6 +57,11 @@ enum ShoppingItemSource {
   MANUAL
 }
 
+enum ShoppingCheckEventTarget {
+  FAMILY_ITEM
+  MEAL_PLAN_ITEM
+}
+
 model User {
   id                String             @id @default(cuid())
   email             String             @unique
@@ -81,6 +86,7 @@ model User {
   mealPlanReviewComments       MealPlanReviewComment[] @relation("MealPlanReviewCommentAuthor")
   addressedMealPlanReviewComments MealPlanReviewComment[] @relation("MealPlanReviewCommentAddressedBy")
   responsibleMealPlanEntries      MealPlanEntry[]        @relation("MealPlanEntryResponsible")
+  shoppingItemCheckEvents         ShoppingItemCheckEvent[] @relation("ShoppingItemCheckEventActor")
 
   @@index([displayName])
 }
@@ -102,6 +108,7 @@ model Family {
   stockIngredients           FamilyStockIngredient[]
   freezerItems               FamilyFreezerItem[]
   shoppingItems       FamilyShoppingItem[]
+  shoppingItemCheckEvents ShoppingItemCheckEvent[]
 
   @@index([createdByUserId])
   @@index([name])
@@ -256,6 +263,7 @@ model MealPlan {
   entries              MealPlanEntry[]
   manualShoppingItems  ManualShoppingItem[]
   shoppingOverrides    ShoppingItemOverride[]
+  shoppingItemCheckEvents ShoppingItemCheckEvent[]
   shares               MealPlanShare[]
   reviewComments       MealPlanReviewComment[]
 
@@ -421,6 +429,26 @@ model ShoppingItemOverride {
   @@index([mealPlanId, sourceType])
   @@index([preferredStoreId])
   @@index([postponedUntilDate])
+}
+
+model ShoppingItemCheckEvent {
+  id          String                   @id @default(cuid())
+  familyId    String
+  mealPlanId  String?
+  targetType  ShoppingCheckEventTarget
+  targetKey   String
+  sourceType  ShoppingItemSource?
+  itemName    String
+  checked     Boolean
+  actorUserId String
+  createdAt   DateTime                 @default(now())
+  family      Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  mealPlan    MealPlan?                @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  actorUser   User                     @relation("ShoppingItemCheckEventActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([familyId, createdAt])
+  @@index([mealPlanId, createdAt])
+  @@index([actorUserId])
 }
 
 model Store {
