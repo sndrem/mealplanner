@@ -80,6 +80,7 @@ import {
   copyMealPlan,
   createMealPlan,
   deleteMealPlan,
+  getDinnerAnalyticsForFamily,
   formatDateOnly,
   getMealPlanForFamily,
   getMealPlanMaxSpanMessage,
@@ -1438,6 +1439,174 @@ describe("meal-plan.server", () => {
       },
     });
     expect(MEAL_PLAN_MAX_SPAN_DAYS).toBe(14);
+  });
+
+  it("aggregates dinner analytics by ingredient and recipe for a timeframe", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-10T10:00:00.000Z"));
+    dbMock.mealPlanEntry.findMany.mockResolvedValue([
+      {
+        date: new Date("2026-08-09T00:00:00.000Z"),
+        id: "entry-3",
+        recipe: {
+          id: "recipe-2",
+          ingredients: [{ displayName: "Lime" }],
+          title: "Fisketaco",
+        },
+        recipeId: "recipe-2",
+      },
+      {
+        date: new Date("2026-08-08T00:00:00.000Z"),
+        id: "entry-2",
+        recipe: {
+          id: "recipe-1",
+          ingredients: [
+            { displayName: "Tomat " },
+            { displayName: "LIME" },
+          ],
+          title: "Taco",
+        },
+        recipeId: "recipe-1",
+      },
+      {
+        date: new Date("2026-08-01T00:00:00.000Z"),
+        id: "entry-1",
+        recipe: {
+          id: "recipe-1",
+          ingredients: [{ displayName: "tomat" }],
+          title: "Taco",
+        },
+        recipeId: "recipe-1",
+      },
+    ]);
+
+    const result = await getDinnerAnalyticsForFamily({
+      familyId: "family-1",
+      timeframe: "90d",
+      userId: "user-1",
+    });
+
+    expect(dbMock.mealPlanEntry.findMany).toHaveBeenCalledWith({
+      orderBy: [{ date: "desc" }, { id: "desc" }],
+      select: {
+        date: true,
+        id: true,
+        recipe: {
+          select: {
+            id: true,
+            ingredients: {
+              orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+              select: {
+                displayName: true,
+              },
+            },
+            title: true,
+          },
+        },
+        recipeId: true,
+      },
+      where: {
+        date: {
+          gte: new Date("2026-05-12T00:00:00.000Z"),
+        },
+        mealPlan: {
+          familyId: "family-1",
+        },
+        mealType: "DINNER",
+        recipeId: {
+          not: null,
+        },
+      },
+    });
+    expect(result.family).toEqual({
+      id: "family-1",
+      name: "Solberg",
+    });
+    expect(result.mostUsedIngredients).toEqual([
+      {
+        count: 2,
+        ingredientName: "Lime",
+      },
+      {
+        count: 2,
+        ingredientName: "Tomat",
+      },
+    ]);
+    expect(result.mostUsedRecipes).toEqual([
+      {
+        count: 2,
+        recipeId: "recipe-1",
+        recipeTitle: "Taco",
+      },
+      {
+        count: 1,
+        recipeId: "recipe-2",
+        recipeTitle: "Fisketaco",
+      },
+    ]);
+    expect(result.latestRecipesUsed).toEqual([
+      {
+        date: new Date("2026-08-09T00:00:00.000Z"),
+        recipeId: "recipe-2",
+        recipeTitle: "Fisketaco",
+      },
+      {
+        date: new Date("2026-08-08T00:00:00.000Z"),
+        recipeId: "recipe-1",
+        recipeTitle: "Taco",
+      },
+      {
+        date: new Date("2026-08-01T00:00:00.000Z"),
+        recipeId: "recipe-1",
+        recipeTitle: "Taco",
+      },
+    ]);
+    expect(result.timeframe).toBe("90d");
+    expect(result.timeframeStartDate).toEqual(
+      new Date("2026-05-12T00:00:00.000Z"),
+    );
+
+    vi.useRealTimers();
+  });
+
+  it("does not apply a date filter for all-time dinner analytics", async () => {
+    dbMock.mealPlanEntry.findMany.mockResolvedValue([]);
+
+    await getDinnerAnalyticsForFamily({
+      familyId: "family-1",
+      timeframe: "all",
+      userId: "user-1",
+    });
+
+    expect(dbMock.mealPlanEntry.findMany).toHaveBeenCalledWith({
+      orderBy: [{ date: "desc" }, { id: "desc" }],
+      select: {
+        date: true,
+        id: true,
+        recipe: {
+          select: {
+            id: true,
+            ingredients: {
+              orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+              select: {
+                displayName: true,
+              },
+            },
+            title: true,
+          },
+        },
+        recipeId: true,
+      },
+      where: {
+        mealPlan: {
+          familyId: "family-1",
+        },
+        mealType: "DINNER",
+        recipeId: {
+          not: null,
+        },
+      },
+    });
   });
 
   it("rejects auto-fill for approved meal plans", async () => {
