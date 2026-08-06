@@ -73,7 +73,10 @@ function MealPlanDndProvider({ children }: { children: ReactNode }) {
   const [backendKey, setBackendKey] = useState<"html5" | "touch">("html5");
 
   useEffect(() => {
-    if (window.matchMedia("(pointer: coarse)").matches) {
+    const hasTouchPoints = navigator.maxTouchPoints > 0;
+    const hasCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+
+    if (hasTouchPoints || hasCoarsePointer) {
       setBackendKey("touch");
     }
   }, []);
@@ -83,7 +86,14 @@ function MealPlanDndProvider({ children }: { children: ReactNode }) {
       backend={backendKey === "touch" ? TouchBackend : HTML5Backend}
       key={backendKey}
       options={
-        backendKey === "touch" ? { enableMouseEvents: true } : undefined
+        backendKey === "touch"
+          ? {
+              delayTouchStart: 140,
+              enableMouseEvents: true,
+              ignoreContextMenu: true,
+              touchSlop: 12,
+            }
+          : undefined
       }
     >
       {children}
@@ -566,6 +576,7 @@ function MealPlanReorderDayRow({
   visibleDates: string[];
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const handleRef = useRef<HTMLSpanElement | null>(null);
 
   const [{ isDragging }, drag] = useDrag(
     () => ({
@@ -601,8 +612,8 @@ function MealPlanReorderDayRow({
     [date, onSwapOrMove],
   );
 
-  // Same connection pattern as store section rows (works with HTML5Backend).
-  drag(drop(ref));
+  drag(handleRef);
+  drop(ref);
 
   const dropHighlight = isOver && canDrop;
   const rowClassName = [
@@ -612,7 +623,7 @@ function MealPlanReorderDayRow({
       : "border-slate-200 bg-slate-50",
     isDragging ? "opacity-50" : "",
     dropHighlight ? "ring-2 ring-emerald-400" : "",
-    hasMealSelection ? "cursor-grab active:cursor-grabbing" : "",
+    hasMealSelection ? "active:cursor-grabbing" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -625,9 +636,24 @@ function MealPlanReorderDayRow({
           <span
             className={
               hasMealSelection
-                ? "mt-1 shrink-0 rounded-xl border border-dashed border-slate-300 bg-white px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500"
+                ? "mt-1 shrink-0 cursor-grab touch-none rounded-xl border border-dashed border-slate-300 bg-white px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 active:cursor-grabbing"
                 : "mt-1 shrink-0 rounded-xl border border-dashed border-slate-200 bg-slate-100 px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-300"
             }
+            onMouseDown={(event) => {
+              if (!hasMealSelection) {
+                return;
+              }
+
+              event.stopPropagation();
+            }}
+            onTouchStart={(event) => {
+              if (!hasMealSelection) {
+                return;
+              }
+
+              event.stopPropagation();
+            }}
+            ref={hasMealSelection ? handleRef : undefined}
           >
             Dra
           </span>
