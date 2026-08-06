@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   Form,
   Link,
@@ -7,6 +6,7 @@ import {
   type MetaFunction,
 } from "react-router";
 
+import { MealPlanWeekEntriesForm } from "../components/meal-plan-week-entries-form";
 import { requireUser } from "../lib/auth.server";
 import { listFamilyMembers } from "../lib/family.server";
 import {
@@ -19,13 +19,8 @@ import {
   listSharesForMealPlan,
   markReviewCommentAddressed,
 } from "../lib/meal-plan-share.server";
-import { isPlanDateToday, formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS } from "../lib/meal-plan-dates";
-import {
-  encodeMealSelection,
-  formatMealPlanRecipeSelectLabel,
-  getDinnerMenuLabel,
-  parseMealSelection,
-} from "../lib/meal-plan-display";
+import { formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS } from "../lib/meal-plan-dates";
+import { parseMealSelection } from "../lib/meal-plan-display";
 import {
   approveMealPlan,
   autoFillMealPlanEntries,
@@ -767,87 +762,28 @@ export default function FamilyMealPlanRoute({
               </div>
             </details>
 
-            <Form
-              key={loaderData.entriesSnapshot}
-              className="mt-4 min-w-0 space-y-3"
-              method="post"
-            >
-              <div className="grid min-w-0 gap-2">
-                {loaderData.visibleDates.map((date, index) => {
-                  const entry = entryValues[date] ?? {
-                    freezerItemId: "",
-                    note: "",
-                    recipeId: "",
-                    responsibleUserId: "",
-                    updatedAt: "",
-                  };
-                  const showWeekSeparator =
-                    loaderData.visibleDates.length > 7 &&
-                    (index === 0 || isUtcMonday(date));
-
-                  return (
-                    <div key={date} className="grid min-w-0 gap-2">
-                      {showWeekSeparator ? (
-                        <p className="pt-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-                          {formatWeekChunkLabel(date)}
-                        </p>
-                      ) : null}
-                      <MealPlanDayRow
-                        calendarDownloadTarget={CALENDAR_DOWNLOAD_TARGET}
-                        canExportDay={calendarExportDateSet.has(date)}
-                        date={date}
-                        entry={entry}
-                        familyId={loaderData.family.id}
-                        familyMembers={loaderData.familyMembers}
-                        freezerItems={loaderData.freezerItems}
-                        isToday={isPlanDateToday(date)}
-                        mealPlanId={loaderData.mealPlan.id}
-                        recipes={loaderData.recipes}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              {(actionData?.intent === "save-meal-plan-entries" ||
-                actionData?.intent === "reset-meal-plan-entries") &&
-              actionData.entryFormError ? (
-                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {actionData.entryFormError}
-                </p>
-              ) : null}
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                  disabled={
-                    isSavingEntries ||
-                    isResettingEntries ||
-                    isAutoFillingEntries
-                  }
-                  name="intent"
-                  type="submit"
-                  value="save-meal-plan-entries"
-                >
-                  {isSavingEntries ? "Lagrer middager..." : "Lagre middager"}
-                </button>
-                <button
-                  className="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
-                  disabled={
-                    isSavingEntries ||
-                    isResettingEntries ||
-                    isAutoFillingEntries
-                  }
-                  name="intent"
-                  type="submit"
-                  value="reset-meal-plan-entries"
-                >
-                  {isResettingEntries
-                    ? "Tilbakestiller..."
-                    : "Tilbakestill ukeoversikt"}
-                </button>
-              </div>
-            </Form>
+            <MealPlanWeekEntriesForm
+              calendarDownloadTarget={CALENDAR_DOWNLOAD_TARGET}
+              calendarExportDateSet={calendarExportDateSet}
+              entryFormError={
+                (actionData?.intent === "save-meal-plan-entries" ||
+                  actionData?.intent === "reset-meal-plan-entries") &&
+                actionData.entryFormError
+                  ? actionData.entryFormError
+                  : undefined
+              }
+              entriesSnapshot={loaderData.entriesSnapshot}
+              entryValues={entryValues}
+              familyId={loaderData.family.id}
+              familyMembers={loaderData.familyMembers}
+              freezerItems={loaderData.freezerItems}
+              isAutoFillingEntries={isAutoFillingEntries}
+              isResettingEntries={isResettingEntries}
+              isSavingEntries={isSavingEntries}
+              mealPlanId={loaderData.mealPlan.id}
+              recipes={loaderData.recipes}
+              visibleDates={loaderData.visibleDates}
+            />
 
             <Form className="mt-4 space-y-3" method="post">
               <input
@@ -1231,13 +1167,6 @@ interface MealPlanRecipeOption {
   prepMinutes: number | null;
   tags: string[];
   title: string;
-}
-
-interface MealPlanFreezerOption {
-  id: string;
-  label: string;
-  note: string | null;
-  quantity: number;
 }
 
 interface ShareMemberOption {
@@ -1727,257 +1656,6 @@ function RecipeBankContent({
   );
 }
 
-function MealPlanDayRow({
-  calendarDownloadTarget,
-  canExportDay,
-  date,
-  entry,
-  familyId,
-  familyMembers,
-  freezerItems,
-  isToday,
-  mealPlanId,
-  recipes,
-}: {
-  calendarDownloadTarget: string;
-  canExportDay: boolean;
-  date: string;
-  entry: MealPlanEntryFormState;
-  familyId: string;
-  familyMembers: MealPlanFamilyMemberOption[];
-  freezerItems: MealPlanFreezerOption[];
-  isToday: boolean;
-  mealPlanId: string;
-  recipes: MealPlanRecipeOption[];
-}) {
-  const [mealSelection, setMealSelection] = useState(
-    encodeMealSelection({
-      freezerItemId: entry.freezerItemId,
-      recipeId: entry.recipeId,
-    }),
-  );
-  const [selectedResponsibleUserId, setSelectedResponsibleUserId] = useState(
-    entry.responsibleUserId,
-  );
-
-  useEffect(() => {
-    setMealSelection(
-      encodeMealSelection({
-        freezerItemId: entry.freezerItemId,
-        recipeId: entry.recipeId,
-      }),
-    );
-  }, [entry.freezerItemId, entry.recipeId]);
-
-  useEffect(() => {
-    setSelectedResponsibleUserId(entry.responsibleUserId);
-  }, [entry.responsibleUserId]);
-
-  const parsedSelection = parseMealSelection(mealSelection);
-  const selectedRecipe =
-    recipes.find((recipe) => recipe.id === parsedSelection.recipeId) ?? null;
-  const selectedFreezerItem =
-    freezerItems.find((item) => item.id === parsedSelection.freezerItemId) ??
-    null;
-  const mealLabel = getMealDaySummaryLabel(
-    entry,
-    selectedRecipe,
-    selectedFreezerItem,
-  );
-  const hasNoteOnly =
-    !parsedSelection.recipeId &&
-    !parsedSelection.freezerItemId &&
-    Boolean(entry.note.trim());
-  const hasFreezerSelection = Boolean(parsedSelection.freezerItemId);
-  const responsibleMember =
-    familyMembers.find(
-      (member) => member.id === selectedResponsibleUserId,
-    ) ?? null;
-  const selectableFreezerItems = freezerItems.filter(
-    (item) =>
-      item.quantity > 0 || item.id === parsedSelection.freezerItemId,
-  );
-
-  return (
-    <details
-      className={
-        isToday
-          ? "group min-w-0 max-w-full overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 ring-1 ring-emerald-100"
-          : "group min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
-      }
-    >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 marker:content-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-            {formatWeekdayLabel(date)}
-          </p>
-          <p className="truncate text-base font-semibold text-slate-950">
-            {mealLabel}
-          </p>
-          <p className="text-xs text-slate-500">{formatDateLabel(date)}</p>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          {isToday ? (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
-              I dag
-            </span>
-          ) : null}
-          {hasNoteOnly ? (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
-              Notat
-            </span>
-          ) : null}
-          {hasFreezerSelection ? (
-            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
-              Fryser
-            </span>
-          ) : null}
-          {responsibleMember ? (
-            <span className="max-w-[8rem] truncate rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
-              {responsibleMember.displayName}
-            </span>
-          ) : null}
-          <span className="text-xs text-slate-400 group-open:hidden">Åpne</span>
-          <span className="hidden text-xs text-slate-400 group-open:inline">
-            Lukk
-          </span>
-        </div>
-      </summary>
-
-      <div className="min-w-0 space-y-3 border-t border-slate-200 px-3 pb-3 pt-3">
-        <input name="entryDate" type="hidden" value={date} />
-        <input
-          name={`entryUpdatedAt:${date}`}
-          type="hidden"
-          value={entry.updatedAt}
-        />
-
-        {canExportDay ? (
-          <a
-            className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
-            href={`/families/${familyId}/meal-plans/${mealPlanId}/days/${date}/calendar.ics`}
-            target={calendarDownloadTarget}
-          >
-            Eksporter dag (.ics)
-          </a>
-        ) : null}
-
-        <label className="block min-w-0 text-sm font-medium text-slate-700">
-          Middag
-          <select
-            className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-            name={`mealSelection:${date}`}
-            onChange={(event) => setMealSelection(event.target.value)}
-            value={mealSelection}
-          >
-            <option value="">Velg middag</option>
-            {recipes.length > 0 ? (
-              <optgroup label="Oppskrifter">
-                {recipes.map((recipe) => (
-                  <option key={recipe.id} value={`recipe:${recipe.id}`}>
-                    {formatMealPlanRecipeSelectLabel(recipe.title, recipe.tags)}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-            {selectableFreezerItems.length > 0 ? (
-              <optgroup label="Fryser">
-                {selectableFreezerItems.map((item) => (
-                  <option key={item.id} value={`freezer:${item.id}`}>
-                    Fryser · {item.label} ({item.quantity} igjen)
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-          </select>
-          {parsedSelection.recipeId ? (
-            <Link
-              className="mt-2 inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
-              to={`/families/${familyId}/recipes/${parsedSelection.recipeId}`}
-            >
-              Se oppskrift
-            </Link>
-          ) : null}
-        </label>
-
-        <label className="block min-w-0 text-sm font-medium text-slate-700">
-          Ansvarlig
-          <select
-            className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-            name={`responsibleUserId:${date}`}
-            onChange={(event) =>
-              setSelectedResponsibleUserId(event.target.value)
-            }
-            value={selectedResponsibleUserId}
-          >
-            <option value="">Ingen valgt</option>
-            {familyMembers.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.displayName}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="block min-w-0 text-sm font-medium text-slate-700">
-          Notat
-          <textarea
-            className="mt-2 box-border min-h-24 w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-            defaultValue={entry.note}
-            name={`note:${date}`}
-            placeholder="F.eks. bytt ut ris med pasta eller husk rester til dagen etter"
-          />
-        </label>
-
-        <div className="min-w-0 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-          <p className="break-words text-sm leading-6 text-slate-600">
-            {selectedRecipe
-              ? `${selectedRecipe.description ?? "Ingen beskrivelse."} · ${selectedRecipe.prepMinutes ?? "?"} min · ${selectedRecipe.defaultServings ?? "?"} personer`
-              : selectedFreezerItem
-                ? selectedFreezerItem.note
-                  ? `Fryserrett. ${selectedFreezerItem.note}`
-                  : "Fryserrett valgt for denne dagen."
-                : entry.note
-                  ? "Bare notat lagres for denne dagen."
-                  : "Ingen rett valgt enda."}
-          </p>
-
-          {selectedRecipe?.tags.length ? (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {selectedRecipe.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </details>
-  );
-}
-
-function getMealDaySummaryLabel(
-  entry: MealPlanEntryFormState,
-  selectedRecipe: MealPlanRecipeOption | null,
-  selectedFreezerItem: MealPlanFreezerOption | null,
-) {
-  return getDinnerMenuLabel({
-    freezerItem: selectedFreezerItem
-      ? { label: selectedFreezerItem.label }
-      : entry.freezerItemId
-        ? { label: "Fryserrett" }
-        : null,
-    freezerItemId: entry.freezerItemId || null,
-    note: entry.note,
-    recipe: selectedRecipe ? { title: selectedRecipe.title } : null,
-    recipeId: entry.recipeId || null,
-  });
-}
-
 function formatMealPlanWindow(startDate: string, endDate: string) {
   const formatter = new Intl.DateTimeFormat("nb-NO", {
     day: "numeric",
@@ -2057,14 +1735,6 @@ function indexMealPlanEntryValues(
   );
 }
 
-function formatDateLabel(date: string) {
-  return new Intl.DateTimeFormat("nb-NO", {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }).format(new Date(`${date}T00:00:00.000Z`));
-}
-
 function formatWeekdayLabel(date: string) {
   const label = new Intl.DateTimeFormat("nb-NO", {
     timeZone: "UTC",
@@ -2074,17 +1744,4 @@ function formatWeekdayLabel(date: string) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-function isUtcMonday(date: string) {
-  return new Date(`${date}T00:00:00.000Z`).getUTCDay() === 1;
-}
 
-function formatWeekChunkLabel(date: string) {
-  const parsedDate = new Date(`${date}T00:00:00.000Z`);
-  const dayOffset = (parsedDate.getUTCDay() + 6) % 7;
-  const weekStart = new Date(parsedDate.getTime());
-  weekStart.setUTCDate(weekStart.getUTCDate() - dayOffset);
-  const weekEnd = new Date(weekStart.getTime());
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
-
-  return `${formatDateLabel(formatDateOnly(weekStart))} – ${formatDateLabel(formatDateOnly(weekEnd))}`;
-}
