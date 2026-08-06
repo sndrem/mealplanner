@@ -1,3 +1,12 @@
+export function formatMealPlanRecipeSelectLabel(title: string, tags: string[]) {
+  const cleaned = tags.map((tag) => tag.trim()).filter(Boolean);
+  if (cleaned.length === 0) {
+    return title;
+  }
+
+  return `${title} · ${cleaned.join(", ")}`;
+}
+
 export function formatMealPlanWindow(startDate: string, endDate: string) {
   const formatter = new Intl.DateTimeFormat("nb-NO", {
     day: "numeric",

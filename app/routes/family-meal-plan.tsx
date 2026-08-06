@@ -22,6 +22,7 @@ import {
 import { isPlanDateToday, formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS } from "../lib/meal-plan-dates";
 import {
   encodeMealSelection,
+  formatMealPlanRecipeSelectLabel,
   getDinnerMenuLabel,
   parseMealSelection,
 } from "../lib/meal-plan-display";
@@ -1874,7 +1875,7 @@ function MealPlanDayRow({
               <optgroup label="Oppskrifter">
                 {recipes.map((recipe) => (
                   <option key={recipe.id} value={`recipe:${recipe.id}`}>
-                    {recipe.title}
+                    {formatMealPlanRecipeSelectLabel(recipe.title, recipe.tags)}
                   </option>
                 ))}
               </optgroup>

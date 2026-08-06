@@ -2,36 +2,32 @@
 
 ## Current Objective
 
-Issue #168 — Track who marks shopping items bought/not bought and show collapsible Handlehistorikk in store mode, on branch `issue/168-shopping-check-history`.
+Issue #170 — Show recipe tags in the meal plan day dinner `<select>` options, on branch `issue/170-meal-plan-select-tags`.
 
 ## Completed
 
-- Added append-only `ShoppingItemCheckEvent` model + migration.
-- Record check events from family and meal-plan toggle helpers (including override delete-on-uncheck).
-- Store mode shows collapsed **Handlehistorikk** under **Før handledato**.
-- History query covers all meal plans in the store-mode trip (not only the anchor) plus family items.
-- Hardened Prisma client reuse so missing model delegates force a fresh client after `prisma generate`.
+- Added `formatMealPlanRecipeSelectLabel` (`Title · tag1, tag2`; title-only when no tags).
+- Wired formatter into `MealPlanDayRow` recipe options.
+- Unit tests for empty, whitespace, single, and multiple tags.
 
 ## Files To Read First
 
-- `app/lib/shopping-check-history.server.ts` — record/list history helpers
-- `app/lib/family-shopping-write.server.ts` / `app/lib/shopping-write.server.ts` — toggle write paths
-- `app/routes/family-meal-plan-store-mode.tsx` — Handlehistorikk UI + history loader call
-- `prisma/schema.prisma` — `ShoppingItemCheckEvent`
+- `app/lib/meal-plan-display.ts` — select option label formatter
+- `app/routes/family-meal-plan.tsx` — dinner `<select>` usage
+- `app/lib/meal-plan-display.test.ts` — formatter coverage
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (367 tests)
+- `npm run test:run` — passed (372 tests)
 - `npm run typecheck` — passed
 - `npm run build` — passed
 
 ## Open Items
 
-- After deploy: run migration `20260806100000_add_shopping_item_check_event`
-- Manual smoke: two family members toggle generated/manual/family items across included weeks → expand Handlehistorikk
+- Manual UI smoke after merge: open a day row → tagged recipes show `Title · tags`; untagged show title only; freezer options unchanged
 
 ## Next Step
 
-Merge PR after CI is green (issue closes via `Closes #168`).
+Merge PR after CI is green (issue closes via `Closes #170`).
