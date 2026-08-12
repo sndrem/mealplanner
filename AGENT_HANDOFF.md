@@ -2,22 +2,20 @@
 
 ## Current Objective
 
-Ship a new family dinner analytics overview page that surfaces usage patterns for ingredients and recipes, with timeframe filtering.
+Fix ingredient search dropdown scroll in `ManualShoppingQuickAdd` so long result lists remain reachable (issue #181).
 
 ## Completed
 
-- Added route registration for `families/:familyId/meal-plans/overview` and linked it from top and mobile family navigation.
-- Implemented `getDinnerAnalyticsForFamily` in `app/lib/meal-plan.server.ts` with `30d` / `90d` / `all` timeframe support, recipe usage counts, ingredient usage counts (normalized), and latest recipe usage rows.
-- Added `app/routes/family-meal-plans-overview.tsx` with timeframe selector, empty state, and three analytics sections: most used ingredients, most used recipes, latest recipes used.
-- Added tests for analytics loader serialization and timeframe handling in `app/routes/family-meal-plans-overview.test.ts`.
-- Added server-level analytics tests in `app/lib/meal-plan.server.test.ts` for aggregation behavior and all-time date filtering.
+- Removed `overflow-x-clip` from quick-add component root and fixed dock wrappers that were clipping the dropdown.
+- Split dropdown into a positioned shell and inner scrollable listbox with touch-friendly overflow classes.
+- Added viewport-aware max height for upward (`revealOnFocus`) and downward dropdown modes.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plans-overview.tsx` - new analytics route UI and loader behavior
-- `app/lib/meal-plan.server.ts` - analytics query and aggregation logic
-- `app/lib/meal-plan.server.test.ts` - server analytics coverage and expected aggregation outputs
-- `app/routes/family-meal-plans-overview.test.ts` - route-level serialization and timeframe tests
+- `app/components/manual-shopping-quick-add.tsx` - dropdown shell/scroll split and max-height measurement
+- `app/routes/family-shopping.tsx` - mobile dock wrapper overflow fix
+- `app/lib/store-mode-theme.ts` - store-mode dock class overflow fix
+- `app/routes/family-meal-plan-store-mode.tsx` - store-mode fixed shell overflow fix
 
 ## Validation
 
@@ -28,8 +26,8 @@ Ship a new family dinner analytics overview page that surfaces usage patterns fo
 
 ## Open Items
 
-- None identified during local validation.
+- Manual UI verification recommended on family shopping (desktop + mobile dock), meal-plan shopping, and store mode.
 
 ## Next Step
 
-Push branch and open PR that closes issue `#179`.
+Merge PR and confirm dropdown scroll on device/browser.

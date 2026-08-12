@@ -38,7 +38,7 @@ export const storeModeLaterChipClass =
   "rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-700";
 
 export const storeModeQuickAddDockClass =
-  "min-w-0 max-w-full overflow-x-clip rounded-[28px] bg-white p-4 shadow-2xl ring-2 ring-store-accent";
+  "min-w-0 max-w-full rounded-[28px] bg-white p-4 shadow-2xl ring-2 ring-store-accent";
 
 export type StoreModeBannerTone = "success" | "sync" | "error";
 
