@@ -1,4 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useFetcher } from "react-router";
 
 import type {
@@ -47,6 +54,9 @@ const SEARCH_DEBOUNCE_MS = 250;
 const DEFAULT_QUICK_ADD_INTENT = "quick-add-manual-shopping-item";
 const DEFAULT_SEARCH_FETCHER_KEY = "manual-shopping-ingredient-search";
 const DEFAULT_QUICK_ADD_FETCHER_KEY = "manual-shopping-quick-add";
+const DROPDOWN_MAX_HEIGHT_PX = 256;
+const DROPDOWN_VIEWPORT_PADDING_PX = 16;
+const DROPDOWN_GAP_PX = 8;
 
 const quickAddStyles = {
   default: {
@@ -54,9 +64,11 @@ const quickAddStyles = {
       "flex w-full px-4 py-3 text-left text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60",
     description: "text-sm leading-6 text-slate-600",
     dropdown:
-      "absolute z-10 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg",
+      "absolute z-10 w-full rounded-2xl border border-slate-200 bg-white shadow-lg",
+    dropdownScroll:
+      "max-h-64 overflow-y-auto overscroll-y-contain touch-pan-y py-2",
     dropdownUp:
-      "absolute bottom-full z-10 mb-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg",
+      "absolute bottom-full z-10 mb-2 w-full rounded-2xl border border-slate-200 bg-white shadow-lg",
     error: "text-sm text-rose-600",
     input:
       "min-w-0 w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
@@ -78,9 +90,11 @@ const quickAddStyles = {
       "flex w-full px-4 py-3 text-left text-sm font-medium text-store-accent-text transition hover:bg-store-accent-light disabled:cursor-not-allowed disabled:opacity-60",
     description: "text-sm leading-6 text-stone-600",
     dropdown:
-      "absolute z-10 max-h-64 w-full overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-lg",
+      "absolute z-10 w-full rounded-2xl border border-stone-200 bg-white shadow-lg",
+    dropdownScroll:
+      "max-h-64 overflow-y-auto overscroll-y-contain touch-pan-y py-2",
     dropdownUp:
-      "absolute bottom-full z-10 mb-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-lg",
+      "absolute bottom-full z-10 mb-2 w-full rounded-2xl border border-stone-200 bg-white shadow-lg",
     error: "text-sm text-rose-600",
     input:
       "min-w-0 w-0 flex-1 rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 text-base text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
@@ -128,6 +142,9 @@ export function ManualShoppingQuickAdd({
   const [displayedResults, setDisplayedResults] = useState<
     IngredientSearchResult[]
   >([]);
+  const [dropdownMaxHeight, setDropdownMaxHeight] = useState<number | null>(
+    null,
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastRequestedQueryRef = useRef<string | null>(null);
@@ -282,6 +299,50 @@ export function ManualShoppingQuickAdd({
     trimmedQuery.length > 0 && !hasExactMatch && !isSearching;
   const isExpanded =
     !revealOnFocus || isInputFocused || trimmedQuery.length > 0;
+
+  useLayoutEffect(() => {
+    if (!showDropdown) {
+      setDropdownMaxHeight(null);
+      return;
+    }
+
+    function updateDropdownMaxHeight() {
+      const input = inputRef.current;
+
+      if (!input) {
+        return;
+      }
+
+      const rect = input.getBoundingClientRect();
+
+      if (revealOnFocus) {
+        setDropdownMaxHeight(
+          Math.max(
+            120,
+            rect.top - DROPDOWN_GAP_PX - DROPDOWN_VIEWPORT_PADDING_PX,
+          ),
+        );
+        return;
+      }
+
+      setDropdownMaxHeight(
+        Math.min(
+          DROPDOWN_MAX_HEIGHT_PX,
+          window.innerHeight -
+            rect.bottom -
+            DROPDOWN_GAP_PX -
+            DROPDOWN_VIEWPORT_PADDING_PX,
+        ),
+      );
+    }
+
+    updateDropdownMaxHeight();
+    window.addEventListener("resize", updateDropdownMaxHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateDropdownMaxHeight);
+    };
+  }, [revealOnFocus, showDropdown]);
   const recentsBlock =
     recentManualItems.length > 0 ? (
       <div className="space-y-2">
@@ -309,7 +370,7 @@ export function ManualShoppingQuickAdd({
 
   return (
     <div
-      className="flex min-w-0 max-w-full flex-col gap-3 overflow-x-clip"
+      className="flex min-w-0 max-w-full flex-col gap-3"
       ref={containerRef}
     >
       <label
@@ -409,51 +470,60 @@ export function ManualShoppingQuickAdd({
         </div>
 
         {showDropdown ? (
-          <ul
+          <div
             className={revealOnFocus ? styles.dropdownUp : styles.dropdown}
-            id={listboxId}
-            role="listbox"
           >
-            {isSearching ? (
-              <li className={styles.searchPending} role="presentation">
-                Søker...
-              </li>
-            ) : null}
-            {displayedResults.map((ingredient) => (
-              <li key={ingredient.id} role="option">
-                <button
-                  className={styles.option}
-                  disabled={isQuickAdding}
-                  onClick={() => {
-                    submitQuickAdd({
-                      ingredientId: ingredient.id,
-                      quantity,
-                    });
-                  }}
-                  type="button"
-                >
-                  <span className="font-medium">
-                    {ingredient.canonicalName}
-                  </span>
-                  <span className={styles.optionMeta}>Fra register</span>
-                </button>
-              </li>
-            ))}
-            {showCreateOption ? (
-              <li role="option">
-                <button
-                  className={styles.createOption}
-                  disabled={isQuickAdding}
-                  onClick={() => {
-                    submitQuickAdd({ name: trimmedQuery, quantity });
-                  }}
-                  type="button"
-                >
-                  Legg til «{trimmedQuery}»
-                </button>
-              </li>
-            ) : null}
-          </ul>
+            <ul
+              className={styles.dropdownScroll}
+              id={listboxId}
+              role="listbox"
+              style={
+                dropdownMaxHeight === null
+                  ? undefined
+                  : { maxHeight: dropdownMaxHeight }
+              }
+            >
+              {isSearching ? (
+                <li className={styles.searchPending} role="presentation">
+                  Søker...
+                </li>
+              ) : null}
+              {displayedResults.map((ingredient) => (
+                <li key={ingredient.id} role="option">
+                  <button
+                    className={styles.option}
+                    disabled={isQuickAdding}
+                    onClick={() => {
+                      submitQuickAdd({
+                        ingredientId: ingredient.id,
+                        quantity,
+                      });
+                    }}
+                    type="button"
+                  >
+                    <span className="font-medium">
+                      {ingredient.canonicalName}
+                    </span>
+                    <span className={styles.optionMeta}>Fra register</span>
+                  </button>
+                </li>
+              ))}
+              {showCreateOption ? (
+                <li role="option">
+                  <button
+                    className={styles.createOption}
+                    disabled={isQuickAdding}
+                    onClick={() => {
+                      submitQuickAdd({ name: trimmedQuery, quantity });
+                    }}
+                    type="button"
+                  >
+                    Legg til «{trimmedQuery}»
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+          </div>
         ) : null}
       </div>
 

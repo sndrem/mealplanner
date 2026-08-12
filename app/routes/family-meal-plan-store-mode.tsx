@@ -1133,7 +1133,7 @@ export default function FamilyMealPlanStoreModeRoute({
         </div>
       ) : null}
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 overflow-x-clip px-4 pb-4 pt-3">
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-3">
         <div className="pointer-events-auto mx-auto max-w-4xl min-w-0">
           <div className={storeModeQuickAddDockClass}>
             <ManualShoppingQuickAdd
