@@ -44,6 +44,7 @@ vi.mock("../lib/shopping-write.server", () => {
     parseManualShoppingItemValues: vi.fn(),
     toggleShoppingItemChecked: vi.fn(),
     updateActiveShoppingDate: vi.fn(),
+    updateGeneratedShoppingItemQuantity: vi.fn(),
     updateManualShoppingItem: vi.fn(),
   };
 });
@@ -80,6 +81,7 @@ import {
   parseManualShoppingItemValues,
   toggleShoppingItemChecked,
   updateActiveShoppingDate,
+  updateGeneratedShoppingItemQuantity,
   updateManualShoppingItem,
 } from "../lib/shopping-write.server";
 import { listIngredientCategories } from "../lib/store.server";
@@ -164,6 +166,7 @@ describe("family store mode route", () => {
                 id: "store-1",
                 name: "Meny",
               },
+              quantity: null,
               quantityLabel: "1 stk",
               section: {
                 displayName: "Frukt og gront",
@@ -595,6 +598,43 @@ describe("family store mode route", () => {
     });
     expect(result).toEqual({
       intent: "update-family-shopping-item-quantity",
+      ok: true,
+    });
+  });
+
+  it("updates generated item quantity without redirecting", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
+    vi.mocked(updateGeneratedShoppingItemQuantity).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-generated-shopping-item-quantity");
+    formData.set("sourceKey", "entry-1:ingredient-1");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+    formData.set("quantity", "4 flasker");
+    formData.set("itemMealPlanId", "meal-plan-2");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(undefined, formData),
+    } as never);
+
+    expect(updateGeneratedShoppingItemQuantity).toHaveBeenCalledWith({
+      expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-2",
+      quantity: "4 flasker",
+      sourceKey: "entry-1:ingredient-1",
+      userId: "user-1",
+    });
+    expect(result).toEqual({
+      intent: "update-generated-shopping-item-quantity",
       ok: true,
     });
   });

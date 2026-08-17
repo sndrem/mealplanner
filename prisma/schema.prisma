@@ -417,6 +417,7 @@ model ShoppingItemOverride {
   postponedUntilDate    DateTime?          @db.Date
   preferredStoreId      String?
   note                  String?
+  quantity              String?
   updatedByUserId       String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt

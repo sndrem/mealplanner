@@ -64,6 +64,7 @@ export interface GeneratedShoppingItemOverrideValues {
   note: string;
   postponedUntilDate: string;
   preferredStoreId: string;
+  quantity: string;
 }
 
 export interface GeneratedShoppingItemOverrideFieldErrors {
@@ -494,6 +495,7 @@ export async function excludeGeneratedShoppingItem({
       note: true,
       postponedUntilDate: true,
       preferredStoreId: true,
+      quantity: true,
       updatedAt: true,
     },
     where: {
@@ -523,6 +525,7 @@ export async function excludeGeneratedShoppingItem({
     note: existingOverride?.note ?? null,
     postponedUntilDate: existingOverride?.postponedUntilDate ?? null,
     preferredStoreId: existingOverride?.preferredStoreId ?? null,
+    quantity: existingOverride?.quantity ?? null,
   };
 
   try {
@@ -625,6 +628,7 @@ export async function restoreGeneratedShoppingItem({
       note: true,
       postponedUntilDate: true,
       preferredStoreId: true,
+      quantity: true,
       updatedAt: true,
     },
     where: {
@@ -661,6 +665,7 @@ export async function restoreGeneratedShoppingItem({
     note: existingOverride.note,
     postponedUntilDate: existingOverride.postponedUntilDate,
     preferredStoreId: existingOverride.preferredStoreId,
+    quantity: existingOverride.quantity,
   };
 
   try {
@@ -793,6 +798,7 @@ export async function toggleShoppingItemChecked({
       note: true,
       postponedUntilDate: true,
       preferredStoreId: true,
+      quantity: true,
       sourceType: true,
       updatedAt: true,
     },
@@ -1075,6 +1081,7 @@ export async function optInStockShoppingItems({
           note: true,
           postponedUntilDate: true,
           preferredStoreId: true,
+          quantity: true,
         },
         where: {
           mealPlanId_sourceType_sourceKey: {
@@ -1094,6 +1101,7 @@ export async function optInStockShoppingItems({
           note: existingOverride?.note ?? null,
           postponedUntilDate: existingOverride?.postponedUntilDate ?? null,
           preferredStoreId: existingOverride?.preferredStoreId ?? null,
+          quantity: existingOverride?.quantity ?? null,
           sourceKey,
           sourceType: ShoppingItemSource.GENERATED,
           ...buildActorUpdate(userId),
@@ -1184,24 +1192,9 @@ export async function updateGeneratedShoppingItemOverride({
     };
   }
 
-  const existingOverride = await db.shoppingItemOverride.findUnique({
-    select: {
-      checked: true,
-      excludedFromList: true,
-      id: true,
-      includeDespiteStock: true,
-      note: true,
-      postponedUntilDate: true,
-      preferredStoreId: true,
-      updatedAt: true,
-    },
-    where: {
-      mealPlanId_sourceType_sourceKey: {
-        mealPlanId: mealPlan.id,
-        sourceKey,
-        sourceType: ShoppingItemSource.GENERATED,
-      },
-    },
+  const existingOverride = await findGeneratedShoppingItemOverrideForWrite({
+    mealPlanId: mealPlan.id,
+    sourceKey,
   });
 
   if (!matchesExpectedUpdatedAt(expectedUpdatedAt, existingOverride?.updatedAt)) {
@@ -1222,6 +1215,8 @@ export async function updateGeneratedShoppingItemOverride({
     note: string | null;
     postponedUntilDate: Date | null;
     preferredStoreId: string | null;
+    quantity: string | null;
+    sourceKey: string;
   } = {
     checked: existingOverride?.checked ?? false,
     excludedFromList: existingOverride?.excludedFromList ?? false,
@@ -1229,6 +1224,8 @@ export async function updateGeneratedShoppingItemOverride({
     note: validation.values.note || null,
     postponedUntilDate: validation.postponedUntilDate ?? null,
     preferredStoreId: validation.preferredStoreId,
+    quantity: normalizeOverrideQuantity(validation.values.quantity),
+    sourceKey,
   };
 
   try {
@@ -1320,6 +1317,162 @@ export async function updateGeneratedShoppingItemOverride({
   } catch (error) {
     logCollaborationFailure({
       action: "update-generated-shopping-item",
+      domain: "shopping",
+      entityId: existingOverride?.id ?? sourceKey,
+      entityType: "shopping-item-override",
+      error,
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    throw error;
+  }
+}
+
+export async function updateGeneratedShoppingItemQuantity({
+  expectedUpdatedAt,
+  familyId,
+  mealPlanId,
+  quantity,
+  sourceKey,
+  userId,
+}: {
+  expectedUpdatedAt: string;
+  familyId: string;
+  mealPlanId: string;
+  quantity: string;
+  sourceKey: string;
+  userId: string;
+}) {
+  const mealPlan = await getScopedMealPlan({
+    familyId,
+    mealPlanId,
+    userId,
+  });
+
+  if (!mealPlan) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  const existingOverride = await findGeneratedShoppingItemOverrideForWrite({
+    mealPlanId: mealPlan.id,
+    sourceKey,
+  });
+
+  if (!matchesExpectedUpdatedAt(expectedUpdatedAt, existingOverride?.updatedAt)) {
+    return buildShoppingConflictResult({
+      action: "update-generated-shopping-item-quantity",
+      entityId: existingOverride?.id ?? sourceKey,
+      entityType: "shopping-item-override",
+      familyId,
+      mealPlanId: mealPlan.id,
+      userId,
+    });
+  }
+
+  const nextData = {
+    checked: existingOverride?.checked ?? false,
+    excludedFromList: existingOverride?.excludedFromList ?? false,
+    includeDespiteStock: existingOverride?.includeDespiteStock ?? false,
+    note: existingOverride?.note ?? null,
+    postponedUntilDate: existingOverride?.postponedUntilDate ?? null,
+    preferredStoreId: existingOverride?.preferredStoreId ?? null,
+    quantity: normalizeOverrideQuantity(quantity),
+    sourceKey,
+  };
+
+  try {
+    if (isOverrideEmpty(nextData)) {
+      if (existingOverride) {
+        const deleteResult = await db.shoppingItemOverride.deleteMany({
+          where: {
+            id: existingOverride.id,
+            updatedAt: existingOverride.updatedAt,
+          },
+        });
+
+        if (deleteResult.count === 0) {
+          return buildShoppingConflictResult({
+            action: "update-generated-shopping-item-quantity",
+            entityId: existingOverride.id,
+            entityType: "shopping-item-override",
+            familyId,
+            mealPlanId: mealPlan.id,
+            userId,
+          });
+        }
+      }
+
+      logCollaborationWrite({
+        action: "update-generated-shopping-item-quantity",
+        domain: "shopping",
+        entityId: existingOverride?.id ?? sourceKey,
+        entityType: "shopping-item-override",
+        familyId,
+        mealPlanId: mealPlan.id,
+        outcome: "UPDATED",
+        userId,
+      });
+
+      return {
+        status: "UPDATED" as const,
+      };
+    }
+
+    if (existingOverride) {
+      const updateResult = await db.shoppingItemOverride.updateMany({
+        data: {
+          ...nextData,
+          ...buildActorUpdate(userId),
+        },
+        where: {
+          id: existingOverride.id,
+          updatedAt: existingOverride.updatedAt,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        return buildShoppingConflictResult({
+          action: "update-generated-shopping-item-quantity",
+          entityId: existingOverride.id,
+          entityType: "shopping-item-override",
+          familyId,
+          mealPlanId: mealPlan.id,
+          userId,
+        });
+      }
+    } else {
+      await db.shoppingItemOverride.create({
+        data: {
+          ...nextData,
+          mealPlanId: mealPlan.id,
+          sourceType: ShoppingItemSource.GENERATED,
+          ...buildActorUpdate(userId),
+        },
+      });
+    }
+
+    logCollaborationWrite({
+      action: "update-generated-shopping-item-quantity",
+      domain: "shopping",
+      entityId: existingOverride?.id ?? sourceKey,
+      entityType: "shopping-item-override",
+      familyId,
+      mealPlanId: mealPlan.id,
+      outcome: "UPDATED",
+      userId,
+    });
+
+    return {
+      status: "UPDATED" as const,
+    };
+  } catch (error) {
+    logCollaborationFailure({
+      action: "update-generated-shopping-item-quantity",
       domain: "shopping",
       entityId: existingOverride?.id ?? sourceKey,
       entityType: "shopping-item-override",
@@ -1820,7 +1973,76 @@ function normalizeGeneratedShoppingItemOverrideValues(
     note: values.note.trim(),
     postponedUntilDate: values.postponedUntilDate.trim(),
     preferredStoreId: values.preferredStoreId.trim(),
+    quantity: values.quantity.trim(),
   };
+}
+
+const generatedOverrideWriteSelect = {
+  checked: true,
+  excludedFromList: true,
+  id: true,
+  includeDespiteStock: true,
+  note: true,
+  postponedUntilDate: true,
+  preferredStoreId: true,
+  quantity: true,
+  sourceKey: true,
+  sourceType: true,
+  updatedAt: true,
+} as const;
+
+async function findGeneratedShoppingItemOverrideForWrite({
+  mealPlanId,
+  sourceKey,
+}: {
+  mealPlanId: string;
+  sourceKey: string;
+}) {
+  const exact = await db.shoppingItemOverride.findUnique({
+    select: generatedOverrideWriteSelect,
+    where: {
+      mealPlanId_sourceType_sourceKey: {
+        mealPlanId,
+        sourceKey,
+        sourceType: ShoppingItemSource.GENERATED,
+      },
+    },
+  });
+
+  if (exact) {
+    return exact;
+  }
+
+  const occurrenceKeySet = new Set(sourceKey.split("|").filter(Boolean));
+
+  if (occurrenceKeySet.size === 0) {
+    return null;
+  }
+
+  const overrides = await db.shoppingItemOverride.findMany({
+    select: generatedOverrideWriteSelect,
+    where: {
+      mealPlanId,
+      sourceType: ShoppingItemSource.GENERATED,
+    },
+  });
+
+  return (
+    overrides
+      .filter((override) =>
+        override.sourceKey
+          .split("|")
+          .some((part) => occurrenceKeySet.has(part)),
+      )
+      .sort(
+        (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
+      )[0] ?? null
+  );
+}
+
+function normalizeOverrideQuantity(quantity: string | null | undefined) {
+  const trimmed = quantity?.trim() ?? "";
+  return trimmed || null;
 }
 
 async function resolveScopedStoreId(preferredStoreId: string, familyId: string) {
@@ -1924,6 +2146,7 @@ function shouldDeleteOverrideAfterUnchecked(existingOverride: {
   note: string | null;
   postponedUntilDate: Date | null;
   preferredStoreId: string | null;
+  quantity?: string | null;
   sourceType: ShoppingItemSource;
 }) {
   if (existingOverride.sourceType === ShoppingItemSource.MANUAL) {
@@ -1935,7 +2158,8 @@ function shouldDeleteOverrideAfterUnchecked(existingOverride: {
     !existingOverride.includeDespiteStock &&
     !existingOverride.note &&
     !existingOverride.postponedUntilDate &&
-    !existingOverride.preferredStoreId
+    !existingOverride.preferredStoreId &&
+    !existingOverride.quantity
   );
 }
 
@@ -1946,6 +2170,7 @@ function isOverrideEmpty(values: {
   note: string | null;
   postponedUntilDate: Date | null;
   preferredStoreId: string | null;
+  quantity?: string | null;
 }) {
   return (
     !values.checked &&
@@ -1953,6 +2178,7 @@ function isOverrideEmpty(values: {
     !values.includeDespiteStock &&
     !values.note &&
     !values.postponedUntilDate &&
-    !values.preferredStoreId
+    !values.preferredStoreId &&
+    !values.quantity
   );
 }

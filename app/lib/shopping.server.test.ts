@@ -1192,6 +1192,191 @@ describe("shopping.server", () => {
     );
   });
 
+  it("uses an override quantity instead of the merged recipe amount", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-dairy", name: "Meieri" },
+                categoryId: "category-dairy",
+                displayName: "Yoghurt",
+                id: "ingredient-1",
+                ingredientId: "canonical-yoghurt",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "beger",
+              },
+            ],
+            title: "Frokostbolle",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [
+        {
+          checked: false,
+          excludedFromList: false,
+          includeDespiteStock: false,
+          note: null,
+          postponedUntilDate: null,
+          preferredStore: null,
+          preferredStoreId: null,
+          quantity: " 4 beger ",
+          sourceKey: "entry-1:ingredient-1",
+          sourceType: "GENERATED",
+          updatedAt: new Date("2026-05-16T12:00:00.000Z"),
+        },
+      ],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+    });
+    dbMock.store.findMany.mockResolvedValue([]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.projectedItems[0]).toEqual(
+      expect.objectContaining({
+        quantity: "4 beger",
+        quantityLabel: "4 beger",
+        sourceType: "GENERATED",
+      }),
+    );
+  });
+
+  it("keeps an overlapping quantity override after the generated source key changes", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-dairy", name: "Meieri" },
+                categoryId: "category-dairy",
+                displayName: "Yoghurt",
+                id: "ingredient-1",
+                ingredientId: "canonical-yoghurt",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "beger",
+              },
+            ],
+            title: "Frokostbolle",
+          },
+          recipeId: "recipe-1",
+        },
+        {
+          date: new Date("2026-05-16T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "2",
+                category: { id: "category-dairy", name: "Meieri" },
+                categoryId: "category-dairy",
+                displayName: "Yoghurt",
+                id: "ingredient-2",
+                ingredientId: "canonical-yoghurt",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "beger",
+              },
+            ],
+            title: "Parfait",
+          },
+          recipeId: "recipe-2",
+        },
+        {
+          date: new Date("2026-05-17T00:00:00.000Z"),
+          id: "entry-3",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-3",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-dairy", name: "Meieri" },
+                categoryId: "category-dairy",
+                displayName: "Yoghurt",
+                id: "ingredient-3",
+                ingredientId: "canonical-yoghurt",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "beger",
+              },
+            ],
+            title: "Smoothie",
+          },
+          recipeId: "recipe-3",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [
+        {
+          checked: false,
+          excludedFromList: false,
+          includeDespiteStock: false,
+          note: null,
+          postponedUntilDate: null,
+          preferredStore: null,
+          preferredStoreId: null,
+          quantity: "6 beger",
+          sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2",
+          sourceType: "GENERATED",
+          updatedAt: new Date("2026-05-16T12:00:00.000Z"),
+        },
+      ],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Langhelg",
+    });
+    dbMock.store.findMany.mockResolvedValue([]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.projectedItems[0]).toEqual(
+      expect.objectContaining({
+        quantity: "6 beger",
+        quantityLabel: "6 beger",
+        sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2|entry-3:ingredient-3",
+        sourceType: "GENERATED",
+      }),
+    );
+  });
+
   describe("getMealPlanStoreModeData", () => {
     function registerStoreModePlans(
       anchorPlan: Record<string, unknown>,
@@ -2631,6 +2816,7 @@ describe("shopping.server", () => {
         postponedUntilDate: null,
         preferredStore: null,
         preferredStoreConflict: false,
+        quantity: null,
         quantityLabel: "1 l",
         recipeCount: 1,
         section: { displayName: "Meieri", sortOrder: 1 },

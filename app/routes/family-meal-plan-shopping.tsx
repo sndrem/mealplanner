@@ -1,9 +1,10 @@
 import { ShoppingItemSource } from "@prisma/client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Form,
   Link,
   isRouteErrorResponse,
+  useFetcher,
   useNavigation,
   useRevalidator,
   type MetaFunction,
@@ -20,6 +21,7 @@ import {
   ShoppingDateSelect,
   ShoppingListItemExpanded,
 } from "../components/shopping-list-item-expanded";
+import { ShoppingQuantityEditModal } from "../components/shopping-quantity-edit-modal";
 import { getToggleExpectedVersion } from "../lib/shopping-store-mode-client";
 import {
   insertProjectedItemIntoStoreGroups,
@@ -42,6 +44,7 @@ import {
   restoreGeneratedShoppingItem,
   toggleShoppingItemChecked,
   updateGeneratedShoppingItemOverride,
+  updateGeneratedShoppingItemQuantity,
   updateManualShoppingItem,
   type GeneratedShoppingItemOverrideFieldErrors,
   type GeneratedShoppingItemOverrideValues,
@@ -71,6 +74,7 @@ type ShoppingIntent =
   | "toggle-family-shopping-item-checked"
   | "toggle-shopping-item-checked"
   | "update-generated-shopping-item"
+  | "update-generated-shopping-item-quantity"
   | "update-manual-shopping-item";
 
 interface ShoppingActionData {
@@ -597,6 +601,42 @@ export async function action({
     });
   }
 
+  if (intent === "update-generated-shopping-item-quantity") {
+    const sourceKey = String(formData.get("sourceKey") ?? "").trim();
+
+    if (!sourceKey) {
+      return {
+        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    const result = await updateGeneratedShoppingItemQuantity({
+      expectedUpdatedAt: parseExpectedUpdatedAt(formData),
+      familyId,
+      mealPlanId,
+      quantity: String(formData.get("quantity") ?? ""),
+      sourceKey,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    return {
+      intent,
+      ok: true,
+    } satisfies ShoppingActionData;
+  }
+
   return {
     formError: "Ukjent handling.",
   } satisfies ShoppingActionData;
@@ -609,12 +649,21 @@ export default function FamilyMealPlanShoppingRoute({
   const navigation = useNavigation();
   const revalidator = useRevalidator();
   const scheduleRevalidate = useDebouncedRevalidate(revalidator.revalidate);
+  const quantityFetcher = useFetcher<ShoppingActionData>();
   const pendingIntent = navigation.formData?.get("intent");
   const pendingSourceKey = getPendingSourceKey(navigation.formData);
   const [storeGroups, setStoreGroups] = useState(loaderData.storeGroups);
   const [recentManualItems, setRecentManualItems] = useState(
     loaderData.recentManualItems,
   );
+  const [quantityEditItem, setQuantityEditItem] = useState<{
+    collaborationVersion: string;
+    name: string;
+    quantity: string;
+    sourceKey: string;
+  } | null>(null);
+  const [quantityDraft, setQuantityDraft] = useState("");
+  const quantityInputRef = useRef<HTMLInputElement>(null);
   const addManualValues =
     actionData?.intent === "add-manual-shopping-item" && actionData.manualValues
       ? actionData.manualValues
@@ -641,6 +690,45 @@ export default function FamilyMealPlanShoppingRoute({
     },
     [scheduleRevalidate],
   );
+
+  const closeQuantityEdit = useCallback(() => {
+    setQuantityEditItem(null);
+  }, []);
+
+  const submitGeneratedQuantity = useCallback(
+    (item: { collaborationVersion: string; sourceKey: string }, quantity: string) => {
+      const formData = new FormData();
+      formData.set("intent", "update-generated-shopping-item-quantity");
+      formData.set("sourceKey", item.sourceKey);
+      formData.set("expectedUpdatedAt", item.collaborationVersion);
+      formData.set("quantity", quantity);
+      quantityFetcher.submit(formData, { method: "post" });
+      closeQuantityEdit();
+    },
+    [closeQuantityEdit, quantityFetcher],
+  );
+
+  useEffect(() => {
+    if (!quantityEditItem) {
+      return;
+    }
+
+    quantityInputRef.current?.focus();
+    quantityInputRef.current?.select();
+  }, [quantityEditItem]);
+
+  useEffect(() => {
+    if (
+      quantityFetcher.state !== "idle" ||
+      quantityFetcher.data?.intent !==
+        "update-generated-shopping-item-quantity" ||
+      !quantityFetcher.data.ok
+    ) {
+      return;
+    }
+
+    scheduleRevalidate();
+  }, [quantityFetcher.data, quantityFetcher.state, scheduleRevalidate]);
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -1270,6 +1358,7 @@ export default function FamilyMealPlanShoppingRoute({
                                       item.postponedUntilDate ?? "",
                                     preferredStoreId:
                                       item.preferredStore?.id ?? "",
+                                    quantity: item.quantity ?? "",
                                   }
                                 : null;
                           const quantityBadge =
@@ -1308,15 +1397,39 @@ export default function FamilyMealPlanShoppingRoute({
                                 <h4 className="text-base font-semibold text-slate-950">
                                   {item.name}
                                 </h4>
-                                {quantityBadge ? (
-                                  <span
+                                {item.sourceType === "GENERATED" ? (
+                                  <button
                                     className={
-                                      item.sourceType === "GENERATED" &&
+                                      quantityBadge &&
                                       !item.quantityLabel &&
                                       item.occurrenceCount > 1
-                                        ? "rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800"
-                                        : "rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                                        ? "rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 transition hover:bg-amber-200"
+                                        : "rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
                                     }
+                                    onClick={() => {
+                                      setQuantityDraft(
+                                        item.quantity ??
+                                          item.quantityLabel ??
+                                          "",
+                                      );
+                                      setQuantityEditItem({
+                                        collaborationVersion:
+                                          item.collaborationVersion,
+                                        name: item.name,
+                                        quantity: item.quantity ?? "",
+                                        sourceKey: item.sourceKey,
+                                      });
+                                    }}
+                                    type="button"
+                                  >
+                                    <span className="inline-flex items-center gap-1">
+                                      {quantityBadge ?? "Sett mengde"}
+                                      <QuantityEditIcon className="h-3 w-3 opacity-80" />
+                                    </span>
+                                  </button>
+                                ) : quantityBadge ? (
+                                  <span
+                                    className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
                                   >
                                     {quantityBadge}
                                   </span>
@@ -1438,6 +1551,22 @@ export default function FamilyMealPlanShoppingRoute({
           </section>
         )}
       </div>
+      {quantityEditItem ? (
+        <ShoppingQuantityEditModal
+          canReset={Boolean(quantityEditItem.quantity.trim())}
+          name={quantityEditItem.name}
+          onCancel={closeQuantityEdit}
+          onReset={() =>
+            submitGeneratedQuantity(quantityEditItem, "")
+          }
+          onSave={() =>
+            submitGeneratedQuantity(quantityEditItem, quantityDraft)
+          }
+          quantity={quantityDraft}
+          quantityInputRef={quantityInputRef}
+          setQuantity={setQuantityDraft}
+        />
+      ) : null}
     </main>
   );
 }
@@ -1549,6 +1678,7 @@ function parseGeneratedShoppingItemOverrideValues(
     note: String(formData.get("note") ?? ""),
     postponedUntilDate: String(formData.get("postponedUntilDate") ?? ""),
     preferredStoreId: String(formData.get("preferredStoreId") ?? ""),
+    quantity: String(formData.get("quantity") ?? ""),
   };
 }
 
@@ -1691,4 +1821,29 @@ function formatDateLabel(value: string) {
 
 function formatMealPlanWindow(startDate: string, endDate: string) {
   return `${formatDateLabel(startDate)} til ${formatDateLabel(endDate)}`;
+}
+
+function QuantityEditIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M4 20h4l10.5-10.5-4-4L4 16v4Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.75"
+      />
+      <path
+        d="m13.5 6.5 4 4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.75"
+      />
+    </svg>
+  );
 }
