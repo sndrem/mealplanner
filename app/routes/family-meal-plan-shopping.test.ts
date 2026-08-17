@@ -24,6 +24,7 @@ vi.mock("../lib/shopping-write.server", () => {
     optInStockShoppingItems: vi.fn(),
     toggleShoppingItemChecked: vi.fn(),
     updateGeneratedShoppingItemOverride: vi.fn(),
+    updateGeneratedShoppingItemQuantity: vi.fn(),
     updateManualShoppingItem: vi.fn(),
   };
 });
@@ -36,6 +37,7 @@ import {
   optInStockShoppingItems,
   toggleShoppingItemChecked,
   updateGeneratedShoppingItemOverride,
+  updateGeneratedShoppingItemQuantity,
 } from "../lib/shopping-write.server";
 import { action, loader } from "./family-meal-plan-shopping";
 
@@ -131,6 +133,7 @@ describe("family meal plan shopping route", () => {
             id: "store-1",
             name: "Meny",
           },
+          quantity: null,
           quantityLabel: "1 stk",
           section: {
             displayName: "Frukt og gront",
@@ -211,6 +214,7 @@ describe("family meal plan shopping route", () => {
                     id: "store-1",
                     name: "Meny",
                   },
+                  quantity: null,
                   quantityLabel: "1 stk",
                   section: {
                     displayName: "Frukt og gront",
@@ -378,6 +382,7 @@ describe("family meal plan shopping route", () => {
                     id: "store-1",
                     name: "Meny",
                   },
+                  quantity: null,
                   quantityLabel: "1 stk",
                   section: {
                     displayName: "Frukt og gront",
@@ -755,6 +760,7 @@ describe("family meal plan shopping route", () => {
         note: "Kjøp senere",
         postponedUntilDate: "2026-05-21",
         preferredStoreId: "store-1",
+        quantity: "",
       },
     });
 
@@ -783,6 +789,7 @@ describe("family meal plan shopping route", () => {
         note: "Kjøp senere",
         postponedUntilDate: "2026-05-21",
         preferredStoreId: "store-1",
+        quantity: "",
       },
     });
     expect(result).toEqual({
@@ -798,7 +805,45 @@ describe("family meal plan shopping route", () => {
         note: "Kjøp senere",
         postponedUntilDate: "2026-05-21",
         preferredStoreId: "store-1",
+        quantity: "",
       },
+    });
+  });
+
+  it("updates generated shopping item quantity without creating a manual item", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(updateGeneratedShoppingItemQuantity).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-generated-shopping-item-quantity");
+    formData.set("sourceKey", "entry-1:ingredient-1");
+    formData.set("expectedUpdatedAt", "2026-05-10T00:00:00.000Z");
+    formData.set("quantity", "4 flasker");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(
+        "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping",
+        formData,
+      ),
+    });
+
+    expect(updateGeneratedShoppingItemQuantity).toHaveBeenCalledWith({
+      expectedUpdatedAt: "2026-05-10T00:00:00.000Z",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      quantity: "4 flasker",
+      sourceKey: "entry-1:ingredient-1",
+      userId: "user-1",
+    });
+    expect(result).toEqual({
+      intent: "update-generated-shopping-item-quantity",
+      ok: true,
     });
   });
 });

@@ -239,6 +239,20 @@ export function ShoppingListItemExpanded({
             />
 
             <label className="block min-w-0 text-sm font-medium text-slate-700">
+              Mengde
+              <input
+                className="mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                defaultValue={overrideValues.quantity}
+                name="quantity"
+                placeholder="F.eks. 4 flasker"
+                type="text"
+              />
+            </label>
+            <p className="text-xs leading-5 text-slate-500">
+              La feltet stå tomt for å bruke mengden fra oppskriftene.
+            </p>
+
+            <label className="block min-w-0 text-sm font-medium text-slate-700">
               Foretrukket butikk
               <select
                 className="mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"

@@ -6,6 +6,7 @@ import {
 } from "../lib/shopping-display";
 import type { StoreModeShoppingView } from "../lib/shopping-store-mode-client";
 import type { StoreCategory } from "../lib/store.server";
+import { ShoppingQuantityEditModal } from "./shopping-quantity-edit-modal";
 
 interface StoreModeShoppingItemCardBase {
   category: {
@@ -89,8 +90,10 @@ interface StoreModeShoppingItemCardProps {
   onUpdateCategory?: (request: StoreModeCategoryUpdateRequest) => void;
   onUpdateQuantity?: (item: {
     expectedUpdatedAt: string;
+    mealPlanId?: string | null;
     quantity: string;
     sourceKey: string;
+    sourceType: "FAMILY" | "GENERATED";
   }) => void;
   onToggle: () => void;
   selectedStoreId: string | undefined;
@@ -252,7 +255,8 @@ export function StoreModeShoppingItemCard({
   const nameClass = item.checked
     ? "text-sm font-semibold leading-5 text-stone-500 line-through decoration-stone-400"
     : "text-sm font-semibold leading-5 text-stone-950";
-  const showQuantityEdit = item.sourceType === "FAMILY";
+  const showQuantityEdit =
+    item.sourceType === "FAMILY" || item.sourceType === "GENERATED";
 
   useEffect(() => {
     if (!isQuantityModalOpen) {
@@ -291,34 +295,26 @@ export function StoreModeShoppingItemCard({
                 </span>
               ) : null}
             </span>
-            {quantityBadge ? (
-              showQuantityEdit ? (
-                <button
-                  className={`${badgeClass} pointer-events-auto bg-store-accent-light text-store-accent-text ring-1 ring-store-accent/40 transition hover:bg-store-accent-light/80`}
-                  onClick={() => {
-                    setQuantityDraft(item.quantityLabel ?? "");
-                    setIsQuantityModalOpen(true);
-                  }}
-                  type="button"
-                >
-                  <span className="inline-flex items-center gap-1">
-                    {quantityBadge}
-                    <EditPencilIcon className="h-3 w-3 opacity-80" />
-                  </span>
-                </button>
-              ) : (
-                <span
-                  className={
-                    item.sourceType === "GENERATED" &&
-                    !item.quantityLabel &&
-                    item.occurrenceCount > 1
-                      ? `${badgeClass} bg-amber-100 text-amber-800`
-                      : `${badgeClass} bg-white text-stone-700 ring-1 ring-stone-200`
-                  }
-                >
-                  {quantityBadge}
+            {showQuantityEdit ? (
+              <button
+                className={`${badgeClass} pointer-events-auto bg-store-accent-light text-store-accent-text ring-1 ring-store-accent/40 transition hover:bg-store-accent-light/80`}
+                onClick={() => {
+                  setQuantityDraft(
+                    item.quantity ?? item.quantityLabel ?? "",
+                  );
+                  setIsQuantityModalOpen(true);
+                }}
+                type="button"
+              >
+                <span className="inline-flex items-center gap-1">
+                  {quantityBadge ?? "Sett mengde"}
+                  <EditPencilIcon className="h-3 w-3 opacity-80" />
                 </span>
-              )
+              </button>
+            ) : quantityBadge ? (
+              <span className={`${badgeClass} bg-white text-stone-700 ring-1 ring-stone-200`}>
+                {quantityBadge}
+              </span>
             ) : null}
             {item.sourceType === "GENERATED" && item.recipeCount > 1 ? (
               <span className={`${badgeClass} bg-emerald-100 text-emerald-800`}>
@@ -445,62 +441,36 @@ export function StoreModeShoppingItemCard({
         </details>
       </div>
 
-      {isQuantityModalOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/35 p-4"
-          onClick={() => setIsQuantityModalOpen(false)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              setIsQuantityModalOpen(false);
-            }
+      {isQuantityModalOpen &&
+      (item.sourceType === "FAMILY" || item.sourceType === "GENERATED") ? (
+        <ShoppingQuantityEditModal
+          canReset={Boolean((item.quantity ?? item.quantityLabel)?.trim())}
+          name={item.name}
+          onCancel={() => setIsQuantityModalOpen(false)}
+          onReset={() => {
+            onUpdateQuantity?.({
+              expectedUpdatedAt: item.collaborationVersion,
+              mealPlanId: item.mealPlanId,
+              quantity: "",
+              sourceKey: item.sourceKey,
+              sourceType: item.sourceType,
+            });
+            setIsQuantityModalOpen(false);
           }}
-          role="presentation"
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-4 shadow-xl"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-          >
-            <h3 className="text-sm font-semibold text-stone-950">
-              Oppdater mengde
-            </h3>
-            <p className="mt-1 text-xs text-stone-600">{item.name}</p>
-            <label className="mt-3 block text-xs font-medium text-stone-700">
-              Mengde
-              <input
-                className="mt-1 w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-base text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
-                onChange={(event) => setQuantityDraft(event.target.value)}
-                placeholder="F.eks. 4 flasker"
-                ref={quantityInputRef}
-                type="text"
-                value={quantityDraft}
-              />
-            </label>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                className="rounded-xl border border-stone-300 px-3 py-2 text-sm text-stone-700 transition hover:bg-stone-100"
-                onClick={() => setIsQuantityModalOpen(false)}
-                type="button"
-              >
-                Avbryt
-              </button>
-              <button
-                className="rounded-xl bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
-                onClick={() => {
-                  onUpdateQuantity?.({
-                    expectedUpdatedAt: item.collaborationVersion,
-                    quantity: quantityDraft,
-                    sourceKey: item.sourceKey,
-                  });
-                  setIsQuantityModalOpen(false);
-                }}
-                type="button"
-              >
-                Lagre
-              </button>
-            </div>
-          </div>
-        </div>
+          onSave={() => {
+            onUpdateQuantity?.({
+              expectedUpdatedAt: item.collaborationVersion,
+              mealPlanId: item.mealPlanId,
+              quantity: quantityDraft,
+              sourceKey: item.sourceKey,
+              sourceType: item.sourceType,
+            });
+            setIsQuantityModalOpen(false);
+          }}
+          quantity={quantityDraft}
+          quantityInputRef={quantityInputRef}
+          setQuantity={setQuantityDraft}
+        />
       ) : null}
     </div>
   );

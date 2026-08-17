@@ -79,6 +79,7 @@ const shoppingOverrideSelect =
       select: storeSummarySelect,
     },
     preferredStoreId: true,
+    quantity: true,
     sourceKey: true,
     sourceType: true,
     updatedAt: true,
@@ -268,6 +269,7 @@ export interface ProjectedGeneratedShoppingItem extends ProjectedShoppingItemBas
   occurrences: ProjectedShoppingOccurrence[];
   postponedUntilDate: Date | null;
   preferredStoreConflict: boolean;
+  quantity: string | null;
   sourceType: "GENERATED";
   unit: string | null;
 }
@@ -1176,7 +1178,11 @@ function mapGeneratedProjectionBucketToItem({
     postponedUntilDate: override?.postponedUntilDate ?? null,
     preferredStore,
     preferredStoreConflict: bucket.preferredStoreConflict,
-    quantityLabel: buildMergedQuantityLabel(occurrences),
+    quantity: override?.quantity?.trim() || null,
+    quantityLabel: buildGeneratedQuantityLabel({
+      occurrences,
+      overrideQuantity: override?.quantity,
+    }),
     section,
     sourceKey,
     sourceType: ShoppingItemSource.GENERATED,
@@ -1650,13 +1656,11 @@ function resolveGeneratedOverride(
     return directOverride;
   }
 
-  // Legacy overrides may still be keyed by a single occurrence before merge.
+  const occurrenceKeySet = new Set(bucket.occurrenceKeys);
   let fallbackOverride: ShoppingOverride | undefined;
 
-  for (const occurrenceKey of bucket.occurrenceKeys) {
-    const candidate = overrideBySourceKey.get(occurrenceKey);
-
-    if (!candidate) {
+  for (const [sourceKey, candidate] of overrideBySourceKey) {
+    if (!generatedOverrideSourceKeyOverlaps(sourceKey, occurrenceKeySet)) {
       continue;
     }
 
@@ -1669,6 +1673,29 @@ function resolveGeneratedOverride(
   }
 
   return fallbackOverride;
+}
+
+function generatedOverrideSourceKeyOverlaps(
+  sourceKey: string,
+  occurrenceKeySet: Set<string>,
+) {
+  return sourceKey.split("|").some((part) => occurrenceKeySet.has(part));
+}
+
+function buildGeneratedQuantityLabel({
+  occurrences,
+  overrideQuantity,
+}: {
+  occurrences: ProjectedShoppingOccurrence[];
+  overrideQuantity?: string | null;
+}) {
+  const trimmedOverride = overrideQuantity?.trim();
+
+  if (trimmedOverride) {
+    return trimmedOverride;
+  }
+
+  return buildMergedQuantityLabel(occurrences);
 }
 
 function hasIncludeDespiteStockKey(

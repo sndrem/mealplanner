@@ -62,6 +62,7 @@ import {
   parseManualShoppingItemValues,
   toggleShoppingItemChecked,
   updateActiveShoppingDate,
+  updateGeneratedShoppingItemQuantity,
   updateManualShoppingItem,
 } from "../lib/shopping-write.server";
 import { listIngredientCategories } from "../lib/store.server";
@@ -101,6 +102,7 @@ type StoreModeIntent =
   | "quick-add-family-shopping-item"
   | "update-family-shopping-item-category"
   | "update-family-shopping-item-quantity"
+  | "update-generated-shopping-item-quantity"
   | "update-manual-shopping-item-category"
   | "toggle-family-shopping-item-checked"
   | "toggle-shopping-item-checked"
@@ -364,6 +366,44 @@ export async function action({ params, request }: Route.ActionArgs) {
     } satisfies StoreModeActionData;
   }
 
+  if (intent === "update-generated-shopping-item-quantity") {
+    const sourceKey = String(formData.get("sourceKey") ?? "").trim();
+    const quantity = String(formData.get("quantity") ?? "");
+
+    if (!sourceKey) {
+      return {
+        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    const itemMealPlanId = resolveItemMealPlanId(formData, anchorMealPlanId);
+    const result = await updateGeneratedShoppingItemQuantity({
+      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
+      familyId,
+      mealPlanId: itemMealPlanId,
+      quantity,
+      sourceKey,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    return {
+      intent,
+      ok: true,
+    } satisfies StoreModeActionData;
+  }
+
   if (intent === "update-family-shopping-item-category") {
     const familyItemId = String(formData.get("sourceKey") ?? "").trim();
 
@@ -594,18 +634,32 @@ export default function FamilyMealPlanStoreModeRoute({
   const handleUpdateQuantity = useCallback(
     ({
       expectedUpdatedAt,
+      mealPlanId,
       quantity,
       sourceKey,
+      sourceType,
     }: {
       expectedUpdatedAt: string;
+      mealPlanId?: string | null;
       quantity: string;
       sourceKey: string;
+      sourceType: "FAMILY" | "GENERATED";
     }) => {
       const formData = new FormData();
-      formData.set("intent", "update-family-shopping-item-quantity");
+      formData.set(
+        "intent",
+        sourceType === "GENERATED"
+          ? "update-generated-shopping-item-quantity"
+          : "update-family-shopping-item-quantity",
+      );
       formData.set("sourceKey", sourceKey);
       formData.set("expectedUpdatedAt", expectedUpdatedAt);
       formData.set("quantity", quantity);
+
+      if (sourceType === "GENERATED" && mealPlanId) {
+        formData.set("itemMealPlanId", mealPlanId);
+      }
+
       quantityFetcher.submit(formData, { method: "post" });
     },
     [quantityFetcher],
@@ -614,7 +668,10 @@ export default function FamilyMealPlanStoreModeRoute({
   useEffect(() => {
     if (
       quantityFetcher.state !== "idle" ||
-      quantityFetcher.data?.intent !== "update-family-shopping-item-quantity" ||
+      (quantityFetcher.data?.intent !==
+        "update-family-shopping-item-quantity" &&
+        quantityFetcher.data?.intent !==
+          "update-generated-shopping-item-quantity") ||
       !quantityFetcher.data.ok
     ) {
       return;
@@ -1287,8 +1344,10 @@ function StoreModeItemGrid<
   onUpdateCategory: (request: StoreModeCategoryUpdateRequest) => void;
   onUpdateQuantity: (item: {
     expectedUpdatedAt: string;
+    mealPlanId?: string | null;
     quantity: string;
     sourceKey: string;
+    sourceType: "FAMILY" | "GENERATED";
   }) => void;
   onToggleItem: (item: TItem) => void;
   recentlyAddedSourceKey: string | null;
