@@ -190,11 +190,13 @@ export default function FamilyMealPlanReviewRoute({
 }) {
   const navigation = useNavigation();
   const pendingIntent = navigation.formData?.get("intent");
-  const pendingDate = navigation.formData?.get("date");
+  const pendingDate = String(navigation.formData?.get("date") ?? "");
+  const isPending = navigation.state !== "idle";
   const isApprovingMealPlan =
-    navigation.state === "submitting" && pendingIntent === "approve-meal-plan";
-  const recipientLabel =
-    loaderData.mealPlan.status === "APPROVED"
+    isPending && pendingIntent === "approve-meal-plan";
+  const recipientLabel = isApprovingMealPlan
+    ? "Godkjent"
+    : loaderData.mealPlan.status === "APPROVED"
       ? "Godkjent"
       : loaderData.recipientStatus === "RESPONDED"
         ? "Du har svart"
@@ -243,7 +245,7 @@ export default function FamilyMealPlanReviewRoute({
           ) : null}
         </section>
 
-        {loaderData.notice === "meal-plan-approved" ? (
+        {loaderData.notice === "meal-plan-approved" || isApprovingMealPlan ? (
           <section className="rounded-[24px] border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-950">
             <h2 className="text-base font-semibold">Ukeplan godkjent</h2>
             <p className="mt-1 text-sm leading-6 text-emerald-900">
@@ -252,7 +254,7 @@ export default function FamilyMealPlanReviewRoute({
           </section>
         ) : null}
 
-        {loaderData.canApprove ? (
+        {loaderData.canApprove && !isApprovingMealPlan ? (
           <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm mt-15">
             <h2 className="text-base font-semibold text-slate-950">
               Godkjenn ukeplanen
@@ -287,11 +289,18 @@ export default function FamilyMealPlanReviewRoute({
 
         <div className="flex flex-col gap-3 pb-8">
           {loaderData.days.map((day) => {
-            const isSubmittingDay =
-              navigation.state === "submitting" && pendingDate === day.date;
+            const isSubmittingDay = isPending && pendingDate === day.date;
             const dayError =
               actionData?.date === day.date ? actionData.formError : undefined;
-            const selectedQuickResponse = day.comment?.quickResponse ?? null;
+            const selectedQuickResponse =
+              isSubmittingDay && pendingIntent === "save-day-feedback"
+                ? String(navigation.formData?.get("quickResponse") ?? "")
+                : (day.comment?.quickResponse ?? null);
+            const pendingNoteBody =
+              isSubmittingDay && pendingIntent === "save-day-note"
+                ? String(navigation.formData?.get("body") ?? "").trim()
+                : "";
+            const displayNoteBody = pendingNoteBody || day.comment?.body || "";
 
             return (
               <article
@@ -341,11 +350,6 @@ export default function FamilyMealPlanReviewRoute({
                   <div className="mt-4 flex flex-col gap-2">
                     {loaderData.quickResponseOptions.map((option) => {
                       const isSelected = selectedQuickResponse === option.value;
-                      const isSubmittingChip =
-                        isSubmittingDay &&
-                        pendingIntent === "save-day-feedback" &&
-                        navigation.formData?.get("quickResponse") ===
-                          option.value;
 
                       return (
                         <Form
@@ -379,7 +383,7 @@ export default function FamilyMealPlanReviewRoute({
                             disabled={isSubmittingDay}
                             type="submit"
                           >
-                            {isSubmittingChip ? "Lagrer..." : option.label}
+                            {option.label}
                           </button>
                         </Form>
                       );
@@ -432,9 +436,13 @@ export default function FamilyMealPlanReviewRoute({
 
                 {day.comment &&
                 !day.comment.quickResponse &&
-                day.comment.body ? (
+                displayNoteBody ? (
                   <p className="mt-2 text-xs text-slate-500">
-                    Lagret: {day.comment.feedbackLabel}
+                    Lagret: {pendingNoteBody || day.comment.feedbackLabel}
+                  </p>
+                ) : pendingNoteBody ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Lagret: {pendingNoteBody}
                   </p>
                 ) : null}
 

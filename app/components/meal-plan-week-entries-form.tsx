@@ -148,6 +148,17 @@ export function MealPlanWeekEntriesForm({
   }, [entriesSnapshot]);
 
   useEffect(() => {
+    if (!isResettingEntries) {
+      return;
+    }
+
+    setMealSelectionsByDate(
+      Object.fromEntries(visibleDates.map((date) => [date, ""])),
+    );
+    setIsReorderMode(false);
+  }, [isResettingEntries, visibleDates]);
+
+  useEffect(() => {
     if (isSavingEntries) {
       setIsReorderMode(false);
     }
@@ -187,6 +198,7 @@ export function MealPlanWeekEntriesForm({
               familyId={familyId}
               familyMembers={familyMembers}
               freezerItems={freezerItems}
+              isAutoFillingEntries={isAutoFillingEntries}
               isReorderMode={isReorderMode}
               isToday={isPlanDateToday(date)}
               mealPlanId={mealPlanId}
@@ -282,6 +294,7 @@ function MealPlanDayRow({
   familyId,
   familyMembers,
   freezerItems,
+  isAutoFillingEntries,
   isReorderMode,
   isToday,
   mealPlanId,
@@ -298,6 +311,7 @@ function MealPlanDayRow({
   familyId: string;
   familyMembers: MealPlanFamilyMemberOption[];
   freezerItems: MealPlanFreezerOption[];
+  isAutoFillingEntries: boolean;
   isReorderMode: boolean;
   isToday: boolean;
   mealPlanId: string;
@@ -333,6 +347,11 @@ function MealPlanDayRow({
     !parsedSelection.freezerItemId &&
     Boolean(entry.note.trim());
   const hasFreezerSelection = Boolean(parsedSelection.freezerItemId);
+  const isFillingEmptyDay =
+    isAutoFillingEntries &&
+    !parsedSelection.recipeId &&
+    !parsedSelection.freezerItemId &&
+    !entry.note.trim();
   const responsibleMember =
     familyMembers.find(
       (member) => member.id === selectedResponsibleUserId,
@@ -400,7 +419,7 @@ function MealPlanDayRow({
             {formatWeekdayLabel(date)}
           </p>
           <p className="truncate text-base font-semibold text-slate-950">
-            {mealLabel}
+            {isFillingEmptyDay ? "Fyller tom dag..." : mealLabel}
           </p>
           <p className="text-xs text-slate-500">{formatDateLabel(date)}</p>
         </div>

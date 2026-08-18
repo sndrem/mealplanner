@@ -206,6 +206,59 @@ export default function FamilyFreezerRoute({
           note: "",
           quantity: "",
         };
+  const pendingFreezerItemId = String(
+    navigation.formData?.get("freezerItemId") ?? "",
+  );
+  const isPendingFreezer =
+    navigation.state !== "idle" && navigation.formData != null;
+  const displayFreezerItems = (() => {
+    if (!isPendingFreezer || !navigation.formData) {
+      return loaderData.freezerItems;
+    }
+
+    if (pendingIntent === "remove-freezer-item" && pendingFreezerItemId) {
+      return loaderData.freezerItems.filter(
+        (item) => item.id !== pendingFreezerItemId,
+      );
+    }
+
+    if (pendingIntent === "update-freezer-item" && pendingFreezerItemId) {
+      return loaderData.freezerItems.map((item) =>
+        item.id === pendingFreezerItemId
+          ? {
+              ...item,
+              label:
+                String(navigation.formData?.get("label") ?? item.label).trim() ||
+                item.label,
+              note: String(navigation.formData?.get("note") ?? "") || null,
+              quantity: Number(
+                navigation.formData?.get("quantity") ?? item.quantity,
+              ),
+            }
+          : item,
+      );
+    }
+
+    if (pendingIntent === "add-freezer-item") {
+      const label = String(navigation.formData.get("label") ?? "").trim();
+
+      if (!label) {
+        return loaderData.freezerItems;
+      }
+
+      return [
+        {
+          id: "optimistic:pending-add",
+          label,
+          note: String(navigation.formData.get("note") ?? "") || null,
+          quantity: Number(navigation.formData.get("quantity") ?? 0),
+        },
+        ...loaderData.freezerItems,
+      ];
+    }
+
+    return loaderData.freezerItems;
+  })();
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -317,12 +370,12 @@ export default function FamilyFreezerRoute({
             <button
               className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 sm:col-span-2"
               disabled={
-                navigation.state === "submitting" &&
+                navigation.state !== "idle" &&
                 pendingIntent === "add-freezer-item"
               }
               type="submit"
             >
-              {navigation.state === "submitting" &&
+              {navigation.state !== "idle" &&
               pendingIntent === "add-freezer-item"
                 ? "Legger til..."
                 : "Legg til fryserrett"}
@@ -336,23 +389,23 @@ export default function FamilyFreezerRoute({
               Fryserbeholdning
             </h2>
             <p className="text-sm leading-6 text-slate-600">
-              {loaderData.freezerItems.length === 0
+              {displayFreezerItems.length === 0
                 ? "Ingen fryserretter er registrert ennå."
-                : `${loaderData.freezerItems.length} fryserretter er registrert.`}
+                : `${displayFreezerItems.length} fryserretter er registrert.`}
             </p>
           </div>
 
-          {loaderData.freezerItems.length > 0 ? (
+          {displayFreezerItems.length > 0 ? (
             <ul className="mt-6 grid gap-4">
-              {loaderData.freezerItems.map((item) => {
+              {displayFreezerItems.map((item) => {
                 const isUpdating =
-                  navigation.state === "submitting" &&
+                  navigation.state !== "idle" &&
                   pendingIntent === "update-freezer-item" &&
-                  navigation.formData?.get("freezerItemId") === item.id;
+                  pendingFreezerItemId === item.id;
                 const isRemoving =
-                  navigation.state === "submitting" &&
+                  navigation.state !== "idle" &&
                   pendingIntent === "remove-freezer-item" &&
-                  navigation.formData?.get("freezerItemId") === item.id;
+                  pendingFreezerItemId === item.id;
                 const updateValues =
                   actionData?.intent === "update-freezer-item" &&
                   actionData.targetFreezerItemId === item.id &&

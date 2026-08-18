@@ -1,0 +1,37 @@
+---
+description: Client form submissions must update visible data immediately (optimistic)
+globs: app/{routes,components,features}/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Optimistic form updates
+
+Every client **mutation** must show the intended result immediately, then reconcile with the action/loader. Pending-only UI (`"Lagrer..."`, disabled buttons) is **not** optimistic.
+
+## Do
+
+- Apply the change to display state **before or as** you submit (`useFetcher` + overlay, `navigation.formData` / `fetcher.formData`, or a queue like `useStoreModeToggleSync`).
+- Roll back on error and show the action error. On success, drop the overlay and let loader data take over.
+- For shopping lists, reuse helpers in `app/lib/shopping-list-client.ts`.
+
+```tsx
+// BAD — waits for revalidation; button spinner is not optimistic
+const isPending = navigation.state === "submitting" && pendingSourceKey === item.sourceKey;
+<button disabled={isPending}>{item.checked ? "Kjøpt" : "Ikke kjøpt"}</button>
+
+// GOOD — visible data follows the in-flight form
+const pendingChecked = navigation.formData?.get("sourceKey") === item.sourceKey
+  ? navigation.formData.get("checked") === "true"
+  : item.checked;
+```
+
+## Don't
+
+- Leave the list/card on the old value until the loader returns.
+- Insert or patch items only in an `onSuccess` handler after the action returns. That hides revalidation latency; it is **not** optimistic.
+
+## Exceptions
+
+- Auth and session flows (`login`, `register`, `logout`) that only set a session and navigate.
+- GET search forms.
+- Mutations whose only result is a redirect to a page that did not exist yet (e.g. create family) — still prefer optimistic UI when the current view can show the new entity.

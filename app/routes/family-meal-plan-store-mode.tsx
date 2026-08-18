@@ -1,6 +1,6 @@
 import { ShoppingItemSource } from "@prisma/client";
 import type { ChangeEvent, ComponentProps } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Form,
   Link,
@@ -42,11 +42,18 @@ import {
   writeStoreModeShoppingView,
 } from "../lib/shopping-store-mode-client";
 import {
+  buildOptimisticManualShoppingItem,
+  dropResolvedOptimisticItemsFromSectionGroups,
   insertProjectedItemIntoSectionGroups,
+  patchProjectedItemInSectionGroups,
   prependRecentManualItem,
   relocateProjectedItemInSectionGroups,
+  removeProjectedItemFromSectionGroups,
 } from "../lib/shopping-list-client";
-import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import type {
+  OptimisticQuickAddDraft,
+  QuickAddShoppingSuccess,
+} from "../lib/shopping-quick-add";
 import { scrollToShoppingItem } from "../lib/shopping-quick-add-feedback.client";
 import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
 import { resolveStoreModeAnchorMealPlan } from "../lib/meal-plan-for-date.server";
@@ -593,6 +600,8 @@ export default function FamilyMealPlanStoreModeRoute({
   const [recentlyAddedSourceKey, setRecentlyAddedSourceKey] = useState<
     string | null
   >(null);
+  const quantityRollbackRef = useRef(loaderData.dueSectionGroups);
+  const categoryRollbackRef = useRef(loaderData.dueSectionGroups);
   const isSavingStore =
     navigation.state === "submitting" &&
     pendingIntent === "update-selected-store";
@@ -601,14 +610,51 @@ export default function FamilyMealPlanStoreModeRoute({
     pendingIntent === "update-active-shopping-date";
 
   useEffect(() => {
-    setDueSectionGroups(loaderData.dueSectionGroups);
+    setDueSectionGroups(
+      dropResolvedOptimisticItemsFromSectionGroups(
+        loaderData.dueSectionGroups,
+        loaderData.dueSectionGroups.flatMap((section) => section.items),
+      ),
+    );
     setRecentManualItems(loaderData.recentManualItems);
   }, [loaderData.dueSectionGroups, loaderData.recentManualItems]);
+
+  const fallbackCategory = loaderData.categories[0] ?? {
+    displayName: "Annet",
+    id: "uncategorized",
+  };
+
+  const handleQuickAddSubmit = useCallback(
+    (draft: OptimisticQuickAddDraft) => {
+      setDueSectionGroups((currentSections) =>
+        insertProjectedItemIntoSectionGroups(
+          currentSections,
+          buildOptimisticManualShoppingItem({
+            category: {
+              id: fallbackCategory.id,
+              name: fallbackCategory.displayName,
+            },
+            name: draft.name,
+            quantity: draft.quantity,
+            sourceKey: draft.sourceKey,
+            sourceType: "FAMILY",
+          }),
+        ),
+      );
+      setRecentlyAddedSourceKey(draft.sourceKey);
+    },
+    [fallbackCategory.displayName, fallbackCategory.id],
+  );
 
   const handleQuickAddSuccess = useCallback(
     (payload: QuickAddShoppingSuccess) => {
       setDueSectionGroups((currentSections) =>
-        insertProjectedItemIntoSectionGroups(currentSections, payload.item),
+        insertProjectedItemIntoSectionGroups(
+          dropResolvedOptimisticItemsFromSectionGroups(currentSections, [
+            payload.item,
+          ]),
+          payload.item,
+        ),
       );
       setRecentManualItems((currentRecents) =>
         prependRecentManualItem(currentRecents, payload.recentManualItem),
@@ -619,6 +665,12 @@ export default function FamilyMealPlanStoreModeRoute({
     },
     [scheduleRevalidate],
   );
+
+  const handleQuickAddError = useCallback((sourceKey: string) => {
+    setDueSectionGroups((currentSections) =>
+      removeProjectedItemFromSectionGroups(currentSections, sourceKey),
+    );
+  }, []);
 
   const handleQuickAddFromCard = useCallback(
     (item: { name: string; quantityLabel: string | null }) => {
@@ -660,20 +712,35 @@ export default function FamilyMealPlanStoreModeRoute({
         formData.set("itemMealPlanId", mealPlanId);
       }
 
+      const trimmedQuantity = quantity.trim() || null;
+      setDueSectionGroups((currentSections) => {
+        quantityRollbackRef.current = currentSections;
+        return patchProjectedItemInSectionGroups(currentSections, sourceKey, {
+          quantity: trimmedQuantity,
+          quantityLabel: trimmedQuantity,
+        });
+      });
       quantityFetcher.submit(formData, { method: "post" });
     },
     [quantityFetcher],
   );
 
   useEffect(() => {
+    if (quantityFetcher.state !== "idle") {
+      return;
+    }
+
+    const data = quantityFetcher.data;
+
     if (
-      quantityFetcher.state !== "idle" ||
-      (quantityFetcher.data?.intent !==
-        "update-family-shopping-item-quantity" &&
-        quantityFetcher.data?.intent !==
-          "update-generated-shopping-item-quantity") ||
-      !quantityFetcher.data.ok
+      data?.intent !== "update-family-shopping-item-quantity" &&
+      data?.intent !== "update-generated-shopping-item-quantity"
     ) {
+      return;
+    }
+
+    if (!data.ok) {
+      setDueSectionGroups(quantityRollbackRef.current);
       return;
     }
 
@@ -702,9 +769,42 @@ export default function FamilyMealPlanStoreModeRoute({
         formData.set("itemMealPlanId", request.mealPlanId);
       }
 
+      const nextCategory = loaderData.categories.find(
+        (category) => category.id === request.categoryId,
+      );
+      const trimmedNote = request.note.trim() || null;
+
+      setDueSectionGroups((currentSections) => {
+        categoryRollbackRef.current = currentSections;
+        const currentItem = currentSections
+          .flatMap((section) => section.items)
+          .find((item) => item.sourceKey === request.sourceKey);
+
+        if (!currentItem || !nextCategory) {
+          return currentSections;
+        }
+
+        return relocateProjectedItemInSectionGroups(
+          currentSections,
+          request.sourceKey,
+          {
+            ...currentItem,
+            category: {
+              id: nextCategory.id,
+              name: nextCategory.displayName,
+            },
+            note: trimmedNote,
+            section: {
+              ...currentItem.section,
+              displayName: nextCategory.displayName,
+            },
+          },
+        );
+      });
+      setRecentlyAddedSourceKey(request.sourceKey);
       categoryFetcher.submit(formData, { method: "post" });
     },
-    [categoryFetcher],
+    [categoryFetcher, loaderData.categories],
   );
 
   useEffect(() => {
@@ -722,23 +822,23 @@ export default function FamilyMealPlanStoreModeRoute({
     }
 
     if (!data.ok) {
+      setDueSectionGroups(categoryRollbackRef.current);
       return;
     }
 
     const updatedItem = data.item;
 
-    if (!updatedItem) {
-      return;
+    if (updatedItem) {
+      setDueSectionGroups((currentSections) =>
+        relocateProjectedItemInSectionGroups(
+          currentSections,
+          updatedItem.sourceKey,
+          updatedItem,
+        ),
+      );
+      setRecentlyAddedSourceKey(updatedItem.sourceKey);
     }
 
-    setDueSectionGroups((currentSections) =>
-      relocateProjectedItemInSectionGroups(
-        currentSections,
-        updatedItem.sourceKey,
-        updatedItem,
-      ),
-    );
-    setRecentlyAddedSourceKey(updatedItem.sourceKey);
     scheduleRevalidate();
   }, [categoryFetcher.data, categoryFetcher.state, scheduleRevalidate]);
 
@@ -870,8 +970,16 @@ export default function FamilyMealPlanStoreModeRoute({
       ? actionData.activeShoppingDateValue
       : loaderData.activeShoppingDate;
   const ingredientSearchPath = `/families/${loaderData.family.id}/shopping/ingredient-search`;
+  const quantityFetcherError =
+    quantityFetcher.data?.formError &&
+    (quantityFetcher.data.intent === "update-family-shopping-item-quantity" ||
+      quantityFetcher.data.intent ===
+        "update-generated-shopping-item-quantity")
+      ? quantityFetcher.data.formError
+      : null;
   const generalFormError =
     categoryFetcherError ??
+    quantityFetcherError ??
     (actionData?.formError &&
     actionData.intent !== "quick-add-family-shopping-item"
       ? actionData.formError
@@ -1196,6 +1304,8 @@ export default function FamilyMealPlanStoreModeRoute({
             <ManualShoppingQuickAdd
               appearance="store-mode"
               ingredientSearchPath={ingredientSearchPath}
+              onQuickAddError={handleQuickAddError}
+              onQuickAddSubmit={handleQuickAddSubmit}
               onQuickAddSuccess={handleQuickAddSuccess}
               prefillRequest={quickAddPrefillRequest}
               quickAddIntent="quick-add-family-shopping-item"

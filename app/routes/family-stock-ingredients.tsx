@@ -171,6 +171,50 @@ export default function FamilyStockIngredientsRoute({
           note: "",
         };
   const canManageStock = loaderData.userRole === "ADMIN";
+  const pendingStockId = String(
+    navigation.formData?.get("stockIngredientId") ?? "",
+  );
+  const isPendingStock =
+    navigation.state !== "idle" && navigation.formData != null;
+  const displayStockIngredients = (() => {
+    if (!isPendingStock || !navigation.formData) {
+      return loaderData.stockIngredients;
+    }
+
+    if (pendingIntent === "remove-stock-ingredient" && pendingStockId) {
+      return loaderData.stockIngredients.filter(
+        (ingredient) => ingredient.id !== pendingStockId,
+      );
+    }
+
+    if (pendingIntent === "add-stock-ingredient") {
+      const ingredientId = String(navigation.formData.get("ingredientId") ?? "");
+      const displayName = String(
+        navigation.formData.get("displayName") ?? "",
+      ).trim();
+      const searchName = loaderData.searchResults.find(
+        (ingredient) => ingredient.id === ingredientId,
+      )?.canonicalName;
+      const label = displayName || searchName || "";
+
+      if (!label) {
+        return loaderData.stockIngredients;
+      }
+
+      return [
+        {
+          displayLabel: label,
+          displayNameNormalized: label.toLowerCase(),
+          id: "optimistic:pending-add",
+          ingredientId: ingredientId || null,
+          note: String(navigation.formData.get("note") ?? "") || null,
+        },
+        ...loaderData.stockIngredients,
+      ];
+    }
+
+    return loaderData.stockIngredients;
+  })();
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -315,12 +359,12 @@ export default function FamilyStockIngredientsRoute({
               <button
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                 disabled={
-                  navigation.state === "submitting" &&
+                  navigation.state !== "idle" &&
                   pendingIntent === "add-stock-ingredient"
                 }
                 type="submit"
               >
-                {navigation.state === "submitting" &&
+                {navigation.state !== "idle" &&
                 pendingIntent === "add-stock-ingredient"
                   ? "Legger til..."
                   : "Legg til basisvare"}
@@ -340,15 +384,15 @@ export default function FamilyStockIngredientsRoute({
               Familiens basisvarer
             </h2>
             <p className="text-sm leading-6 text-slate-600">
-              {loaderData.stockIngredients.length === 0
+              {displayStockIngredients.length === 0
                 ? "Ingen basisvarer er konfigurert ennå."
-                : `${loaderData.stockIngredients.length} basisvarer er registrert.`}
+                : `${displayStockIngredients.length} basisvarer er registrert.`}
             </p>
           </div>
 
-          {loaderData.stockIngredients.length > 0 ? (
+          {displayStockIngredients.length > 0 ? (
             <ul className="mt-6 grid gap-3">
-              {loaderData.stockIngredients.map((ingredient) => (
+              {displayStockIngredients.map((ingredient) => (
                 <li
                   key={ingredient.id}
                   className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-slate-50 p-5 sm:flex-row sm:items-center sm:justify-between"
@@ -363,7 +407,8 @@ export default function FamilyStockIngredientsRoute({
                       </p>
                     ) : null}
                   </div>
-                  {canManageStock ? (
+                  {canManageStock &&
+                  ingredient.id !== "optimistic:pending-add" ? (
                     <Form method="post">
                       <input
                         name="intent"
@@ -378,10 +423,9 @@ export default function FamilyStockIngredientsRoute({
                       <button
                         className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={
-                          navigation.state === "submitting" &&
+                          navigation.state !== "idle" &&
                           pendingIntent === "remove-stock-ingredient" &&
-                          navigation.formData?.get("stockIngredientId") ===
-                            ingredient.id
+                          pendingStockId === ingredient.id
                         }
                         type="submit"
                       >
