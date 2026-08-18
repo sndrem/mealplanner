@@ -2,29 +2,28 @@
 
 ## Current Objective
 
-Ship store-mode shopping defaulting to grid view, with Rutenett first in the view toggle.
+Ship alphabetical A–Z sorting for items in store-mode `StoreModeItemGrid`.
 
 ## Completed
 
-- `readStoreModeShoppingView` defaults to `grid` when nothing (or an invalid value) is stored.
-- Store-mode toggle UI order is Rutenett, then Liste.
-- Unit tests cover the new default, persistence of `list`, and invalid-storage fallback.
+- `StoreModeItemGrid` sorts items by name (`nb` locale) before render, including the bought-items grid.
+- `sortStoreModeItemsByName` lives in `shopping-store-mode-client.ts` with unit tests for name order and `sourceKey` tie-breaking.
 
 ## Files To Read First
 
-- `app/lib/shopping-store-mode-client.ts` - default view constant and storage read
-- `app/components/store-mode-shopping-view-toggle.tsx` - toggle button order
+- `app/routes/family-meal-plan-store-mode.tsx` - `StoreModeItemGrid` sorts its `items` prop
+- `app/lib/shopping-store-mode-client.ts` - `sortStoreModeItemsByName` / `compareStoreModeItemsByName`
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (401 tests)
+- `npm run test:run` — passed (403 tests)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Existing localStorage values of `list` still win over the new default; that is intended.
+- Loader data (`compareProjectedItemsForStoreMode`) still orders within a section by relevant date, then name. The grid re-sorts for display; aisle/section order is unchanged.
 - No related GitHub issue was found for this change.
 
 ## Next Step

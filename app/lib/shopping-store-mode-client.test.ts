@@ -17,6 +17,7 @@ import {
   readStoreModeToggleQueue,
   reconcileToggleQueue,
   removeToggleOp,
+  sortStoreModeItemsByName,
   upsertToggleOp,
   writeStoreModeDeprioritizeBought,
   writeStoreModeShoppingView,
@@ -342,6 +343,25 @@ describe("shopping-store-mode-client", () => {
     window.localStorage.setItem(storageKey, "yes");
 
     expect(readStoreModeDeprioritizeBought(storageKey)).toBe(true);
+  });
+
+  it("sorts store-mode items alphabetically by name", () => {
+    expect(
+      sortStoreModeItemsByName([
+        { name: "Yoghurt", sourceKey: "item-3" },
+        { name: "Eple", sourceKey: "item-1" },
+        { name: "Melk", sourceKey: "item-2" },
+      ]).map((item) => item.name),
+    ).toEqual(["Eple", "Melk", "Yoghurt"]);
+  });
+
+  it("uses sourceKey as a stable tiebreaker when names match", () => {
+    expect(
+      sortStoreModeItemsByName([
+        { name: "Melk", sourceKey: "family:2" },
+        { name: "Melk", sourceKey: "family:1" },
+      ]).map((item) => item.sourceKey),
+    ).toEqual(["family:1", "family:2"]);
   });
 
   it("returns sections unchanged when deprioritize-bought is off", () => {

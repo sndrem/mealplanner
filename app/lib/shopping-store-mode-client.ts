@@ -121,6 +121,25 @@ export function writeStoreModeDeprioritizeBought(
   }
 }
 
+export function compareStoreModeItemsByName(
+  left: { name: string; sourceKey: string },
+  right: { name: string; sourceKey: string },
+) {
+  const nameComparison = left.name.localeCompare(right.name, "nb");
+
+  if (nameComparison !== 0) {
+    return nameComparison;
+  }
+
+  return left.sourceKey.localeCompare(right.sourceKey, "nb");
+}
+
+export function sortStoreModeItemsByName<
+  TItem extends { name: string; sourceKey: string },
+>(items: TItem[]): TItem[] {
+  return [...items].sort(compareStoreModeItemsByName);
+}
+
 export function partitionStoreModeSections<
   TItem extends { checked: boolean },
   TSection extends { items: TItem[] },
