@@ -2,35 +2,35 @@
 
 ## Current Objective
 
-Open and merge the pull request for the family shopping catalog (issue #189).
+Open and merge the pull request for forgot-password (issue #191).
 
 ## Completed
 
-- Custom quick-add names persist in a family-scoped catalog and show up in typeahead on later lists.
-- Handlevarer admin supports rename, default quantity/category, add, and delete.
-- Migration backfills historical custom shopping names that are not canonical ingredients.
-- Search loaders require family membership and merge catalog + register suggestions.
+- Login has a “Glemt passord?” link; `/forgot-password` always shows a generic success message.
+- Hashed, one-time, 1-hour `PasswordResetToken` rows are stored in Postgres; unused tokens are throttled to one send per 15 minutes.
+- SMTP mailer (Nodemailer) sends the reset link when `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` are set. Gmail works without a custom domain via an app password. Otherwise the email (including the reset URL) is logged to the server console.
+- A valid `/reset-password?token=` form sets a new scrypt password and signs the user in.
 
 ## Files To Read First
 
-- `app/lib/shopping-catalog.server.ts` - list/search/merge suggestions
-- `app/lib/shopping-catalog-write.server.ts` - upsert and admin CRUD
-- `app/routes/family-shopping-catalog.tsx` - Handlevarer UI
-- `app/components/manual-shopping-quick-add.tsx` - typeahead sources
+- `app/lib/password-reset.server.ts` - token create/validate/reset
+- `app/lib/mailer.server.ts` - SMTP send with console fallback
+- `app/routes/forgot-password.tsx` - request form
+- `app/routes/reset-password.tsx` - set new password
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (421 tests)
+- `npm run test:run` — passed (442 tests)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Apply Prisma migration on each environment before using the feature.
-- Manual check: add a custom name, start a new week, type it, confirm default quantity, then rename in Handlevarer.
-- Issue #189 closes when the PR merges (`Closes #189`).
+- Set Fly secrets for Gmail SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`) after merge so production can send reset mail.
+- Manual check: request a reset, open the email, set a new password, confirm the old password fails.
+- Issue #191 closes when the PR merges (`Closes #191`).
 
 ## Next Step
 
-Review and merge the pull request.
+Review and merge the pull request, then set SMTP Fly secrets.
