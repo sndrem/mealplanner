@@ -143,6 +143,27 @@ export default function FamilyRecipesRoute({
     () => filterRecipeList(loaderData.globalRecipes, searchQuery),
     [loaderData.globalRecipes, searchQuery],
   );
+  const pendingCreateTitle =
+    navigation.state !== "idle" && pendingIntent === "create-recipe"
+      ? String(navigation.formData?.get("title") ?? "").trim()
+      : "";
+  const displayFamilyRecipes = pendingCreateTitle
+    ? [
+        {
+          _count: {
+            ingredients: 1,
+            mealPlanEntries: 0,
+          },
+          defaultServings: null,
+          description: null,
+          id: "optimistic:pending-add",
+          prepMinutes: null,
+          tags: [] as string[],
+          title: pendingCreateTitle,
+        },
+        ...filteredFamilyRecipes,
+      ]
+    : filteredFamilyRecipes;
   const createValues =
     actionData?.intent === "create-recipe" && actionData.createValues
       ? actionData.createValues
@@ -322,12 +343,12 @@ export default function FamilyRecipesRoute({
               <button
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                 disabled={
-                  navigation.state === "submitting" &&
+                  navigation.state !== "idle" &&
                   pendingIntent === "create-recipe"
                 }
                 type="submit"
               >
-                {navigation.state === "submitting" &&
+                {navigation.state !== "idle" &&
                 pendingIntent === "create-recipe"
                   ? "Oppretter..."
                   : "Opprett oppskrift"}
@@ -375,25 +396,29 @@ export default function FamilyRecipesRoute({
             </h2>
           </div>
 
-          {loaderData.familyRecipes.length === 0 ? (
+          {loaderData.familyRecipes.length === 0 && !pendingCreateTitle ? (
             <p className="mt-6 rounded-[24px] border border-dashed border-emerald-200 bg-emerald-50/50 px-5 py-8 text-center text-sm leading-6 text-slate-600">
               {canManageRecipes
                 ? "Ingen familieoppskrifter ennå. Opprett den første oppskriften over."
                 : "Familien har ingen egne oppskrifter ennå."}
             </p>
-          ) : filteredFamilyRecipes.length === 0 && isSearchActive ? (
+          ) : displayFamilyRecipes.length === 0 && isSearchActive ? (
             <p className="mt-6 rounded-[24px] border border-dashed border-emerald-200 bg-emerald-50/50 px-5 py-8 text-center text-sm leading-6 text-slate-600">
               Ingen familieoppskrifter matcher søket.
             </p>
           ) : (
             <div className="mt-6 grid gap-3">
-              {filteredFamilyRecipes.map((recipe) => (
+              {displayFamilyRecipes.map((recipe) => (
                 <RecipeListCard
                   key={recipe.id}
                   recipe={recipe}
                   scopeLabel="Familie"
                   scopeTone="family"
-                  to={`/families/${loaderData.family.id}/recipes/${recipe.id}`}
+                  to={
+                    recipe.id.startsWith("optimistic:")
+                      ? undefined
+                      : `/families/${loaderData.family.id}/recipes/${recipe.id}`
+                  }
                 />
               ))}
             </div>

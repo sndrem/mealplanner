@@ -355,9 +355,14 @@ export default function FamilyRoute({
     navigation.formData?.get("targetUserId") ?? "",
   );
   const isRemovingMember =
-    navigation.state === "submitting" && pendingIntent === "remove-member";
+    navigation.state !== "idle" && pendingIntent === "remove-member";
   const isAdmin = loaderData.userRole === "ADMIN";
   const familyId = loaderData.family.id;
+  const displayMembers = isRemovingMember
+    ? loaderData.members.filter(
+        (member) => member.user.id !== pendingTargetUserId,
+      )
+    : loaderData.members;
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -448,7 +453,7 @@ export default function FamilyRoute({
                   </div>
 
                   <div className="mt-6 grid gap-4">
-                    {loaderData.members.map(
+                    {displayMembers.map(
                       (member: (typeof loaderData.members)[number]) => {
                         const canRemove = member.role === "MEMBER";
                         const isPendingRemoval =

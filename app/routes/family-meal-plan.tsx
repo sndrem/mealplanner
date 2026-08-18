@@ -515,31 +515,33 @@ export default function FamilyMealPlanRoute({
 }: MealPlanRouteProps) {
   const navigation = useNavigation();
   const pendingIntent = navigation.formData?.get("intent");
+  const isPending = navigation.state !== "idle";
   const isApprovingMealPlan =
-    navigation.state === "submitting" && pendingIntent === "approve-meal-plan";
+    isPending && pendingIntent === "approve-meal-plan";
   const isReopeningMealPlan =
-    navigation.state === "submitting" && pendingIntent === "reopen-meal-plan";
+    isPending && pendingIntent === "reopen-meal-plan";
   const isAutoFillingEntries =
-    navigation.state === "submitting" &&
-    pendingIntent === "auto-fill-meal-plan-entries";
+    isPending && pendingIntent === "auto-fill-meal-plan-entries";
   const isSavingEntries =
-    navigation.state === "submitting" &&
-    pendingIntent === "save-meal-plan-entries";
+    isPending && pendingIntent === "save-meal-plan-entries";
   const isResettingEntries =
-    navigation.state === "submitting" &&
-    pendingIntent === "reset-meal-plan-entries";
+    isPending && pendingIntent === "reset-meal-plan-entries";
   const isUpdatingMetadata =
-    navigation.state === "submitting" && pendingIntent === "update-meal-plan";
+    isPending && pendingIntent === "update-meal-plan";
   const isSharingMealPlan =
-    navigation.state === "submitting" && pendingIntent === "share-meal-plan";
+    isPending && pendingIntent === "share-meal-plan";
   const isMarkingCommentAddressed =
-    navigation.state === "submitting" &&
-    pendingIntent === "mark-comment-addressed";
+    isPending && pendingIntent === "mark-comment-addressed";
+  const pendingCommentId = isMarkingCommentAddressed
+    ? String(navigation.formData?.get("commentId") ?? "")
+    : "";
   const openFeedbackShares = loaderData.feedbackShares.filter(
     (share) => share.status === "OPEN",
   );
   const unresolvedComments = openFeedbackShares.flatMap((share) =>
-    share.comments.filter((comment) => !comment.addressedAt),
+    share.comments.filter(
+      (comment) => !comment.addressedAt && comment.id !== pendingCommentId,
+    ),
   );
   const noticeContent = loaderData.notice
     ? getMealPlanNoticeContent(loaderData.notice, loaderData.noticeMeta)
@@ -557,6 +559,27 @@ export default function FamilyMealPlanRoute({
     actionData?.values?.startDate ?? loaderData.mealPlan.startDate;
   const endDateValue =
     actionData?.values?.endDate ?? loaderData.mealPlan.endDate;
+  const displayTitle = isUpdatingMetadata
+    ? String(navigation.formData?.get("title") ?? loaderData.mealPlan.title)
+    : loaderData.mealPlan.title;
+  const displayStartDate = isUpdatingMetadata
+    ? String(
+        navigation.formData?.get("startDate") ?? loaderData.mealPlan.startDate,
+      )
+    : loaderData.mealPlan.startDate;
+  const displayEndDate = isUpdatingMetadata
+    ? String(navigation.formData?.get("endDate") ?? loaderData.mealPlan.endDate)
+    : loaderData.mealPlan.endDate;
+  const displayMealPlanStatus = isApprovingMealPlan
+    ? "APPROVED"
+    : isReopeningMealPlan
+      ? "DRAFT"
+      : loaderData.mealPlan.status;
+  const displayApprovedAt = isApprovingMealPlan
+    ? new Date().toISOString()
+    : isReopeningMealPlan
+      ? null
+      : loaderData.mealPlan.approvedAt;
   const approvalIntent =
     loaderData.mealPlan.status === "APPROVED"
       ? "reopen-meal-plan"
@@ -575,8 +598,26 @@ export default function FamilyMealPlanRoute({
     actionData.entryValues
       ? actionData.entryValues
       : loaderData.entriesByDate;
+  const displayEntryValues = isResettingEntries
+    ? Object.fromEntries(
+        loaderData.visibleDates.map((date) => {
+          const current = entryValues[date];
+
+          return [
+            date,
+            {
+              freezerItemId: "",
+              note: "",
+              recipeId: "",
+              responsibleUserId: "",
+              updatedAt: current?.updatedAt ?? "",
+            } satisfies MealPlanEntryFormState,
+          ];
+        }),
+      )
+    : entryValues;
   const selectedRecipeIds = new Set(
-    Object.values(entryValues)
+    Object.values(displayEntryValues)
       .map((entry) => entry.recipeId)
       .filter(Boolean),
   );
@@ -601,13 +642,10 @@ export default function FamilyMealPlanRoute({
                   Middagsplanlegging
                 </span>
                 <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-                  {loaderData.mealPlan.title}
+                  {displayTitle}
                 </h1>
                 <p className="mt-2 text-sm font-medium text-emerald-200/90">
-                  {formatMealPlanWindow(
-                    loaderData.mealPlan.startDate,
-                    loaderData.mealPlan.endDate,
-                  )}
+                  {formatMealPlanWindow(displayStartDate, displayEndDate)}
                 </p>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
                   Se hele uken med ett blikk. Trykk på en dag for å planlegge
@@ -654,11 +692,11 @@ export default function FamilyMealPlanRoute({
               actionData={actionData}
               approvalButtonLabel={approvalButtonLabel}
               approvalIntent={approvalIntent}
-              approvedAt={loaderData.mealPlan.approvedAt}
+              approvedAt={displayApprovedAt}
               entriesSnapshot={loaderData.entriesSnapshot}
               isApprovingMealPlan={isApprovingMealPlan}
               isReopeningMealPlan={isReopeningMealPlan}
-              mealPlanStatus={loaderData.mealPlan.status}
+              mealPlanStatus={displayMealPlanStatus}
               mealPlanUpdatedAt={loaderData.mealPlan.updatedAt}
               variant="hero"
             />
@@ -674,7 +712,7 @@ export default function FamilyMealPlanRoute({
           </section>
         ) : null}
 
-        {loaderData.mealPlan.status === "DRAFT" ? (
+        {displayMealPlanStatus === "DRAFT" ? (
           <section className="grid min-w-0 gap-6 lg:grid-cols-2">
             <MealPlanShareSection
               actionData={actionData}
@@ -682,10 +720,27 @@ export default function FamilyMealPlanRoute({
               familyId={loaderData.family.id}
               isSharingMealPlan={isSharingMealPlan}
               members={loaderData.shareMembers}
+              pendingShare={
+                isSharingMealPlan
+                  ? {
+                      message: String(
+                        navigation.formData?.get("message") ?? "",
+                      ).trim(),
+                      recipientIds: navigation.formData
+                        ? navigation.formData
+                            .getAll("recipientUserIds")
+                            .map((value) => String(value))
+                        : [],
+                      wholeFamily: Boolean(
+                        navigation.formData?.get("wholeFamily"),
+                      ),
+                    }
+                  : null
+              }
             />
             <MealPlanFeedbackSection
-              actionData={actionData}
               isMarkingCommentAddressed={isMarkingCommentAddressed}
+              pendingCommentId={pendingCommentId}
               unresolvedCount={unresolvedComments.length}
               visibleDates={loaderData.visibleDates}
               shares={openFeedbackShares}
@@ -773,7 +828,7 @@ export default function FamilyMealPlanRoute({
                   : undefined
               }
               entriesSnapshot={loaderData.entriesSnapshot}
-              entryValues={entryValues}
+              entryValues={displayEntryValues}
               familyId={loaderData.family.id}
               familyMembers={loaderData.familyMembers}
               freezerItems={loaderData.freezerItems}
@@ -1201,17 +1256,34 @@ function MealPlanShareSection({
   familyId,
   isSharingMealPlan,
   members,
+  pendingShare,
 }: {
   actionData?: MealPlanActionData;
   activeOpenShare: FeedbackShare | null;
   familyId: string;
   isSharingMealPlan: boolean;
   members: ShareMemberOption[];
+  pendingShare: {
+    message: string;
+    recipientIds: string[];
+    wholeFamily: boolean;
+  } | null;
 }) {
-  if (activeOpenShare) {
-    const recipientNames = activeOpenShare.recipients
-      .map((recipient) => recipient.displayName)
-      .join(", ");
+  if (activeOpenShare || pendingShare) {
+    const recipientNames = pendingShare
+      ? members
+          .filter((member) => pendingShare.recipientIds.includes(member.id))
+          .map((member) => member.displayName)
+          .join(", ")
+      : activeOpenShare?.recipients
+          .map((recipient) => recipient.displayName)
+          .join(", ") ?? "";
+    const wholeFamily = pendingShare
+      ? pendingShare.wholeFamily
+      : Boolean(activeOpenShare?.wholeFamily);
+    const message = pendingShare
+      ? pendingShare.message
+      : activeOpenShare?.message ?? "";
 
     return (
       <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -1220,15 +1292,17 @@ function MealPlanShareSection({
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Ukeplanen venter allerede på tilbakemelding fra{" "}
-          {activeOpenShare.wholeFamily
-            ? "familien"
-            : recipientNames || "mottakerne"}
-          .{activeOpenShare.message ? ` «${activeOpenShare.message}»` : ""}
+          {wholeFamily ? "familien" : recipientNames || "mottakerne"}
+          .{message ? ` «${message}»` : ""}
         </p>
-        <p className="mt-3 text-sm text-slate-500">
-          Du kan ikke sende en ny gjennomgang før denne er avsluttet (for
-          eksempel når planen godkjennes).
-        </p>
+        {pendingShare ? (
+          <p className="mt-3 text-sm text-slate-500">Sender deling...</p>
+        ) : (
+          <p className="mt-3 text-sm text-slate-500">
+            Du kan ikke sende en ny gjennomgang før denne er avsluttet (for
+            eksempel når planen godkjennes).
+          </p>
+        )}
         <Link
           className="mt-4 inline-flex text-sm font-medium text-emerald-700 hover:text-emerald-800"
           to={`/families/${familyId}/meal-plans/reviews`}
@@ -1325,14 +1399,14 @@ function MealPlanShareSection({
 }
 
 function MealPlanFeedbackSection({
-  actionData,
   isMarkingCommentAddressed,
+  pendingCommentId,
   shares,
   unresolvedCount,
   visibleDates,
 }: {
-  actionData?: MealPlanActionData;
   isMarkingCommentAddressed: boolean;
+  pendingCommentId: string;
   shares: FeedbackShare[];
   unresolvedCount: number;
   visibleDates: string[];
@@ -1410,7 +1484,7 @@ function MealPlanFeedbackSection({
                     <p className="mt-1 text-sm text-slate-700">
                       {comment.feedbackLabel}
                     </p>
-                    {comment.addressedAt ? (
+                    {comment.addressedAt || comment.id === pendingCommentId ? (
                       <p className="mt-2 text-xs text-emerald-700">Behandlet</p>
                     ) : (
                       <Form className="mt-2" method="post">
@@ -1429,10 +1503,7 @@ function MealPlanFeedbackSection({
                           disabled={isMarkingCommentAddressed}
                           type="submit"
                         >
-                          {isMarkingCommentAddressed &&
-                          actionData?.commentId === comment.id
-                            ? "Lagrer..."
-                            : "Merk som behandlet"}
+                          Merk som behandlet
                         </button>
                       </Form>
                     )}

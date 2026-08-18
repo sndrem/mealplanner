@@ -1,5 +1,5 @@
 import { ShoppingItemSource } from "@prisma/client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Form,
   Link,
@@ -36,10 +36,19 @@ import {
 } from "../lib/shopping-preference-write.server";
 import { getToggleExpectedVersion } from "../lib/shopping-store-mode-client";
 import {
+  applyOptimisticShoppingListFormOverlay,
+  buildOptimisticManualShoppingItem,
+  dropResolvedOptimisticItemsFromStoreGroups,
+  filterStoreGroupsBySourceType,
+  getOptimisticChecked,
   insertProjectedItemIntoStoreGroups,
   prependRecentManualItem,
+  removeProjectedItemFromStoreGroups,
 } from "../lib/shopping-list-client";
-import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import type {
+  OptimisticQuickAddDraft,
+  QuickAddShoppingSuccess,
+} from "../lib/shopping-quick-add";
 import { scrollToShoppingItem } from "../lib/shopping-quick-add-feedback.client";
 import {
   serializeProjectedShoppingItem,
@@ -443,6 +452,13 @@ export default function FamilyShoppingRoute({
       : null;
   const pendingIntent = navigation.formData?.get("intent");
   const pendingSourceKey = getPendingSourceKey(navigation.formData);
+  const displayListMode =
+    navigation.state !== "idle" &&
+    pendingIntent === "set-family-shopping-list-mode"
+      ? String(
+          navigation.formData?.get("listMode") ?? loaderData.activeListMode,
+        )
+      : loaderData.activeListMode;
   const ingredientSearchPath = `/families/${loaderData.family.id}/shopping/ingredient-search`;
   const generalFormError =
     actionData?.formError &&
@@ -451,14 +467,55 @@ export default function FamilyShoppingRoute({
       : undefined;
 
   useEffect(() => {
-    setStoreGroups(loaderData.storeGroups);
+    setStoreGroups(
+      dropResolvedOptimisticItemsFromStoreGroups(
+        loaderData.storeGroups,
+        loaderData.storeGroups.flatMap((group) =>
+          group.sections.flatMap((section) => section.items),
+        ),
+      ),
+    );
     setRecentManualItems(loaderData.recentManualItems);
   }, [loaderData.recentManualItems, loaderData.storeGroups]);
+
+  const fallbackCategory = useMemo(
+    () =>
+      loaderData.categories[0] ?? {
+        displayName: "Annet",
+        id: "uncategorized",
+      },
+    [loaderData.categories],
+  );
+
+  const handleQuickAddSubmit = useCallback(
+    (draft: OptimisticQuickAddDraft) => {
+      const placeholder = buildOptimisticManualShoppingItem({
+        category: {
+          id: fallbackCategory.id,
+          name: fallbackCategory.displayName,
+        },
+        name: draft.name,
+        quantity: draft.quantity,
+        sourceKey: draft.sourceKey,
+        sourceType: "FAMILY",
+      });
+      setStoreGroups((currentGroups) =>
+        insertProjectedItemIntoStoreGroups(currentGroups, placeholder),
+      );
+      setRecentlyAddedSourceKey(draft.sourceKey);
+    },
+    [fallbackCategory.displayName, fallbackCategory.id],
+  );
 
   const handleQuickAddSuccess = useCallback(
     (payload: QuickAddShoppingSuccess) => {
       setStoreGroups((currentGroups) =>
-        insertProjectedItemIntoStoreGroups(currentGroups, payload.item),
+        insertProjectedItemIntoStoreGroups(
+          dropResolvedOptimisticItemsFromStoreGroups(currentGroups, [
+            payload.item,
+          ]),
+          payload.item,
+        ),
       );
       setRecentManualItems((currentRecents) =>
         prependRecentManualItem(currentRecents, payload.recentManualItem),
@@ -468,6 +525,12 @@ export default function FamilyShoppingRoute({
     },
     [scheduleRevalidate],
   );
+
+  const handleQuickAddError = useCallback((sourceKey: string) => {
+    setStoreGroups((currentGroups) =>
+      removeProjectedItemFromStoreGroups(currentGroups, sourceKey),
+    );
+  }, []);
 
   useEffect(() => {
     if (!recentlyAddedSourceKey) {
@@ -489,6 +552,8 @@ export default function FamilyShoppingRoute({
 
   const quickAddProps = {
     ingredientSearchPath,
+    onQuickAddError: handleQuickAddError,
+    onQuickAddSubmit: handleQuickAddSubmit,
     onQuickAddSuccess: handleQuickAddSuccess,
     quickAddIntent: "quick-add-family-shopping-item" as const,
     recentManualItems,
@@ -497,6 +562,62 @@ export default function FamilyShoppingRoute({
     actionData?.intent === "add-family-shopping-item" && actionData.familyValues
       ? actionData.familyValues
       : defaultFamilyShoppingItemValues;
+  const displayStoreGroups = useMemo(() => {
+    if (navigation.state === "idle" || !navigation.formData) {
+      return storeGroups;
+    }
+
+    const overlayGroups = applyOptimisticShoppingListFormOverlay({
+      categories: loaderData.categories,
+      formData: navigation.formData,
+      groups: storeGroups,
+      intent: pendingIntent,
+      sourceKey: pendingSourceKey,
+      stores: loaderData.stores,
+    });
+
+    if (pendingIntent !== "add-family-shopping-item") {
+      return overlayGroups;
+    }
+
+    const name = String(navigation.formData.get("name") ?? "").trim();
+
+    if (!name) {
+      return overlayGroups;
+    }
+
+    const categoryId = String(navigation.formData.get("categoryId") ?? "");
+    const category =
+      loaderData.categories.find((entry) => entry.id === categoryId) ??
+      fallbackCategory;
+
+    return insertProjectedItemIntoStoreGroups(
+      overlayGroups,
+      buildOptimisticManualShoppingItem({
+        category: {
+          id: category.id,
+          name: category.displayName,
+        },
+        name,
+        quantity: String(navigation.formData.get("quantity") ?? ""),
+        sourceKey: "optimistic:pending-add-family",
+        sourceType: "FAMILY",
+      }),
+    );
+  }, [
+    fallbackCategory,
+    loaderData.categories,
+    loaderData.stores,
+    navigation.formData,
+    navigation.state,
+    pendingIntent,
+    pendingSourceKey,
+    storeGroups,
+  ]);
+  const visibleStoreGroups =
+    displayListMode === "GLOBAL"
+      ? filterStoreGroupsBySourceType(displayStoreGroups, "FAMILY")
+      : displayStoreGroups;
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 pb-44 pt-8 text-slate-900 lg:pb-12 lg:py-12">
@@ -574,12 +695,12 @@ export default function FamilyShoppingRoute({
                   <input name="listMode" type="hidden" value="GLOBAL" />
                   <button
                     className={`rounded-2xl px-5 py-3 text-sm font-medium transition ${
-                      loaderData.activeListMode === "GLOBAL"
+                      displayListMode === "GLOBAL"
                         ? "bg-slate-950 text-white"
                         : "bg-white text-slate-900 ring-1 ring-sky-200 hover:bg-sky-100"
                     }`}
                     disabled={
-                      navigation.state === "submitting" &&
+                      navigation.state !== "idle" &&
                       pendingIntent === "set-family-shopping-list-mode"
                     }
                     type="submit"
@@ -596,12 +717,12 @@ export default function FamilyShoppingRoute({
                   <input name="listMode" type="hidden" value="COMBINED" />
                   <button
                     className={`rounded-2xl px-5 py-3 text-sm font-medium transition ${
-                      loaderData.activeListMode === "COMBINED"
+                      displayListMode === "COMBINED"
                         ? "bg-emerald-600 text-white"
                         : "bg-white text-slate-900 ring-1 ring-sky-200 hover:bg-sky-100"
                     }`}
                     disabled={
-                      navigation.state === "submitting" &&
+                      navigation.state !== "idle" &&
                       pendingIntent === "set-family-shopping-list-mode"
                     }
                     type="submit"
@@ -721,9 +842,9 @@ export default function FamilyShoppingRoute({
           </article>
         </section>
 
-        {storeGroups.length ? (
+        {visibleStoreGroups.length ? (
           <section className="grid gap-6">
-            {storeGroups.map((group) => (
+            {visibleStoreGroups.map((group) => (
               <article
                 key={group.store?.id ?? "no-store"}
                 className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200"
@@ -1005,18 +1126,23 @@ function renderFamilyShoppingListItem({
 }) {
   const sourceBadge = getFamilyShoppingSourceBadge(item);
   const isPendingCheckToggle =
-    navigation.state === "submitting" &&
+    navigation.state !== "idle" &&
     ((pendingIntent === "toggle-family-shopping-item-checked" &&
       item.sourceType === "FAMILY") ||
       (pendingIntent === "toggle-meal-plan-shopping-item-checked" &&
         item.sourceType !== "FAMILY")) &&
     pendingSourceKey === item.sourceKey;
+  const displayChecked = getOptimisticChecked({
+    checkedValue: navigation.formData?.get("checked"),
+    isPending: isPendingCheckToggle,
+    itemChecked: item.checked,
+  });
   const isPendingFamilySave =
-    navigation.state === "submitting" &&
+    navigation.state !== "idle" &&
     pendingIntent === "update-family-shopping-item" &&
     pendingSourceKey === item.sourceKey;
   const isPendingFamilyDelete =
-    navigation.state === "submitting" &&
+    navigation.state !== "idle" &&
     pendingIntent === "delete-family-shopping-item" &&
     pendingSourceKey === item.sourceKey;
   const familyValues =
@@ -1036,7 +1162,7 @@ function renderFamilyShoppingListItem({
   const rowStateClass =
     recentlyAddedSourceKey === item.sourceKey
       ? "border-emerald-300 bg-emerald-100"
-      : item.checked
+      : displayChecked
         ? "border-slate-200 bg-slate-100 opacity-80"
         : "border-slate-200 bg-slate-50";
 
@@ -1049,7 +1175,7 @@ function renderFamilyShoppingListItem({
       <div className="flex flex-wrap items-center gap-2">
         <h4
           className={`text-base font-semibold ${
-            item.checked ? "text-slate-500 line-through" : "text-slate-950"
+            displayChecked ? "text-slate-500 line-through" : "text-slate-950"
           }`}
         >
           {item.name}
@@ -1098,6 +1224,7 @@ function renderFamilyShoppingListItem({
             <ShoppingListItemExpanded
               actionData={actionData}
               categories={categories}
+              displayChecked={displayChecked}
               familyValues={familyValues}
               isPendingCheckToggle={isPendingCheckToggle}
               isPendingFamilyDelete={isPendingFamilyDelete}
@@ -1140,8 +1267,10 @@ function renderFamilyShoppingListItem({
             type="submit"
           >
             {isPendingCheckToggle
-              ? "Oppdaterer..."
-              : item.checked
+              ? displayChecked
+                ? "Krysser av..."
+                : "Oppdaterer..."
+              : displayChecked
                 ? "Fjern avkryssing"
                 : "Marker som kjøpt"}
           </button>

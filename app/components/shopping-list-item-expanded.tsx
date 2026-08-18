@@ -95,6 +95,7 @@ type ShoppingListItemExpandedProps = {
   };
   categories: Array<{ displayName: string; id: string }>;
   familyValues?: FamilyShoppingItemValues | null;
+  displayChecked?: boolean;
   isPendingCheckToggle: boolean;
   isPendingFamilyDelete?: boolean;
   isPendingFamilySave?: boolean;
@@ -128,6 +129,7 @@ type ShoppingListItemExpandedProps = {
 export function ShoppingListItemExpanded({
   actionData,
   categories,
+  displayChecked,
   isPendingCheckToggle,
   isPendingGeneratedExclude,
   isPendingGeneratedSave,
@@ -143,6 +145,7 @@ export function ShoppingListItemExpanded({
   stores,
   toggleExpectedVersion,
 }: ShoppingListItemExpandedProps) {
+  const checked = displayChecked ?? item.checked;
   return (
     <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
       <div className="min-w-0 rounded-[20px] bg-white p-4 ring-1 ring-slate-200">
@@ -215,10 +218,10 @@ export function ShoppingListItemExpanded({
             type="submit"
           >
             {isPendingCheckToggle
-              ? item.checked
-                ? "Oppdaterer..."
-                : "Krysser av..."
-              : item.checked
+              ? checked
+                ? "Krysser av..."
+                : "Oppdaterer..."
+              : checked
                 ? "Fjern avkryssing"
                 : "Marker som kjøpt"}
           </button>

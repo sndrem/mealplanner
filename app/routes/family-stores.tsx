@@ -208,6 +208,50 @@ export default function FamilyStoresRoute({
       ? actionData.createValues
       : { name: "" };
   const canManageStores = loaderData.userRole === "ADMIN";
+  const pendingStoreId = String(navigation.formData?.get("storeId") ?? "");
+  const isPendingStore =
+    navigation.state !== "idle" && navigation.formData != null;
+  const displayFamilyStores = (() => {
+    if (!isPendingStore || !navigation.formData) {
+      return loaderData.familyStores;
+    }
+
+    if (pendingIntent === "delete-store" && pendingStoreId) {
+      return loaderData.familyStores.filter((store) => store.id !== pendingStoreId);
+    }
+
+    if (pendingIntent === "update-store" && pendingStoreId) {
+      return loaderData.familyStores.map((store) =>
+        store.id === pendingStoreId
+          ? {
+              ...store,
+              name:
+                String(navigation.formData?.get("name") ?? store.name).trim() ||
+                store.name,
+            }
+          : store,
+      );
+    }
+
+    if (pendingIntent === "create-store") {
+      const name = String(navigation.formData.get("name") ?? "").trim();
+
+      if (!name) {
+        return loaderData.familyStores;
+      }
+
+      return [
+        {
+          id: "optimistic:pending-add",
+          name,
+          sections: [],
+        },
+        ...loaderData.familyStores,
+      ];
+    }
+
+    return loaderData.familyStores;
+  })();
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -295,13 +339,11 @@ export default function FamilyStoresRoute({
               <button
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                 disabled={
-                  navigation.state === "submitting" &&
-                  pendingIntent === "create-store"
+                  navigation.state !== "idle" && pendingIntent === "create-store"
                 }
                 type="submit"
               >
-                {navigation.state === "submitting" &&
-                pendingIntent === "create-store"
+                {navigation.state !== "idle" && pendingIntent === "create-store"
                   ? "Oppretter..."
                   : "Opprett butikk"}
               </button>
@@ -321,10 +363,10 @@ export default function FamilyStoresRoute({
               </p>
             </div>
 
-            {loaderData.familyStores.length > 0 ? (
+            {displayFamilyStores.length > 0 ? (
               <DndProvider backend={HTML5Backend}>
                 <div className="mt-6 grid gap-5">
-                  {loaderData.familyStores.map((store) => (
+                  {displayFamilyStores.map((store) => (
                     <FamilyStoreEditorCard
                       canManageStores={canManageStores}
                       key={store.id}

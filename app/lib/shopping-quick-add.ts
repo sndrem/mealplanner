@@ -30,3 +30,9 @@ export function isQuickAddShoppingSuccess(
 ): data is QuickAddShoppingSuccess {
   return Boolean(data && "ok" in data && data.ok === true);
 }
+
+export interface OptimisticQuickAddDraft {
+  name: string;
+  quantity: string;
+  sourceKey: string;
+}

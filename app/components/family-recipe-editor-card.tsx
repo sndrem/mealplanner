@@ -60,11 +60,11 @@ export function FamilyRecipeEditorCard({
   const pendingIntent = navigation.formData?.get("intent");
   const pendingRecipeId = String(navigation.formData?.get("recipeId") ?? "");
   const isUpdatingRecipe =
-    navigation.state === "submitting" &&
+    navigation.state !== "idle" &&
     pendingIntent === "update-recipe" &&
     pendingRecipeId === recipe.id;
   const isDeletingRecipe =
-    navigation.state === "submitting" &&
+    navigation.state !== "idle" &&
     pendingIntent === "delete-recipe" &&
     pendingRecipeId === recipe.id;
   const persistedValues = useMemo<FamilyRecipeValues>(
@@ -190,12 +190,17 @@ export function FamilyRecipeEditorCard({
 
   return (
     <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      {isDeletingRecipe ? (
+        <p className="text-sm font-medium text-rose-700">Sletter oppskrift...</p>
+      ) : null}
+      <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${isDeletingRecipe ? "mt-3 opacity-60" : ""}`}>
         <div>
           <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
             Familieoppskrift
           </span>
-          <h2 className="mt-3 text-2xl font-semibold text-slate-950">{recipe.title}</h2>
+          <h2 className="mt-3 text-2xl font-semibold text-slate-950">
+            {isUpdatingRecipe ? draftValues.title : recipe.title}
+          </h2>
           {mealPlanEntryCount > 0 ? (
             <p className="mt-2 text-sm text-slate-600">
               Brukt i {mealPlanEntryCount}{" "}

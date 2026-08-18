@@ -41,11 +41,11 @@ export function FamilyStoreEditorCard({
   const pendingIntent = navigation.formData?.get("intent");
   const pendingStoreId = String(navigation.formData?.get("storeId") ?? "");
   const isUpdatingStore =
-    navigation.state === "submitting" &&
+    navigation.state !== "idle" &&
     pendingIntent === "update-store" &&
     pendingStoreId === store.id;
   const isDeletingStore =
-    navigation.state === "submitting" &&
+    navigation.state !== "idle" &&
     pendingIntent === "delete-store" &&
     pendingStoreId === store.id;
   const persistedValues = useMemo<FamilyStoreValues>(
@@ -136,7 +136,7 @@ export function FamilyStoreEditorCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-slate-950">
-            {store.name}
+            {isUpdatingStore ? draftName : store.name}
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             {isEditing
@@ -145,7 +145,7 @@ export function FamilyStoreEditorCard({
           </p>
         </div>
 
-        {canManageStores && !isEditing ? (
+        {canManageStores && !isEditing && !store.id.startsWith("optimistic:") ? (
           <button
             className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
             onClick={handleStartEditing}
@@ -232,7 +232,7 @@ export function FamilyStoreEditorCard({
         </div>
       )}
 
-      {canManageStores && !isEditing ? (
+      {canManageStores && !isEditing && !store.id.startsWith("optimistic:") ? (
         <div className="mt-4">
           <Form method="post">
             <input name="intent" type="hidden" value="delete-store" />

@@ -1,5 +1,5 @@
 import { ShoppingItemSource } from "@prisma/client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Form,
   Link,
@@ -24,10 +24,19 @@ import {
 import { ShoppingQuantityEditModal } from "../components/shopping-quantity-edit-modal";
 import { getToggleExpectedVersion } from "../lib/shopping-store-mode-client";
 import {
+  applyOptimisticShoppingListFormOverlay,
+  buildOptimisticManualShoppingItem,
+  dropResolvedOptimisticItemsFromStoreGroups,
+  getOptimisticChecked,
   insertProjectedItemIntoStoreGroups,
+  patchProjectedItemInStoreGroups,
   prependRecentManualItem,
+  removeProjectedItemFromStoreGroups,
 } from "../lib/shopping-list-client";
-import type { QuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import type {
+  OptimisticQuickAddDraft,
+  QuickAddShoppingSuccess,
+} from "../lib/shopping-quick-add";
 import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
 import {
   getMealPlanShoppingData,
@@ -664,6 +673,7 @@ export default function FamilyMealPlanShoppingRoute({
   } | null>(null);
   const [quantityDraft, setQuantityDraft] = useState("");
   const quantityInputRef = useRef<HTMLInputElement>(null);
+  const quantityRollbackRef = useRef(loaderData.storeGroups);
   const addManualValues =
     actionData?.intent === "add-manual-shopping-item" && actionData.manualValues
       ? actionData.manualValues
@@ -672,16 +682,72 @@ export default function FamilyMealPlanShoppingRoute({
   const noticeContent = loaderData.notice
     ? getShoppingNoticeContent(loaderData.notice)
     : null;
+  const listFormError =
+    quantityFetcher.data?.formError &&
+    quantityFetcher.data.intent === "update-generated-shopping-item-quantity"
+      ? quantityFetcher.data.formError
+      : actionData?.formError;
 
   useEffect(() => {
-    setStoreGroups(loaderData.storeGroups);
+    setStoreGroups(
+      dropResolvedOptimisticItemsFromStoreGroups(
+        loaderData.storeGroups,
+        loaderData.storeGroups.flatMap((group) =>
+          group.sections.flatMap((section) => section.items),
+        ),
+      ),
+    );
     setRecentManualItems(loaderData.recentManualItems);
   }, [loaderData.recentManualItems, loaderData.storeGroups]);
+
+  const fallbackCategory = useMemo(
+    () =>
+      loaderData.categories[0] ?? {
+        displayName: "Annet",
+        id: "uncategorized",
+      },
+    [loaderData.categories],
+  );
+
+  const handleQuickAddSubmit = useCallback(
+    (draft: OptimisticQuickAddDraft) => {
+      setStoreGroups((currentGroups) =>
+        insertProjectedItemIntoStoreGroups(
+          currentGroups,
+          buildOptimisticManualShoppingItem({
+            buyOnDate: loaderData.mealPlan.startDate,
+            category: {
+              id: fallbackCategory.id,
+              name: fallbackCategory.displayName,
+            },
+            mealPlanId: loaderData.mealPlan.id,
+            mealPlanTitle: loaderData.mealPlan.title,
+            name: draft.name,
+            quantity: draft.quantity,
+            sourceKey: draft.sourceKey,
+            sourceType: "MANUAL",
+          }),
+        ),
+      );
+    },
+    [
+      fallbackCategory.displayName,
+      fallbackCategory.id,
+      loaderData.mealPlan.id,
+      loaderData.mealPlan.startDate,
+      loaderData.mealPlan.title,
+    ],
+  );
 
   const handleQuickAddSuccess = useCallback(
     (payload: QuickAddShoppingSuccess) => {
       setStoreGroups((currentGroups) =>
-        insertProjectedItemIntoStoreGroups(currentGroups, payload.item),
+        insertProjectedItemIntoStoreGroups(
+          dropResolvedOptimisticItemsFromStoreGroups(currentGroups, [
+            payload.item,
+          ]),
+          payload.item,
+        ),
       );
       setRecentManualItems((currentRecents) =>
         prependRecentManualItem(currentRecents, payload.recentManualItem),
@@ -690,6 +756,12 @@ export default function FamilyMealPlanShoppingRoute({
     },
     [scheduleRevalidate],
   );
+
+  const handleQuickAddError = useCallback((sourceKey: string) => {
+    setStoreGroups((currentGroups) =>
+      removeProjectedItemFromStoreGroups(currentGroups, sourceKey),
+    );
+  }, []);
 
   const closeQuantityEdit = useCallback(() => {
     setQuantityEditItem(null);
@@ -702,6 +774,14 @@ export default function FamilyMealPlanShoppingRoute({
       formData.set("sourceKey", item.sourceKey);
       formData.set("expectedUpdatedAt", item.collaborationVersion);
       formData.set("quantity", quantity);
+      const trimmedQuantity = quantity.trim() || null;
+      setStoreGroups((currentGroups) => {
+        quantityRollbackRef.current = currentGroups;
+        return patchProjectedItemInStoreGroups(currentGroups, item.sourceKey, {
+          quantity: trimmedQuantity,
+          quantityLabel: trimmedQuantity,
+        });
+      });
       quantityFetcher.submit(formData, { method: "post" });
       closeQuantityEdit();
     },
@@ -721,14 +801,176 @@ export default function FamilyMealPlanShoppingRoute({
     if (
       quantityFetcher.state !== "idle" ||
       quantityFetcher.data?.intent !==
-        "update-generated-shopping-item-quantity" ||
-      !quantityFetcher.data.ok
+        "update-generated-shopping-item-quantity"
     ) {
+      return;
+    }
+
+    if (!quantityFetcher.data.ok) {
+      setStoreGroups(quantityRollbackRef.current);
       return;
     }
 
     scheduleRevalidate();
   }, [quantityFetcher.data, quantityFetcher.state, scheduleRevalidate]);
+
+  const displayStoreGroups = useMemo(() => {
+    if (navigation.state === "idle" || !navigation.formData) {
+      return storeGroups;
+    }
+
+    let overlayGroups = applyOptimisticShoppingListFormOverlay({
+      categories: loaderData.categories,
+      formData: navigation.formData,
+      groups: storeGroups,
+      intent: pendingIntent,
+      sourceKey: pendingSourceKey,
+      stores: loaderData.stores,
+    });
+
+    if (pendingIntent === "restore-generated-shopping-item" && pendingSourceKey) {
+      const restoredItem = loaderData.excludedGeneratedItems.find(
+        (item) => item.sourceKey === pendingSourceKey,
+      );
+
+      if (restoredItem) {
+        overlayGroups = insertProjectedItemIntoStoreGroups(
+          overlayGroups,
+          restoredItem,
+        );
+      }
+    }
+
+    if (
+      pendingIntent === "opt-in-stock-shopping-item" ||
+      pendingIntent === "opt-in-stock-shopping-items"
+    ) {
+      const optedInKeys = new Set(
+        navigation.formData.getAll("sourceKey").map((value) => String(value)),
+      );
+
+      for (const ingredient of loaderData.stockIngredientsForPlan) {
+        if (!optedInKeys.has(ingredient.sourceKey)) {
+          continue;
+        }
+
+        overlayGroups = insertProjectedItemIntoStoreGroups(
+          overlayGroups,
+          {
+            amount: null,
+            category: ingredient.category,
+            checked: false,
+            collaborationVersion: "",
+            firstDate:
+              ingredient.occurrences[0]?.date ?? loaderData.mealPlan.startDate,
+            lastDate:
+              ingredient.occurrences.at(-1)?.date ??
+              loaderData.mealPlan.endDate,
+            mealPlanId: loaderData.mealPlan.id,
+            mealPlanTitle: loaderData.mealPlan.title,
+            name: ingredient.name,
+            note: null,
+            occurrenceCount: ingredient.occurrenceCount,
+            occurrences: ingredient.occurrences,
+            postponedUntilDate: null,
+            preferredStore: null,
+            preferredStoreConflict: false,
+            quantity: ingredient.quantityLabel,
+            quantityLabel: ingredient.quantityLabel,
+            recipeCount: 1,
+            section: {
+              displayName: ingredient.category.name,
+              sortOrder: 99,
+            },
+            sourceKey: ingredient.sourceKey,
+            sourceType: "GENERATED",
+            unit: null,
+          },
+        );
+      }
+    }
+
+    if (pendingIntent !== "add-manual-shopping-item") {
+      return overlayGroups;
+    }
+
+    const name = String(navigation.formData.get("name") ?? "").trim();
+
+    if (!name) {
+      return overlayGroups;
+    }
+
+    const categoryId = String(navigation.formData.get("categoryId") ?? "");
+    const category =
+      loaderData.categories.find((entry) => entry.id === categoryId) ??
+      fallbackCategory;
+    const preferredStoreId = String(
+      navigation.formData.get("preferredStoreId") ?? "",
+    );
+    const preferredStore =
+      loaderData.stores.find((store) => store.id === preferredStoreId) ?? null;
+
+    return insertProjectedItemIntoStoreGroups(
+      overlayGroups,
+      buildOptimisticManualShoppingItem({
+        buyOnDate: String(navigation.formData.get("buyOnDate") ?? "") || null,
+        category: {
+          id: category.id,
+          name: category.displayName,
+        },
+        mealPlanId: loaderData.mealPlan.id,
+        mealPlanTitle: loaderData.mealPlan.title,
+        name,
+        note: String(navigation.formData.get("note") ?? "") || null,
+        preferredStore,
+        quantity: String(navigation.formData.get("quantity") ?? ""),
+        sourceKey: "optimistic:pending-add-manual",
+        sourceType: "MANUAL",
+      }),
+    );
+  }, [
+    fallbackCategory,
+    loaderData.categories,
+    loaderData.excludedGeneratedItems,
+    loaderData.mealPlan.endDate,
+    loaderData.mealPlan.id,
+    loaderData.mealPlan.startDate,
+    loaderData.mealPlan.title,
+    loaderData.stockIngredientsForPlan,
+    loaderData.stores,
+    navigation.formData,
+    navigation.state,
+    pendingIntent,
+    pendingSourceKey,
+    storeGroups,
+  ]);
+
+  const pendingOptInSourceKeys = useMemo(() => {
+    if (
+      navigation.state === "idle" ||
+      !navigation.formData ||
+      (pendingIntent !== "opt-in-stock-shopping-item" &&
+        pendingIntent !== "opt-in-stock-shopping-items")
+    ) {
+      return new Set<string>();
+    }
+
+    return new Set(
+      navigation.formData.getAll("sourceKey").map((value) => String(value)),
+    );
+  }, [navigation.formData, navigation.state, pendingIntent]);
+
+  const displayStockIngredients = loaderData.stockIngredientsForPlan.filter(
+    (ingredient) => !pendingOptInSourceKeys.has(ingredient.sourceKey),
+  );
+  const displayExcludedGeneratedItems =
+    navigation.state !== "idle" &&
+    pendingIntent === "restore-generated-shopping-item" &&
+    pendingSourceKey
+      ? loaderData.excludedGeneratedItems.filter(
+          (item) => item.sourceKey !== pendingSourceKey,
+        )
+      : loaderData.excludedGeneratedItems;
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
@@ -781,20 +1023,20 @@ export default function FamilyMealPlanShoppingRoute({
           </section>
         ) : null}
 
-        {actionData?.formError ? (
+        {listFormError ? (
           <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
             <h2 className="text-base font-semibold">
               Kunne ikke oppdatere handlelisten
             </h2>
-            <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
+            <p className="mt-2 text-sm leading-6">{listFormError}</p>
           </section>
         ) : null}
 
-        {loaderData.stockIngredientCount > 0 ? (
+        {displayStockIngredients.length > 0 ? (
           <section className="rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-5 text-amber-950 shadow-sm">
             <details>
               <summary className="cursor-pointer text-base font-semibold">
-                {loaderData.stockIngredientCount} basisvarer brukt denne uken
+                {displayStockIngredients.length} basisvarer brukt denne uken
               </summary>
               <div className="mt-4 space-y-4">
                 <p className="text-sm leading-6 text-amber-900">
@@ -807,7 +1049,7 @@ export default function FamilyMealPlanShoppingRoute({
                     type="hidden"
                     value="opt-in-stock-shopping-items"
                   />
-                  {loaderData.stockIngredientsForPlan.map((ingredient) => (
+                  {displayStockIngredients.map((ingredient) => (
                     <input
                       key={ingredient.sourceKey}
                       name="sourceKey"
@@ -818,7 +1060,7 @@ export default function FamilyMealPlanShoppingRoute({
                   <button
                     className="rounded-2xl bg-amber-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-950 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={
-                      navigation.state === "submitting" &&
+                      navigation.state !== "idle" &&
                       pendingIntent === "opt-in-stock-shopping-items"
                     }
                     type="submit"
@@ -827,7 +1069,7 @@ export default function FamilyMealPlanShoppingRoute({
                   </button>
                 </Form>
                 <ul className="grid gap-3">
-                  {loaderData.stockIngredientsForPlan.map((ingredient) => (
+                  {displayStockIngredients.map((ingredient) => (
                     <li
                       key={ingredient.sourceKey}
                       className="rounded-[20px] border border-amber-200 bg-white px-4 py-4"
@@ -879,7 +1121,7 @@ export default function FamilyMealPlanShoppingRoute({
                           <button
                             className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                             disabled={
-                              navigation.state === "submitting" &&
+                              navigation.state !== "idle" &&
                               pendingIntent === "opt-in-stock-shopping-item" &&
                               navigation.formData?.get("sourceKey") ===
                                 ingredient.sourceKey
@@ -898,11 +1140,11 @@ export default function FamilyMealPlanShoppingRoute({
           </section>
         ) : null}
 
-        {loaderData.excludedGeneratedCount > 0 ? (
+        {displayExcludedGeneratedItems.length > 0 ? (
           <section className="rounded-[28px] border border-slate-200 bg-slate-50 px-6 py-5 text-slate-950 shadow-sm">
             <details open>
               <summary className="cursor-pointer text-base font-semibold">
-                {loaderData.excludedGeneratedCount} varelinjer fjernet fra
+                {displayExcludedGeneratedItems.length} varelinjer fjernet fra
                 listen
               </summary>
               <div className="mt-4 space-y-4">
@@ -911,9 +1153,9 @@ export default function FamilyMealPlanShoppingRoute({
                   ukeplanen. Du kan legge dem tilbake når du trenger dem.
                 </p>
                 <ul className="grid gap-3">
-                  {loaderData.excludedGeneratedItems.map((item) => {
+                  {displayExcludedGeneratedItems.map((item) => {
                     const isPendingRestore =
-                      navigation.state === "submitting" &&
+                      navigation.state !== "idle" &&
                       pendingIntent === "restore-generated-shopping-item" &&
                       pendingSourceKey === item.sourceKey;
 
@@ -1042,6 +1284,8 @@ export default function FamilyMealPlanShoppingRoute({
             <div className="mt-6">
               <ManualShoppingQuickAdd
                 ingredientSearchPath={ingredientSearchPath}
+                onQuickAddError={handleQuickAddError}
+                onQuickAddSubmit={handleQuickAddSubmit}
                 onQuickAddSuccess={handleQuickAddSuccess}
                 recentManualItems={recentManualItems}
               />
@@ -1208,10 +1452,15 @@ export default function FamilyMealPlanShoppingRoute({
                     {group.sections.flatMap((section) =>
                       section.items.map((item) => {
                         const isPendingCheckToggle =
-                          navigation.state === "submitting" &&
+                          navigation.state !== "idle" &&
                           pendingIntent ===
                             "toggle-family-shopping-item-checked" &&
                           pendingSourceKey === item.sourceKey;
+                        const displayChecked = getOptimisticChecked({
+                          checkedValue: navigation.formData?.get("checked"),
+                          isPending: isPendingCheckToggle,
+                          itemChecked: item.checked,
+                        });
 
                         return (
                           <article
@@ -1220,7 +1469,13 @@ export default function FamilyMealPlanShoppingRoute({
                           >
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                               <div>
-                                <p className="text-sm font-semibold text-slate-950">
+                                <p
+                                  className={`text-sm font-semibold ${
+                                    displayChecked
+                                      ? "text-slate-500 line-through"
+                                      : "text-slate-950"
+                                  }`}
+                                >
                                   {item.name}
                                   {item.quantityLabel
                                     ? ` · ${item.quantityLabel}`
@@ -1257,8 +1512,10 @@ export default function FamilyMealPlanShoppingRoute({
                                   type="submit"
                                 >
                                   {isPendingCheckToggle
-                                    ? "Oppdaterer..."
-                                    : item.checked
+                                    ? displayChecked
+                                      ? "Krysser av..."
+                                      : "Oppdaterer..."
+                                    : displayChecked
                                       ? "Fjern avkryssing"
                                       : "Marker som kjøpt"}
                                 </button>
@@ -1275,9 +1532,9 @@ export default function FamilyMealPlanShoppingRoute({
           </section>
         ) : null}
 
-        {storeGroups.length ? (
+        {displayStoreGroups.length ? (
           <section className="grid gap-6">
-            {storeGroups.map((group) => (
+            {displayStoreGroups.map((group) => (
               <article
                 key={group.store?.id ?? "no-store"}
                 className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200"
@@ -1305,9 +1562,14 @@ export default function FamilyMealPlanShoppingRoute({
                       <div className="mt-3 grid gap-2 xl:gap-3">
                         {section.items.map((item) => {
                           const isPendingCheckToggle =
-                            navigation.state === "submitting" &&
+                            navigation.state !== "idle" &&
                             pendingIntent === "toggle-shopping-item-checked" &&
                             pendingSourceKey === item.sourceKey;
+                          const displayChecked = getOptimisticChecked({
+                            checkedValue: navigation.formData?.get("checked"),
+                            isPending: isPendingCheckToggle,
+                            itemChecked: item.checked,
+                          });
                           const isPendingManualSave =
                             navigation.state === "submitting" &&
                             pendingIntent === "update-manual-shopping-item" &&
@@ -1373,6 +1635,7 @@ export default function FamilyMealPlanShoppingRoute({
                           const expandedProps = {
                             actionData,
                             categories: loaderData.categories,
+                            displayChecked,
                             isPendingCheckToggle,
                             isPendingGeneratedExclude,
                             isPendingGeneratedSave,
@@ -1394,7 +1657,13 @@ export default function FamilyMealPlanShoppingRoute({
                               className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50 p-3 xl:p-5"
                             >
                               <div className="flex flex-wrap items-center gap-2">
-                                <h4 className="text-base font-semibold text-slate-950">
+                                <h4
+                                  className={`text-base font-semibold ${
+                                    displayChecked
+                                      ? "text-slate-500 line-through"
+                                      : "text-slate-950"
+                                  }`}
+                                >
                                   {item.name}
                                 </h4>
                                 {item.sourceType === "GENERATED" ? (
@@ -1451,7 +1720,7 @@ export default function FamilyMealPlanShoppingRoute({
                                     Manuell
                                   </span>
                                 ) : null}
-                                {item.checked ? (
+                                {displayChecked ? (
                                   <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
                                     Avkrysset
                                   </span>

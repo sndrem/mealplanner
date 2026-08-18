@@ -9,10 +9,12 @@ import {
 import { useFetcher } from "react-router";
 
 import type {
+  OptimisticQuickAddDraft,
   QuickAddShoppingActionData,
   QuickAddShoppingSuccess,
 } from "../lib/shopping-quick-add";
 import { isQuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import { createOptimisticSourceKey } from "../lib/shopping-list-client";
 import type { RecentManualShoppingItem } from "../lib/shopping.server";
 
 export interface IngredientSearchResult {
@@ -31,6 +33,8 @@ interface ManualShoppingQuickAddProps {
   appearance?: ManualShoppingQuickAddAppearance;
   autoFocus?: boolean;
   ingredientSearchPath: string;
+  onQuickAddError?: (sourceKey: string) => void;
+  onQuickAddSubmit?: (draft: OptimisticQuickAddDraft) => void;
   onQuickAddSuccess?: (payload: QuickAddShoppingSuccess) => void;
   quickAddIntent?: string;
   recentManualItems: RecentManualShoppingItem[];
@@ -120,6 +124,8 @@ export function ManualShoppingQuickAdd({
   appearance = "default",
   autoFocus = false,
   ingredientSearchPath,
+  onQuickAddError,
+  onQuickAddSubmit,
   onQuickAddSuccess,
   quickAddIntent = DEFAULT_QUICK_ADD_INTENT,
   recentManualItems,
@@ -155,6 +161,11 @@ export function ManualShoppingQuickAdd({
   searchFetcherRef.current = searchFetcher;
   const onQuickAddSuccessRef = useRef(onQuickAddSuccess);
   onQuickAddSuccessRef.current = onQuickAddSuccess;
+  const onQuickAddSubmitRef = useRef(onQuickAddSubmit);
+  onQuickAddSubmitRef.current = onQuickAddSubmit;
+  const onQuickAddErrorRef = useRef(onQuickAddError);
+  onQuickAddErrorRef.current = onQuickAddError;
+  const pendingOptimisticSourceKeyRef = useRef<string | null>(null);
   const isQuickAdding = quickAddFetcher.state !== "idle";
   const trimmedQuery = query.trim();
   const quickAddActionData =
@@ -194,6 +205,25 @@ export function ManualShoppingQuickAdd({
 
     if (typeof fields.quantity === "string") {
       formData.set("quantity", fields.quantity);
+    }
+
+    const draftName =
+      fields.name?.trim() ||
+      displayedResults.find((ingredient) => ingredient.id === fields.ingredientId)
+        ?.canonicalName ||
+      recentManualItems.find(
+        (item) => item.nameNormalized === fields.recentNameNormalized,
+      )?.displayName ||
+      trimmedQuery;
+    const sourceKey = createOptimisticSourceKey();
+    pendingOptimisticSourceKeyRef.current = sourceKey;
+
+    if (draftName) {
+      onQuickAddSubmitRef.current?.({
+        name: draftName,
+        quantity: fields.quantity ?? quantity,
+        sourceKey,
+      });
     }
 
     quickAddFetcher.submit(formData, { method: "post" });
@@ -246,13 +276,23 @@ export function ManualShoppingQuickAdd({
 
   useEffect(() => {
     if (
-      !isQuickAddShoppingSuccess(quickAddFetcher.data) ||
+      !quickAddFetcher.data ||
       quickAddFetcher.data === lastHandledQuickAddDataRef.current
     ) {
       return;
     }
 
     lastHandledQuickAddDataRef.current = quickAddFetcher.data;
+    const optimisticSourceKey = pendingOptimisticSourceKeyRef.current;
+    pendingOptimisticSourceKeyRef.current = null;
+
+    if (!isQuickAddShoppingSuccess(quickAddFetcher.data)) {
+      if (optimisticSourceKey) {
+        onQuickAddErrorRef.current?.(optimisticSourceKey);
+      }
+      return;
+    }
+
     setIsListOpen(false);
     setIsInputFocused(false);
     setQuery("");

@@ -211,11 +211,21 @@ export default function FamilyMealPlansRoute({
     navigation.formData?.get("mealPlanId") ?? "",
   );
   const isCreatingMealPlan =
-    navigation.state === "submitting" && pendingIntent === "create-meal-plan";
+    navigation.state !== "idle" && pendingIntent === "create-meal-plan";
   const isDeletingMealPlan =
-    navigation.state === "submitting" && pendingIntent === "delete-meal-plan";
+    navigation.state !== "idle" && pendingIntent === "delete-meal-plan";
+  const pendingCreateMealPlan = isCreatingMealPlan
+    ? buildOptimisticMealPlanListItem(navigation.formData)
+    : null;
+  const mealPlansForDisplay = [
+    ...(pendingCreateMealPlan ? [pendingCreateMealPlan] : []),
+    ...loaderData.mealPlans.filter(
+      (mealPlan) =>
+        !(isDeletingMealPlan && mealPlan.id === pendingMealPlanId),
+    ),
+  ];
   const partitionedMealPlans = partitionMealPlansByTimeStatus(
-    loaderData.mealPlans,
+    mealPlansForDisplay,
   );
   const visiblePastMealPlans = showAllPastMealPlans
     ? partitionedMealPlans.past
@@ -313,7 +323,7 @@ export default function FamilyMealPlansRoute({
               </p>
             </div>
 
-            {loaderData.mealPlans.length > 0 ? (
+            {mealPlansForDisplay.length > 0 ? (
               <div className="mt-6 grid gap-6">
                 {partitionedMealPlans.upcoming.length > 0 ? (
                   <div className="grid gap-3">
@@ -432,6 +442,35 @@ export default function FamilyMealPlansRoute({
 }
 
 type MealPlanListItem = MealPlanListRouteProps["loaderData"]["mealPlans"][number];
+
+function buildOptimisticMealPlanListItem(
+  formData: FormData | undefined,
+): MealPlanListItem | null {
+  if (!formData) {
+    return null;
+  }
+
+  const startDate = String(formData.get("startDate") ?? "");
+  const endDate = String(formData.get("endDate") ?? "");
+
+  if (!startDate || !endDate) {
+    return null;
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  const now = new Date();
+
+  return {
+    activeShoppingDate: null,
+    createdAt: now,
+    endDate,
+    id: "optimistic:pending-add",
+    startDate,
+    status: "DRAFT",
+    title: title || "Ny ukeplan",
+    updatedAt: now,
+  };
+}
 
 function getCreateMealPlanInitialState(actionData?: MealPlanActionData) {
   if (actionData?.intent === "create-meal-plan") {
@@ -633,6 +672,7 @@ function MealPlanListCard({
       : timeStatus === "past"
         ? "inline-flex items-center justify-center rounded-2xl bg-slate-700 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
         : "inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800";
+  const isPlaceholder = mealPlan.id.startsWith("optimistic:");
   const timeStatusBadge =
     timeStatus === "active"
       ? {
@@ -675,24 +715,32 @@ function MealPlanListCard({
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Link
-            className={openLinkClassName}
-            to={`/families/${familyId}/meal-plans/${mealPlan.id}`}
-          >
-            Åpne ukeplan
-          </Link>
+          {isPlaceholder ? (
+            <span className="inline-flex items-center justify-center rounded-2xl bg-slate-200 px-4 py-3 text-sm font-medium text-slate-600">
+              Oppretter...
+            </span>
+          ) : (
+            <>
+              <Link
+                className={openLinkClassName}
+                to={`/families/${familyId}/meal-plans/${mealPlan.id}`}
+              >
+                Åpne ukeplan
+              </Link>
 
-          <Form method="post">
-            <input name="intent" type="hidden" value="delete-meal-plan" />
-            <input name="mealPlanId" type="hidden" value={mealPlan.id} />
-            <button
-              className="inline-flex items-center justify-center rounded-2xl bg-rose-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300"
-              disabled={isDeletingMealPlan}
-              type="submit"
-            >
-              {isPendingDelete ? "Sletter..." : "Slett"}
-            </button>
-          </Form>
+              <Form method="post">
+                <input name="intent" type="hidden" value="delete-meal-plan" />
+                <input name="mealPlanId" type="hidden" value={mealPlan.id} />
+                <button
+                  className="inline-flex items-center justify-center rounded-2xl bg-rose-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300"
+                  disabled={isDeletingMealPlan}
+                  type="submit"
+                >
+                  {isPendingDelete ? "Sletter..." : "Slett"}
+                </button>
+              </Form>
+            </>
+          )}
         </div>
       </div>
 
