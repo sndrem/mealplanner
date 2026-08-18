@@ -26,6 +26,8 @@ export interface StoreModeProgress {
 
 export type StoreModeShoppingView = "list" | "grid";
 
+export const DEFAULT_STORE_MODE_SHOPPING_VIEW: StoreModeShoppingView = "grid";
+
 const STORE_MODE_QUEUE_KEY_PREFIX = "mealplanner:store-mode-queue:v1";
 const STORE_MODE_VIEW_KEY_PREFIX = "mealplanner:store-mode-view:v1";
 const STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX =
@@ -43,7 +45,7 @@ export function readStoreModeShoppingView(
   storageKey: string,
 ): StoreModeShoppingView {
   if (typeof window === "undefined") {
-    return "list";
+    return DEFAULT_STORE_MODE_SHOPPING_VIEW;
   }
 
   try {
@@ -53,9 +55,9 @@ export function readStoreModeShoppingView(
       return raw;
     }
 
-    return "list";
+    return DEFAULT_STORE_MODE_SHOPPING_VIEW;
   } catch {
-    return "list";
+    return DEFAULT_STORE_MODE_SHOPPING_VIEW;
   }
 }
 

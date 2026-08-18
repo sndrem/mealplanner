@@ -2,19 +2,18 @@
 
 ## Current Objective
 
-Ship optimistic form updates so in-scope mutations change visible data immediately, then reconcile with the loader.
+Ship store-mode shopping defaulting to grid view, with Rutenett first in the view toggle.
 
 ## Completed
 
-- Shopping overlays (check, quantity, category/notes, add, update/delete/exclude/restore/opt-in, GLOBAL list-mode filter) share helpers in `shopping-list-client.ts`.
-- Freezer, stock, stores, recipes, meal plans, review chips/notes/approve, and remove-member use `navigation.formData` or a local overlay until the loader matches.
-- Auto-fill only shows a filling state on empty days. COMBINED list mode still waits for the loader when switching from GLOBAL.
+- `readStoreModeShoppingView` defaults to `grid` when nothing (or an invalid value) is stored.
+- Store-mode toggle UI order is Rutenett, then Liste.
+- Unit tests cover the new default, persistence of `list`, and invalid-storage fallback.
 
 ## Files To Read First
 
-- `app/lib/shopping-list-client.ts` - overlay helpers and form overlay
-- `.cursor/rules/optimistic-form-updates.mdc` - required UI pattern
-- `app/routes/family-meal-plan.tsx` - meal-plan detail overlays
+- `app/lib/shopping-store-mode-client.ts` - default view constant and storage read
+- `app/components/store-mode-shopping-view-toggle.tsx` - toggle button order
 
 ## Validation
 
@@ -25,10 +24,9 @@ Ship optimistic form updates so in-scope mutations change visible data immediate
 
 ## Open Items
 
-- Manual smoke after merge: submit, confirm UI updates before network idle, confirm no duplicate after revalidate, force an error and confirm rollback.
-- Auto-fill and COMBINED←GLOBAL remain partial by data availability; that is intended.
-- Skipped by plan: login/register/logout, GET search, create-family, join-family.
+- Existing localStorage values of `list` still win over the new default; that is intended.
+- No related GitHub issue was found for this change.
 
 ## Next Step
 
-Review and merge the pull request for optimistic form updates.
+Review and merge the pull request.

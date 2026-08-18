@@ -266,12 +266,12 @@ describe("shopping-store-mode-client", () => {
     );
   });
 
-  it("defaults shopping view to list", () => {
+  it("defaults shopping view to grid", () => {
     const viewStorageKey = buildStoreModeViewStorageKey({
       familyId: "family-1",
     });
 
-    expect(readStoreModeShoppingView(viewStorageKey)).toBe("list");
+    expect(readStoreModeShoppingView(viewStorageKey)).toBe("grid");
   });
 
   it("persists and reads shopping view preference", () => {
@@ -279,19 +279,19 @@ describe("shopping-store-mode-client", () => {
       familyId: "family-1",
     });
 
-    writeStoreModeShoppingView(viewStorageKey, "grid");
+    writeStoreModeShoppingView(viewStorageKey, "list");
 
-    expect(readStoreModeShoppingView(viewStorageKey)).toBe("grid");
+    expect(readStoreModeShoppingView(viewStorageKey)).toBe("list");
   });
 
-  it("falls back to list for invalid stored shopping views", () => {
+  it("falls back to grid for invalid stored shopping views", () => {
     const viewStorageKey = buildStoreModeViewStorageKey({
       familyId: "family-1",
     });
 
     window.localStorage.setItem(viewStorageKey, "table");
 
-    expect(readStoreModeShoppingView(viewStorageKey)).toBe("list");
+    expect(readStoreModeShoppingView(viewStorageKey)).toBe("grid");
   });
 
   it("builds isolated deprioritize-bought storage keys per family", () => {
