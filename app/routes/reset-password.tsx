@@ -92,7 +92,7 @@ export default function ResetPasswordRoute({ actionData, loaderData }: Route.Com
               autoComplete="new-password"
               className={authInputClassName}
               name="password"
-              placeholder={`Minst ${PASSWORD_MIN_LENGTH} tegn`}
+              placeholder="Minst 8 tegn"
               type="password"
             />
             {actionData?.fieldErrors?.password ? (
