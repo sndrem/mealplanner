@@ -88,9 +88,16 @@ Copy [`.env.example`](.env.example) to `.env` and set all required values. The s
 ```bash
 DATABASE_URL="postgresql://mealplanner:mealplanner@localhost:5466/mealplanner?schema=public"
 SESSION_SECRET="replace-this-with-a-long-random-string-of-at-least-32-characters"
+SMTP_HOST=""
+SMTP_PORT="587"
+SMTP_USER=""
+SMTP_PASS=""
+EMAIL_FROM=""
 ```
 
 `SESSION_SECRET` must be at least 32 characters and is used to sign the login session cookie.
+
+SMTP settings are optional at startup. When `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` are unset, password-reset emails are logged to the server console instead of being sent. A Gmail inbox works without a custom domain: enable 2-Step Verification, create an [App Password](https://myaccount.google.com/apppasswords), then set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER` to the Gmail address, `SMTP_PASS` to the app password, and `EMAIL_FROM` to `Mealplanner <that-gmail-address>`. Gmail will send from the Gmail address itself.
 
 If any required variable is missing or invalid, the server fails fast during startup instead of waiting until the first database access.
 
@@ -98,6 +105,7 @@ If any required variable is missing or invalid, the server fails fast during sta
 
 - Users can now register with name, e-post, and password
 - Users can log in and out with a signed cookie session
+- Login includes a “Glemt passord?” flow that emails a one-time reset link
 - Protected routes redirect unauthenticated requests to `/login`
 - The first protected route lives at `/app` and acts as the current family onboarding and landing state
 - Authenticated users can create a family or join one with a family code from that protected flow

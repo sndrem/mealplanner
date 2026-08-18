@@ -18,12 +18,27 @@ The server validates these at startup ([`app/lib/env.server.ts`](../app/lib/env.
 | `DATABASE_URL` | PostgreSQL connection string (`postgresql://` or `postgres://`) |
 | `SESSION_SECRET` | Cookie session signing (min 32 characters) |
 
+Optional (password reset mail). The app starts without them; forgot-password emails only reach inboxes when SMTP host, user, and password are set. A Gmail address works without a custom domain (use an [App Password](https://myaccount.google.com/apppasswords)):
+
+| Variable | Purpose |
+| -------- | ------- |
+| `SMTP_HOST` | SMTP server, e.g. `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP port (defaults to `587`; use `465` for implicit TLS) |
+| `SMTP_USER` | SMTP username (the Gmail address) |
+| `SMTP_PASS` | SMTP password (Gmail app password) |
+| `EMAIL_FROM` | From header, e.g. `Mealplanner <you@gmail.com>` (defaults to `SMTP_USER`) |
+
 Set secrets on Fly (never commit production values):
 
 ```bash
 fly secrets set \
   DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?schema=public" \
   SESSION_SECRET="<generate-a-long-random-string>" \
+  SMTP_HOST="smtp.gmail.com" \
+  SMTP_PORT="587" \
+  SMTP_USER="you@gmail.com" \
+  SMTP_PASS="<gmail-app-password>" \
+  EMAIL_FROM="Mealplanner <you@gmail.com>" \
   -a mealplanner-xzvzow
 ```
 
@@ -109,7 +124,7 @@ fly tokens create deploy -a mealplanner-xzvzow
 
 Add the token value as `FLY_API_TOKEN`.
 
-Runtime secrets (`DATABASE_URL`, `SESSION_SECRET`, etc.) stay on Fly via `fly secrets set`; they are not stored in GitHub.
+Runtime secrets (`DATABASE_URL`, `SESSION_SECRET`, `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, etc.) stay on Fly via `fly secrets set`; they are not stored in GitHub.
 
 ### Pre-deploy checks
 

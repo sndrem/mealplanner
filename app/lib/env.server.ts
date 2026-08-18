@@ -35,14 +35,37 @@ const sessionSecretSchema = z
   .trim()
   .min(32, "SESSION_SECRET must be at least 32 characters long");
 
+function optionalTrimmedString(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+const optionalPortSchema = z.preprocess((value) => {
+  if (value === undefined || value === "") {
+    return undefined;
+  }
+
+  return value;
+}, z.coerce.number().int().min(1).max(65535).optional());
+
 const envSchema = z.object({
   DATABASE_URL: databaseUrlSchema,
   SESSION_SECRET: sessionSecretSchema,
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: optionalPortSchema,
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASS: z.string().min(1).optional(),
+  EMAIL_FROM: z.string().min(1).optional(),
 });
 
 const parsedEnv = envSchema.safeParse({
   DATABASE_URL: process.env.DATABASE_URL,
   SESSION_SECRET: process.env.SESSION_SECRET,
+  SMTP_HOST: optionalTrimmedString(process.env.SMTP_HOST),
+  SMTP_PORT: optionalTrimmedString(process.env.SMTP_PORT),
+  SMTP_USER: optionalTrimmedString(process.env.SMTP_USER),
+  SMTP_PASS: optionalTrimmedString(process.env.SMTP_PASS),
+  EMAIL_FROM: optionalTrimmedString(process.env.EMAIL_FROM),
 });
 
 if (!parsedEnv.success) {
