@@ -37,6 +37,7 @@ import {
   partitionStoreModeSections,
   readStoreModeDeprioritizeBought,
   readStoreModeShoppingView,
+  sortStoreModeItemsByName,
   type StoreModeShoppingView,
   writeStoreModeDeprioritizeBought,
   writeStoreModeShoppingView,
@@ -1463,6 +1464,11 @@ function StoreModeItemGrid<
   recentlyAddedSourceKey: string | null;
   selectedStoreId?: string;
 }) {
+  const sortedItems = useMemo(
+    () => sortStoreModeItemsByName(items),
+    [items],
+  );
+
   return (
     <div
       className={
@@ -1471,7 +1477,7 @@ function StoreModeItemGrid<
           : "mt-4 flex flex-col gap-2"
       }
     >
-      {items.map((item) => (
+      {sortedItems.map((item) => (
         <StoreModeShoppingItemCard
           key={item.sourceKey}
           categories={categories}
