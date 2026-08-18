@@ -2,29 +2,34 @@
 
 ## Current Objective
 
-Ship alphabetical A–Z sorting for items in store-mode `StoreModeItemGrid`.
+Open and merge the pull request for the family shopping catalog (issue #189).
 
 ## Completed
 
-- `StoreModeItemGrid` sorts items by name (`nb` locale) before render, including the bought-items grid.
-- `sortStoreModeItemsByName` lives in `shopping-store-mode-client.ts` with unit tests for name order and `sourceKey` tie-breaking.
+- Custom quick-add names persist in a family-scoped catalog and show up in typeahead on later lists.
+- Handlevarer admin supports rename, default quantity/category, add, and delete.
+- Migration backfills historical custom shopping names that are not canonical ingredients.
+- Search loaders require family membership and merge catalog + register suggestions.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan-store-mode.tsx` - `StoreModeItemGrid` sorts its `items` prop
-- `app/lib/shopping-store-mode-client.ts` - `sortStoreModeItemsByName` / `compareStoreModeItemsByName`
+- `app/lib/shopping-catalog.server.ts` - list/search/merge suggestions
+- `app/lib/shopping-catalog-write.server.ts` - upsert and admin CRUD
+- `app/routes/family-shopping-catalog.tsx` - Handlevarer UI
+- `app/components/manual-shopping-quick-add.tsx` - typeahead sources
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — passed (403 tests)
+- `npm run test:run` — passed (421 tests)
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Loader data (`compareProjectedItemsForStoreMode`) still orders within a section by relevant date, then name. The grid re-sorts for display; aisle/section order is unchanged.
-- No related GitHub issue was found for this change.
+- Apply Prisma migration on each environment before using the feature.
+- Manual check: add a custom name, start a new week, type it, confirm default quantity, then rename in Handlevarer.
+- Issue #189 closes when the PR merges (`Closes #189`).
 
 ## Next Step
 

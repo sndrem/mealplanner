@@ -43,6 +43,11 @@ function buildFamilyNavItems(
     },
     {
       end: true,
+      label: "Handlevarer",
+      to: `/families/${familyId}/shopping-catalog`,
+    },
+    {
+      end: true,
       label: "Fryser",
       to: `/families/${familyId}/freezer`,
     },

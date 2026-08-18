@@ -64,6 +64,10 @@ const {
       store: {
         findFirst: vi.fn(),
       },
+      familyShoppingCatalogItem: {
+        findFirst: vi.fn(),
+        findUnique: vi.fn(),
+      },
     },
     getFamilyStockMatchSetMock: vi.fn(),
     getStockIngredientsForMealPlanMock: vi.fn(),
@@ -117,6 +121,12 @@ vi.mock("./stock.server", () => {
   };
 });
 
+vi.mock("./shopping-catalog-write.server", () => {
+  return {
+    upsertFamilyShoppingCatalogItemFromQuickAdd: vi.fn(),
+  };
+});
+
 import {
   createManualShoppingItem,
   createQuickManualShoppingItem,
@@ -160,6 +170,8 @@ describe("shopping-write.server", () => {
     dbMock.shoppingItemOverride.updateMany.mockResolvedValue({ count: 1 });
     dbMock.shoppingItemOverride.deleteMany.mockResolvedValue({ count: 1 });
     dbMock.shoppingItemOverride.findMany.mockResolvedValue([]);
+    dbMock.familyShoppingCatalogItem.findFirst.mockResolvedValue(null);
+    dbMock.familyShoppingCatalogItem.findUnique.mockResolvedValue(null);
     dbMock.$transaction.mockImplementation(async (callback: (tx: typeof transactionMock) => unknown) =>
       callback(transactionMock),
     );
@@ -430,6 +442,100 @@ describe("shopping-write.server", () => {
     });
   });
 
+  it("resolves quick-add values from a family catalog item id", async () => {
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
+    dbMock.familyShoppingCatalogItem.findFirst.mockResolvedValue({
+      defaultCategoryId: "category-household",
+      defaultQuantity: "1 pk",
+      displayName: "Tørkerull",
+      id: "catalog-1",
+    });
+
+    const result = await resolveQuickAddManualShoppingItemValues({
+      familyId: "family-1",
+      input: {
+        catalogItemId: "catalog-1",
+      },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      values: {
+        buyOnDate: "",
+        categoryId: "category-household",
+        name: "Tørkerull",
+        note: "",
+        preferredStoreId: "",
+        quantity: "1 pk",
+      },
+    });
+  });
+
+  it("uses catalog defaults when typing a matching custom name", async () => {
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
+    dbMock.familyShoppingCatalogItem.findUnique.mockResolvedValue({
+      defaultCategoryId: "category-household",
+      defaultQuantity: "2 pk",
+      displayName: "Tørkerull",
+      id: "catalog-1",
+    });
+
+    const result = await resolveQuickAddManualShoppingItemValues({
+      familyId: "family-1",
+      input: {
+        name: "tørkerull",
+      },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      values: {
+        buyOnDate: "",
+        categoryId: "category-household",
+        name: "Tørkerull",
+        note: "",
+        preferredStoreId: "",
+        quantity: "2 pk",
+      },
+    });
+  });
+
+  it("prefers an explicit quantity over catalog default quantity", async () => {
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
+    dbMock.familyShoppingCatalogItem.findFirst.mockResolvedValue({
+      defaultCategoryId: "category-household",
+      defaultQuantity: "1 pk",
+      displayName: "Tørkerull",
+      id: "catalog-1",
+    });
+
+    const result = await resolveQuickAddManualShoppingItemValues({
+      familyId: "family-1",
+      input: {
+        catalogItemId: "catalog-1",
+        quantity: "3 pk",
+      },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      values: {
+        buyOnDate: "",
+        categoryId: "category-household",
+        name: "Tørkerull",
+        note: "",
+        preferredStoreId: "",
+        quantity: "3 pk",
+      },
+    });
+  });
+
   it("creates a quick-add manual item with Annet defaults for new names", async () => {
     dbMock.ingredientCategory.findUnique.mockResolvedValue({
       id: "category-other",
@@ -497,6 +603,16 @@ describe("shopping-write.server", () => {
         quantity: "1",
         updatedByUserId: "user-1",
       },
+    });
+    const { upsertFamilyShoppingCatalogItemFromQuickAdd } = await import(
+      "./shopping-catalog-write.server"
+    );
+    expect(upsertFamilyShoppingCatalogItemFromQuickAdd).toHaveBeenCalledWith({
+      familyId: "family-1",
+      ingredientId: undefined,
+      item: expect.objectContaining({
+        name: "Tannkrem",
+      }),
     });
   });
 
