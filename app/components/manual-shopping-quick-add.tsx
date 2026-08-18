@@ -20,7 +20,9 @@ import type { RecentManualShoppingItem } from "../lib/shopping.server";
 export interface IngredientSearchResult {
   canonicalName: string;
   defaultCategoryId: string | null;
+  defaultQuantity?: string | null;
   id: string;
+  source?: "catalog" | "register";
 }
 
 interface ManualShoppingQuickAddLoaderSlice {
@@ -183,6 +185,7 @@ export function ManualShoppingQuickAdd({
       : undefined;
 
   function submitQuickAdd(fields: {
+    catalogItemId?: string;
     ingredientId?: string;
     name?: string;
     quantity?: string;
@@ -190,6 +193,10 @@ export function ManualShoppingQuickAdd({
   }) {
     const formData = new FormData();
     formData.set("intent", quickAddIntent);
+
+    if (fields.catalogItemId) {
+      formData.set("catalogItemId", fields.catalogItemId);
+    }
 
     if (fields.ingredientId) {
       formData.set("ingredientId", fields.ingredientId);
@@ -209,8 +216,11 @@ export function ManualShoppingQuickAdd({
 
     const draftName =
       fields.name?.trim() ||
-      displayedResults.find((ingredient) => ingredient.id === fields.ingredientId)
-        ?.canonicalName ||
+      displayedResults.find(
+        (ingredient) =>
+          ingredient.id === fields.ingredientId ||
+          ingredient.id === fields.catalogItemId,
+      )?.canonicalName ||
       recentManualItems.find(
         (item) => item.nameNormalized === fields.recentNameNormalized,
       )?.displayName ||
@@ -529,11 +539,19 @@ export function ManualShoppingQuickAdd({
                 </li>
               ) : null}
               {displayedResults.map((ingredient) => (
-                <li key={ingredient.id} role="option">
+                <li key={`${ingredient.source ?? "register"}:${ingredient.id}`} role="option">
                   <button
                     className={styles.option}
                     disabled={isQuickAdding}
                     onClick={() => {
+                      if (ingredient.source === "catalog") {
+                        submitQuickAdd({
+                          catalogItemId: ingredient.id,
+                          quantity,
+                        });
+                        return;
+                      }
+
                       submitQuickAdd({
                         ingredientId: ingredient.id,
                         quantity,
@@ -544,7 +562,9 @@ export function ManualShoppingQuickAdd({
                     <span className="font-medium">
                       {ingredient.canonicalName}
                     </span>
-                    <span className={styles.optionMeta}>Fra register</span>
+                    <span className={styles.optionMeta}>
+                      {formatSuggestionMeta(ingredient)}
+                    </span>
                   </button>
                 </li>
               ))}
@@ -570,4 +590,16 @@ export function ManualShoppingQuickAdd({
       {!revealOnFocus && recentsBlock ? recentsBlock : null}
     </div>
   );
+}
+
+function formatSuggestionMeta(ingredient: IngredientSearchResult) {
+  if (ingredient.source === "catalog") {
+    const defaultQuantity = ingredient.defaultQuantity?.trim();
+
+    return defaultQuantity
+      ? `Familievare · ${defaultQuantity}`
+      : "Familievare";
+  }
+
+  return "Fra register";
 }

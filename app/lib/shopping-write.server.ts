@@ -18,6 +18,11 @@ import {
   loadShoppingMealPlan,
   projectCreatedManualShoppingItem,
 } from "./shopping.server";
+import {
+  getFamilyShoppingCatalogItemByNormalizedName,
+  getFamilyShoppingCatalogItemForFamily,
+} from "./shopping-catalog.server";
+import { upsertFamilyShoppingCatalogItemFromQuickAdd } from "./shopping-catalog-write.server";
 import { getFamilyStockMatchSet } from "./stock.server";
 import { logCollaborationFailure, logCollaborationWrite } from "./write-observability.server";
 
@@ -38,6 +43,7 @@ export interface ManualShoppingItemFieldErrors {
 }
 
 export interface QuickAddManualShoppingItemInput {
+  catalogItemId?: string;
   ingredientId?: string;
   name?: string;
   quantity?: string;
@@ -123,6 +129,12 @@ export async function createQuickManualShoppingItem({
       status: "NOT_FOUND" as const,
     };
   }
+
+  await upsertFamilyShoppingCatalogItemFromQuickAdd({
+    familyId,
+    ingredientId: input.ingredientId,
+    item,
+  });
 
   return {
     item,
@@ -1891,6 +1903,7 @@ export async function resolveQuickAddManualShoppingItemValues({
   }
 
   const ingredientId = input.ingredientId?.trim();
+  const catalogItemId = input.catalogItemId?.trim();
   const requestedQuantity = input.quantity?.trim();
   const quantity = requestedQuantity || QUICK_ADD_DEFAULT_QUANTITY;
 
@@ -1912,6 +1925,27 @@ export async function resolveQuickAddManualShoppingItemValues({
           categoryId: ingredient.defaultCategoryId ?? otherCategoryId,
           name: ingredient.canonicalName,
           quantity,
+        }),
+      };
+    }
+  }
+
+  if (catalogItemId) {
+    const catalogItem = await getFamilyShoppingCatalogItemForFamily({
+      catalogItemId,
+      familyId,
+    });
+
+    if (catalogItem) {
+      return {
+        ok: true as const,
+        values: buildQuickAddManualShoppingItemValues({
+          categoryId: catalogItem.defaultCategoryId,
+          name: catalogItem.displayName,
+          quantity:
+            requestedQuantity ||
+            catalogItem.defaultQuantity?.trim() ||
+            QUICK_ADD_DEFAULT_QUANTITY,
         }),
       };
     }
@@ -1952,6 +1986,25 @@ export async function resolveQuickAddManualShoppingItemValues({
         categoryId: otherCategoryId,
         name,
         quantity,
+      }),
+    };
+  }
+
+  const catalogItem = await getFamilyShoppingCatalogItemByNormalizedName({
+    familyId,
+    nameNormalized: normalizeIngredientCanonicalName(name),
+  });
+
+  if (catalogItem) {
+    return {
+      ok: true as const,
+      values: buildQuickAddManualShoppingItemValues({
+        categoryId: catalogItem.defaultCategoryId,
+        name: catalogItem.displayName,
+        quantity:
+          requestedQuantity ||
+          catalogItem.defaultQuantity?.trim() ||
+          QUICK_ADD_DEFAULT_QUANTITY,
       }),
     };
   }

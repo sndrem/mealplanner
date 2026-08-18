@@ -447,6 +447,7 @@ describe("family store mode route", () => {
       id: "meal-plan-1",
     });
     vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
+      catalogItemId: "",
       ingredientId: "ingredient-1",
       name: "Melk",
       quantity: "",
@@ -491,6 +492,7 @@ describe("family store mode route", () => {
     expect(createQuickFamilyShoppingItem).toHaveBeenCalledWith({
       familyId: "family-1",
       input: {
+        catalogItemId: "",
         ingredientId: "ingredient-1",
         name: "Melk",
         quantity: "",
@@ -531,6 +533,7 @@ describe("family store mode route", () => {
       id: "meal-plan-1",
     });
     vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
+      catalogItemId: "",
       ingredientId: "",
       name: "",
       quantity: "",

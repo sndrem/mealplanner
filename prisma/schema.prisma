@@ -108,6 +108,7 @@ model Family {
   stockIngredients           FamilyStockIngredient[]
   freezerItems               FamilyFreezerItem[]
   shoppingItems       FamilyShoppingItem[]
+  shoppingCatalogItems FamilyShoppingCatalogItem[]
   shoppingItemCheckEvents ShoppingItemCheckEvent[]
 
   @@index([createdByUserId])
@@ -139,6 +140,7 @@ model IngredientCategory {
   recipeIngredients   RecipeIngredient[]
   manualShoppingItems ManualShoppingItem[]
   familyShoppingItems FamilyShoppingItem[]
+  shoppingCatalogItems FamilyShoppingCatalogItem[]
   storeSections       StoreSection[]
 
   @@index([displayName])
@@ -404,6 +406,24 @@ model FamilyShoppingItem {
   @@index([updatedByUserId])
   @@index([categoryId])
   @@index([preferredStoreId])
+}
+
+model FamilyShoppingCatalogItem {
+  id                String   @id @default(cuid())
+  familyId          String
+  displayName       String
+  nameNormalized    String
+  defaultQuantity   String?
+  defaultCategoryId String
+  lastUsedAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  family            Family             @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  defaultCategory   IngredientCategory @relation(fields: [defaultCategoryId], references: [id], onDelete: Restrict)
+
+  @@unique([familyId, nameNormalized])
+  @@index([familyId])
+  @@index([defaultCategoryId])
 }
 
 model ShoppingItemOverride {

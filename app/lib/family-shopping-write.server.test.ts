@@ -45,6 +45,10 @@ vi.mock("./shopping-write.server", () => ({
   resolveQuickAddManualShoppingItemValues: vi.fn(),
 }));
 
+vi.mock("./shopping-catalog-write.server", () => ({
+  upsertFamilyShoppingCatalogItemFromQuickAdd: vi.fn(),
+}));
+
 import { resolveQuickAddManualShoppingItemValues } from "./shopping-write.server";
 import {
   createFamilyShoppingItem,
@@ -278,6 +282,16 @@ describe("family-shopping-write.server", () => {
       },
       status: "CREATED",
     });
+    const { upsertFamilyShoppingCatalogItemFromQuickAdd } = await import(
+      "./shopping-catalog-write.server"
+    );
+    expect(upsertFamilyShoppingCatalogItemFromQuickAdd).toHaveBeenCalledWith({
+      familyId: "family-1",
+      ingredientId: undefined,
+      item: expect.objectContaining({
+        name: "Batterier",
+      }),
+    });
   });
 
   it("parses quick-add input quantity from form data", () => {
@@ -286,6 +300,7 @@ describe("family-shopping-write.server", () => {
     formData.set("quantity", "4 flasker");
 
     expect(parseQuickAddFamilyShoppingItemInput(formData)).toEqual({
+      catalogItemId: "",
       ingredientId: "",
       name: "Melk",
       quantity: "4 flasker",

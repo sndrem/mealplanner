@@ -11,6 +11,7 @@ import {
   buildRecentManualItemFromProjectedItem,
   projectCreatedFamilyShoppingItem,
 } from "./shopping.server";
+import { upsertFamilyShoppingCatalogItemFromQuickAdd } from "./shopping-catalog-write.server";
 import {
   resolveQuickAddManualShoppingItemValues,
   type QuickAddManualShoppingItemInput,
@@ -47,6 +48,7 @@ export function parseFamilyShoppingItemValues(
 
 export function parseQuickAddFamilyShoppingItemInput(formData: FormData) {
   return {
+    catalogItemId: String(formData.get("catalogItemId") ?? ""),
     ingredientId: String(formData.get("ingredientId") ?? ""),
     name: String(formData.get("name") ?? ""),
     quantity: String(formData.get("quantity") ?? ""),
@@ -95,6 +97,12 @@ export async function createQuickFamilyShoppingItem({
   if (!item) {
     throw new Error("Fant ikke den nylig opprettede familiens handlelinje.");
   }
+
+  await upsertFamilyShoppingCatalogItemFromQuickAdd({
+    familyId,
+    ingredientId: input.ingredientId,
+    item,
+  });
 
   return {
     item,

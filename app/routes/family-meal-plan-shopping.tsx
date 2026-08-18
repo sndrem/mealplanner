@@ -1920,6 +1920,7 @@ function shouldAutoOpenShoppingItemDetails(
 
 function parseQuickAddManualShoppingItemInput(formData: FormData) {
   return {
+    catalogItemId: String(formData.get("catalogItemId") ?? ""),
     ingredientId: String(formData.get("ingredientId") ?? ""),
     name: String(formData.get("name") ?? ""),
     quantity: String(formData.get("quantity") ?? ""),

@@ -611,6 +611,7 @@ describe("family meal plan shopping route", () => {
     expect(createQuickManualShoppingItem).toHaveBeenCalledWith({
       familyId: "family-1",
       input: {
+        catalogItemId: "",
         ingredientId: "",
         name: "Tannkrem",
         quantity: "",

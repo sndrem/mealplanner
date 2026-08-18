@@ -164,6 +164,7 @@ describe("family shopping route", () => {
   it("returns quick-add success data without redirecting", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
+      catalogItemId: "",
       ingredientId: "ingredient-1",
       name: "Melk",
       quantity: "",
@@ -209,6 +210,7 @@ describe("family shopping route", () => {
     expect(createQuickFamilyShoppingItem).toHaveBeenCalledWith({
       familyId: "family-1",
       input: {
+        catalogItemId: "",
         ingredientId: "ingredient-1",
         name: "Melk",
         quantity: "",
@@ -246,6 +248,7 @@ describe("family shopping route", () => {
   it("returns quick-add validation errors without redirecting", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(parseQuickAddFamilyShoppingItemInput).mockReturnValue({
+      catalogItemId: "",
       ingredientId: "",
       name: "",
       quantity: "",
