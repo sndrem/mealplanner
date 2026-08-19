@@ -8,8 +8,8 @@ on:
       - reopened
 
 jobs:
-  validate:
-    name: Validate
+  pr-validation:
+    name: pr-validation
     runs-on: ubuntu-latest
     permissions:
       contents: read
