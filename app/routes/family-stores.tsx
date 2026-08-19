@@ -12,16 +12,28 @@ import { requireUser } from "../lib/auth.server";
 import { FamilyStoreEditorCard } from "../components/family-store-editor-card";
 import { getStoreManagementData } from "../lib/store.server";
 import {
+  createFamilyCategory,
   createFamilyStore,
+  deleteFamilyCategory,
   deleteFamilyStore,
   updateFamilyStore,
   type FamilyStoreFieldErrors,
   type FamilyStoreValues,
 } from "../lib/store-write.server";
 
-type StoresNotice = "store-created" | "store-deleted" | "store-updated";
+type StoresNotice =
+  | "store-created"
+  | "store-deleted"
+  | "store-updated"
+  | "category-created"
+  | "category-deleted";
 
-type StoresIntent = "create-store" | "delete-store" | "update-store";
+type StoresIntent =
+  | "create-store"
+  | "delete-store"
+  | "update-store"
+  | "create-category"
+  | "delete-category";
 
 interface StoresActionData {
   createFieldErrors?: {
@@ -189,6 +201,65 @@ export async function action({
     });
   }
 
+  if (intent === "create-category") {
+    const displayName = String(formData.get("categoryDisplayName") ?? "");
+    const result = await createFamilyCategory({
+      familyId,
+      displayName,
+      userId: user.id,
+    });
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: result.fieldErrors.displayName,
+        intent,
+      } satisfies StoresActionData;
+    }
+
+    return buildStoresRedirect({
+      familyId,
+      notice: "category-created",
+      request,
+    });
+  }
+
+  if (intent === "delete-category") {
+    const categoryId = String(formData.get("categoryId") ?? "").trim();
+
+    if (!categoryId) {
+      return {
+        formError: "Fant ikke kategorien som skulle slettes.",
+        intent,
+      } satisfies StoresActionData;
+    }
+
+    const result = await deleteFamilyCategory({
+      categoryId,
+      familyId,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      return {
+        formError: "Fant ikke kategorien som skulle slettes.",
+        intent,
+      } satisfies StoresActionData;
+    }
+
+    if (result.status === "IN_USE") {
+      return {
+        formError: result.message,
+        intent,
+      } satisfies StoresActionData;
+    }
+
+    return buildStoresRedirect({
+      familyId,
+      notice: "category-deleted",
+      request,
+    });
+  }
+
   return {
     formError: "Ukjent handling.",
   } satisfies StoresActionData;
@@ -351,6 +422,68 @@ export default function FamilyStoresRoute({
           </section>
         ) : null}
 
+        {canManageStores ? (
+          <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-lg font-semibold text-slate-950">
+                Kategorier
+              </h2>
+              <p className="text-sm leading-6 text-slate-600">
+                Standardkategorier brukes av alle familier. Egne kategorier kan
+                legges til som seksjoner i butikkene.
+              </p>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {loaderData.categories.map((category) => (
+                <span
+                  className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700"
+                  key={category.id}
+                >
+                  {category.displayName}
+                  {category.familyId ? (
+                    <Form className="inline" method="post">
+                      <input
+                        name="intent"
+                        type="hidden"
+                        value="delete-category"
+                      />
+                      <input
+                        name="categoryId"
+                        type="hidden"
+                        value={category.id}
+                      />
+                      <button
+                        className="text-slate-400 transition hover:text-rose-600"
+                        title="Slett kategori"
+                        type="submit"
+                      >
+                        &times;
+                      </button>
+                    </Form>
+                  ) : null}
+                </span>
+              ))}
+            </div>
+
+            <Form className="mt-4 flex gap-3" method="post">
+              <input name="intent" type="hidden" value="create-category" />
+              <input
+                className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                name="categoryDisplayName"
+                placeholder="Ny kategori, f.eks. Helsekost"
+                type="text"
+              />
+              <button
+                className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                type="submit"
+              >
+                Legg til
+              </button>
+            </Form>
+          </section>
+        ) : null}
+
         <section className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2">
@@ -368,6 +501,7 @@ export default function FamilyStoresRoute({
                 <div className="mt-6 grid gap-5">
                   {displayFamilyStores.map((store) => (
                     <FamilyStoreEditorCard
+                      availableCategories={loaderData.categories}
                       canManageStores={canManageStores}
                       key={store.id}
                       store={store}
@@ -467,7 +601,9 @@ function getStoresNotice(request: Request): StoresNotice | null {
   if (
     notice === "store-created" ||
     notice === "store-deleted" ||
-    notice === "store-updated"
+    notice === "store-updated" ||
+    notice === "category-created" ||
+    notice === "category-deleted"
   ) {
     return notice;
   }
@@ -493,6 +629,18 @@ function getStoresNoticeContent(notice: StoresNotice) {
         description:
           "Butikken ble slettet. Eventuelle preferanser peker nå ikke lenger til denne butikken.",
         title: "Butikken er slettet",
+      };
+    case "category-created":
+      return {
+        description:
+          "Den nye kategorien er opprettet og kan nå legges til som seksjon i butikkene.",
+        title: "Kategori opprettet",
+      };
+    case "category-deleted":
+      return {
+        description:
+          "Kategorien og tilhørende butikkseksjoner ble slettet.",
+        title: "Kategori slettet",
       };
   }
 }

@@ -124,6 +124,7 @@ model Family {
   shoppingItems       FamilyShoppingItem[]
   shoppingCatalogItems FamilyShoppingCatalogItem[]
   shoppingItemCheckEvents ShoppingItemCheckEvent[]
+  ingredientCategories    IngredientCategory[]
 
   @@index([createdByUserId])
   @@index([name])
@@ -148,8 +149,10 @@ model IngredientCategory {
   id                  String               @id @default(cuid())
   key                 String               @unique
   displayName         String
+  familyId            String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+  family              Family?              @relation(fields: [familyId], references: [id], onDelete: Cascade)
   ingredients         Ingredient[]
   recipeIngredients   RecipeIngredient[]
   manualShoppingItems ManualShoppingItem[]
@@ -158,6 +161,7 @@ model IngredientCategory {
   storeSections       StoreSection[]
 
   @@index([displayName])
+  @@index([familyId])
 }
 
 model Ingredient {

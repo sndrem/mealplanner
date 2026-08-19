@@ -6,6 +6,7 @@ import { requireFamilyMembership } from "./family.server";
 export const storeCategorySelect =
   Prisma.validator<Prisma.IngredientCategorySelect>()({
     displayName: true,
+    familyId: true,
     id: true,
   });
 
@@ -36,10 +37,13 @@ export type ManagedStore = Prisma.StoreGetPayload<{
   select: typeof managedStoreSelect;
 }>;
 
-export async function listIngredientCategories() {
+export async function listIngredientCategories(familyId?: string) {
   return db.ingredientCategory.findMany({
     orderBy: [{ displayName: "asc" }],
     select: storeCategorySelect,
+    where: familyId
+      ? { OR: [{ familyId: null }, { familyId }] }
+      : { familyId: null },
   });
 }
 
@@ -65,7 +69,7 @@ export async function getStoreManagementData({
     userId,
   });
   const [categories, stores] = await Promise.all([
-    listIngredientCategories(),
+    listIngredientCategories(familyId),
     listScopedStores(familyId),
   ]);
 
