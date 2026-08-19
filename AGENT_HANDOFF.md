@@ -2,26 +2,18 @@
 
 ## Current Objective
 
-Allow families to create custom store sections by introducing family-owned ingredient categories (issue #194).
+Auto-merge PRs when all validation checks pass (issue #197).
 
 ## Completed
 
-- Added optional `familyId` to `IngredientCategory` model with migration
-- `listIngredientCategories()` now returns global + family-scoped categories
-- Added `createFamilyCategory` and `deleteFamilyCategory` server functions
-- Relaxed store validation to allow partial section sets (no longer requires all categories)
-- `updateFamilyStore` handles adding new sections and removing old ones in a single transaction
-- Added `create-category` and `delete-category` intents to the stores route
-- Store editor card supports adding sections from a dropdown and removing them per row
-- Category management UI with inline create and delete on the stores page
-- Fixed 6 test files to include `familyId` in category mock objects
+- Added `.github/workflows/auto-merge.yml` triggered by `workflow_run` completion of `Pull Request Validation`
+- Workflow uses `actions/github-script` to squash-merge eligible PRs via the GitHub API
+- Skips draft PRs, fork PRs, closed PRs, and PRs not targeting `main`
 
 ## Files To Read First
 
-- `prisma/schema.prisma` - `IngredientCategory` now has optional `familyId`
-- `app/lib/store-write.server.ts` - New category CRUD and relaxed store validation
-- `app/routes/family-stores.tsx` - New intents and category management UI
-- `app/components/family-store-editor-card.tsx` - Add/remove section controls
+- `.github/workflows/auto-merge.yml` — the new auto-merge workflow
+- `.github/workflows/pr-validation.yml` — the existing validation workflow it depends on
 
 ## Validation
 
@@ -32,10 +24,9 @@ Allow families to create custom store sections by introducing family-owned ingre
 
 ## Open Items
 
-- No tests added for the new `createFamilyCategory` / `deleteFamilyCategory` functions
-- Delete guard only checks `RecipeIngredient` usage; `ManualShoppingItem` and `FamilyShoppingItem` also reference categories
-- The `key` field on family-owned categories uses a generated slug — uniqueness is probabilistic (randomBytes)
+- Repository settings must have "Allow auto-merge" enabled (Settings → General → Pull Requests) — this is a manual admin step
+- Branch protection on `main` should require the `Validate` status check for full safety
 
 ## Next Step
 
-Add unit tests for `createFamilyCategory` and `deleteFamilyCategory` in `store-write.server.test.ts`.
+Enable auto-merge in repository settings and configure branch protection rules.
