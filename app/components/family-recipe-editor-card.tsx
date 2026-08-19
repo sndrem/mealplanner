@@ -57,6 +57,8 @@ export function FamilyRecipeEditorCard({
   updateValues,
 }: FamilyRecipeEditorCardProps) {
   const navigation = useNavigation();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const pendingIntent = navigation.formData?.get("intent");
   const pendingRecipeId = String(navigation.formData?.get("recipeId") ?? "");
   const isUpdatingRecipe =
@@ -230,12 +232,16 @@ export function FamilyRecipeEditorCard({
             familyStores={familyStores}
             fieldErrors={updateFieldErrors}
             focusIngredientIndex={focusIngredientIndex}
+            generateError={generateError}
+            isGenerating={isGenerating}
             onAddIngredient={addIngredient}
             onIngredientDisplayNameFocused={clearIngredientDisplayNameFocus}
             onMoveIngredient={moveIngredient}
             onRemoveIngredient={removeIngredient}
             onUpdateIngredient={updateIngredient}
             setDraftValues={setDraftValues}
+            setGenerateError={setGenerateError}
+            setIsGenerating={setIsGenerating}
           />
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
@@ -296,12 +302,16 @@ function RecipeFields({
   familyStores,
   fieldErrors,
   focusIngredientIndex,
+  generateError,
+  isGenerating,
   onAddIngredient,
   onIngredientDisplayNameFocused,
   onMoveIngredient,
   onRemoveIngredient,
   onUpdateIngredient,
   setDraftValues,
+  setGenerateError,
+  setIsGenerating,
 }: {
   categories: RecipeCategory[];
   draftIngredients: DraftIngredientRow[];
@@ -309,6 +319,8 @@ function RecipeFields({
   familyStores: RecipeStore[];
   fieldErrors?: FamilyRecipeFieldErrors;
   focusIngredientIndex: number | null;
+  generateError: string | null;
+  isGenerating: boolean;
   onAddIngredient: () => void;
   onIngredientDisplayNameFocused: () => void;
   onMoveIngredient: (key: string, direction: "up" | "down") => void;
@@ -318,6 +330,8 @@ function RecipeFields({
     patch: Partial<FamilyRecipeIngredientValues>,
   ) => void;
   setDraftValues: React.Dispatch<React.SetStateAction<FamilyRecipeValues>>;
+  setGenerateError: React.Dispatch<React.SetStateAction<string | null>>;
+  setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   return (
     <>
@@ -354,6 +368,54 @@ function RecipeFields({
           value={draftValues.description}
         />
       </label>
+      <button
+        className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+        disabled={isGenerating || !draftValues.title}
+        onClick={async () => {
+          setIsGenerating(true);
+          setGenerateError(null);
+          try {
+            const res = await fetch("/api/generate-recipe-description", {
+              body: JSON.stringify({
+                ingredients: draftValues.ingredients.map((i) => ({
+                  amount: i.amount,
+                  displayName: i.displayName,
+                  unit: i.unit,
+                })),
+                title: draftValues.title,
+              }),
+              headers: { "Content-Type": "application/json" },
+              method: "POST",
+            });
+            const json = await res.json();
+            if (json.error) {
+              setGenerateError(json.error);
+            } else {
+              setDraftValues((current) => ({
+                ...current,
+                description: json.description,
+              }));
+            }
+          } catch {
+            setGenerateError("Kunne ikke koble til serveren.");
+          } finally {
+            setIsGenerating(false);
+          }
+        }}
+        type="button"
+      >
+        {isGenerating ? (
+          <>
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            Genererer...
+          </>
+        ) : (
+          "Generer beskrivelse med AI"
+        )}
+      </button>
+      {generateError ? (
+        <p className="text-sm text-rose-600">{generateError}</p>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-medium text-slate-700">
