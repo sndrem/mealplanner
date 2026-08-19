@@ -15,7 +15,14 @@ interface FamilyStoreSection {
   id: string;
 }
 
+interface AvailableCategory {
+  displayName: string;
+  familyId: string | null;
+  id: string;
+}
+
 interface FamilyStoreEditorCardProps {
+  availableCategories: AvailableCategory[];
   canManageStores: boolean;
   store: {
     id: string;
@@ -32,6 +39,7 @@ interface DragItem {
 }
 
 export function FamilyStoreEditorCard({
+  availableCategories,
   canManageStores,
   store,
   updateFieldErrors,
@@ -100,6 +108,33 @@ export function FamilyStoreEditorCard({
             }
           : section,
       ),
+    );
+  }
+
+  const unusedCategories = useMemo(
+    () => {
+      const usedIds = new Set(draftSections.map((s) => s.categoryId));
+      return availableCategories.filter((c) => !usedIds.has(c.id));
+    },
+    [availableCategories, draftSections],
+  );
+
+  function addSection(categoryId: string) {
+    const category = availableCategories.find((c) => c.id === categoryId);
+    if (!category) return;
+    setDraftSections((current) => [
+      ...current,
+      {
+        categoryId: category.id,
+        displayName: category.displayName,
+        id: `new:${category.id}`,
+      },
+    ]);
+  }
+
+  function removeSection(categoryId: string) {
+    setDraftSections((current) =>
+      current.filter((s) => s.categoryId !== categoryId),
     );
   }
 
@@ -183,12 +218,36 @@ export function FamilyStoreEditorCard({
                 key={`${store.id}:${section.categoryId}`}
                 onDisplayNameChange={handleSectionDisplayNameChange}
                 onMove={moveSection}
+                onRemove={removeSection}
                 section={section}
                 validationError={
                   updateFieldErrors?.sectionDisplayNames?.[section.categoryId]
                 }
               />
             ))}
+            {unusedCategories.length > 0 ? (
+              <div className="flex items-center gap-3">
+                <select
+                  className="min-w-0 flex-1 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      addSection(e.target.value);
+                      e.target.value = "";
+                    }
+                  }}
+                >
+                  <option disabled value="">
+                    Legg til seksjon...
+                  </option>
+                  {unusedCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
 
           {updateFieldErrors?.sections ? (
@@ -256,6 +315,7 @@ function StoreSectionEditorRow({
   isEditing,
   onDisplayNameChange,
   onMove,
+  onRemove,
   section,
   validationError,
 }: {
@@ -263,6 +323,7 @@ function StoreSectionEditorRow({
   isEditing: boolean;
   onDisplayNameChange: (categoryId: string, displayName: string) => void;
   onMove: (fromIndex: number, toIndex: number) => void;
+  onRemove: (categoryId: string) => void;
   section: FamilyStoreSection;
   validationError?: string;
 }) {
@@ -368,6 +429,15 @@ function StoreSectionEditorRow({
             <p className="mt-2 text-sm text-rose-600">{validationError}</p>
           ) : null}
         </div>
+
+        <button
+          className="rounded-xl px-2 py-1 text-slate-400 transition hover:text-rose-600"
+          onClick={() => onRemove(section.categoryId)}
+          title="Fjern seksjon"
+          type="button"
+        >
+          &times;
+        </button>
       </div>
     </div>
   );

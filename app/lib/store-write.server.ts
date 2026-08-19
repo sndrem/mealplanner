@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { randomBytes } from "crypto";
 
 import { db } from "./db.server";
 import { requireFamilyAdmin, requireFamilyMembership } from "./family.server";
@@ -49,7 +50,7 @@ export async function createFamilyStore({
   }
 
   const [categories, existingStore] = await Promise.all([
-    listIngredientCategories(),
+    listIngredientCategories(familyId),
     db.store.findFirst({
       select: {
         id: true,
@@ -150,31 +151,53 @@ export async function updateFamilyStore({
     };
   }
 
+  const existingCategoryIds = new Set(
+    existingStore.sections.map((s) => s.categoryId),
+  );
+  const submittedCategoryIds = new Set(
+    validation.values.sections.map((s) => s.categoryId),
+  );
+  const removedCategoryIds = existingStore.sections
+    .filter((s) => !submittedCategoryIds.has(s.categoryId))
+    .map((s) => s.id);
+
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.store.update({
-      data: {
-        name: validation.values.name,
-      },
-      where: {
-        id: existingStore.id,
-      },
+      data: { name: validation.values.name },
+      where: { id: existingStore.id },
     });
 
+    if (removedCategoryIds.length > 0) {
+      await tx.storeSection.deleteMany({
+        where: { id: { in: removedCategoryIds } },
+      });
+    }
+
     await Promise.all(
-      validation.values.sections.map((section, index) =>
-        tx.storeSection.update({
+      validation.values.sections.map((section, index) => {
+        if (existingCategoryIds.has(section.categoryId)) {
+          return tx.storeSection.update({
+            data: {
+              displayName: section.displayName,
+              sortOrder: index + 1,
+            },
+            where: {
+              storeId_categoryId: {
+                categoryId: section.categoryId,
+                storeId: existingStore.id,
+              },
+            },
+          });
+        }
+        return tx.storeSection.create({
           data: {
+            categoryId: section.categoryId,
             displayName: section.displayName,
             sortOrder: index + 1,
+            storeId: existingStore.id,
           },
-          where: {
-            storeId_categoryId: {
-              categoryId: section.categoryId,
-              storeId: existingStore.id,
-            },
-          },
-        }),
-      ),
+        });
+      }),
     );
   });
 
@@ -312,17 +335,17 @@ async function validateFamilyStoreValues({
     fieldErrors.name = "Skriv inn et butikknavn.";
   }
 
-  const categories = await listIngredientCategories();
-  const expectedCategoryIds = new Set(categories.map((category) => category.id));
+  const categories = await listIngredientCategories(familyId);
+  const validCategoryIds = new Set(categories.map((category) => category.id));
   const submittedCategoryIds = normalizedValues.sections.map((section) => section.categoryId);
   const uniqueCategoryIds = new Set(submittedCategoryIds);
 
-  if (
-    normalizedValues.sections.length !== categories.length ||
-    uniqueCategoryIds.size !== categories.length ||
-    submittedCategoryIds.some((categoryId) => !expectedCategoryIds.has(categoryId))
-  ) {
-    fieldErrors.sections = "Butikken må ha en seksjon for hver kategori i familien.";
+  if (uniqueCategoryIds.size !== normalizedValues.sections.length) {
+    fieldErrors.sections = "Butikken kan ikke ha flere seksjoner for samme kategori.";
+  } else if (submittedCategoryIds.some((categoryId) => !validCategoryIds.has(categoryId))) {
+    fieldErrors.sections = "Én eller flere seksjoner refererer til en ukjent kategori.";
+  } else if (normalizedValues.sections.length === 0) {
+    fieldErrors.sections = "Butikken må ha minst én seksjon.";
   }
 
   for (const section of normalizedValues.sections) {
@@ -366,6 +389,78 @@ async function validateFamilyStoreValues({
     ok: true as const,
     values: normalizedValues,
   };
+}
+
+export async function createFamilyCategory({
+  familyId,
+  displayName,
+  userId,
+}: {
+  familyId: string;
+  displayName: string;
+  userId: string;
+}) {
+  await requireFamilyAdmin({ familyId, userId });
+
+  const normalized = displayName.trim();
+  if (!normalized) {
+    return {
+      fieldErrors: { displayName: "Skriv inn et kategorinavn." },
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
+  const key = `family-${familyId}-${normalized.toLowerCase().replace(/\s+/g, "-")}-${randomBytes(4).toString("hex")}`;
+
+  const category = await db.ingredientCategory.create({
+    data: {
+      displayName: normalized,
+      familyId,
+      key,
+    },
+    select: { id: true, displayName: true },
+  });
+
+  return { status: "CREATED" as const, category };
+}
+
+export async function deleteFamilyCategory({
+  categoryId,
+  familyId,
+  userId,
+}: {
+  categoryId: string;
+  familyId: string;
+  userId: string;
+}) {
+  await requireFamilyAdmin({ familyId, userId });
+
+  const category = await db.ingredientCategory.findFirst({
+    where: { id: categoryId, familyId },
+    select: { id: true },
+  });
+
+  if (!category) {
+    return { status: "NOT_FOUND" as const };
+  }
+
+  const usageCount = await db.recipeIngredient.count({
+    where: { categoryId },
+  });
+
+  if (usageCount > 0) {
+    return {
+      status: "IN_USE" as const,
+      message: "Kategorien er i bruk av oppskrifter og kan ikke slettes.",
+    };
+  }
+
+  await db.$transaction(async (tx) => {
+    await tx.storeSection.deleteMany({ where: { categoryId } });
+    await tx.ingredientCategory.delete({ where: { id: categoryId } });
+  });
+
+  return { status: "DELETED" as const };
 }
 
 async function resolveScopedStoreId(storeId: string, familyId: string) {

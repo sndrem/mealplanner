@@ -2,35 +2,40 @@
 
 ## Current Objective
 
-Open and merge the pull request for forgot-password (issue #191).
+Allow families to create custom store sections by introducing family-owned ingredient categories (issue #194).
 
 ## Completed
 
-- Login has a “Glemt passord?” link; `/forgot-password` always shows a generic success message.
-- Hashed, one-time, 1-hour `PasswordResetToken` rows are stored in Postgres; unused tokens are throttled to one send per 15 minutes.
-- SMTP mailer (Nodemailer) sends the reset link when `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` are set. Gmail works without a custom domain via an app password. Otherwise the email (including the reset URL) is logged to the server console.
-- A valid `/reset-password?token=` form sets a new scrypt password and signs the user in.
-- Reset password UI no longer imports `PASSWORD_MIN_LENGTH` from `auth.server`, so `npm run build` succeeds.
+- Added optional `familyId` to `IngredientCategory` model with migration
+- `listIngredientCategories()` now returns global + family-scoped categories
+- Added `createFamilyCategory` and `deleteFamilyCategory` server functions
+- Relaxed store validation to allow partial section sets (no longer requires all categories)
+- `updateFamilyStore` handles adding new sections and removing old ones in a single transaction
+- Added `create-category` and `delete-category` intents to the stores route
+- Store editor card supports adding sections from a dropdown and removing them per row
+- Category management UI with inline create and delete on the stores page
+- Fixed 6 test files to include `familyId` in category mock objects
 
 ## Files To Read First
 
-- `app/lib/password-reset.server.ts` - token create/validate/reset
-- `app/lib/mailer.server.ts` - SMTP send with console fallback
-- `app/routes/forgot-password.tsx` - request form
-- `app/routes/reset-password.tsx` - set new password (client must not import `.server` modules)
+- `prisma/schema.prisma` - `IngredientCategory` now has optional `familyId`
+- `app/lib/store-write.server.ts` - New category CRUD and relaxed store validation
+- `app/routes/family-stores.tsx` - New intents and category management UI
+- `app/components/family-store-editor-card.tsx` - Add/remove section controls
 
 ## Validation
 
+- `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run -- app/routes/reset-password.test.ts` — passed (5 tests)
-- `npm run build` — passed
+- `npm run test:run` — 442 tests passed
+- `npm run typecheck` — passed
 
 ## Open Items
 
-- Set Fly secrets for Gmail SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`) after merge so production can send reset mail.
-- Manual check: request a reset, open the email, set a new password, confirm the old password fails.
-- Issue #191 closes when the PR merges (`Closes #191`).
+- No tests added for the new `createFamilyCategory` / `deleteFamilyCategory` functions
+- Delete guard only checks `RecipeIngredient` usage; `ManualShoppingItem` and `FamilyShoppingItem` also reference categories
+- The `key` field on family-owned categories uses a generated slug — uniqueness is probabilistic (randomBytes)
 
 ## Next Step
 
-Review and merge https://github.com/sndrem/mealplanner/pull/192, then set SMTP Fly secrets.
+Add unit tests for `createFamilyCategory` and `deleteFamilyCategory` in `store-write.server.test.ts`.

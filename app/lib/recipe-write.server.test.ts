@@ -81,6 +81,7 @@ describe("recipe-write.server", () => {
     vi.mocked(listIngredientCategories).mockResolvedValue([
       {
         displayName: "Kjott og fisk",
+        familyId: null,
         id: "category-meat",
       },
     ]);

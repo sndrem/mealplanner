@@ -115,6 +115,7 @@ describe("family store mode route", () => {
     vi.mocked(listIngredientCategories).mockResolvedValue([
       {
         displayName: "Meieri",
+        familyId: null,
         id: "category-dairy",
       },
     ]);
@@ -256,6 +257,7 @@ describe("family store mode route", () => {
     expect(result.categories).toEqual([
       {
         displayName: "Meieri",
+        familyId: null,
         id: "category-dairy",
       },
     ]);
