@@ -100,7 +100,10 @@ export async function action({
       } satisfies RecipesActionData;
     }
 
-    const returnTo = getSafeRedirectTo(String(formData.get("returnTo") ?? ""), "");
+    const returnTo = getSafeRedirectTo(
+      String(formData.get("returnTo") ?? ""),
+      "",
+    );
 
     if (returnTo) {
       const url = new URL(returnTo, request.url);
@@ -517,7 +520,7 @@ function RecipeListCard({
             {recipe.title}
           </h3>
           {recipe.description ? (
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-sm leading-6 text-slate-600 whitespace-break-spaces">
               {recipe.description}
             </p>
           ) : null}
