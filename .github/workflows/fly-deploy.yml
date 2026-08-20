@@ -5,6 +5,13 @@ on:
     branches:
       - main
   workflow_dispatch:
+  workflow_run:
+    # Auto-merge uses GITHUB_TOKEN; that merge does not fire push workflows.
+    workflows: ["Auto-merge PR"]
+    types:
+      - completed
+    branches:
+      - main
 
 concurrency:
   group: fly-deploy-mealplanner-xzvzow
@@ -13,6 +20,7 @@ concurrency:
 jobs:
   validate:
     name: Validate
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -53,7 +61,13 @@ jobs:
   deploy:
     name: Deploy
     needs: validate
-    if: github.ref == 'refs/heads/main'
+    if: |
+      always() &&
+      needs.validate.result == 'success' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        github.ref == 'refs/heads/main'
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
