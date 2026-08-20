@@ -2,7 +2,7 @@
 
 ## Current Objective
 
-Ship searchable, tag-filtered meal-plan recipe picker (issue #201), including recipe-bank assign.
+Ship searchable, tag-filtered meal-plan recipe picker (issue #201), including recipe-bank assign. Merge conflicts with main resolved.
 
 ## Completed
 
@@ -11,6 +11,7 @@ Ship searchable, tag-filtered meal-plan recipe picker (issue #201), including re
 - Planning loader returns `recentlyUsedRecipeIds` via existing `getRecentlyUsedRecipeIds`
 - Oppskriftsbank: search, tag filters, and “Legg til på [dag]” (open day or day dropdown)
 - Form still submits `mealSelection:{date}` with `recipe:` / `freezer:` encoding
+- Merged `origin/main` and kept bank scroll height + `whitespace-break-spaces` from main
 
 ## Files To Read First
 
@@ -21,10 +22,10 @@ Ship searchable, tag-filtered meal-plan recipe picker (issue #201), including re
 
 ## Validation
 
-- `npm run prisma:generate` — passed
-- `npm run lint` — passed
-- `npm run test:run` — 449 tests passed
-- `npm run typecheck` — passed
+- `npm run prisma:generate` — passed (pre-merge)
+- `npm run lint` — re-run after conflict resolution
+- `npm run test:run` — re-run after conflict resolution
+- `npm run typecheck` — re-run after conflict resolution
 
 ## Open Items
 
@@ -34,4 +35,4 @@ Ship searchable, tag-filtered meal-plan recipe picker (issue #201), including re
 
 ## Next Step
 
-Review and merge the PR for issue #201; optionally add recipe cover images as a follow-up issue.
+Confirm PR #202 is mergeable after push; merge when checks pass.

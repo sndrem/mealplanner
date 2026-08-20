@@ -21,7 +21,10 @@ import {
   listSharesForMealPlan,
   markReviewCommentAddressed,
 } from "../lib/meal-plan-share.server";
-import { formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS } from "../lib/meal-plan-dates";
+import {
+  formatDateOnly,
+  MEAL_PLAN_MAX_SPAN_DAYS,
+} from "../lib/meal-plan-dates";
 import {
   encodeMealSelection,
   formatShortDateLabel,
@@ -530,18 +533,15 @@ export default function FamilyMealPlanRoute({
   const isPending = navigation.state !== "idle";
   const isApprovingMealPlan =
     isPending && pendingIntent === "approve-meal-plan";
-  const isReopeningMealPlan =
-    isPending && pendingIntent === "reopen-meal-plan";
+  const isReopeningMealPlan = isPending && pendingIntent === "reopen-meal-plan";
   const isAutoFillingEntries =
     isPending && pendingIntent === "auto-fill-meal-plan-entries";
   const isSavingEntries =
     isPending && pendingIntent === "save-meal-plan-entries";
   const isResettingEntries =
     isPending && pendingIntent === "reset-meal-plan-entries";
-  const isUpdatingMetadata =
-    isPending && pendingIntent === "update-meal-plan";
-  const isSharingMealPlan =
-    isPending && pendingIntent === "share-meal-plan";
+  const isUpdatingMetadata = isPending && pendingIntent === "update-meal-plan";
+  const isSharingMealPlan = isPending && pendingIntent === "share-meal-plan";
   const isMarkingCommentAddressed =
     isPending && pendingIntent === "mark-comment-addressed";
   const pendingCommentId = isMarkingCommentAddressed
@@ -1347,15 +1347,15 @@ function MealPlanShareSection({
           .filter((member) => pendingShare.recipientIds.includes(member.id))
           .map((member) => member.displayName)
           .join(", ")
-      : activeOpenShare?.recipients
+      : (activeOpenShare?.recipients
           .map((recipient) => recipient.displayName)
-          .join(", ") ?? "";
+          .join(", ") ?? "");
     const wholeFamily = pendingShare
       ? pendingShare.wholeFamily
       : Boolean(activeOpenShare?.wholeFamily);
     const message = pendingShare
       ? pendingShare.message
-      : activeOpenShare?.message ?? "";
+      : (activeOpenShare?.message ?? "");
 
     return (
       <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -1364,8 +1364,8 @@ function MealPlanShareSection({
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Ukeplanen venter allerede på tilbakemelding fra{" "}
-          {wholeFamily ? "familien" : recipientNames || "mottakerne"}
-          .{message ? ` «${message}»` : ""}
+          {wholeFamily ? "familien" : recipientNames || "mottakerne"}.
+          {message ? ` «${message}»` : ""}
         </p>
         {pendingShare ? (
           <p className="mt-3 text-sm text-slate-500">Sender deling...</p>
@@ -1869,7 +1869,7 @@ function RecipeBankContent({
         ) : null}
       </div>
 
-      <div className="mt-4 grid gap-2 lg:mt-6 lg:gap-3">
+      <div className="mt-4 grid h-[calc(100vh-20rem)] gap-2 overflow-y-auto lg:mt-6 lg:gap-3">
         {filteredRecipes.length === 0 ? (
           <p className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
             Ingen oppskrifter matcher søket.
@@ -1895,7 +1895,7 @@ function RecipeBankContent({
                       <h3 className="text-base font-semibold text-slate-950">
                         {recipe.title}
                       </h3>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                      <p className="mt-2 whitespace-break-spaces text-sm leading-6 text-slate-600">
                         {recipe.description}
                       </p>
                     </div>
@@ -2029,5 +2029,3 @@ function formatWeekdayLabel(date: string) {
 
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
-
-

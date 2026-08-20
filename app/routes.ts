@@ -7,6 +7,7 @@ export default [
   route("register", "routes/register.tsx"),
   route("forgot-password", "routes/forgot-password.tsx"),
   route("reset-password", "routes/reset-password.tsx"),
+  route("api/generate-recipe-description", "routes/api.generate-recipe-description.ts"),
   layout("routes/app-layout.tsx", [
     route("app", "routes/app.tsx"),
     route("families/:familyId", "routes/family.tsx"),
