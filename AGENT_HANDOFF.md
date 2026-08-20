@@ -2,18 +2,16 @@
 
 ## Current Objective
 
-Ship family week overview recipe cover thumbnails (#207) — PR ready on `issue/207-family-week-recipe-images`.
+Ship square week-menu thumbnails on family home (#209) — ready for PR merge.
 
 ## Completed
 
-- `getFamilyWeekDinnerMenu` selects `recipe.imageKey` and exposes `imageUrl` via `getRecipeImageUrl`
-- `WeekDayMenuCard` on family oversikt shows a compact cover when present; omits media when absent
-- Unit/route tests updated for image URL mapping
+- `WeekDayMenuCard` image classes changed from `w-full max-h-28` to `w-28 max-w-full` so covers stay square on mobile and shrink cleanly in `md:grid-cols-7`
+- Branch `issue/209-week-menu-square-images` cut from current `origin/main`
 
 ## Files To Read First
 
-- `app/lib/family-home.server.ts` — week dinner menu + imageUrl
-- `app/routes/family.tsx` — `WeekDayMenuCard` thumbnail UI
+- `app/routes/family.tsx` — `WeekDayMenuCard` thumbnail `className`
 
 ## Validation
 
@@ -24,8 +22,8 @@ Ship family week overview recipe cover thumbnails (#207) — PR ready on `issue/
 
 ## Open Items
 
-- Manual smoke: mixed week (cover / no cover / freezer) on family oversikt after deploy
+- Manual smoke: Oversikt week cards with images at ~375px and at `md+` 7-column grid after deploy
 
 ## Next Step
 
-Review/merge the PR; confirm week cards show covers only when recipes have images.
+Review/merge the PR; confirm mobile thumbs look square, not thin strips.
