@@ -28,6 +28,25 @@ Optional (password reset mail). The app starts without them; forgot-password ema
 | `SMTP_PASS` | SMTP password (Gmail app password) |
 | `EMAIL_FROM` | From header, e.g. `Mealplanner <you@gmail.com>` (defaults to `SMTP_USER`) |
 
+Optional (recipe cover images via Cloudflare R2). The app starts without them; image upload is disabled until all R2 variables are set:
+
+| Variable | Purpose |
+| -------- | ------- |
+| `R2_ACCOUNT_ID` | Cloudflare account ID (S3 endpoint host) |
+| `R2_ACCESS_KEY_ID` | R2 API token access key ID |
+| `R2_SECRET_ACCESS_KEY` | R2 API token secret access key |
+| `R2_BUCKET_NAME` | Bucket name, e.g. `mealplanner-recipe-images` |
+| `R2_PUBLIC_BASE_URL` | Public HTTPS base for objects (custom domain or `*.r2.dev`), no trailing slash |
+
+### Cloudflare R2 setup (one-time)
+
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com), open **Storage & databases → R2** and create a bucket (e.g. `mealplanner-recipe-images`).
+2. Enable public read access:
+   - **Dev / staging:** bucket **Settings → Public Development URL** → Enable, then copy the `*.r2.dev` base URL.
+   - **Production:** bucket **Settings → Custom Domains** → connect e.g. `images.yourdomain.com` (domain must be on Cloudflare).
+3. **Manage R2 API Tokens → Create API token** with **Object Read & Write** scoped to that bucket. Copy Access Key ID and Secret Access Key (secret is shown once). Endpoint is `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
+4. Set the five `R2_*` variables locally in `.env` and on Fly (below).
+
 Set secrets on Fly (never commit production values):
 
 ```bash
@@ -39,6 +58,11 @@ fly secrets set \
   SMTP_USER="you@gmail.com" \
   SMTP_PASS="<gmail-app-password>" \
   EMAIL_FROM="Mealplanner <you@gmail.com>" \
+  R2_ACCOUNT_ID="<cloudflare-account-id>" \
+  R2_ACCESS_KEY_ID="<access-key-id>" \
+  R2_SECRET_ACCESS_KEY="<secret-access-key>" \
+  R2_BUCKET_NAME="mealplanner-recipe-images" \
+  R2_PUBLIC_BASE_URL="https://images.yourdomain.com" \
   -a mealplanner-xzvzow
 ```
 

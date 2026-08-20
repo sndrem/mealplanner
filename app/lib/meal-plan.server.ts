@@ -21,6 +21,7 @@ import {
 import { listActiveFreezerItemsForPlanning } from "./freezer.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import { formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS, getMealPlanMaxSpanMessage } from "./meal-plan-dates";
+import { getRecipeImageUrl } from "./r2.server";
 import {
   logCollaborationFailure,
   logCollaborationWrite,
@@ -57,6 +58,7 @@ const recipeOptionSelect = Prisma.validator<Prisma.RecipeSelect>()({
   defaultServings: true,
   description: true,
   id: true,
+  imageKey: true,
   prepMinutes: true,
   tags: true,
   title: true,
@@ -450,11 +452,29 @@ export async function getMealPlanPlanningData({
       name: membership.family.name,
     },
     freezerItems,
-    mealPlan,
+    mealPlan: {
+      ...mealPlan,
+      entries: mealPlan.entries.map((entry) => ({
+        ...entry,
+        recipe: entry.recipe
+          ? withRecipeOptionImageUrl(entry.recipe)
+          : entry.recipe,
+      })),
+    },
     recentlyUsedRecipeIds: [...recentlyUsedRecipeIdSet],
-    recipes,
+    recipes: recipes.map(withRecipeOptionImageUrl),
     userRole: membership.role,
     visibleDates: getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate),
+  };
+}
+
+function withRecipeOptionImageUrl<T extends { imageKey: string | null }>(
+  recipe: T,
+) {
+  const { imageKey, ...rest } = recipe;
+  return {
+    ...rest,
+    imageUrl: getRecipeImageUrl(imageKey),
   };
 }
 

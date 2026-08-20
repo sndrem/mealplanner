@@ -2,6 +2,7 @@ import { Prisma, RecipeScope } from "@prisma/client";
 
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
+import { getRecipeImageUrl } from "./r2.server";
 import { listIngredientCategories } from "./store.server";
 
 export const recipeIngredientSelect =
@@ -34,6 +35,7 @@ export const managedRecipeSelect = Prisma.validator<Prisma.RecipeSelect>()({
   description: true,
   familyId: true,
   id: true,
+  imageKey: true,
   ingredients: {
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     select: recipeIngredientSelect,
@@ -50,6 +52,7 @@ export const recipeListSummarySelect = Prisma.validator<Prisma.RecipeSelect>()({
   description: true,
   familyId: true,
   id: true,
+  imageKey: true,
   prepMinutes: true,
   scope: true,
   tags: true,
@@ -121,9 +124,9 @@ export async function getRecipeManagementData({
       id: membership.family.id,
       name: membership.family.name,
     },
-    familyRecipes,
+    familyRecipes: familyRecipes.map(withRecipeImageUrl),
     familyStores,
-    globalRecipes,
+    globalRecipes: globalRecipes.map(withRecipeImageUrl),
     userRole: membership.role,
   };
 }
@@ -179,6 +182,7 @@ export async function getFamilyRecipeDetail({
       description: recipe.description,
       familyId: recipe.familyId,
       id: recipe.id,
+      imageUrl: getRecipeImageUrl(recipe.imageKey),
       ingredients: recipe.ingredients,
       prepMinutes: recipe.prepMinutes,
       scope: recipe.scope,
@@ -187,5 +191,13 @@ export async function getFamilyRecipeDetail({
       updatedAt: recipe.updatedAt,
     },
     status: "FOUND" as const,
+  };
+}
+
+function withRecipeImageUrl<T extends { imageKey: string | null }>(recipe: T) {
+  const { imageKey, ...rest } = recipe;
+  return {
+    ...rest,
+    imageUrl: getRecipeImageUrl(imageKey),
   };
 }
