@@ -94,6 +94,7 @@ const mockWeekDays = [
   {
     date: "2026-06-01",
     dateLabel: "1. jun.",
+    imageUrl: null,
     isToday: false,
     mealPlanId: "meal-plan-1",
     mealPlanTitle: "Uke 23",
@@ -104,6 +105,7 @@ const mockWeekDays = [
   {
     date: "2026-06-04",
     dateLabel: "4. jun.",
+    imageUrl: "https://images.example.com/families/family-1/recipes/recipe-1/cover.jpg",
     isToday: true,
     mealPlanId: "meal-plan-1",
     mealPlanTitle: "Uke 23",

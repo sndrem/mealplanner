@@ -12,6 +12,12 @@ vi.mock("./family.server", () => ({
   requireFamilyMembership: vi.fn(),
 }));
 
+vi.mock("./r2.server", () => ({
+  getRecipeImageUrl: vi.fn((imageKey: string | null | undefined) =>
+    imageKey ? `https://images.example.com/${imageKey}` : null,
+  ),
+}));
+
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 import { getFamilyWeekDinnerMenu } from "./family-home.server";
@@ -45,7 +51,10 @@ describe("getFamilyWeekDinnerMenu", () => {
           {
             date: new Date("2026-06-04T00:00:00.000Z"),
             note: null,
-            recipe: { title: "Taco" },
+            recipe: {
+              imageKey: "families/family-1/recipes/recipe-1/cover.jpg",
+              title: "Taco",
+            },
             recipeId: "recipe-1",
             responsibleUser: { displayName: "Kari" },
           },
@@ -54,6 +63,16 @@ describe("getFamilyWeekDinnerMenu", () => {
             note: "Restemat",
             recipe: null,
             recipeId: null,
+            responsibleUser: null,
+          },
+          {
+            date: new Date("2026-06-06T00:00:00.000Z"),
+            note: null,
+            recipe: {
+              imageKey: null,
+              title: "Pasta",
+            },
+            recipeId: "recipe-2",
             responsibleUser: null,
           },
         ],
@@ -71,6 +90,8 @@ describe("getFamilyWeekDinnerMenu", () => {
     expect(result).toHaveLength(7);
     expect(result[3]).toMatchObject({
       date: "2026-06-04",
+      imageUrl:
+        "https://images.example.com/families/family-1/recipes/recipe-1/cover.jpg",
       isToday: true,
       mealPlanId: "meal-plan-1",
       mealPlanTitle: "Uke 23",
@@ -79,15 +100,23 @@ describe("getFamilyWeekDinnerMenu", () => {
     });
     expect(result[4]).toMatchObject({
       date: "2026-06-05",
+      imageUrl: null,
       menuLabel: "Restemat",
       responsibleDisplayName: null,
     });
+    expect(result[5]).toMatchObject({
+      date: "2026-06-06",
+      imageUrl: null,
+      menuLabel: "Pasta",
+    });
     expect(result[0]).toMatchObject({
       date: "2026-06-01",
+      imageUrl: null,
       menuLabel: "Ikke planlagt",
     });
     expect(result[6]).toMatchObject({
       date: "2026-06-07",
+      imageUrl: null,
       menuLabel: "Ikke planlagt",
       mealPlanId: "meal-plan-1",
     });
