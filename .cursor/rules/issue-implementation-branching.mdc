@@ -1,0 +1,53 @@
+---
+description: Start new GitHub issue work from an up-to-date main branch to avoid merge conflicts
+alwaysApply: true
+---
+
+# Issue Implementation Branching
+
+When starting work on a **new** GitHub issue (planning, implementation, or shipping), always branch from the latest `main`.
+
+## When this applies
+
+- User asks to implement, plan, or ship a GitHub issue
+- User references a new issue number you have not started on this branch yet
+- User says "pick up issue #N" and you are not already on `issue/<N>-*`
+
+## Required git setup (before code changes)
+
+Run in order:
+
+```bash
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+git checkout -b issue/<number>-<short-slug>
+```
+
+Branch naming: `issue/<number>-<short-slug>` (lowercase, hyphens, ~40 chars max).
+
+## Do not
+
+- Create a feature branch from a stale local `main`
+- Start new issue work while still on another issue's branch without syncing `main` first
+- Implement on `main` / `master` directly
+
+## Resuming existing issue work
+
+If you are already on the correct `issue/<number>-*` branch for that issue and have in-progress commits, stay on it. Before opening or updating a PR, sync with main:
+
+```bash
+git fetch origin
+git merge origin/main
+# or: git rebase origin/main — only if the user or team prefers rebase
+```
+
+Resolve conflicts locally, re-run validation, then push.
+
+## Uncommitted changes
+
+If `git checkout main` or `git pull` is blocked by local changes, stop and ask the user whether to stash, commit, or discard — do not force checkout.
+
+## Mention in handoff / PR
+
+When creating a branch, note in the plan or handoff that it was cut from current `origin/main` after `git pull --ff-only`.

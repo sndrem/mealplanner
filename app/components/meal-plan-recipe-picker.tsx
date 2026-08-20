@@ -170,7 +170,7 @@ export function MealPlanRecipePicker({
             Søk
             <input
               autoComplete="off"
-              className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="For eksempel tomatsuppe"
               ref={searchInputRef}
