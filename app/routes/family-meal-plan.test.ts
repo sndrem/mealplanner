@@ -113,6 +113,7 @@ describe("family meal plan route", () => {
           title: "Kyllingtaco",
         },
       ],
+      recentlyUsedRecipeIds: [],
       userRole: "ADMIN",
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
@@ -199,6 +200,7 @@ describe("family meal plan route", () => {
           title: "Kyllingtaco",
         },
       ],
+      recentlyUsedRecipeIds: [],
       shareMembers: [{ displayName: "Kari", id: "user-2", role: "MEMBER" }],
       userRole: "ADMIN",
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],

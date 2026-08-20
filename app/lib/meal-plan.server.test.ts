@@ -570,6 +570,7 @@ describe("meal-plan.server", () => {
         title: "Kyllingtaco",
       },
     ]);
+    expect(result.recentlyUsedRecipeIds).toEqual([]);
     expect(dbMock.recipe.findMany).toHaveBeenCalledWith({
       orderBy: [{ title: "asc" }],
       select: {
@@ -584,6 +585,7 @@ describe("meal-plan.server", () => {
         OR: [{ scope: "GLOBAL" }, { familyId: "family-1", scope: "FAMILY" }],
       },
     });
+    expect(dbMock.mealPlanEntry.findMany).toHaveBeenCalled();
   });
 
   it("returns NOT_FOUND when updating a missing meal plan", async () => {

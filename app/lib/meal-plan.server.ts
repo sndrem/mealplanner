@@ -431,11 +431,18 @@ export async function getMealPlanPlanningData({
     .filter((entry) => entry.mealType === PLANNING_MEAL_TYPE)
     .map((entry) => entry.freezerItemId)
     .filter((freezerItemId): freezerItemId is string => Boolean(freezerItemId));
-  const freezerItems = await listActiveFreezerItemsForPlanning({
-    familyId,
-    includeItemIds: assignedFreezerItemIds,
-    userId,
-  });
+  const [freezerItems, recentlyUsedRecipeIdSet] = await Promise.all([
+    listActiveFreezerItemsForPlanning({
+      familyId,
+      includeItemIds: assignedFreezerItemIds,
+      userId,
+    }),
+    getRecentlyUsedRecipeIds({
+      beforeDate: mealPlan.startDate,
+      currentMealPlanId: mealPlan.id,
+      familyId,
+    }),
+  ]);
 
   return {
     family: {
@@ -444,6 +451,7 @@ export async function getMealPlanPlanningData({
     },
     freezerItems,
     mealPlan,
+    recentlyUsedRecipeIds: [...recentlyUsedRecipeIdSet],
     recipes,
     userRole: membership.role,
     visibleDates: getMealPlanDateRange(mealPlan.startDate, mealPlan.endDate),

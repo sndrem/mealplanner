@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import { Form, Link } from "react-router";
 
+import { MealPlanRecipePicker } from "./meal-plan-recipe-picker";
 import { formatDateOnly, isPlanDateToday } from "../lib/meal-plan-dates";
 import {
   encodeMealSelection,
-  formatMealPlanRecipeSelectLabel,
   formatShortDateLabel,
   getDinnerMenuLabel,
   parseMealSelection,
@@ -33,6 +33,7 @@ interface MealPlanRecipeOption {
   defaultServings: number | null;
   description: string | null;
   id: string;
+  imageUrl?: string | null;
   prepMinutes: number | null;
   tags: string[];
   title: string;
@@ -102,6 +103,7 @@ function MealPlanDndProvider({ children }: { children: ReactNode }) {
 }
 
 export function MealPlanWeekEntriesForm({
+  activeAssignDate,
   calendarDownloadTarget,
   calendarExportDateSet,
   entryFormError,
@@ -114,9 +116,14 @@ export function MealPlanWeekEntriesForm({
   isResettingEntries,
   isSavingEntries,
   mealPlanId,
+  mealSelectionsByDate,
+  onActiveAssignDateChange,
+  onMealSelectionsByDateChange,
+  recentlyUsedRecipeIds,
   recipes,
   visibleDates,
 }: {
+  activeAssignDate: string | null;
   calendarDownloadTarget: string;
   calendarExportDateSet: Set<string>;
   entryFormError?: string;
@@ -129,19 +136,42 @@ export function MealPlanWeekEntriesForm({
   isResettingEntries: boolean;
   isSavingEntries: boolean;
   mealPlanId: string;
+  mealSelectionsByDate: Record<string, string>;
+  onActiveAssignDateChange: (date: string | null) => void;
+  onMealSelectionsByDateChange: (
+    value:
+      | Record<string, string>
+      | ((current: Record<string, string>) => Record<string, string>),
+  ) => void;
+  recentlyUsedRecipeIds: string[];
   recipes: MealPlanRecipeOption[];
   visibleDates: string[];
 }) {
   const [isReorderMode, setIsReorderMode] = useState(false);
-  const [mealSelectionsByDate, setMealSelectionsByDate] = useState(() =>
-    buildMealSelectionsByDate(visibleDates, entryValues),
+  const recentlyUsedRecipeIdSet = useMemo(
+    () => new Set(recentlyUsedRecipeIds),
+    [recentlyUsedRecipeIds],
   );
+  const inPlanRecipeIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    for (const selection of Object.values(mealSelectionsByDate)) {
+      const parsed = parseMealSelection(selection);
+
+      if (parsed.recipeId) {
+        ids.add(parsed.recipeId);
+      }
+    }
+
+    return ids;
+  }, [mealSelectionsByDate]);
 
   useEffect(() => {
-    setMealSelectionsByDate(
+    onMealSelectionsByDateChange(
       buildMealSelectionsByDate(visibleDates, entryValues),
     );
     setIsReorderMode(false);
+    onActiveAssignDateChange(null);
     // Only reset when the server snapshot changes. Including entryValues/visibleDates
     // would wipe in-progress drag swaps whenever parent re-renders with new object identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: snapshot-gated reset
@@ -152,11 +182,17 @@ export function MealPlanWeekEntriesForm({
       return;
     }
 
-    setMealSelectionsByDate(
+    onMealSelectionsByDateChange(
       Object.fromEntries(visibleDates.map((date) => [date, ""])),
     );
     setIsReorderMode(false);
-  }, [isResettingEntries, visibleDates]);
+    onActiveAssignDateChange(null);
+  }, [
+    isResettingEntries,
+    onActiveAssignDateChange,
+    onMealSelectionsByDateChange,
+    visibleDates,
+  ]);
 
   useEffect(() => {
     if (isSavingEntries) {
@@ -165,7 +201,7 @@ export function MealPlanWeekEntriesForm({
   }, [isSavingEntries]);
 
   const applySwapOrMove = (fromDate: string, toDate: string) => {
-    setMealSelectionsByDate((current) =>
+    onMealSelectionsByDateChange((current) =>
       swapOrMoveMealSelection(current, fromDate, toDate),
     );
   };
@@ -191,6 +227,7 @@ export function MealPlanWeekEntriesForm({
               </p>
             ) : null}
             <MealPlanDayRow
+              activeAssignDate={activeAssignDate}
               calendarDownloadTarget={calendarDownloadTarget}
               canExportDay={calendarExportDateSet.has(date)}
               date={date}
@@ -198,18 +235,21 @@ export function MealPlanWeekEntriesForm({
               familyId={familyId}
               familyMembers={familyMembers}
               freezerItems={freezerItems}
+              inPlanRecipeIds={inPlanRecipeIds}
               isAutoFillingEntries={isAutoFillingEntries}
               isReorderMode={isReorderMode}
               isToday={isPlanDateToday(date)}
               mealPlanId={mealPlanId}
               mealSelection={mealSelectionsByDate[date] ?? ""}
+              onActiveAssignDateChange={onActiveAssignDateChange}
               onMealSelectionChange={(value) => {
-                setMealSelectionsByDate((current) => ({
+                onMealSelectionsByDateChange((current) => ({
                   ...current,
                   [date]: value,
                 }));
               }}
               onSwapOrMove={applySwapOrMove}
+              recentlyUsedRecipeIds={recentlyUsedRecipeIdSet}
               recipes={recipes}
               visibleDates={visibleDates}
             />
@@ -287,6 +327,7 @@ export function MealPlanWeekEntriesForm({
 }
 
 function MealPlanDayRow({
+  activeAssignDate,
   calendarDownloadTarget,
   canExportDay,
   date,
@@ -294,16 +335,20 @@ function MealPlanDayRow({
   familyId,
   familyMembers,
   freezerItems,
+  inPlanRecipeIds,
   isAutoFillingEntries,
   isReorderMode,
   isToday,
   mealPlanId,
   mealSelection,
+  onActiveAssignDateChange,
   onMealSelectionChange,
   onSwapOrMove,
+  recentlyUsedRecipeIds,
   recipes,
   visibleDates,
 }: {
+  activeAssignDate: string | null;
   calendarDownloadTarget: string;
   canExportDay: boolean;
   date: string;
@@ -311,13 +356,16 @@ function MealPlanDayRow({
   familyId: string;
   familyMembers: MealPlanFamilyMemberOption[];
   freezerItems: MealPlanFreezerOption[];
+  inPlanRecipeIds: ReadonlySet<string>;
   isAutoFillingEntries: boolean;
   isReorderMode: boolean;
   isToday: boolean;
   mealPlanId: string;
   mealSelection: string;
+  onActiveAssignDateChange: (date: string | null) => void;
   onMealSelectionChange: (value: string) => void;
   onSwapOrMove: (fromDate: string, toDate: string) => void;
+  recentlyUsedRecipeIds: ReadonlySet<string>;
   recipes: MealPlanRecipeOption[];
   visibleDates: string[];
 }) {
@@ -341,6 +389,11 @@ function MealPlanDayRow({
     selectedRecipe,
     selectedFreezerItem,
   );
+  const pickerTriggerLabel = mealSelection
+    ? mealLabel === "Ikke planlagt"
+      ? "Velg middag"
+      : mealLabel
+    : "Velg middag";
   const hasMealSelection = Boolean(mealSelection);
   const hasNoteOnly =
     !parsedSelection.recipeId &&
@@ -412,6 +465,19 @@ function MealPlanDayRow({
           ? "group min-w-0 max-w-full overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 ring-1 ring-emerald-100"
           : "group min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
       }
+      onToggle={(event) => {
+        const isOpen = event.currentTarget.open;
+
+        if (isOpen) {
+          onActiveAssignDateChange(date);
+          return;
+        }
+
+        if (activeAssignDate === date) {
+          onActiveAssignDateChange(null);
+        }
+      }}
+      open={activeAssignDate === date}
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 marker:content-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
         <div className="min-w-0 flex-1">
@@ -469,34 +535,18 @@ function MealPlanDayRow({
           </a>
         ) : null}
 
-        <label className="block min-w-0 text-sm font-medium text-slate-700">
-          Middag
-          <select
-            className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-700">Middag</p>
+          <MealPlanRecipePicker
+            freezerItems={selectableFreezerItems}
+            inPlanRecipeIds={inPlanRecipeIds}
             name={`mealSelection:${date}`}
-            onChange={(event) => onMealSelectionChange(event.target.value)}
+            onChange={onMealSelectionChange}
+            recentlyUsedRecipeIds={recentlyUsedRecipeIds}
+            recipes={recipes}
+            triggerLabel={pickerTriggerLabel}
             value={mealSelection}
-          >
-            <option value="">Velg middag</option>
-            {recipes.length > 0 ? (
-              <optgroup label="Oppskrifter">
-                {recipes.map((recipe) => (
-                  <option key={recipe.id} value={`recipe:${recipe.id}`}>
-                    {formatMealPlanRecipeSelectLabel(recipe.title, recipe.tags)}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-            {selectableFreezerItems.length > 0 ? (
-              <optgroup label="Fryser">
-                {selectableFreezerItems.map((item) => (
-                  <option key={item.id} value={`freezer:${item.id}`}>
-                    Fryser · {item.label} ({item.quantity} igjen)
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-          </select>
+          />
           {parsedSelection.recipeId ? (
             <Link
               className="mt-2 inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
@@ -505,7 +555,7 @@ function MealPlanDayRow({
               Se oppskrift
             </Link>
           ) : null}
-        </label>
+        </div>
 
         <label className="block min-w-0 text-sm font-medium text-slate-700">
           Ansvarlig
