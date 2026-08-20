@@ -178,7 +178,7 @@ function WeekDayMenuCard({
       {day.imageUrl ? (
         <img
           alt=""
-          className="mt-3 aspect-square w-full max-h-28 rounded-xl object-cover"
+          className="mt-3 aspect-square w-28 max-w-full rounded-xl object-cover"
           loading="lazy"
           src={day.imageUrl}
         />
