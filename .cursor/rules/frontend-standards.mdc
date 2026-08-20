@@ -17,7 +17,7 @@ alwaysApply: true
 - In Tailwind, prefer readable utility composition and shared patterns over long repeated class strings.
 - Match existing project conventions and keep changes minimal.
 - Client form submissions must update visible data immediately (optimistic). Pending-only `"Lagrer..."` is not enough; follow `.cursor/rules/optimistic-form-updates.mdc`.
-- Use text-base as font size for any text inputs to prevent auto-zoom in iOS devices
+- Text inputs (`input`, `textarea`, searchable fields) must use `text-base` (16px) or larger — never `text-sm`/`text-xs` — to prevent iOS Safari focus zoom. See `.cursor/rules/ios-input-font-size.mdc`.
 
 ```tsx
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {

@@ -22,7 +22,7 @@ Use this skill when:
 Follow this sequence:
 
 1. Resolve the repository context from git@github.com:sndrem/mealplanner.git
-2. Ensure a feature branch (not `main` / `master`).
+2. Sync `main` and ensure a feature branch (not `main` / `master`) — see Step 2.
 3. Fetch the GitHub issue.
 4. Summarize the issue in your own words.
 5. Have a look at the file AGENT_HANDOFF.md for context of the previous issue resolved
@@ -41,30 +41,35 @@ If the repository is not obvious from the current workspace:
 
 If the repository is known, use that repository with the issue number directly.
 
-## Step 2: Ensure Feature Branch
+## Step 2: Sync Main And Ensure Feature Branch
 
-Before fetching the issue or editing code, check the current branch:
+Before fetching the issue or editing code, start from the latest `main` so the branch does not fall behind and cause merge conflicts later.
 
-```bash
-git branch --show-current
-```
-
-If the branch is `main` or `master`, create and check out a feature branch:
+**Starting a new issue** (not already on `issue/<number>-*` for this issue):
 
 ```bash
+git fetch origin
+git checkout main
+git pull --ff-only origin main
 git checkout -b issue/<number>-<short-slug>
 ```
+
+If the issue number is not known yet, run `gh issue view` first for the title, or use `issue/<number>-plan` temporarily.
+
+**Already on the correct `issue/<number>-*` branch** for this issue with in-progress work: stay on it; do not recreate the branch.
+
+**On a different feature branch** or stale `main`: always run the sync + new branch flow above for the new issue.
 
 Branch naming:
 
 - Prefix with `issue/<number>-` (e.g. `issue/42-fly-deploy`)
 - `<short-slug>`: a few lowercase words from the issue title (drop filler words, use hyphens, max ~40 chars)
 
-If you already know the issue number from the user, you may create the branch after a quick `gh issue view` for the title. Otherwise use a temporary slug like `issue/<number>-plan` and rename only if the team prefers that workflow.
-
-If already on a feature branch, stay on it — do not branch from `main` again.
+If `git checkout main` or `git pull` is blocked by uncommitted changes, stop and ask the user — do not force checkout.
 
 Do not commit or push as part of this step unless the user explicitly asks.
+
+See also: `.cursor/rules/issue-implementation-branching.mdc`
 
 ## Step 3: Fetch The Issue
 

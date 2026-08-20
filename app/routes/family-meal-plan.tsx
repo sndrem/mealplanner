@@ -1794,7 +1794,7 @@ function RecipeBankContent({
           Søk oppskrifter
           <input
             autoComplete="off"
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="For eksempel tomatsuppe"
             type="search"

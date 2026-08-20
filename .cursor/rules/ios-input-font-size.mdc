@@ -1,0 +1,29 @@
+---
+description: Keep text inputs at least 16px to prevent iOS Safari auto-zoom on focus
+alwaysApply: true
+---
+
+# iOS Input Font Size
+
+iOS Safari automatically zooms the viewport when focusing a text field whose computed font size is under **16px**.
+
+## Required
+
+- Any focusable text control must use **`text-base` (16px)** or larger in Tailwind: `input`, `textarea`, `select` (when typed into), and `contenteditable`.
+- Prefer `text-base` over `text-sm` / `text-xs` on those controls.
+- Do not use `text-sm` on search boxes, quantity fields, notes, titles, or other typed fields.
+
+## Allowed
+
+- Labels, helper text, buttons, and chips may stay smaller (`text-sm`, `text-xs`).
+- If a field must look smaller visually, keep computed font-size ≥ 16px and scale with CSS `transform` — do not reduce font-size below 16px.
+
+## Examples
+
+```tsx
+// ❌ BAD — text-sm is 14px; iOS zooms on focus
+<input className="... text-sm ..." type="search" />
+
+// ✅ GOOD — text-base is 16px; no auto-zoom
+<input className="... text-base ..." type="search" />
+```

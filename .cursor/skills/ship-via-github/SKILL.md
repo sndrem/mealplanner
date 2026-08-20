@@ -15,6 +15,7 @@ Before starting:
 
 - `gh` is installed and authenticated (`gh auth status`)
 - Current branch is not `main` / `master` (create a feature branch first if needed)
+- For **new** issue work, branch was created from up-to-date `main` (`git fetch origin && git checkout main && git pull --ff-only origin main`) — see `.cursor/rules/issue-implementation-branching.mdc`
 - Default repository: `sndrem/mealplanner` (use current workspace remote if different)
 
 Resolve the related issue number from, in order:
