@@ -2,31 +2,34 @@
 
 ## Current Objective
 
-Ship iOS search-input font-size fix and Cursor rules for ≥16px text inputs (PR #204).
+Ship recipe cover images via Cloudflare R2 (#205) — PR ready on `issue/205-recipe-cover-images`.
 
 ## Completed
 
-- Recipe picker and Oppskriftsbank search inputs use `text-base` (16px) to prevent iOS Safari focus zoom
-- Added `.cursor/rules/ios-input-font-size.mdc` and strengthened `frontend-standards.mdc`
-- Added `.cursor/rules/issue-implementation-branching.mdc` plus plan/ship skill updates to branch from fresh `main`
+- `Recipe.imageKey` + migration; R2 client and optional env
+- Multipart create/update/delete with upload, replace, remove, and object cleanup
+- Images on recipe list, detail, and meal-plan picker/bank
+- Docs for R2 setup in `.env.example` and `docs/deploy-fly.md`
+- Validation passed; commit + PR for #205
 
 ## Files To Read First
 
-- `app/components/meal-plan-recipe-picker.tsx` — picker search input classes
-- `app/routes/family-meal-plan.tsx` — recipe bank search input
-- `.cursor/rules/ios-input-font-size.mdc` — always-on input font rule
+- `app/lib/r2.server.ts` — upload/delete/URL helpers
+- `app/lib/recipe-write.server.ts` — cover write path
+- `docs/deploy-fly.md` — operator R2 checklist
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 449 tests passed
+- `npm run test:run` — 458 tests passed
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- PR #204 CI in progress; auto-merge should deploy via the post-auto-merge Fly hook once merged
+- Set `R2_*` secrets on Fly before production uploads work
+- Manual smoke against a real R2 bucket after merge/deploy
 
 ## Next Step
 
-Wait for PR #204 checks / auto-merge, then smoke-test search focus on iOS Safari.
+Review/merge the PR; configure Fly R2 secrets; smoke-test cover upload in production.

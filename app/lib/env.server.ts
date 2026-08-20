@@ -56,6 +56,11 @@ const envSchema = z.object({
   SMTP_USER: z.string().min(1).optional(),
   SMTP_PASS: z.string().min(1).optional(),
   EMAIL_FROM: z.string().min(1).optional(),
+  R2_ACCOUNT_ID: z.string().min(1).optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_BUCKET_NAME: z.string().min(1).optional(),
+  R2_PUBLIC_BASE_URL: z.string().url().optional(),
 });
 
 const parsedEnv = envSchema.safeParse({
@@ -66,6 +71,11 @@ const parsedEnv = envSchema.safeParse({
   SMTP_USER: optionalTrimmedString(process.env.SMTP_USER),
   SMTP_PASS: optionalTrimmedString(process.env.SMTP_PASS),
   EMAIL_FROM: optionalTrimmedString(process.env.EMAIL_FROM),
+  R2_ACCOUNT_ID: optionalTrimmedString(process.env.R2_ACCOUNT_ID),
+  R2_ACCESS_KEY_ID: optionalTrimmedString(process.env.R2_ACCESS_KEY_ID),
+  R2_SECRET_ACCESS_KEY: optionalTrimmedString(process.env.R2_SECRET_ACCESS_KEY),
+  R2_BUCKET_NAME: optionalTrimmedString(process.env.R2_BUCKET_NAME),
+  R2_PUBLIC_BASE_URL: optionalTrimmedString(process.env.R2_PUBLIC_BASE_URL),
 });
 
 if (!parsedEnv.success) {

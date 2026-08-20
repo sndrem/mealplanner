@@ -21,8 +21,15 @@ vi.mock("../lib/recipe.server", () => {
 vi.mock("../lib/recipe-write.server", () => {
   return {
     deleteFamilyRecipe: vi.fn(),
+    parseFamilyRecipeCoverInput: vi.fn(() => ({ file: null, remove: false })),
     parseFamilyRecipeValues: vi.fn(),
     updateFamilyRecipe: vi.fn(),
+  };
+});
+
+vi.mock("../lib/r2.server", () => {
+  return {
+    isR2Configured: vi.fn(() => false),
   };
 });
 
@@ -30,6 +37,7 @@ import { requireUser } from "../lib/auth.server";
 import { getFamilyRecipeDetail, getRecipeManagementData } from "../lib/recipe.server";
 import {
   deleteFamilyRecipe,
+  parseFamilyRecipeCoverInput,
   parseFamilyRecipeValues,
   updateFamilyRecipe,
 } from "../lib/recipe-write.server";
@@ -77,6 +85,7 @@ describe("family recipe route", () => {
         description: "Test",
         familyId: "family-1",
         id: "recipe-1",
+        imageUrl: null,
         ingredients: [],
         prepMinutes: 20,
         scope: "FAMILY",
@@ -97,6 +106,7 @@ describe("family recipe route", () => {
     });
 
     expect(data.startInEditMode).toBe(true);
+    expect(data.r2Configured).toBe(false);
   });
 
   it("does not start the recipe editor without edit=1", async () => {
@@ -184,6 +194,13 @@ describe("family recipe route", () => {
       request: buildRequest(undefined, formData),
     });
 
+    expect(parseFamilyRecipeCoverInput).toHaveBeenCalled();
+    expect(updateFamilyRecipe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cover: { file: null, remove: false },
+        recipeId: "recipe-1",
+      }),
+    );
     expect(result).toEqual({
       intent: "update-recipe",
       updateFieldErrors: {

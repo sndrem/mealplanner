@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Form, useNavigation } from "react-router";
 
+import { RecipePickerMedia } from "./recipe-picker-card";
+import { compressRecipeCoverImage } from "../lib/recipe-cover-image";
 import type {
   FamilyRecipeFieldErrors,
   FamilyRecipeIngredientValues,
@@ -31,6 +33,7 @@ interface FamilyRecipeEditorCardProps {
     defaultServings: number | null;
     description: string | null;
     id: string;
+    imageUrl?: string | null;
     ingredients: Array<{
       amount: string | null;
       categoryId: string;
@@ -42,6 +45,7 @@ interface FamilyRecipeEditorCardProps {
     tags: string[];
     title: string;
   };
+  r2Configured?: boolean;
   updateFieldErrors?: FamilyRecipeFieldErrors;
   updateValues?: FamilyRecipeValues;
 }
@@ -53,12 +57,18 @@ export function FamilyRecipeEditorCard({
   initialEditing = false,
   mealPlanEntryCount,
   recipe,
+  r2Configured = false,
   updateFieldErrors,
   updateValues,
 }: FamilyRecipeEditorCardProps) {
   const navigation = useNavigation();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+  const [removeCoverImage, setRemoveCoverImage] = useState(false);
+  const [isCompressingCover, setIsCompressingCover] = useState(false);
+  const coverObjectUrlRef = useRef<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
   const pendingIntent = navigation.formData?.get("intent");
   const pendingRecipeId = String(navigation.formData?.get("recipeId") ?? "");
   const isUpdatingRecipe =
@@ -86,6 +96,9 @@ export function FamilyRecipeEditorCard({
   const clearIngredientDisplayNameFocus = useCallback(() => {
     setFocusIngredientIndex(null);
   }, []);
+  const displayedCoverUrl = removeCoverImage
+    ? null
+    : (coverPreviewUrl ?? recipe.imageUrl ?? null);
 
   useEffect(() => {
     if (updateValues) {
@@ -97,6 +110,14 @@ export function FamilyRecipeEditorCard({
     setDraftValues(sourceValues);
   }, [sourceValues]);
 
+  useEffect(() => {
+    return () => {
+      if (coverObjectUrlRef.current) {
+        URL.revokeObjectURL(coverObjectUrlRef.current);
+      }
+    };
+  }, []);
+
   const draftIngredients = useMemo(
     () => toDraftIngredients(draftValues.ingredients),
     [draftValues.ingredients],
@@ -106,6 +127,40 @@ export function FamilyRecipeEditorCard({
     setIgnoreSubmittedValues(true);
     setDraftValues(persistedValues);
     setIsEditing(false);
+    setRemoveCoverImage(false);
+    if (coverObjectUrlRef.current) {
+      URL.revokeObjectURL(coverObjectUrlRef.current);
+      coverObjectUrlRef.current = null;
+    }
+    setCoverPreviewUrl(null);
+  }
+
+  async function handleCoverFileChange(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const selected = event.target.files?.[0];
+    if (!selected) {
+      return;
+    }
+
+    setIsCompressingCover(true);
+    setRemoveCoverImage(false);
+
+    try {
+      const compressed = await compressRecipeCoverImage(selected);
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(compressed);
+      event.target.files = dataTransfer.files;
+
+      if (coverObjectUrlRef.current) {
+        URL.revokeObjectURL(coverObjectUrlRef.current);
+      }
+      const objectUrl = URL.createObjectURL(compressed);
+      coverObjectUrlRef.current = objectUrl;
+      setCoverPreviewUrl(objectUrl);
+    } finally {
+      setIsCompressingCover(false);
+    }
   }
 
   function updateIngredient(
@@ -196,19 +251,26 @@ export function FamilyRecipeEditorCard({
         <p className="text-sm font-medium text-rose-700">Sletter oppskrift...</p>
       ) : null}
       <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${isDeletingRecipe ? "mt-3 opacity-60" : ""}`}>
-        <div>
-          <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
-            Familieoppskrift
-          </span>
-          <h2 className="mt-3 text-2xl font-semibold text-slate-950">
-            {isUpdatingRecipe ? draftValues.title : recipe.title}
-          </h2>
-          {mealPlanEntryCount > 0 ? (
-            <p className="mt-2 text-sm text-slate-600">
-              Brukt i {mealPlanEntryCount}{" "}
-              {mealPlanEntryCount === 1 ? "ukeplan" : "ukeplaner"}
-            </p>
-          ) : null}
+        <div className="flex min-w-0 flex-1 items-start gap-4">
+          <RecipePickerMedia
+            imageUrl={displayedCoverUrl}
+            size="md"
+            title={isUpdatingRecipe ? draftValues.title : recipe.title}
+          />
+          <div className="min-w-0">
+            <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
+              Familieoppskrift
+            </span>
+            <h2 className="mt-3 text-2xl font-semibold text-slate-950">
+              {isUpdatingRecipe ? draftValues.title : recipe.title}
+            </h2>
+            {mealPlanEntryCount > 0 ? (
+              <p className="mt-2 text-sm text-slate-600">
+                Brukt i {mealPlanEntryCount}{" "}
+                {mealPlanEntryCount === 1 ? "ukeplan" : "ukeplaner"}
+              </p>
+            ) : null}
+          </div>
         </div>
         {canManageRecipes && !isEditing ? (
           <button
@@ -222,9 +284,38 @@ export function FamilyRecipeEditorCard({
       </div>
 
       {canManageRecipes && isEditing ? (
-        <Form className="mt-6 space-y-6" method="post">
+        <Form
+          className="mt-6 space-y-6"
+          encType="multipart/form-data"
+          method="post"
+        >
           <input name="intent" type="hidden" value="update-recipe" />
           <input name="recipeId" type="hidden" value={recipe.id} />
+          {removeCoverImage ? (
+            <input name="removeCoverImage" type="hidden" value="1" />
+          ) : null}
+          <RecipeCoverField
+            coverError={updateFieldErrors?.coverImage}
+            coverInputRef={coverInputRef}
+            disabled={!r2Configured || isCompressingCover}
+            hasExistingImage={Boolean(recipe.imageUrl) && !removeCoverImage}
+            isCompressing={isCompressingCover}
+            onFileChange={handleCoverFileChange}
+            onRemove={() => {
+              setRemoveCoverImage(true);
+              if (coverInputRef.current) {
+                coverInputRef.current.value = "";
+              }
+              if (coverObjectUrlRef.current) {
+                URL.revokeObjectURL(coverObjectUrlRef.current);
+                coverObjectUrlRef.current = null;
+              }
+              setCoverPreviewUrl(null);
+            }}
+            previewUrl={displayedCoverUrl}
+            r2Configured={r2Configured}
+            title={draftValues.title}
+          />
           <RecipeFields
             categories={categories}
             draftIngredients={draftIngredients}
@@ -246,7 +337,7 @@ export function FamilyRecipeEditorCard({
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
               className="inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-              disabled={isUpdatingRecipe}
+              disabled={isUpdatingRecipe || isCompressingCover}
               type="submit"
             >
               {isUpdatingRecipe ? "Lagrer..." : "Lagre oppskrift"}
@@ -292,6 +383,82 @@ export function FamilyRecipeEditorCard({
         </div>
       ) : null}
     </article>
+  );
+}
+
+function RecipeCoverField({
+  coverError,
+  coverInputRef,
+  disabled,
+  hasExistingImage,
+  isCompressing,
+  onFileChange,
+  onRemove,
+  previewUrl,
+  r2Configured,
+  title,
+}: {
+  coverError?: string;
+  coverInputRef: React.RefObject<HTMLInputElement | null>;
+  disabled: boolean;
+  hasExistingImage: boolean;
+  isCompressing: boolean;
+  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemove: () => void;
+  previewUrl: string | null;
+  r2Configured: boolean;
+  title: string;
+}) {
+  return (
+    <fieldset className="space-y-3 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+      <legend className="px-1 text-sm font-semibold text-slate-950">
+        Coverbilde
+      </legend>
+      <div className="flex items-start gap-4">
+        <RecipePickerMedia imageUrl={previewUrl} title={title || "Oppskrift"} />
+        <div className="min-w-0 flex-1 space-y-3">
+          {!r2Configured ? (
+            <p className="text-sm leading-6 text-amber-800">
+              Bildeopplasting er ikke konfigurert (Cloudflare R2). Du kan fortsatt
+              lagre oppskriften uten bilde.
+            </p>
+          ) : (
+            <p className="text-sm leading-6 text-slate-600">
+              JPEG, PNG eller WebP. Bildet komprimeres automatisk før opplasting
+              (maks 2 MB).
+            </p>
+          )}
+          <label className="block text-sm font-medium text-slate-700">
+            Velg bilde
+            <input
+              accept="image/jpeg,image/png,image/webp"
+              className="mt-2 block w-full text-base text-slate-700 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+              disabled={disabled}
+              name="coverImage"
+              onChange={onFileChange}
+              ref={coverInputRef}
+              type="file"
+            />
+          </label>
+          {isCompressing ? (
+            <p className="text-sm text-slate-500">Komprimerer bilde...</p>
+          ) : null}
+          {hasExistingImage || previewUrl ? (
+            <button
+              className="text-sm font-medium text-rose-700 transition hover:text-rose-800"
+              disabled={disabled}
+              onClick={onRemove}
+              type="button"
+            >
+              Fjern coverbilde
+            </button>
+          ) : null}
+          {coverError ? (
+            <p className="text-sm text-rose-600">{coverError}</p>
+          ) : null}
+        </div>
+      </div>
+    </fieldset>
   );
 }
 

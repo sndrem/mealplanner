@@ -2,6 +2,14 @@ import { Prisma, RecipeScope } from "@prisma/client";
 
 import { db } from "./db.server";
 import { requireFamilyAdmin } from "./family.server";
+import {
+  deleteR2Object,
+  isR2Configured,
+  RECIPE_COVER_CONTENT_TYPES,
+  RECIPE_COVER_MAX_BYTES,
+  uploadRecipeCover,
+  type RecipeCoverContentType,
+} from "./r2.server";
 import { listIngredientCategories } from "./store.server";
 
 export interface FamilyRecipeIngredientValues {
@@ -19,6 +27,11 @@ export interface FamilyRecipeValues {
   prepMinutes: string;
   tags: string;
   title: string;
+}
+
+export interface FamilyRecipeCoverInput {
+  file: File | null;
+  remove: boolean;
 }
 
 export function parseFamilyRecipeValues(formData: FormData): FamilyRecipeValues {
@@ -48,7 +61,26 @@ export function parseFamilyRecipeValues(formData: FormData): FamilyRecipeValues 
   };
 }
 
+export function parseFamilyRecipeCoverInput(
+  formData: FormData,
+): FamilyRecipeCoverInput {
+  const rawFile = formData.get("coverImage");
+  const file =
+    rawFile instanceof File && rawFile.size > 0 && rawFile.name
+      ? rawFile
+      : null;
+  const removeRaw = String(formData.get("removeCoverImage") ?? "")
+    .trim()
+    .toLowerCase();
+
+  return {
+    file,
+    remove: removeRaw === "1" || removeRaw === "true" || removeRaw === "on",
+  };
+}
+
 export interface FamilyRecipeFieldErrors {
+  coverImage?: string;
   defaultServings?: string;
   ingredients?: string;
   ingredientAmounts?: Record<number, string>;
@@ -90,11 +122,57 @@ function parseTags(tags: string) {
     .filter(Boolean);
 }
 
+function isRecipeCoverContentType(
+  value: string,
+): value is RecipeCoverContentType {
+  return (RECIPE_COVER_CONTENT_TYPES as readonly string[]).includes(value);
+}
+
+export function validateRecipeCoverFile(file: File | null) {
+  if (!file) {
+    return { ok: true as const, file: null };
+  }
+
+  if (!isR2Configured()) {
+    return {
+      error:
+        "Bildeopplasting er ikke konfigurert. Sett Cloudflare R2-miljøvariabler.",
+      ok: false as const,
+    };
+  }
+
+  if (!isRecipeCoverContentType(file.type)) {
+    return {
+      error: "Coverbildet må være JPEG, PNG eller WebP.",
+      ok: false as const,
+    };
+  }
+
+  if (file.size > RECIPE_COVER_MAX_BYTES) {
+    return {
+      error: "Coverbildet kan være maks 2 MB.",
+      ok: false as const,
+    };
+  }
+
+  return {
+    ok: true as const,
+    file,
+  };
+}
+
+async function readFileBytes(file: File) {
+  const buffer = await file.arrayBuffer();
+  return new Uint8Array(buffer);
+}
+
 export async function createFamilyRecipe({
+  cover,
   familyId,
   userId,
   values,
 }: {
+  cover?: FamilyRecipeCoverInput;
   familyId: string;
   userId: string;
   values: FamilyRecipeValues;
@@ -108,10 +186,14 @@ export async function createFamilyRecipe({
     familyId,
     values,
   });
+  const coverValidation = validateRecipeCoverFile(cover?.file ?? null);
 
-  if (!validation.ok) {
+  if (!validation.ok || !coverValidation.ok) {
     return {
-      fieldErrors: validation.fieldErrors,
+      fieldErrors: {
+        ...(validation.ok ? {} : validation.fieldErrors),
+        ...(!coverValidation.ok ? { coverImage: coverValidation.error } : {}),
+      },
       status: "VALIDATION_ERROR" as const,
       values: validation.values,
     };
@@ -144,6 +226,36 @@ export async function createFamilyRecipe({
     },
   });
 
+  if (coverValidation.file) {
+    try {
+      const bytes = await readFileBytes(coverValidation.file);
+      const imageKey = await uploadRecipeCover({
+        bytes,
+        contentType: coverValidation.file.type as RecipeCoverContentType,
+        familyId,
+        recipeId: recipe.id,
+      });
+      await db.recipe.update({
+        data: { imageKey },
+        where: { id: recipe.id },
+      });
+    } catch (error) {
+      console.error("Failed to upload recipe cover after create", {
+        error,
+        recipeId: recipe.id,
+      });
+      return {
+        fieldErrors: {
+          coverImage:
+            "Oppskriften ble opprettet, men coverbildet kunne ikke lastes opp. Prøv igjen fra redigering.",
+        },
+        recipe,
+        status: "VALIDATION_ERROR" as const,
+        values: validation.values,
+      };
+    }
+  }
+
   return {
     recipe,
     status: "CREATED" as const,
@@ -151,11 +263,13 @@ export async function createFamilyRecipe({
 }
 
 export async function updateFamilyRecipe({
+  cover,
   familyId,
   recipeId,
   userId,
   values,
 }: {
+  cover?: FamilyRecipeCoverInput;
   familyId: string;
   recipeId: string;
   userId: string;
@@ -169,6 +283,7 @@ export async function updateFamilyRecipe({
   const existingRecipe = await db.recipe.findFirst({
     select: {
       id: true,
+      imageKey: true,
     },
     where: {
       familyId,
@@ -187,47 +302,98 @@ export async function updateFamilyRecipe({
     familyId,
     values,
   });
+  const coverValidation = validateRecipeCoverFile(cover?.file ?? null);
 
-  if (!validation.ok) {
+  if (!validation.ok || !coverValidation.ok) {
     return {
-      fieldErrors: validation.fieldErrors,
+      fieldErrors: {
+        ...(validation.ok ? {} : validation.fieldErrors),
+        ...(!coverValidation.ok ? { coverImage: coverValidation.error } : {}),
+      },
       status: "VALIDATION_ERROR" as const,
       values: validation.values,
     };
   }
 
-  await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    await tx.recipe.update({
-      data: {
-        defaultServings: validation.parsed.defaultServings,
-        description: validation.parsed.description,
-        prepMinutes: validation.parsed.prepMinutes,
-        tags: validation.parsed.tags,
-        title: validation.parsed.title,
-      },
-      where: {
-        id: existingRecipe.id,
-      },
-    });
+  let nextImageKey: string | null | undefined = undefined;
+  let uploadedKey: string | null = null;
+  const previousImageKey = existingRecipe.imageKey;
 
-    await tx.recipeIngredient.deleteMany({
-      where: {
+  if (cover?.remove && !coverValidation.file) {
+    nextImageKey = null;
+  } else if (coverValidation.file) {
+    try {
+      const bytes = await readFileBytes(coverValidation.file);
+      uploadedKey = await uploadRecipeCover({
+        bytes,
+        contentType: coverValidation.file.type as RecipeCoverContentType,
+        familyId,
         recipeId: existingRecipe.id,
-      },
-    });
+      });
+      nextImageKey = uploadedKey;
+    } catch (error) {
+      console.error("Failed to upload recipe cover on update", {
+        error,
+        recipeId: existingRecipe.id,
+      });
+      return {
+        fieldErrors: {
+          coverImage: "Coverbildet kunne ikke lastes opp. Prøv igjen.",
+        },
+        status: "VALIDATION_ERROR" as const,
+        values: validation.values,
+      };
+    }
+  }
 
-    await tx.recipeIngredient.createMany({
-      data: validation.parsed.ingredients.map((ingredient, index) => ({
-        amount: ingredient.amount,
-        categoryId: ingredient.categoryId,
-        displayName: ingredient.displayName,
-        preferredStoreId: ingredient.preferredStoreId,
-        recipeId: existingRecipe.id,
-        sortOrder: index + 1,
-        unit: ingredient.unit,
-      })),
+  try {
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.recipe.update({
+        data: {
+          defaultServings: validation.parsed.defaultServings,
+          description: validation.parsed.description,
+          ...(nextImageKey !== undefined ? { imageKey: nextImageKey } : {}),
+          prepMinutes: validation.parsed.prepMinutes,
+          tags: validation.parsed.tags,
+          title: validation.parsed.title,
+        },
+        where: {
+          id: existingRecipe.id,
+        },
+      });
+
+      await tx.recipeIngredient.deleteMany({
+        where: {
+          recipeId: existingRecipe.id,
+        },
+      });
+
+      await tx.recipeIngredient.createMany({
+        data: validation.parsed.ingredients.map((ingredient, index) => ({
+          amount: ingredient.amount,
+          categoryId: ingredient.categoryId,
+          displayName: ingredient.displayName,
+          preferredStoreId: ingredient.preferredStoreId,
+          recipeId: existingRecipe.id,
+          sortOrder: index + 1,
+          unit: ingredient.unit,
+        })),
+      });
     });
-  });
+  } catch (error) {
+    if (uploadedKey) {
+      await deleteR2Object(uploadedKey);
+    }
+    throw error;
+  }
+
+  if (
+    nextImageKey !== undefined &&
+    previousImageKey &&
+    previousImageKey !== nextImageKey
+  ) {
+    await deleteR2Object(previousImageKey);
+  }
 
   return {
     status: "UPDATED" as const,
@@ -251,6 +417,7 @@ export async function deleteFamilyRecipe({
   const recipe = await db.recipe.findFirst({
     select: {
       id: true,
+      imageKey: true,
       title: true,
       _count: {
         select: {
@@ -284,6 +451,8 @@ export async function deleteFamilyRecipe({
       id: recipe.id,
     },
   });
+
+  await deleteR2Object(recipe.imageKey);
 
   return {
     status: "DELETED" as const,

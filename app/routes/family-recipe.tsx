@@ -5,11 +5,13 @@ import { requireUser } from "../lib/auth.server";
 import { getFamilyRecipeDetail, getRecipeManagementData } from "../lib/recipe.server";
 import {
   deleteFamilyRecipe,
+  parseFamilyRecipeCoverInput,
   parseFamilyRecipeValues,
   updateFamilyRecipe,
   type FamilyRecipeFieldErrors,
   type FamilyRecipeValues,
 } from "../lib/recipe-write.server";
+import { isR2Configured } from "../lib/r2.server";
 
 type RecipeDetailNotice = "recipe-created" | "recipe-deleted" | "recipe-updated";
 
@@ -76,6 +78,7 @@ export async function loader({
     mealPlanEntryCount: detail.mealPlanEntryCount,
     notice: getRecipeDetailNotice(request),
     recipe: detail.recipe,
+    r2Configured: isR2Configured(),
     startInEditMode: shouldStartInEditMode(request),
     userRole: managementData.userRole,
   };
@@ -100,6 +103,7 @@ export async function action({
   if (intent === "update-recipe") {
     const submittedRecipeId = String(formData.get("recipeId") ?? "").trim();
     const values = parseFamilyRecipeValues(formData);
+    const cover = parseFamilyRecipeCoverInput(formData);
 
     if (!submittedRecipeId || submittedRecipeId !== recipeId) {
       return {
@@ -109,6 +113,7 @@ export async function action({
     }
 
     const result = await updateFamilyRecipe({
+      cover,
       familyId,
       recipeId,
       userId: user.id,
@@ -248,6 +253,7 @@ export default function FamilyRecipeRoute({
           initialEditing={loaderData.startInEditMode}
           mealPlanEntryCount={loaderData.mealPlanEntryCount}
           recipe={loaderData.recipe}
+          r2Configured={loaderData.r2Configured}
           updateFieldErrors={
             actionData?.intent === "update-recipe"
               ? actionData.updateFieldErrors

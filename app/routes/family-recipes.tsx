@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Form, Link, isRouteErrorResponse, useNavigation } from "react-router";
 
+import { RecipePickerMedia } from "../components/recipe-picker-card";
 import { requireUser, getSafeRedirectTo } from "../lib/auth.server";
+import { compressRecipeCoverImage } from "../lib/recipe-cover-image";
 import {
   filterRecipeList,
   hasActiveRecipeSearch,
@@ -9,10 +11,12 @@ import {
 import { getRecipeManagementData } from "../lib/recipe.server";
 import {
   createFamilyRecipe,
+  parseFamilyRecipeCoverInput,
   parseFamilyRecipeValues,
   type FamilyRecipeFieldErrors,
   type FamilyRecipeValues,
 } from "../lib/recipe-write.server";
+import { isR2Configured } from "../lib/r2.server";
 
 type RecipesNotice = "recipe-created" | "recipe-deleted";
 
@@ -66,6 +70,7 @@ export async function loader({
       new URL(request.url).searchParams.get("returnTo"),
       "",
     ),
+    r2Configured: isR2Configured(),
     userRole: result.userRole,
   };
 }
@@ -86,13 +91,24 @@ export async function action({
 
   if (intent === "create-recipe") {
     const values = parseFamilyRecipeValues(formData);
+    const cover = parseFamilyRecipeCoverInput(formData);
     const result = await createFamilyRecipe({
+      cover,
       familyId,
       userId: user.id,
       values,
     });
 
     if (result.status === "VALIDATION_ERROR") {
+      if ("recipe" in result && result.recipe) {
+        const url = new URL(
+          `/families/${familyId}/recipes/${result.recipe.id}?edit=1`,
+          request.url,
+        );
+        url.searchParams.set("notice", "recipe-created");
+        return Response.redirect(url, 302);
+      }
+
       return {
         createFieldErrors: result.fieldErrors,
         createValues: result.values,
@@ -132,6 +148,12 @@ export default function FamilyRecipesRoute({
 }: FamilyRecipesRouteProps) {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [createCoverPreviewUrl, setCreateCoverPreviewUrl] = useState<
+    string | null
+  >(null);
+  const [isCompressingCreateCover, setIsCompressingCreateCover] =
+    useState(false);
+  const createCoverObjectUrlRef = useRef<string | null>(null);
   const noticeContent = loaderData.notice
     ? getRecipesNoticeContent(loaderData.notice)
     : null;
@@ -266,7 +288,11 @@ export default function FamilyRecipesRoute({
               </p>
             </div>
 
-            <Form className="mt-6 space-y-4" method="post">
+            <Form
+              className="mt-6 space-y-4"
+              encType="multipart/form-data"
+              method="post"
+            >
               <input name="intent" type="hidden" value="create-recipe" />
               <input name="ingredientIndex" type="hidden" value="0" />
               {loaderData.returnTo ? (
@@ -279,7 +305,7 @@ export default function FamilyRecipesRoute({
               <label className="block text-sm font-medium text-slate-700">
                 Oppskriftstittel
                 <input
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
                   defaultValue={createValues.title}
                   name="title"
                   placeholder="For eksempel Kyllingwok"
@@ -291,6 +317,69 @@ export default function FamilyRecipesRoute({
                   {actionData.createFieldErrors.title}
                 </p>
               ) : null}
+              <fieldset className="space-y-3 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                <legend className="px-1 text-sm font-semibold text-slate-950">
+                  Coverbilde (valgfritt)
+                </legend>
+                {!loaderData.r2Configured ? (
+                  <p className="text-sm leading-6 text-amber-800">
+                    Bildeopplasting er ikke konfigurert (Cloudflare R2).
+                  </p>
+                ) : (
+                  <p className="text-sm leading-6 text-slate-600">
+                    JPEG, PNG eller WebP. Bildet komprimeres automatisk (maks 2
+                    MB).
+                  </p>
+                )}
+                <div className="flex items-start gap-4">
+                  <RecipePickerMedia
+                    imageUrl={createCoverPreviewUrl}
+                    title={createValues.title || "Ny oppskrift"}
+                  />
+                  <label className="block min-w-0 flex-1 text-sm font-medium text-slate-700">
+                    Velg bilde
+                    <input
+                      accept="image/jpeg,image/png,image/webp"
+                      className="mt-2 block w-full text-base text-slate-700 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+                      disabled={
+                        !loaderData.r2Configured || isCompressingCreateCover
+                      }
+                      name="coverImage"
+                      onChange={async (event) => {
+                        const selected = event.target.files?.[0];
+                        if (!selected) {
+                          return;
+                        }
+                        setIsCompressingCreateCover(true);
+                        try {
+                          const compressed =
+                            await compressRecipeCoverImage(selected);
+                          const dataTransfer = new DataTransfer();
+                          dataTransfer.items.add(compressed);
+                          event.target.files = dataTransfer.files;
+                          if (createCoverObjectUrlRef.current) {
+                            URL.revokeObjectURL(createCoverObjectUrlRef.current);
+                          }
+                          const objectUrl = URL.createObjectURL(compressed);
+                          createCoverObjectUrlRef.current = objectUrl;
+                          setCreateCoverPreviewUrl(objectUrl);
+                        } finally {
+                          setIsCompressingCreateCover(false);
+                        }
+                      }}
+                      type="file"
+                    />
+                  </label>
+                </div>
+                {isCompressingCreateCover ? (
+                  <p className="text-sm text-slate-500">Komprimerer bilde...</p>
+                ) : null}
+                {actionData?.createFieldErrors?.coverImage ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.createFieldErrors.coverImage}
+                  </p>
+                ) : null}
+              </fieldset>
               <fieldset className="space-y-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
                 <legend className="px-1 text-sm font-semibold text-slate-950">
                   Første ingrediens
@@ -303,7 +392,7 @@ export default function FamilyRecipesRoute({
                 <label className="block text-sm font-medium text-slate-700">
                   Ingrediensnavn
                   <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
                     defaultValue={
                       createValues.ingredients[0]?.displayName ?? ""
                     }
@@ -320,7 +409,7 @@ export default function FamilyRecipesRoute({
                 <label className="block text-sm font-medium text-slate-700">
                   Handlekategori for ingrediensen
                   <select
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
                     defaultValue={createValues.ingredients[0]?.categoryId ?? ""}
                     name="ingredientCategoryId:0"
                   >
@@ -346,8 +435,9 @@ export default function FamilyRecipesRoute({
               <button
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                 disabled={
-                  navigation.state !== "idle" &&
-                  pendingIntent === "create-recipe"
+                  (navigation.state !== "idle" &&
+                    pendingIntent === "create-recipe") ||
+                  isCompressingCreateCover
                 }
                 type="submit"
               >
@@ -482,6 +572,7 @@ function RecipeListCard({
     defaultServings: number | null;
     description: string | null;
     id: string;
+    imageUrl?: string | null;
     prepMinutes: number | null;
     tags: string[];
     title: string;
@@ -503,27 +594,34 @@ function RecipeListCard({
       }
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-medium ${scopeClasses}`}
-            >
-              {scopeLabel}
-            </span>
-            {readOnly ? (
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                Kun lesing
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <RecipePickerMedia
+            imageUrl={recipe.imageUrl}
+            size="md"
+            title={recipe.title}
+          />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-medium ${scopeClasses}`}
+              >
+                {scopeLabel}
               </span>
+              {readOnly ? (
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                  Kun lesing
+                </span>
+              ) : null}
+            </div>
+            <h3 className="mt-3 text-base font-semibold text-slate-950">
+              {recipe.title}
+            </h3>
+            {recipe.description ? (
+              <p className="mt-2 text-sm leading-6 text-slate-600 whitespace-break-spaces">
+                {recipe.description}
+              </p>
             ) : null}
           </div>
-          <h3 className="mt-3 text-base font-semibold text-slate-950">
-            {recipe.title}
-          </h3>
-          {recipe.description ? (
-            <p className="mt-2 text-sm leading-6 text-slate-600 whitespace-break-spaces">
-              {recipe.description}
-            </p>
-          ) : null}
         </div>
         {!readOnly && to ? (
           <div className="flex shrink-0 flex-wrap items-center gap-2">

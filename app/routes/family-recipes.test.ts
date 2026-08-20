@@ -20,13 +20,24 @@ vi.mock("../lib/recipe.server", () => {
 vi.mock("../lib/recipe-write.server", () => {
   return {
     createFamilyRecipe: vi.fn(),
+    parseFamilyRecipeCoverInput: vi.fn(() => ({ file: null, remove: false })),
     parseFamilyRecipeValues: vi.fn(),
+  };
+});
+
+vi.mock("../lib/r2.server", () => {
+  return {
+    isR2Configured: vi.fn(() => false),
   };
 });
 
 import { requireUser } from "../lib/auth.server";
 import { getRecipeManagementData } from "../lib/recipe.server";
-import { createFamilyRecipe, parseFamilyRecipeValues } from "../lib/recipe-write.server";
+import {
+  createFamilyRecipe,
+  parseFamilyRecipeCoverInput,
+  parseFamilyRecipeValues,
+} from "../lib/recipe-write.server";
 import { action, loader } from "./family-recipes";
 
 const mockUser = {
@@ -60,6 +71,7 @@ describe("family recipes route", () => {
           description: "Familie",
           familyId: "family-1",
           id: "recipe-family",
+          imageUrl: null,
           prepMinutes: 20,
           scope: "FAMILY",
           tags: ["middag"],
@@ -75,6 +87,7 @@ describe("family recipes route", () => {
           description: "Global",
           familyId: null,
           id: "recipe-global",
+          imageUrl: null,
           prepMinutes: 30,
           scope: "GLOBAL",
           tags: [],
@@ -96,6 +109,53 @@ describe("family recipes route", () => {
     });
     expect(result.familyRecipes).toHaveLength(1);
     expect(result.globalRecipes).toHaveLength(1);
+    expect(result.r2Configured).toBe(false);
+  });
+
+  it("passes cover input when creating a recipe", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseFamilyRecipeValues).mockReturnValue({
+      defaultServings: "",
+      description: "",
+      ingredients: [
+        {
+          amount: "",
+          categoryId: "category-dairy",
+          displayName: "Melk",
+          preferredStoreId: "",
+          unit: "",
+        },
+      ],
+      prepMinutes: "",
+      tags: "",
+      title: "Familiepai",
+    });
+    vi.mocked(parseFamilyRecipeCoverInput).mockReturnValue({
+      file: null,
+      remove: false,
+    });
+    vi.mocked(createFamilyRecipe).mockResolvedValue({
+      recipe: {
+        id: "recipe-new",
+        title: "Familiepai",
+      },
+      status: "CREATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "create-recipe");
+
+    await action({
+      params: { familyId: "family-1" },
+      request: buildRequest("http://localhost/families/family-1/recipes", formData),
+    });
+
+    expect(createFamilyRecipe).toHaveBeenCalledWith({
+      cover: { file: null, remove: false },
+      familyId: "family-1",
+      userId: "user-1",
+      values: expect.objectContaining({ title: "Familiepai" }),
+    });
   });
 
   it("redirects to the recipe detail page after create", async () => {
