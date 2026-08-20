@@ -110,6 +110,7 @@ Routine production releases use [`.github/workflows/fly-deploy.yml`](../.github/
 | Trigger | When it runs |
 | ------- | ------------- |
 | Push to `main` | Automatically after validation passes |
+| `workflow_run` (`Auto-merge PR` completed) | After auto-merge squash-merges a PR — needed because GITHUB_TOKEN merges do not fire `push` |
 | `workflow_dispatch` | Manually from **Actions → Deploy to Fly.io → Run workflow** (must run on the `main` branch) |
 
 Pull request branches do not trigger this workflow.
