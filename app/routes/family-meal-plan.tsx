@@ -5,8 +5,10 @@ import {
   useNavigation,
   type MetaFunction,
 } from "react-router";
+import { useEffect, useMemo, useState } from "react";
 
 import { MealPlanWeekEntriesForm } from "../components/meal-plan-week-entries-form";
+import { RecipePickerMedia } from "../components/recipe-picker-card";
 import { requireUser } from "../lib/auth.server";
 import { listFamilyMembers } from "../lib/family.server";
 import {
@@ -23,7 +25,16 @@ import {
   formatDateOnly,
   MEAL_PLAN_MAX_SPAN_DAYS,
 } from "../lib/meal-plan-dates";
-import { parseMealSelection } from "../lib/meal-plan-display";
+import {
+  encodeMealSelection,
+  formatShortDateLabel,
+  parseMealSelection,
+} from "../lib/meal-plan-display";
+import {
+  deriveRecipeTagOptions,
+  filterRecipePickerList,
+  hasActiveRecipeSearch,
+} from "../lib/recipe-list-search";
 import {
   approveMealPlan,
   autoFillMealPlanEntries,
@@ -214,6 +225,7 @@ export async function loader({
     notice: getMealPlanNotice(request),
     noticeMeta: getMealPlanNoticeMeta(request),
     recipes: result.recipes,
+    recentlyUsedRecipeIds: result.recentlyUsedRecipeIds,
     activeOpenShare: shareData?.openShares[0] ?? null,
     shareMembers: shareData?.members ?? [],
     userRole: result.userRole,
@@ -616,13 +628,33 @@ export default function FamilyMealPlanRoute({
         }),
       )
     : entryValues;
-  const selectedRecipeIds = new Set(
-    Object.values(displayEntryValues)
-      .map((entry) => entry.recipeId)
-      .filter(Boolean),
+  const [mealSelectionsByDate, setMealSelectionsByDate] = useState(() =>
+    buildMealSelectionsByDate(loaderData.visibleDates, loaderData.entriesByDate),
   );
+  const [activeAssignDate, setActiveAssignDate] = useState<string | null>(null);
+  const selectedRecipeIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    for (const selection of Object.values(mealSelectionsByDate)) {
+      const parsed = parseMealSelection(selection);
+
+      if (parsed.recipeId) {
+        ids.add(parsed.recipeId);
+      }
+    }
+
+    return ids;
+  }, [mealSelectionsByDate]);
   const calendarExportDateSet = new Set(loaderData.calendarExportDates);
   const hasMealPlanCalendarExport = calendarExportDateSet.size > 0;
+
+  const assignRecipeToDate = (recipeId: string, date: string) => {
+    setMealSelectionsByDate((current) => ({
+      ...current,
+      [date]: `recipe:${recipeId}`,
+    }));
+    setActiveAssignDate(date);
+  };
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-slate-100 px-4 py-6 text-slate-900 md:py-12">
@@ -818,6 +850,7 @@ export default function FamilyMealPlanRoute({
             </details>
 
             <MealPlanWeekEntriesForm
+              activeAssignDate={activeAssignDate}
               calendarDownloadTarget={CALENDAR_DOWNLOAD_TARGET}
               calendarExportDateSet={calendarExportDateSet}
               entryFormError={
@@ -836,6 +869,10 @@ export default function FamilyMealPlanRoute({
               isResettingEntries={isResettingEntries}
               isSavingEntries={isSavingEntries}
               mealPlanId={loaderData.mealPlan.id}
+              mealSelectionsByDate={mealSelectionsByDate}
+              onActiveAssignDateChange={setActiveAssignDate}
+              onMealSelectionsByDateChange={setMealSelectionsByDate}
+              recentlyUsedRecipeIds={loaderData.recentlyUsedRecipeIds}
               recipes={loaderData.recipes}
               visibleDates={loaderData.visibleDates}
             />
@@ -910,9 +947,12 @@ export default function FamilyMealPlanRoute({
 
               <div className="mt-4 min-w-0 border-t border-slate-200 pt-4">
                 <RecipeBankContent
+                  activeAssignDate={activeAssignDate}
                   familyId={loaderData.family.id}
+                  onAssignRecipe={assignRecipeToDate}
                   recipes={loaderData.recipes}
                   selectedRecipeIds={selectedRecipeIds}
+                  visibleDates={loaderData.visibleDates}
                 />
               </div>
             </details>
@@ -922,9 +962,12 @@ export default function FamilyMealPlanRoute({
                 Oppskriftsbank
               </h2>
               <RecipeBankContent
+                activeAssignDate={activeAssignDate}
                 familyId={loaderData.family.id}
+                onAssignRecipe={assignRecipeToDate}
                 recipes={loaderData.recipes}
                 selectedRecipeIds={selectedRecipeIds}
+                visibleDates={loaderData.visibleDates}
               />
             </div>
           </article>
@@ -1219,9 +1262,38 @@ interface MealPlanRecipeOption {
   defaultServings: number | null;
   description: string | null;
   id: string;
+  imageUrl?: string | null;
   prepMinutes: number | null;
   tags: string[];
   title: string;
+}
+
+function buildMealSelectionsByDate(
+  visibleDates: string[],
+  entryValues: Record<string, MealPlanEntryFormState>,
+) {
+  return Object.fromEntries(
+    visibleDates.map((date) => {
+      const entry = entryValues[date];
+
+      return [
+        date,
+        encodeMealSelection({
+          freezerItemId: entry?.freezerItemId ?? "",
+          recipeId: entry?.recipeId ?? "",
+        }),
+      ];
+    }),
+  );
+}
+
+function formatBankWeekdayLabel(date: string) {
+  const label = new Intl.DateTimeFormat("nb-NO", {
+    timeZone: "UTC",
+    weekday: "short",
+  }).format(new Date(`${date}T00:00:00.000Z`));
+
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 interface ShareMemberOption {
@@ -1658,18 +1730,57 @@ function formatFreezerStockCount(
 }
 
 function RecipeBankContent({
+  activeAssignDate,
   familyId,
+  onAssignRecipe,
   recipes,
   selectedRecipeIds,
+  visibleDates,
 }: {
+  activeAssignDate: string | null;
   familyId: string;
+  onAssignRecipe: (recipeId: string, date: string) => void;
   recipes: MealPlanRecipeOption[];
   selectedRecipeIds: Set<string>;
+  visibleDates: string[];
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [fallbackAssignDate, setFallbackAssignDate] = useState(
+    visibleDates[0] ?? "",
+  );
+  const tagOptions = useMemo(() => deriveRecipeTagOptions(recipes), [recipes]);
+  const filteredRecipes = useMemo(
+    () =>
+      filterRecipePickerList(recipes, {
+        query: searchQuery,
+        selectedTags,
+      }),
+    [recipes, searchQuery, selectedTags],
+  );
+  const isSearchActive =
+    hasActiveRecipeSearch(searchQuery) || selectedTags.length > 0;
+  const assignDate = activeAssignDate ?? fallbackAssignDate;
+  const assignDateLabel = assignDate
+    ? `${formatBankWeekdayLabel(assignDate)} · ${formatShortDateLabel(assignDate)}`
+    : null;
+
+  useEffect(() => {
+    if (
+      fallbackAssignDate &&
+      visibleDates.includes(fallbackAssignDate)
+    ) {
+      return;
+    }
+
+    setFallbackAssignDate(visibleDates[0] ?? "");
+  }, [fallbackAssignDate, visibleDates]);
+
   return (
     <>
       <p className="mt-2 text-sm leading-6 text-slate-600">
         Standard- og familieoppskrifter du kan velge til middagene i planen.
+        Åpne en dag i ukeoversikten, eller velg dag nedenfor, og trykk Legg til.
       </p>
       <Link
         className="mt-1 inline-flex w-fit items-center justify-center rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
@@ -1678,50 +1789,154 @@ function RecipeBankContent({
         Administrer oppskrifter
       </Link>
 
-      <div className="mt-4 grid gap-2 lg:mt-6 lg:gap-3 h-[calc(100vh-20rem)] overflow-y-auto">
-        {recipes.map((recipe) => (
-          <article
-            key={recipe.id}
-            className={
-              selectedRecipeIds.has(recipe.id)
-                ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-5"
-                : "rounded-[24px] border border-slate-200 bg-slate-50 p-5"
-            }
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-base font-semibold text-slate-950">
-                  {recipe.title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600 whitespace-break-spaces">
-                  {recipe.description}
-                </p>
-              </div>
-              {selectedRecipeIds.has(recipe.id) ? (
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                  I planen
-                </span>
-              ) : null}
-            </div>
+      <div className="mt-4 space-y-3">
+        <label className="block text-sm font-medium text-slate-700">
+          Søk oppskrifter
+          <input
+            autoComplete="off"
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="For eksempel tomatsuppe"
+            type="search"
+            value={searchQuery}
+          />
+        </label>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                {recipe.prepMinutes ?? "?"} min
-              </span>
-              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                {recipe.defaultServings ?? "?"} personer
-              </span>
-              {recipe.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
-                >
-                  {tag}
-                </span>
-              ))}
+        {tagOptions.length > 0 ? (
+          <div>
+            <p className="text-sm font-medium text-slate-700">Filtrer på tag</p>
+            <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+              {tagOptions.map(({ count, tag }) => {
+                const isSelected = selectedTags.includes(tag);
+
+                return (
+                  <button
+                    key={tag}
+                    className={
+                      isSelected
+                        ? "shrink-0 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white"
+                        : "shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
+                    }
+                    onClick={() => {
+                      setSelectedTags((current) =>
+                        current.includes(tag)
+                          ? current.filter((value) => value !== tag)
+                          : [...current, tag],
+                      );
+                    }}
+                    type="button"
+                  >
+                    {tag} ({count})
+                  </button>
+                );
+              })}
             </div>
-          </article>
-        ))}
+          </div>
+        ) : null}
+
+        {isSearchActive ? (
+          <button
+            className="text-sm font-medium text-slate-600 underline-offset-2 hover:underline"
+            onClick={() => {
+              setSearchQuery("");
+              setSelectedTags([]);
+            }}
+            type="button"
+          >
+            Nullstill filtre
+          </button>
+        ) : null}
+
+        {!activeAssignDate && visibleDates.length > 0 ? (
+          <label className="block text-sm font-medium text-slate-700">
+            Legg til på dag
+            <select
+              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              onChange={(event) => setFallbackAssignDate(event.target.value)}
+              value={fallbackAssignDate}
+            >
+              {visibleDates.map((date) => (
+                <option key={date} value={date}>
+                  {formatBankWeekdayLabel(date)} · {formatShortDateLabel(date)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : activeAssignDate && assignDateLabel ? (
+          <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+            Valgt dag: {assignDateLabel}. Trykk Legg til på en oppskrift.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="mt-4 grid h-[calc(100vh-20rem)] gap-2 overflow-y-auto lg:mt-6 lg:gap-3">
+        {filteredRecipes.length === 0 ? (
+          <p className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
+            Ingen oppskrifter matcher søket.
+          </p>
+        ) : (
+          filteredRecipes.map((recipe) => (
+            <article
+              key={recipe.id}
+              className={
+                selectedRecipeIds.has(recipe.id)
+                  ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-5"
+                  : "rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+              }
+            >
+              <div className="flex items-start gap-3">
+                <RecipePickerMedia
+                  imageUrl={recipe.imageUrl}
+                  title={recipe.title}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-semibold text-slate-950">
+                        {recipe.title}
+                      </h3>
+                      <p className="mt-2 whitespace-break-spaces text-sm leading-6 text-slate-600">
+                        {recipe.description}
+                      </p>
+                    </div>
+                    {selectedRecipeIds.has(recipe.id) ? (
+                      <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                        I planen
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                      {recipe.prepMinutes ?? "?"} min
+                    </span>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                      {recipe.defaultServings ?? "?"} personer
+                    </span>
+                    {recipe.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  {assignDate ? (
+                    <button
+                      className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                      onClick={() => onAssignRecipe(recipe.id, assignDate)}
+                      type="button"
+                    >
+                      Legg til på {formatBankWeekdayLabel(assignDate)}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </article>
+          ))
+        )}
       </div>
     </>
   );

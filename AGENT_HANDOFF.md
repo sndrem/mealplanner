@@ -2,31 +2,37 @@
 
 ## Current Objective
 
-Auto-merge PRs when all validation checks pass (issue #197).
+Ship searchable, tag-filtered meal-plan recipe picker (issue #201), including recipe-bank assign. Merge conflicts with main resolved.
 
 ## Completed
 
-- Added `.github/workflows/auto-merge.yml` triggered by `workflow_run` completion of `Pull Request Validation`
-- Workflow uses `actions/github-script` to squash-merge eligible PRs via the GitHub API
-- Skips draft PRs, fork PRs, closed PRs, and PRs not targeting `main`
+- Replaced native recipe `<select>` with inline `MealPlanRecipePicker` (search, tag AND filters, Fryser / I planen / Nylig brukt / Alle sections)
+- Added image-ready `RecipePickerCard` media slot with letter placeholders
+- Planning loader returns `recentlyUsedRecipeIds` via existing `getRecentlyUsedRecipeIds`
+- Oppskriftsbank: search, tag filters, and “Legg til på [dag]” (open day or day dropdown)
+- Form still submits `mealSelection:{date}` with `recipe:` / `freezer:` encoding
+- Merged `origin/main` and kept bank scroll height + `whitespace-break-spaces` from main
 
 ## Files To Read First
 
-- `.github/workflows/auto-merge.yml` — the new auto-merge workflow
-- `.github/workflows/pr-validation.yml` — the existing validation workflow it depends on
+- `app/components/meal-plan-recipe-picker.tsx` - picker UI and filter wiring
+- `app/components/meal-plan-week-entries-form.tsx` - day rows + controlled active day
+- `app/routes/family-meal-plan.tsx` - lifted selections + recipe bank assign
+- `app/lib/recipe-list-search.ts` - tag filter and section grouping helpers
 
 ## Validation
 
-- `npm run prisma:generate` — passed
-- `npm run lint` — passed
-- `npm run test:run` — 442 tests passed
-- `npm run typecheck` — passed
+- `npm run prisma:generate` — passed (pre-merge)
+- `npm run lint` — re-run after conflict resolution
+- `npm run test:run` — re-run after conflict resolution
+- `npm run typecheck` — re-run after conflict resolution
 
 ## Open Items
 
-- Repository settings must have "Allow auto-merge" enabled (Settings → General → Pull Requests) — this is a manual admin step
-- Branch protection on `main` should require the `Validate` status check for full safety
+- No recipe `imageUrl` in Prisma yet; UI is placeholder-ready only
+- Keyboard arrow navigation in picker is basic (click + Escape/outside close); could harden listbox roving tabindex later
+- Manual UI smoke on a large recipe catalog still recommended after merge
 
 ## Next Step
 
-Enable auto-merge in repository settings and configure branch protection rules.
+Confirm PR #202 is mergeable after push; merge when checks pass.
