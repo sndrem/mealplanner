@@ -12,10 +12,12 @@ import {
   getCalendarWeekBounds,
   getCalendarWeekDates,
 } from "./meal-plan-week";
+import { getRecipeImageUrl } from "./r2.server";
 
 export type FamilyWeekDayMenu = {
   date: string;
   dateLabel: string;
+  imageUrl: string | null;
   isToday: boolean;
   mealPlanId: string | null;
   mealPlanTitle: string | null;
@@ -59,6 +61,7 @@ export async function getFamilyWeekDinnerMenu({
           note: true,
           recipe: {
             select: {
+              imageKey: true,
               title: true,
             },
           },
@@ -100,6 +103,7 @@ export async function getFamilyWeekDinnerMenu({
     return {
       date,
       dateLabel: formatShortDateLabel(date),
+      imageUrl: getRecipeImageUrl(dinnerEntry?.recipe?.imageKey),
       isToday: isPlanDateToday(date, referenceDate),
       mealPlanId: coveringPlan?.id ?? null,
       mealPlanTitle: coveringPlan?.title ?? null,

@@ -2,21 +2,18 @@
 
 ## Current Objective
 
-Ship recipe cover images via Cloudflare R2 (#205) — PR ready on `issue/205-recipe-cover-images`.
+Ship family week overview recipe cover thumbnails (#207) — PR ready on `issue/207-family-week-recipe-images`.
 
 ## Completed
 
-- `Recipe.imageKey` + migration; R2 client and optional env
-- Multipart create/update/delete with upload, replace, remove, and object cleanup
-- Images on recipe list, detail, and meal-plan picker/bank
-- Docs for R2 setup in `.env.example` and `docs/deploy-fly.md`
-- Validation passed; commit + PR for #205
+- `getFamilyWeekDinnerMenu` selects `recipe.imageKey` and exposes `imageUrl` via `getRecipeImageUrl`
+- `WeekDayMenuCard` on family oversikt shows a compact cover when present; omits media when absent
+- Unit/route tests updated for image URL mapping
 
 ## Files To Read First
 
-- `app/lib/r2.server.ts` — upload/delete/URL helpers
-- `app/lib/recipe-write.server.ts` — cover write path
-- `docs/deploy-fly.md` — operator R2 checklist
+- `app/lib/family-home.server.ts` — week dinner menu + imageUrl
+- `app/routes/family.tsx` — `WeekDayMenuCard` thumbnail UI
 
 ## Validation
 
@@ -27,9 +24,8 @@ Ship recipe cover images via Cloudflare R2 (#205) — PR ready on `issue/205-rec
 
 ## Open Items
 
-- Set `R2_*` secrets on Fly before production uploads work
-- Manual smoke against a real R2 bucket after merge/deploy
+- Manual smoke: mixed week (cover / no cover / freezer) on family oversikt after deploy
 
 ## Next Step
 
-Review/merge the PR; configure Fly R2 secrets; smoke-test cover upload in production.
+Review/merge the PR; confirm week cards show covers only when recipes have images.

@@ -175,6 +175,14 @@ function WeekDayMenuCard({
         {day.weekdayLabel}
       </p>
       <p className="mt-1 text-sm text-slate-500">{day.dateLabel}</p>
+      {day.imageUrl ? (
+        <img
+          alt=""
+          className="mt-3 aspect-square w-full max-h-28 rounded-xl object-cover"
+          loading="lazy"
+          src={day.imageUrl}
+        />
+      ) : null}
       <p className="mt-3 text-base font-semibold leading-snug text-slate-950">
         {day.menuLabel}
       </p>
@@ -199,24 +207,24 @@ function WeekDayMenuCard({
         className={`${cardClassName} block transition hover:border-slate-300 hover:bg-white`}
         to={`/families/${familyId}/meal-plans/${day.mealPlanId}`}
       >
+        {content}
         {day.isToday ? (
           <span className="mb-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
             I dag
           </span>
         ) : null}
-        {content}
       </Link>
     );
   }
 
   return (
     <article className={cardClassName}>
+      {content}
       {day.isToday ? (
         <span className="mb-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
           I dag
         </span>
       ) : null}
-      {content}
     </article>
   );
 }
