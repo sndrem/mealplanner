@@ -2,20 +2,18 @@
 
 ## Current Objective
 
-Ship #211 store-mode Handlet + sticky Angre — validated; opening PR.
+Ship #211 store-mode Handlet + sticky Angre — PR open, awaiting merge.
 
 ## Completed
 
 - Per-aisle **Handlet** folds; removed global **Kjøpt**
 - Sticky **Krysset av · Angre** above quick-add dock
-- Partition API keeps fully checked sections with per-section `boughtItems`
-- Branch `issue/211-store-mode-handlet-undo` from `origin/main`
+- Validated, committed, pushed; PR https://github.com/sndrem/mealplanner/pull/212 (`Closes #211`)
 
 ## Files To Read First
 
 - `app/routes/family-meal-plan-store-mode.tsx`
 - `app/lib/shopping-store-mode-client.ts`
-- `app/lib/store-mode-theme.ts`
 
 ## Validation
 
@@ -26,9 +24,10 @@ Ship #211 store-mode Handlet + sticky Angre — validated; opening PR.
 
 ## Open Items
 
-- Manual phone smoke of aisle check / Angre / Handlet after deploy
+- Manual phone smoke after deploy
+- Issue #211 closes on PR merge via `Closes #211`
 - Untracked `.cursor/rules/ux-flow-sparring.mdc` left out of this PR
 
 ## Next Step
 
-Review/merge the PR; issue #211 closes via `Closes #211` on merge.
+Review/merge https://github.com/sndrem/mealplanner/pull/212
