@@ -2,35 +2,35 @@
 
 ## Current Objective
 
-Ship #213 store-mode trip focus — PR opened, awaiting merge.
+Ship #217 guest shopping-list share — PR opening from `issue/217-share-shopping-list-url`.
 
 ## Completed
 
-- Trip focus control in Butikkmodus: Denne uken / Neste uke / Alle åpne
-- Persisted on `UserStorePreference.storeModeTripFocus` (default CURRENT)
-- Store-mode list filters by focus; family manuals always included
-- Validated, committed, pushed; PR with `Closes #213`
+- Store-mode **Del liste** curation (checked items excluded by default) creates an unlisted guest URL
+- Public `/s/:token` page with Rema 1000 default store, client store switch, localStorage checkoff
+- `ShoppingListShare` snapshot (hashed token + JSON); checks do not write the family list
+- `StoreModeShoppingItemCard` `readOnly` mode
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan-store-mode.tsx`
-- `app/lib/shopping.server.ts`
-- `app/lib/meal-plan-for-date.server.ts`
-- `prisma/migrations/20260821090000_add_store_mode_trip_focus/migration.sql`
+- `app/lib/shopping-share.server.ts` — create/load snapshot
+- `app/routes/family-store-mode-share.tsx` — curation + copy link
+- `app/routes/shopping-list-share.tsx` — unauthenticated guest view
+- `prisma/migrations/20260821140000_add_shopping_list_share/migration.sql`
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 472 tests passed
+- `npm run test:run` — 500 tests passed
 - `npm run typecheck` — passed
 
 ## Open Items
 
 - Apply migration on deploy (`prisma migrate deploy`)
-- Manual smoke after deploy: CURRENT hides next week; NEXT mid-week; Alle åpne
-- Issue #213 closes on PR merge via `Closes #213`
+- Manual smoke: store mode → curate → copy → incognito `/s/:token` → Rema order → switch store → check → reload
+- Issue #217 closes on PR merge via `Closes #217`
 
 ## Next Step
 
-Review/merge the open PR for #213.
+Review/merge the open PR for #217.
