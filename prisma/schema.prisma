@@ -27,6 +27,12 @@ enum FamilyShoppingListMode {
   COMBINED
 }
 
+enum StoreModeTripFocus {
+  CURRENT
+  NEXT
+  ALL
+}
+
 enum MealPlanShareStatus {
   OPEN
   CLOSED
@@ -527,15 +533,16 @@ model StoreSection {
 }
 
 model UserStorePreference {
-  id              String   @id @default(cuid())
-  userId          String
-  familyId        String
-  selectedStoreId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  family          Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  selectedStore   Store?   @relation("UserStorePreferenceSelectedStore", fields: [selectedStoreId], references: [id], onDelete: SetNull)
+  id                 String             @id @default(cuid())
+  userId             String
+  familyId           String
+  selectedStoreId    String?
+  storeModeTripFocus StoreModeTripFocus @default(CURRENT)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family             Family             @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  selectedStore      Store?             @relation("UserStorePreferenceSelectedStore", fields: [selectedStoreId], references: [id], onDelete: SetNull)
 
   @@unique([userId, familyId])
   @@index([userId])

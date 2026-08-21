@@ -14,7 +14,10 @@ vi.mock("./db.server", () => ({
 
 import {
   findMealPlanCoveringDate,
+  resolveEffectiveStoreModeTripFocus,
   resolveStoreModeAnchorMealPlan,
+  resolveStoreModeNextMealPlan,
+  selectMealPlansForTripFocus,
 } from "./meal-plan-for-date.server";
 
 describe("findMealPlanCoveringDate", () => {
@@ -116,5 +119,101 @@ describe("resolveStoreModeAnchorMealPlan", () => {
     });
 
     expect(result).toBeNull();
+  });
+});
+
+describe("resolveStoreModeNextMealPlan", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns the earliest meal plan that starts after today", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({ id: "meal-plan-next" });
+
+    const result = await resolveStoreModeNextMealPlan({
+      familyId: "family-1",
+      referenceDate: new Date("2026-05-14T12:00:00.000Z"),
+    });
+
+    expect(result).toEqual({ id: "meal-plan-next" });
+    expect(dbMock.mealPlan.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ startDate: "asc" }, { id: "asc" }],
+        where: expect.objectContaining({
+          familyId: "family-1",
+          startDate: {
+            gt: new Date("2026-05-14T00:00:00.000Z"),
+          },
+        }),
+      }),
+    );
+  });
+});
+
+describe("resolveEffectiveStoreModeTripFocus", () => {
+  it("keeps NEXT when a next plan exists", () => {
+    expect(
+      resolveEffectiveStoreModeTripFocus({
+        canFocusNext: true,
+        tripFocus: "NEXT",
+      }),
+    ).toBe("NEXT");
+  });
+
+  it("coerces NEXT to CURRENT when no next plan exists", () => {
+    expect(
+      resolveEffectiveStoreModeTripFocus({
+        canFocusNext: false,
+        tripFocus: "NEXT",
+      }),
+    ).toBe("CURRENT");
+  });
+});
+
+describe("selectMealPlansForTripFocus", () => {
+  const currentPlan = {
+    id: "meal-plan-1",
+    startDate: new Date("2026-05-12T00:00:00.000Z"),
+  };
+  const nextPlan = {
+    id: "meal-plan-2",
+    startDate: new Date("2026-05-19T00:00:00.000Z"),
+  };
+  const openPlans = [currentPlan, nextPlan];
+
+  it("returns only the covering plan for CURRENT", () => {
+    expect(
+      selectMealPlansForTripFocus({
+        anchorPlan: currentPlan,
+        currentPlanId: currentPlan.id,
+        focus: "CURRENT",
+        nextPlanId: nextPlan.id,
+        openPlans,
+      }),
+    ).toEqual([currentPlan]);
+  });
+
+  it("returns only the next plan for NEXT", () => {
+    expect(
+      selectMealPlansForTripFocus({
+        anchorPlan: currentPlan,
+        currentPlanId: currentPlan.id,
+        focus: "NEXT",
+        nextPlanId: nextPlan.id,
+        openPlans,
+      }),
+    ).toEqual([nextPlan]);
+  });
+
+  it("returns all open plans for ALL", () => {
+    expect(
+      selectMealPlansForTripFocus({
+        anchorPlan: currentPlan,
+        currentPlanId: currentPlan.id,
+        focus: "ALL",
+        nextPlanId: nextPlan.id,
+        openPlans,
+      }),
+    ).toEqual(openPlans);
   });
 });

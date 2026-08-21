@@ -74,6 +74,10 @@ import {
   updateManualShoppingItem,
 } from "../lib/shopping-write.server";
 import { listIngredientCategories } from "../lib/store.server";
+import {
+  parseStoreModeTripFocus,
+  updateStoreModeTripFocus,
+} from "../lib/store-mode-trip-focus-write.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
 import {
   getStoreModeBannerClass,
@@ -85,6 +89,7 @@ import {
   storeModeLaterChipClass,
   storeModeMetaDateSelectClass,
   storeModeMetaStoreSelectClass,
+  storeModeMetaTripFocusSelectClass,
   storeModeMetaStripClass,
   storeModeMutedPanelClass,
   storeModePageClass,
@@ -109,7 +114,8 @@ type StoreModeNotice =
   | "active-shopping-date-updated"
   | "family-shopping-item-added"
   | "selected-store-updated"
-  | "shopping-item-check-state-updated";
+  | "shopping-item-check-state-updated"
+  | "store-mode-trip-focus-updated";
 
 type StoreModeIntent =
   | "quick-add-family-shopping-item"
@@ -120,7 +126,8 @@ type StoreModeIntent =
   | "toggle-family-shopping-item-checked"
   | "toggle-shopping-item-checked"
   | "update-active-shopping-date"
-  | "update-selected-store";
+  | "update-selected-store"
+  | "update-store-mode-trip-focus";
 
 interface StoreModeActionData {
   activeShoppingDateFieldErrors?: {
@@ -139,6 +146,10 @@ interface StoreModeActionData {
     selectedStoreId?: string;
   };
   selectedStoreValue?: string;
+  tripFocusFieldErrors?: {
+    tripFocus?: string;
+  };
+  tripFocusValue?: string;
 }
 
 interface FamilyMealPlanStoreModeRouteProps {
@@ -182,11 +193,13 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   return {
     activeShoppingDate: formatDateOnly(result.activeShoppingDate),
+    canFocusNext: result.canFocusNext,
     categories,
     dueSectionGroups: result.dueSectionGroups.map((section) => ({
       ...section,
       items: section.items.map(serializeProjectedShoppingItem),
     })),
+    effectiveTripFocus: result.effectiveTripFocus,
     family: result.family,
     includedMealPlans: result.includedMealPlans,
     laterItems: result.laterItems.map(serializeProjectedShoppingItem),
@@ -209,6 +222,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     selectableShoppingDates: result.selectableShoppingDates,
     shoppingHistory,
     stores: result.stores,
+    tripFocus: result.tripFocus,
     userRole: result.userRole,
     visibleDates: result.visibleDates,
   };
@@ -281,6 +295,44 @@ export async function action({ params, request }: Route.ActionArgs) {
     return buildFamilyStoreModeRedirect({
       familyId,
       notice: "selected-store-updated",
+      request,
+    });
+  }
+
+  if (intent === "update-store-mode-trip-focus") {
+    const tripFocus = parseStoreModeTripFocus(formData.get("tripFocus"));
+
+    if (!tripFocus) {
+      return {
+        formError: "Ugyldig fokus for butikkmodus.",
+        intent,
+        tripFocusFieldErrors: {
+          tripFocus: "Velg et gyldig fokus.",
+        },
+        tripFocusValue: String(formData.get("tripFocus") ?? ""),
+      } satisfies StoreModeActionData;
+    }
+
+    const result = await updateStoreModeTripFocus({
+      familyId,
+      tripFocus,
+      userId: user.id,
+    });
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: result.formError,
+        intent,
+        tripFocusFieldErrors: {
+          tripFocus: result.formError,
+        },
+        tripFocusValue: tripFocus,
+      } satisfies StoreModeActionData;
+    }
+
+    return buildFamilyStoreModeRedirect({
+      familyId,
+      notice: "store-mode-trip-focus-updated",
       request,
     });
   }
@@ -614,6 +666,9 @@ export default function FamilyMealPlanStoreModeRoute({
   const isSavingShoppingDate =
     navigation.state === "submitting" &&
     pendingIntent === "update-active-shopping-date";
+  const isSavingTripFocus =
+    navigation.state === "submitting" &&
+    pendingIntent === "update-store-mode-trip-focus";
 
   useEffect(() => {
     setDueSectionGroups(
@@ -1014,6 +1069,16 @@ export default function FamilyMealPlanStoreModeRoute({
     actionData.activeShoppingDateValue
       ? actionData.activeShoppingDateValue
       : loaderData.activeShoppingDate;
+  const tripFocusValue =
+    actionData?.intent === "update-store-mode-trip-focus" &&
+    actionData.tripFocusValue
+      ? actionData.tripFocusValue
+      : loaderData.effectiveTripFocus;
+  const tripFocusSubtitle = getStoreModeTripFocusSubtitle({
+    effectiveTripFocus: loaderData.effectiveTripFocus,
+    includedMealPlans: loaderData.includedMealPlans,
+    mealPlanTitle: loaderData.mealPlan.title,
+  });
   const ingredientSearchPath = `/families/${loaderData.family.id}/shopping/ingredient-search`;
   const quantityFetcherError =
     quantityFetcher.data?.formError &&
@@ -1036,14 +1101,42 @@ export default function FamilyMealPlanStoreModeRoute({
         <section className={storeModeMetaStripClass}>
           <div className="min-w-0">
             <h1 className="truncate font-semibold text-stone-950">Butikkmodus</h1>
-            <p className="truncate text-xs text-stone-500">
-              Samlet fra {loaderData.includedMealPlans.length}{" "}
-              {loaderData.includedMealPlans.length === 1 ? "ukeplan" : "ukeplaner"}
-            </p>
+            <p className="truncate text-xs text-stone-500">{tripFocusSubtitle}</p>
           </div>
           <span className="hidden text-stone-300 sm:inline" aria-hidden="true">
             ·
           </span>
+          <Form className="inline-flex min-w-0 flex-col gap-1" method="post">
+            <input
+              name="intent"
+              type="hidden"
+              value="update-store-mode-trip-focus"
+            />
+            <select
+              aria-busy={isSavingTripFocus}
+              aria-label="Velg handletur-fokus"
+              className={storeModeMetaTripFocusSelectClass}
+              defaultValue={tripFocusValue}
+              disabled={isSavingTripFocus}
+              key={tripFocusValue}
+              name="tripFocus"
+              onChange={(event) => {
+                submitSelectForm(event, tripFocusValue, submit);
+              }}
+            >
+              <option value="CURRENT">Denne uken</option>
+              <option disabled={!loaderData.canFocusNext} value="NEXT">
+                Neste uke
+              </option>
+              <option value="ALL">Alle åpne</option>
+            </select>
+            {actionData?.intent === "update-store-mode-trip-focus" &&
+            actionData.tripFocusFieldErrors?.tripFocus ? (
+              <p className="text-sm text-rose-600">
+                {actionData.tripFocusFieldErrors.tripFocus}
+              </p>
+            ) : null}
+          </Form>
           <Form className="inline-flex min-w-0 flex-col gap-1" method="post">
             <input name="intent" type="hidden" value="update-selected-store" />
             <select
@@ -1440,7 +1533,8 @@ function getStoreModeNotice(request: Request): StoreModeNotice | null {
     notice === "active-shopping-date-updated" ||
     notice === "family-shopping-item-added" ||
     notice === "selected-store-updated" ||
-    notice === "shopping-item-check-state-updated"
+    notice === "shopping-item-check-state-updated" ||
+    notice === "store-mode-trip-focus-updated"
   ) {
     return notice;
   }
@@ -1454,6 +1548,11 @@ function getStoreModeNoticeContent(notice: StoreModeNotice) {
       return {
         description: "Butikkvalget ditt ble lagret for denne familien.",
         title: "Butikkvalg lagret",
+      };
+    case "store-mode-trip-focus-updated":
+      return {
+        description: "Fokuset for handleturen ble oppdatert.",
+        title: "Fokus lagret",
       };
     case "active-shopping-date-updated":
       return {
@@ -1471,6 +1570,26 @@ function getStoreModeNoticeContent(notice: StoreModeNotice) {
         title: "Vare lagt til",
       };
   }
+}
+
+function getStoreModeTripFocusSubtitle({
+  effectiveTripFocus,
+  includedMealPlans,
+  mealPlanTitle,
+}: {
+  effectiveTripFocus: "CURRENT" | "NEXT" | "ALL";
+  includedMealPlans: Array<{ title: string }>;
+  mealPlanTitle: string;
+}) {
+  if (effectiveTripFocus === "ALL") {
+    return `Alle åpne ukeplaner (${includedMealPlans.length})`;
+  }
+
+  if (effectiveTripFocus === "NEXT") {
+    return `Neste uke · ${mealPlanTitle}`;
+  }
+
+  return `Denne uken · ${mealPlanTitle}`;
 }
 
 function buildFamilyStoreModeRedirect({

@@ -5,7 +5,10 @@ import { requireFamilyMembership } from "./family.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import {
   findMealPlanCoveringDate,
+  resolveEffectiveStoreModeTripFocus,
   resolveStoreModeAnchorMealPlan,
+  resolveStoreModeNextMealPlan,
+  selectMealPlansForTripFocus,
 } from "./meal-plan-for-date.server";
 import {
   getMealPlanDateRange,
@@ -17,7 +20,6 @@ import {
   isStockIngredientMatch,
   type FamilyStockMatchSet,
 } from "./stock.server";
-
 const storeSummarySelect = Prisma.validator<Prisma.StoreSelect>()({
   id: true,
   name: true,
@@ -873,7 +875,8 @@ export async function getMealPlanStoreModeData({
     stores,
     selectedStorePreference,
     stockMatchSet,
-    familyMealPlanDateRanges,
+    coveringMealPlan,
+    nextMealPlan,
   ] = await Promise.all([
     db.mealPlan.findFirst({
       select: shoppingMealPlanSelect,
@@ -902,6 +905,7 @@ export async function getMealPlanStoreModeData({
     db.userStorePreference.findUnique({
       select: {
         selectedStoreId: true,
+        storeModeTripFocus: true,
       },
       where: {
         userId_familyId: {
@@ -911,15 +915,13 @@ export async function getMealPlanStoreModeData({
       },
     }),
     getFamilyStockMatchSet(familyId),
-    db.mealPlan.findMany({
-      orderBy: [{ startDate: "asc" }, { id: "asc" }],
-      select: {
-        endDate: true,
-        startDate: true,
-      },
-      where: {
-        familyId,
-      },
+    findMealPlanCoveringDate({
+      familyId,
+      referenceDate: todayAtUtcMidnight,
+    }),
+    resolveStoreModeNextMealPlan({
+      familyId,
+      referenceDate: todayAtUtcMidnight,
     }),
   ]);
 
@@ -930,12 +932,25 @@ export async function getMealPlanStoreModeData({
     });
   }
 
-  const mealPlansForStoreMode = ensureAnchorMealPlanIncluded({
-    anchorMealPlan,
-    includedMealPlans,
+  const savedTripFocus = selectedStorePreference?.storeModeTripFocus ?? "CURRENT";
+  const canFocusNext = nextMealPlan !== null;
+  const effectiveTripFocus = resolveEffectiveStoreModeTripFocus({
+    canFocusNext,
+    tripFocus: savedTripFocus,
   });
+  const mealPlansForStoreMode = selectMealPlansForTripFocus({
+    anchorPlan: anchorMealPlan,
+    currentPlanId: coveringMealPlan?.id ?? null,
+    focus: effectiveTripFocus,
+    nextPlanId: nextMealPlan?.id ?? null,
+    openPlans: includedMealPlans,
+  });
+  const shoppingDateOwnerPlan =
+    effectiveTripFocus === "ALL"
+      ? anchorMealPlan
+      : (mealPlansForStoreMode[0] ?? anchorMealPlan);
   const activeShoppingDate =
-    anchorMealPlan.activeShoppingDate ?? anchorMealPlan.startDate;
+    shoppingDateOwnerPlan.activeShoppingDate ?? shoppingDateOwnerPlan.startDate;
   const selectedStore = resolveSelectedStoreSummary(
     stores,
     selectedStorePreference?.selectedStoreId ?? null,
@@ -999,14 +1014,20 @@ export async function getMealPlanStoreModeData({
         storeSectionsByStoreId,
       ),
   );
+  const focusedDateRanges = mealPlansForStoreMode.map((plan) => ({
+    endDate: plan.endDate,
+    startDate: plan.startDate,
+  }));
 
   return {
     activeShoppingDate,
+    canFocusNext,
     dueSectionGroups: buildStoreModeSectionGroups({
       items: mergedDueItems,
       selectedStore,
       storeSectionsByStoreId,
     }),
+    effectiveTripFocus,
     family: {
       id: membership.family.id,
       name: membership.family.name,
@@ -1017,21 +1038,17 @@ export async function getMealPlanStoreModeData({
       title: plan.title,
     })),
     laterItems,
-    mealPlan: anchorMealPlan,
+    mealPlan: shoppingDateOwnerPlan,
     progress: buildStoreModeProgress(mergedDueItems),
     selectedStore,
     stores: stores.map((store) => ({
       id: store.id,
       name: store.name,
     })),
+    tripFocus: savedTripFocus,
     userRole: membership.role,
-    selectableShoppingDates: unionMealPlanDateRanges(familyMealPlanDateRanges),
-    visibleDates: unionMealPlanDateRanges(
-      mealPlansForStoreMode.map((plan) => ({
-        endDate: plan.endDate,
-        startDate: plan.startDate,
-      })),
-    ),
+    selectableShoppingDates: unionMealPlanDateRanges(focusedDateRanges),
+    visibleDates: unionMealPlanDateRanges(focusedDateRanges),
   };
 }
 
@@ -1389,26 +1406,6 @@ function projectManualShoppingItems({
       stores,
     }),
   );
-}
-
-function ensureAnchorMealPlanIncluded({
-  anchorMealPlan,
-  includedMealPlans,
-}: {
-  anchorMealPlan: ShoppingMealPlan;
-  includedMealPlans: ShoppingMealPlan[];
-}) {
-  if (includedMealPlans.some((plan) => plan.id === anchorMealPlan.id)) {
-    return includedMealPlans;
-  }
-
-  return [...includedMealPlans, anchorMealPlan].sort((left, right) => {
-    if (left.startDate.getTime() !== right.startDate.getTime()) {
-      return left.startDate.getTime() - right.startDate.getTime();
-    }
-
-    return left.id.localeCompare(right.id, "nb");
-  });
 }
 
 function buildStoreModeItemsForPlan({

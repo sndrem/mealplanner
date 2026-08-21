@@ -1381,6 +1381,11 @@ describe("shopping.server", () => {
     function registerStoreModePlans(
       anchorPlan: Record<string, unknown>,
       extraPlans: Record<string, unknown>[] = [],
+      options: {
+        coveringPlan?: Record<string, unknown> | null;
+        nextPlan?: Record<string, unknown> | null;
+        tripFocus?: "CURRENT" | "NEXT" | "ALL";
+      } = {},
     ) {
       const plans = [...extraPlans];
 
@@ -1399,7 +1404,42 @@ describe("shopping.server", () => {
         return String(left.id).localeCompare(String(right.id), "nb");
       });
 
-      dbMock.mealPlan.findFirst.mockResolvedValue(anchorPlan);
+      const coveringPlan =
+        options.coveringPlan === undefined ? anchorPlan : options.coveringPlan;
+      const nextPlan =
+        options.nextPlan === undefined
+          ? (extraPlans.find(
+              (plan) =>
+                (plan.startDate as Date).getTime() >
+                new Date("2026-05-14T00:00:00.000Z").getTime(),
+            ) ?? null)
+          : options.nextPlan;
+
+      dbMock.mealPlan.findFirst.mockImplementation(
+        (args: { where?: Record<string, unknown> }) => {
+          const where = args.where ?? {};
+
+          if (typeof where.id === "string") {
+            return (
+              plans.find((plan) => plan.id === where.id) ?? anchorPlan
+            );
+          }
+
+          const startDateFilter = where.startDate as
+            | { gt?: Date; lte?: Date }
+            | undefined;
+
+          if (startDateFilter?.lte) {
+            return coveringPlan;
+          }
+
+          if (startDateFilter?.gt) {
+            return nextPlan ? { id: nextPlan.id } : null;
+          }
+
+          return anchorPlan;
+        },
+      );
       dbMock.mealPlan.findMany.mockImplementation(
         (args: { select?: Record<string, unknown> }) => {
           if (args.select && "entries" in args.select) {
@@ -1412,6 +1452,10 @@ describe("shopping.server", () => {
           }));
         },
       );
+      dbMock.userStorePreference.findUnique.mockResolvedValue({
+        selectedStoreId: null,
+        storeModeTripFocus: options.tripFocus ?? "CURRENT",
+      });
     }
 
     beforeEach(() => {
@@ -1557,6 +1601,7 @@ describe("shopping.server", () => {
     ]);
     dbMock.userStorePreference.findUnique.mockResolvedValue({
       selectedStoreId: "store-2",
+      storeModeTripFocus: "CURRENT",
     });
 
     const result = await getMealPlanStoreModeData({
@@ -1568,6 +1613,7 @@ describe("shopping.server", () => {
     expect(dbMock.userStorePreference.findUnique).toHaveBeenCalledWith({
       select: {
         selectedStoreId: true,
+        storeModeTripFocus: true,
       },
       where: {
         userId_familyId: {
@@ -2257,7 +2303,11 @@ describe("shopping.server", () => {
       updatedAt: new Date("2026-05-02T12:00:00.000Z"),
     };
 
-    registerStoreModePlans(anchorPlan, [nextWeekPlan]);
+    registerStoreModePlans(anchorPlan, [nextWeekPlan], {
+      coveringPlan: null,
+      nextPlan: nextWeekPlan,
+      tripFocus: "ALL",
+    });
     dbMock.store.findMany.mockResolvedValue([
       {
         familyId: null,
@@ -2286,6 +2336,7 @@ describe("shopping.server", () => {
       userId: "user-1",
     });
 
+    expect(result.effectiveTripFocus).toBe("ALL");
     expect(result.includedMealPlans).toEqual([
       {
         id: "meal-plan-1",
@@ -2315,6 +2366,256 @@ describe("shopping.server", () => {
         }),
       ]),
     );
+  });
+
+  it("limits store mode to the covering meal plan for CURRENT trip focus", async () => {
+    const currentPlan = {
+      activeShoppingDate: new Date("2026-05-14T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-17T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-bakery", name: "Brod" },
+                categoryId: "category-bakery",
+                displayName: "Wraps",
+                id: "ingredient-1",
+                ingredientId: "canonical-wraps",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "pk",
+              },
+            ],
+            title: "Tacofredag",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-12T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Denne uken",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    };
+    const nextWeekPlan = {
+      activeShoppingDate: new Date("2026-05-19T00:00:00.000Z"),
+      endDate: new Date("2026-05-25T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-19T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-pasta", name: "Pasta" },
+                categoryId: "category-pasta",
+                displayName: "Spaghetti",
+                id: "ingredient-2",
+                ingredientId: "canonical-spaghetti",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "pk",
+              },
+            ],
+            title: "Pasta mandag",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-2",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-19T00:00:00.000Z"),
+      status: "APPROVED",
+      title: "Neste uke",
+      updatedAt: new Date("2026-05-02T12:00:00.000Z"),
+    };
+
+    registerStoreModePlans(currentPlan, [nextWeekPlan], {
+      coveringPlan: currentPlan,
+      nextPlan: nextWeekPlan,
+      tripFocus: "CURRENT",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-bakery",
+            displayName: "Brod",
+            id: "section-1",
+            sortOrder: 1,
+          },
+          {
+            categoryId: "category-pasta",
+            displayName: "Pasta",
+            id: "section-2",
+            sortOrder: 2,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.effectiveTripFocus).toBe("CURRENT");
+    expect(result.canFocusNext).toBe(true);
+    expect(result.includedMealPlans).toEqual([
+      {
+        id: "meal-plan-1",
+        status: "DRAFT",
+        title: "Denne uken",
+      },
+    ]);
+    expect(result.mealPlan.id).toBe("meal-plan-1");
+    expect(
+      result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
+    ).toEqual(["Wraps"]);
+  });
+
+  it("limits store mode to the next meal plan for NEXT trip focus", async () => {
+    const currentPlan = {
+      activeShoppingDate: new Date("2026-05-14T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-17T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-bakery", name: "Brod" },
+                categoryId: "category-bakery",
+                displayName: "Wraps",
+                id: "ingredient-1",
+                ingredientId: "canonical-wraps",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "pk",
+              },
+            ],
+            title: "Tacofredag",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-12T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Denne uken",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    };
+    const nextWeekPlan = {
+      activeShoppingDate: new Date("2026-05-19T00:00:00.000Z"),
+      endDate: new Date("2026-05-25T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-19T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                amount: "1",
+                category: { id: "category-pasta", name: "Pasta" },
+                categoryId: "category-pasta",
+                displayName: "Spaghetti",
+                id: "ingredient-2",
+                ingredientId: "canonical-spaghetti",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "pk",
+              },
+            ],
+            title: "Pasta mandag",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-2",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-19T00:00:00.000Z"),
+      status: "APPROVED",
+      title: "Neste uke",
+      updatedAt: new Date("2026-05-02T12:00:00.000Z"),
+    };
+
+    registerStoreModePlans(currentPlan, [nextWeekPlan], {
+      coveringPlan: currentPlan,
+      nextPlan: nextWeekPlan,
+      tripFocus: "NEXT",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-bakery",
+            displayName: "Brod",
+            id: "section-1",
+            sortOrder: 1,
+          },
+          {
+            categoryId: "category-pasta",
+            displayName: "Pasta",
+            id: "section-2",
+            sortOrder: 2,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.effectiveTripFocus).toBe("NEXT");
+    expect(result.includedMealPlans).toEqual([
+      {
+        id: "meal-plan-2",
+        status: "APPROVED",
+        title: "Neste uke",
+      },
+    ]);
+    expect(result.mealPlan.id).toBe("meal-plan-2");
+    expect(result.activeShoppingDate).toEqual(
+      new Date("2026-05-19T00:00:00.000Z"),
+    );
+    expect(
+      result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
+    ).toEqual(["Spaghetti"]);
   });
 
   it("dedupes meal-plan items against family items in merged store mode", async () => {
