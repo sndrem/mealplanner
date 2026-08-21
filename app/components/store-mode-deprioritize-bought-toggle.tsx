@@ -18,7 +18,7 @@ export function StoreModeDeprioritizeBoughtToggle({
       onClick={() => onChange(!enabled)}
       type="button"
     >
-      Flytt kjøpte varer til bunnen
+      Skjul kjøpte varer
     </button>
   );
 }

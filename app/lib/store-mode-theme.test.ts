@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   getStoreModeBannerClass,
   getStoreModeSyncOverlayClass,
+  storeModeBottomChromeShellClass,
   storeModeMetaDateSelectClass,
   storeModeMetaStoreSelectClass,
   storeModeSelectClass,
   storeModeSyncOverlayShellClass,
+  storeModeUndoBarActionClass,
+  storeModeUndoBarClass,
 } from "./store-mode-theme";
 
 describe("store-mode-theme", () => {
@@ -38,5 +41,12 @@ describe("store-mode-theme", () => {
     expect(storeModeMetaStoreSelectClass).not.toContain("w-full");
     expect(storeModeMetaDateSelectClass).toContain("max-w-[9rem]");
     expect(storeModeSelectClass).toContain("w-full");
+  });
+
+  it("exposes thumb-friendly bottom undo chrome", () => {
+    expect(storeModeBottomChromeShellClass).toContain("fixed");
+    expect(storeModeBottomChromeShellClass).toContain("bottom-0");
+    expect(storeModeUndoBarClass).toContain("min-h-11");
+    expect(storeModeUndoBarActionClass).toContain("min-h-11");
   });
 });

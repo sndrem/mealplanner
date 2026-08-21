@@ -79,7 +79,9 @@ import {
   getStoreModeBannerClass,
   getStoreModeSyncOverlayClass,
   storeModeAccentBarClass,
+  storeModeBottomChromeShellClass,
   storeModeCountChipClass,
+  storeModeHandletFoldClass,
   storeModeLaterChipClass,
   storeModeMetaDateSelectClass,
   storeModeMetaStoreSelectClass,
@@ -92,6 +94,9 @@ import {
   storeModeSectionCardClass,
   storeModeSurfaceCardClass,
   storeModeSyncOverlayShellClass,
+  storeModeUndoBarActionClass,
+  storeModeUndoBarClass,
+  storeModeUndoBarDismissClass,
 } from "../lib/store-mode-theme";
 import {
   STORE_MODE_SYNC_PROGRESS_MESSAGE,
@@ -949,14 +954,53 @@ export default function FamilyMealPlanStoreModeRoute({
     );
   }, [deprioritizeBoughtStorageKey]);
   type StoreModeDisplayItem = (typeof displayDueItems)[number];
-  type StoreModeDisplaySection = (typeof displaySectionGroups)[number];
-  const { activeSections, boughtItems } = useMemo(
-    (): {
-      activeSections: StoreModeDisplaySection[];
-      boughtItems: StoreModeDisplayItem[];
-    } => partitionStoreModeSections(displaySectionGroups, deprioritizeBought),
+  const { activeSections } = useMemo(
+    () => partitionStoreModeSections(displaySectionGroups, deprioritizeBought),
     [deprioritizeBought, displaySectionGroups],
   );
+  const hasUncheckedDueItems = useMemo(
+    () => activeSections.some((section) => section.items.length > 0),
+    [activeSections],
+  );
+  const [lastCheckedAction, setLastCheckedAction] =
+    useState<StoreModeDisplayItem | null>(null);
+
+  const handleToggleWithUndoFeedback = useCallback(
+    (item: StoreModeDisplayItem) => {
+      const displayItem = displayItemsBySourceKey.get(item.sourceKey) ?? item;
+      const nextChecked = !displayItem.checked;
+      handleToggle(item);
+
+      if (nextChecked) {
+        setLastCheckedAction({
+          ...displayItem,
+          checked: true,
+        });
+        return;
+      }
+
+      setLastCheckedAction((current) =>
+        current?.sourceKey === item.sourceKey ? null : current,
+      );
+    },
+    [displayItemsBySourceKey, handleToggle],
+  );
+
+  const handleUndoLastCheck = useCallback(() => {
+    if (!lastCheckedAction) {
+      return;
+    }
+
+    handleToggle(lastCheckedAction);
+    setLastCheckedAction(null);
+  }, [handleToggle, lastCheckedAction]);
+
+  const handleDismissLastCheck = useCallback(() => {
+    setLastCheckedAction(null);
+  }, []);
+  const pageClass = lastCheckedAction
+    ? storeModePageClass.replace("pb-36", "pb-52")
+    : storeModePageClass;
   const noticeContent = loaderData.notice
     ? getStoreModeNoticeContent(loaderData.notice)
     : null;
@@ -987,7 +1031,7 @@ export default function FamilyMealPlanStoreModeRoute({
       : undefined);
 
   return (
-    <main className={storeModePageClass}>
+    <main className={pageClass}>
       <div className="mx-auto flex max-w-4xl flex-col gap-5">
         <section className={storeModeMetaStripClass}>
           <div className="min-w-0">
@@ -1133,63 +1177,75 @@ export default function FamilyMealPlanStoreModeRoute({
                       {section.displayName}
                     </span>
                     <span className={storeModeCountChipClass}>
-                      {section.items.length} varer
+                      {section.items.length > 0
+                        ? `${section.items.length} varer`
+                        : `${section.boughtItems.length} handlet`}
                     </span>
                   </summary>
 
-                  <StoreModeItemGrid
-                    categories={loaderData.categories}
-                    categoryFetcherError={categoryFetcherError}
-                    categoryInteractionSourceKey={categoryInteractionSourceKey}
-                    isSavingCategorySourceKey={isSavingCategorySourceKey}
-                    items={section.items}
-                    layout={shoppingView}
-                    onQuickAddFromCard={handleQuickAddFromCard}
-                    onUpdateCategory={handleUpdateCategory}
-                    onUpdateQuantity={handleUpdateQuantity}
-                    onToggleItem={handleToggle}
-                    recentlyAddedSourceKey={recentlyAddedSourceKey}
-                    selectedStoreId={loaderData.selectedStore?.id}
-                  />
+                  {section.items.length > 0 ? (
+                    <StoreModeItemGrid
+                      categories={loaderData.categories}
+                      categoryFetcherError={categoryFetcherError}
+                      categoryInteractionSourceKey={categoryInteractionSourceKey}
+                      isSavingCategorySourceKey={isSavingCategorySourceKey}
+                      items={section.items}
+                      layout={shoppingView}
+                      onQuickAddFromCard={handleQuickAddFromCard}
+                      onUpdateCategory={handleUpdateCategory}
+                      onUpdateQuantity={handleUpdateQuantity}
+                      onToggleItem={handleToggleWithUndoFeedback}
+                      recentlyAddedSourceKey={recentlyAddedSourceKey}
+                      selectedStoreId={loaderData.selectedStore?.id}
+                    />
+                  ) : null}
+
+                  {deprioritizeBought && section.boughtItems.length > 0 ? (
+                    <details
+                      className={`${storeModeHandletFoldClass}${section.items.length > 0 ? " mt-4" : " mt-3"}`}
+                    >
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
+                        <span className="text-sm font-semibold text-stone-700">
+                          Handlet
+                        </span>
+                        <span className={storeModeCountChipClass}>
+                          {section.boughtItems.length} varer
+                        </span>
+                      </summary>
+
+                      <StoreModeItemGrid
+                        categories={loaderData.categories}
+                        categoryFetcherError={categoryFetcherError}
+                        categoryInteractionSourceKey={
+                          categoryInteractionSourceKey
+                        }
+                        isSavingCategorySourceKey={isSavingCategorySourceKey}
+                        items={section.boughtItems}
+                        layout={shoppingView}
+                        onQuickAddFromCard={handleQuickAddFromCard}
+                        onUpdateCategory={handleUpdateCategory}
+                        onUpdateQuantity={handleUpdateQuantity}
+                        onToggleItem={handleToggleWithUndoFeedback}
+                        recentlyAddedSourceKey={recentlyAddedSourceKey}
+                        selectedStoreId={loaderData.selectedStore?.id}
+                      />
+                    </details>
+                  ) : null}
                 </details>
               ))
-            ) : deprioritizeBought ? (
+            ) : null}
+            {deprioritizeBought &&
+            activeSections.length > 0 &&
+            !hasUncheckedDueItems ? (
               <article className={`${storeModeSurfaceCardClass} p-6`}>
                 <h3 className="text-base font-semibold text-stone-950">
                   Alt er krysset av
                 </h3>
                 <p className="mt-3 text-sm leading-6 text-stone-600">
-                  Du har handlet alle varene for denne turen. Kjøpte varer
-                  ligger nedenfor hvis du vil se eller endre dem.
+                  Du har handlet alle varene for denne turen. Åpne Handlet i
+                  hver seksjon hvis du vil se eller endre dem.
                 </p>
               </article>
-            ) : null}
-            {deprioritizeBought && boughtItems.length > 0 ? (
-              <details className={storeModeMutedPanelClass}>
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
-                  <span className="text-lg font-semibold tracking-tight text-stone-950">
-                    Kjøpt
-                  </span>
-                  <span className={storeModeCountChipClass}>
-                    {boughtItems.length} varer
-                  </span>
-                </summary>
-
-                <StoreModeItemGrid
-                  categories={loaderData.categories}
-                  categoryFetcherError={categoryFetcherError}
-                  categoryInteractionSourceKey={categoryInteractionSourceKey}
-                  isSavingCategorySourceKey={isSavingCategorySourceKey}
-                  items={boughtItems}
-                  layout={shoppingView}
-                  onQuickAddFromCard={handleQuickAddFromCard}
-                  onUpdateCategory={handleUpdateCategory}
-                  onUpdateQuantity={handleUpdateQuantity}
-                  onToggleItem={handleToggle}
-                  recentlyAddedSourceKey={recentlyAddedSourceKey}
-                  selectedStoreId={loaderData.selectedStore?.id}
-                />
-              </details>
             ) : null}
           </section>
         ) : (
@@ -1299,8 +1355,35 @@ export default function FamilyMealPlanStoreModeRoute({
         </div>
       ) : null}
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-3">
-        <div className="pointer-events-auto mx-auto max-w-4xl min-w-0">
+      <div className={storeModeBottomChromeShellClass}>
+        <div className="pointer-events-auto mx-auto flex max-w-4xl min-w-0 flex-col gap-2">
+          {lastCheckedAction ? (
+            <div
+              aria-live="polite"
+              className={storeModeUndoBarClass}
+              role="status"
+            >
+              <p className="min-w-0 flex-1 truncate leading-5">
+                Krysset av:{" "}
+                <span className="font-semibold">{lastCheckedAction.name}</span>
+              </p>
+              <button
+                className={storeModeUndoBarActionClass}
+                onClick={handleUndoLastCheck}
+                type="button"
+              >
+                Angre
+              </button>
+              <button
+                aria-label="Lukk"
+                className={storeModeUndoBarDismissClass}
+                onClick={handleDismissLastCheck}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
           <div className={storeModeQuickAddDockClass}>
             <ManualShoppingQuickAdd
               appearance="store-mode"

@@ -364,7 +364,7 @@ describe("shopping-store-mode-client", () => {
     ).toEqual(["family:1", "family:2"]);
   });
 
-  it("returns sections unchanged when deprioritize-bought is off", () => {
+  it("returns sections with empty boughtItems when deprioritize-bought is off", () => {
     const sections = [
       {
         displayName: "Produce",
@@ -376,12 +376,20 @@ describe("shopping-store-mode-client", () => {
     ];
 
     expect(partitionStoreModeSections(sections, false)).toEqual({
-      activeSections: sections,
-      boughtItems: [],
+      activeSections: [
+        {
+          displayName: "Produce",
+          boughtItems: [],
+          items: [
+            { checked: true, id: "a" },
+            { checked: false, id: "b" },
+          ],
+        },
+      ],
     });
   });
 
-  it("partitions unchecked into active sections and checked into bought items", () => {
+  it("keeps bought items on each section and retains fully checked aisles", () => {
     const sections = [
       {
         displayName: "Produce",
@@ -400,12 +408,14 @@ describe("shopping-store-mode-client", () => {
       activeSections: [
         {
           displayName: "Produce",
+          boughtItems: [{ checked: true, id: "a" }],
           items: [{ checked: false, id: "b" }],
         },
-      ],
-      boughtItems: [
-        { checked: true, id: "a" },
-        { checked: true, id: "c" },
+        {
+          displayName: "Dairy",
+          boughtItems: [{ checked: true, id: "c" }],
+          items: [],
+        },
       ],
     });
   });

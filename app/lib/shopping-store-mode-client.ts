@@ -140,26 +140,34 @@ export function sortStoreModeItemsByName<
   return [...items].sort(compareStoreModeItemsByName);
 }
 
+export type StoreModePartitionedSection<
+  TSection extends { items: Array<{ checked: boolean }> },
+> = Omit<TSection, "items"> & {
+  boughtItems: TSection["items"];
+  items: TSection["items"];
+};
+
 export function partitionStoreModeSections<
-  TItem extends { checked: boolean },
-  TSection extends { items: TItem[] },
+  TSection extends { items: Array<{ checked: boolean }> },
 >(
   sections: TSection[],
   deprioritizeBought: boolean,
-): { activeSections: TSection[]; boughtItems: TItem[] } {
+): { activeSections: Array<StoreModePartitionedSection<TSection>> } {
   if (!deprioritizeBought) {
     return {
-      activeSections: sections,
-      boughtItems: [],
+      activeSections: sections.map((section) => ({
+        ...section,
+        boughtItems: [] as TSection["items"],
+        items: section.items,
+      })),
     };
   }
 
-  const activeSections: TSection[] = [];
-  const boughtItems: TItem[] = [];
+  const activeSections: Array<StoreModePartitionedSection<TSection>> = [];
 
   for (const section of sections) {
-    const uncheckedItems: TItem[] = [];
-    const checkedItems: TItem[] = [];
+    const uncheckedItems = [] as TSection["items"];
+    const checkedItems = [] as TSection["items"];
 
     for (const item of section.items) {
       if (item.checked) {
@@ -169,19 +177,19 @@ export function partitionStoreModeSections<
       }
     }
 
-    if (uncheckedItems.length > 0) {
-      activeSections.push({
-        ...section,
-        items: uncheckedItems,
-      });
+    if (uncheckedItems.length === 0 && checkedItems.length === 0) {
+      continue;
     }
 
-    boughtItems.push(...checkedItems);
+    activeSections.push({
+      ...section,
+      boughtItems: checkedItems,
+      items: uncheckedItems,
+    });
   }
 
   return {
     activeSections,
-    boughtItems,
   };
 }
 
