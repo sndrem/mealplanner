@@ -61,6 +61,13 @@ vi.mock("../lib/store-write.server", () => {
   };
 });
 
+vi.mock("../lib/store-mode-trip-focus-write.server", () => {
+  return {
+    parseStoreModeTripFocus: vi.fn(),
+    updateStoreModeTripFocus: vi.fn(),
+  };
+});
+
 import {
   createQuickFamilyShoppingItem,
   parseFamilyShoppingItemValues,
@@ -85,6 +92,10 @@ import {
   updateManualShoppingItem,
 } from "../lib/shopping-write.server";
 import { listIngredientCategories } from "../lib/store.server";
+import {
+  parseStoreModeTripFocus,
+  updateStoreModeTripFocus,
+} from "../lib/store-mode-trip-focus-write.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
 import { action, loader } from "./family-meal-plan-store-mode";
 
@@ -216,6 +227,9 @@ describe("family store mode route", () => {
         id: "store-1",
         name: "Meny",
       },
+      canFocusNext: true,
+      effectiveTripFocus: "CURRENT",
+      tripFocus: "CURRENT",
       stores: [
         {
           id: "store-1",
@@ -287,6 +301,9 @@ describe("family store mode route", () => {
         title: "Langhelg",
       },
     ]);
+    expect(result.tripFocus).toBe("CURRENT");
+    expect(result.effectiveTripFocus).toBe("CURRENT");
+    expect(result.canFocusNext).toBe(true);
     expect(result.dueSectionGroups[0]?.items[0]).toEqual(
       expect.objectContaining({
         firstDate: "2026-05-15",
@@ -337,6 +354,9 @@ describe("family store mode route", () => {
         id: "store-1",
         name: "Meny",
       },
+      canFocusNext: false,
+      effectiveTripFocus: "CURRENT",
+      tripFocus: "CURRENT",
       stores: [
         {
           id: "store-1",
@@ -1196,5 +1216,38 @@ describe("family store mode route", () => {
       "http://localhost/families/family-1/store-mode?notice=selected-store-updated",
     );
     expect(toggleShoppingItemChecked).not.toHaveBeenCalled();
+  });
+
+  it("redirects after updating store-mode trip focus", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
+    vi.mocked(parseStoreModeTripFocus).mockReturnValue("NEXT");
+    vi.mocked(updateStoreModeTripFocus).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-store-mode-trip-focus");
+    formData.set("tripFocus", "NEXT");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(undefined, formData),
+    } as never);
+
+    expect(parseStoreModeTripFocus).toHaveBeenCalledWith("NEXT");
+    expect(updateStoreModeTripFocus).toHaveBeenCalledWith({
+      familyId: "family-1",
+      tripFocus: "NEXT",
+      userId: "user-1",
+    });
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).headers.get("Location")).toBe(
+      "http://localhost/families/family-1/store-mode?notice=store-mode-trip-focus-updated",
+    );
   });
 });

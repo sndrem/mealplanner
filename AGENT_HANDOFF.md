@@ -2,32 +2,35 @@
 
 ## Current Objective
 
-Ship #211 store-mode Handlet + sticky Angre — PR open, awaiting merge.
+Ship #213 store-mode trip focus — PR opened, awaiting merge.
 
 ## Completed
 
-- Per-aisle **Handlet** folds; removed global **Kjøpt**
-- Sticky **Krysset av · Angre** above quick-add dock
-- Validated, committed, pushed; PR https://github.com/sndrem/mealplanner/pull/212 (`Closes #211`)
+- Trip focus control in Butikkmodus: Denne uken / Neste uke / Alle åpne
+- Persisted on `UserStorePreference.storeModeTripFocus` (default CURRENT)
+- Store-mode list filters by focus; family manuals always included
+- Validated, committed, pushed; PR with `Closes #213`
 
 ## Files To Read First
 
 - `app/routes/family-meal-plan-store-mode.tsx`
-- `app/lib/shopping-store-mode-client.ts`
+- `app/lib/shopping.server.ts`
+- `app/lib/meal-plan-for-date.server.ts`
+- `prisma/migrations/20260821090000_add_store_mode_trip_focus/migration.sql`
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 459 tests passed
+- `npm run test:run` — 472 tests passed
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Manual phone smoke after deploy
-- Issue #211 closes on PR merge via `Closes #211`
-- Untracked `.cursor/rules/ux-flow-sparring.mdc` left out of this PR
+- Apply migration on deploy (`prisma migrate deploy`)
+- Manual smoke after deploy: CURRENT hides next week; NEXT mid-week; Alle åpne
+- Issue #213 closes on PR merge via `Closes #213`
 
 ## Next Step
 
-Review/merge https://github.com/sndrem/mealplanner/pull/212
+Review/merge the open PR for #213.

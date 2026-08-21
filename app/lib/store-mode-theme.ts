@@ -31,6 +31,8 @@ export const storeModeMetaStoreSelectClass = `${storeModeMetaSelectBase} max-w-[
 
 export const storeModeMetaDateSelectClass = `${storeModeMetaSelectBase} max-w-[9rem]`;
 
+export const storeModeMetaTripFocusSelectClass = `${storeModeMetaSelectBase} max-w-[10rem]`;
+
 export const storeModeCountChipClass =
   "rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600";
 

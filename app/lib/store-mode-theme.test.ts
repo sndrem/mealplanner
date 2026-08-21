@@ -6,6 +6,7 @@ import {
   storeModeBottomChromeShellClass,
   storeModeMetaDateSelectClass,
   storeModeMetaStoreSelectClass,
+  storeModeMetaTripFocusSelectClass,
   storeModeSelectClass,
   storeModeSyncOverlayShellClass,
   storeModeUndoBarActionClass,
@@ -40,6 +41,7 @@ describe("store-mode-theme", () => {
     expect(storeModeMetaStoreSelectClass).toContain("w-auto");
     expect(storeModeMetaStoreSelectClass).not.toContain("w-full");
     expect(storeModeMetaDateSelectClass).toContain("max-w-[9rem]");
+    expect(storeModeMetaTripFocusSelectClass).toContain("max-w-[10rem]");
     expect(storeModeSelectClass).toContain("w-full");
   });
 
