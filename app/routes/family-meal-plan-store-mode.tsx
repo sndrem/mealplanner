@@ -1215,6 +1215,12 @@ export default function FamilyMealPlanStoreModeRoute({
             </Link>
             <Link
               className="text-stone-600 underline-offset-2 hover:text-stone-950 hover:underline"
+              to={`/families/${loaderData.family.id}/store-mode/share`}
+            >
+              Del liste
+            </Link>
+            <Link
+              className="text-stone-600 underline-offset-2 hover:text-stone-950 hover:underline"
               to={`/families/${loaderData.family.id}/stores`}
             >
               Butikker
