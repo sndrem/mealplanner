@@ -40,6 +40,22 @@ export const storeModeLaterChipClass =
 export const storeModeQuickAddDockClass =
   "min-w-0 max-w-full rounded-[28px] bg-white p-4 shadow-2xl ring-2 ring-store-accent";
 
+/** Fixed bottom stack (undo + quick-add) — out of document flow. */
+export const storeModeBottomChromeShellClass =
+  "pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-3";
+
+export const storeModeUndoBarClass =
+  "flex min-h-11 items-center gap-3 rounded-2xl border border-stone-200 bg-white/95 px-3 py-2 text-sm text-stone-900 shadow-lg backdrop-blur-sm";
+
+export const storeModeUndoBarActionClass =
+  "inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-store-accent-light px-3 text-sm font-semibold text-store-accent-text ring-1 ring-store-accent/40 transition hover:bg-store-accent-light/80";
+
+export const storeModeUndoBarDismissClass =
+  "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-stone-500 transition hover:bg-stone-100 hover:text-stone-950";
+
+export const storeModeHandletFoldClass =
+  "rounded-2xl border border-stone-200/80 bg-stone-50/90 p-3";
+
 export type StoreModeBannerTone = "success" | "sync" | "error";
 
 export type StoreModeSyncOverlayTone = "sync" | "error";
