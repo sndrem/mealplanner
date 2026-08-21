@@ -90,9 +90,9 @@ export function FamilyRecipeEditorCard({
     Boolean(updateValues) || initialEditing,
   );
   const [draftValues, setDraftValues] = useState(sourceValues);
-  const [focusIngredientIndex, setFocusIngredientIndex] = useState<number | null>(
-    null,
-  );
+  const [focusIngredientIndex, setFocusIngredientIndex] = useState<
+    number | null
+  >(null);
   const clearIngredientDisplayNameFocus = useCallback(() => {
     setFocusIngredientIndex(null);
   }, []);
@@ -216,7 +216,9 @@ export function FamilyRecipeEditorCard({
 
     setDraftValues((current) => ({
       ...current,
-      ingredients: current.ingredients.filter((_, rowIndex) => rowIndex !== index),
+      ingredients: current.ingredients.filter(
+        (_, rowIndex) => rowIndex !== index,
+      ),
     }));
   }
 
@@ -248,9 +250,13 @@ export function FamilyRecipeEditorCard({
   return (
     <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
       {isDeletingRecipe ? (
-        <p className="text-sm font-medium text-rose-700">Sletter oppskrift...</p>
+        <p className="text-sm font-medium text-rose-700">
+          Sletter oppskrift...
+        </p>
       ) : null}
-      <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${isDeletingRecipe ? "mt-3 opacity-60" : ""}`}>
+      <div
+        className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${isDeletingRecipe ? "mt-3 opacity-60" : ""}`}
+      >
         <div className="flex min-w-0 flex-1 items-start gap-4">
           <RecipePickerMedia
             imageUrl={displayedCoverUrl}
@@ -419,8 +425,8 @@ function RecipeCoverField({
         <div className="min-w-0 flex-1 space-y-3">
           {!r2Configured ? (
             <p className="text-sm leading-6 text-amber-800">
-              Bildeopplasting er ikke konfigurert (Cloudflare R2). Du kan fortsatt
-              lagre oppskriften uten bilde.
+              Bildeopplasting er ikke konfigurert (Cloudflare R2). Du kan
+              fortsatt lagre oppskriften uten bilde.
             </p>
           ) : (
             <p className="text-sm leading-6 text-slate-600">
@@ -625,7 +631,9 @@ function RecipeFields({
             value={draftValues.prepMinutes}
           />
           {fieldErrors?.prepMinutes ? (
-            <p className="mt-2 text-sm text-rose-600">{fieldErrors.prepMinutes}</p>
+            <p className="mt-2 text-sm text-rose-600">
+              {fieldErrors.prepMinutes}
+            </p>
           ) : null}
         </label>
       </div>
@@ -649,7 +657,9 @@ function RecipeFields({
 
       <div className="space-y-4">
         <div>
-          <h3 className="text-base font-semibold text-slate-950">Ingredienser</h3>
+          <h3 className="text-base font-semibold text-slate-950">
+            Ingredienser
+          </h3>
           <p className="mt-1 text-sm leading-6 text-slate-600">
             Hver rad er én ingrediens med egen handlekategori (brukes i
             handlelisten, ikke som oppskriftstype).
@@ -773,7 +783,9 @@ function IngredientRowEditor({
           <input
             className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
             name={`ingredientAmount:${index}`}
-            onChange={(event) => onUpdate(row.key, { amount: event.target.value })}
+            onChange={(event) =>
+              onUpdate(row.key, { amount: event.target.value })
+            }
             type="text"
             value={row.amount}
           />
@@ -783,7 +795,9 @@ function IngredientRowEditor({
           <input
             className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
             name={`ingredientUnit:${index}`}
-            onChange={(event) => onUpdate(row.key, { unit: event.target.value })}
+            onChange={(event) =>
+              onUpdate(row.key, { unit: event.target.value })
+            }
             type="text"
             value={row.unit}
           />
@@ -846,13 +860,17 @@ function RecipeReadOnlySummary({
   draftValues: FamilyRecipeValues;
   familyStores: RecipeStore[];
 }) {
-  const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const categoryById = new Map(
+    categories.map((category) => [category.id, category]),
+  );
   const storeById = new Map(familyStores.map((store) => [store.id, store]));
 
   return (
     <div className="mt-6 space-y-6">
       {draftValues.description ? (
-        <p className="text-sm leading-7 text-slate-600">{draftValues.description}</p>
+        <p className="text-sm leading-7 text-slate-600 whitespace-break-spaces">
+          {draftValues.description}
+        </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
         {draftValues.defaultServings ? (
@@ -888,7 +906,8 @@ function RecipeReadOnlySummary({
               {index + 1}. {row.displayName}
             </p>
             <p className="mt-1 text-sm text-slate-600">
-              {[row.amount, row.unit].filter(Boolean).join(" ") || "Uten mengde"}
+              {[row.amount, row.unit].filter(Boolean).join(" ") ||
+                "Uten mengde"}
               {" · Handlekategori: "}
               {categoryById.get(row.categoryId)?.displayName ??
                 "Ukjent handlekategori"}
@@ -903,7 +922,9 @@ function RecipeReadOnlySummary({
   );
 }
 
-function toRecipeValues(recipe: FamilyRecipeEditorCardProps["recipe"]): FamilyRecipeValues {
+function toRecipeValues(
+  recipe: FamilyRecipeEditorCardProps["recipe"],
+): FamilyRecipeValues {
   return {
     defaultServings: recipe.defaultServings?.toString() ?? "",
     description: recipe.description ?? "",
