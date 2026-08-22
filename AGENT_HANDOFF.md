@@ -2,35 +2,37 @@
 
 ## Current Objective
 
-Ship #217 guest shopping-list share — PR opening from `issue/217-share-shopping-list-url`.
+Ship #219 shopping list completion celebration — PR from `cursor/shopping-complete-celebration-5128`.
 
 ## Completed
 
-- Store-mode **Del liste** curation (checked items excluded by default) creates an unlisted guest URL
-- Public `/s/:token` page with Rema 1000 default store, client store switch, localStorage checkoff
-- `ShoppingListShare` snapshot (hashed token + JSON); checks do not write the family list
-- `StoreModeShoppingItemCard` `readOnly` mode
+- Completion detection helper + hook (`shopping-list-completion.client.ts`, `use-shopping-list-completion-celebration.ts`)
+- Reusable `ShoppingListCompleteCelebration` component (inline + store-mode chrome variants)
+- Store mode integration: bottom chrome celebration, progress pill pulse, enhanced “Alt er krysset av” card
+- Shared guest list (`/s/:token`) integration with inline celebration + completion card
+- Norwegian copy with emoji: “Ferdig! 🛒” / “God handletur — alt er krysset av.”
+- `prefers-reduced-motion` respected via static panel / no enter animation
 
 ## Files To Read First
 
-- `app/lib/shopping-share.server.ts` — create/load snapshot
-- `app/routes/family-store-mode-share.tsx` — curation + copy link
-- `app/routes/shopping-list-share.tsx` — unauthenticated guest view
-- `prisma/migrations/20260821140000_add_shopping_list_share/migration.sql`
+- `app/lib/shopping-list-completion.client.ts` — edge detection
+- `app/lib/use-shopping-list-completion-celebration.ts` — React hook
+- `app/components/shopping-list-complete-celebration.tsx` — UI
+- `app/routes/family-meal-plan-store-mode.tsx` — primary integration
+- `app/routes/shopping-list-share.tsx` — guest list integration
 
 ## Validation
 
-- `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 500 tests passed
-- `npm run typecheck` — passed
+- `npm run test:run -- shopping-list-completion use-shopping-list-completion` — 12 tests passed
+- `npm run typecheck` — blocked locally (missing `DATABASE_URL` for `prisma:generate`)
 
 ## Open Items
 
-- Apply migration on deploy (`prisma migrate deploy`)
-- Manual smoke: store mode → curate → copy → incognito `/s/:token` → Rema order → switch store → check → reload
-- Issue #217 closes on PR merge via `Closes #217`
+- Manual smoke: store mode check last item → celebration; reload when complete → no celebration; uncheck → dismiss
+- Manual smoke: shared list same flow
+- `npm run typecheck` in CI should pass with env configured
 
 ## Next Step
 
-Review/merge the open PR for #217.
+Review/merge PR; closes #219 on merge.
