@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { isRouteErrorResponse, type MetaFunction } from "react-router";
 
 import { StoreModeShoppingItemCard } from "../components/store-mode-shopping-item-card";
+import { ShoppingListCompleteCelebration } from "../components/shopping-list-complete-celebration";
 import {
   groupSharedShoppingItemsByStore,
   resolveDefaultSharedStoreId,
@@ -20,6 +21,7 @@ import {
   partitionStoreModeSections,
   sortStoreModeItemsByName,
 } from "../lib/shopping-store-mode-client";
+import { useShoppingListCompletionCelebration } from "../lib/use-shopping-list-completion-celebration";
 import {
   storeModeAccentBarClass,
   storeModeCountChipClass,
@@ -102,6 +104,11 @@ export default function ShoppingListShareRoute({
   const { activeSections } = partitionStoreModeSections(sectionGroups, true);
   const checkedCount = checkedIds.size;
   const totalCount = snapshot.items.length;
+  const { isCelebrating } = useShoppingListCompletionCelebration({
+    checkedCount,
+    totalCount,
+  });
+  const allItemsChecked = totalCount > 0 && checkedCount === totalCount;
 
   function handleToggle(itemId: string) {
     setCheckedIds((current) => {
@@ -154,11 +161,19 @@ export default function ShoppingListShareRoute({
               </label>
             </>
           ) : null}
-          <span className={storeModeProgressPillClass}>
+          <span
+            className={`${storeModeProgressPillClass}${
+              isCelebrating ? " motion-safe:animate-pulse" : ""
+            }`}
+          >
             <span aria-hidden="true" className={storeModeProgressDotClass} />
             {checkedCount}/{totalCount}
           </span>
         </section>
+
+        {isCelebrating ? (
+          <ShoppingListCompleteCelebration variant="inline" />
+        ) : null}
 
         {activeSections.length > 0 ? (
           <section className="grid gap-4">
@@ -210,6 +225,32 @@ export default function ShoppingListShareRoute({
                 ) : null}
               </details>
             ))}
+            {allItemsChecked ? (
+              <article
+                className={`${storeModeSurfaceCardClass} p-6${
+                  isCelebrating
+                    ? " border border-emerald-200/80 bg-emerald-50/40 motion-safe:animate-pulse motion-reduce:animate-none"
+                    : ""
+                }`}
+              >
+                <h3 className="text-base font-semibold text-stone-950">
+                  Alt er krysset av
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-stone-600">
+                  Du har handlet alle varene på listen. Åpne Handlet i hver
+                  seksjon hvis du vil se eller endre dem.
+                </p>
+              </article>
+            ) : null}
+          </section>
+        ) : allItemsChecked ? (
+          <section className={`${storeModeSurfaceCardClass} p-6`}>
+            <h2 className="text-lg font-semibold tracking-tight text-stone-950">
+              Alt er krysset av
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-stone-600">
+              Du har handlet alle varene på listen.
+            </p>
           </section>
         ) : (
           <section className={`${storeModeSurfaceCardClass} p-6`}>

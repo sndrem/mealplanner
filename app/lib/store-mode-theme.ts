@@ -55,6 +55,9 @@ export const storeModeUndoBarActionClass =
 export const storeModeUndoBarDismissClass =
   "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-stone-500 transition hover:bg-stone-100 hover:text-stone-950";
 
+export const storeModeCompleteCelebrationChromeClass =
+  "flex min-h-11 items-start gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/95 px-3 py-2.5 text-sm text-emerald-950 shadow-lg backdrop-blur-sm";
+
 export const storeModeHandletFoldClass =
   "rounded-2xl border border-stone-200/80 bg-stone-50/90 p-3";
 
