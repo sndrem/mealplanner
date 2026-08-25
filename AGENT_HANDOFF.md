@@ -2,37 +2,32 @@
 
 ## Current Objective
 
-Ship #219 shopping list completion celebration — PR from `cursor/shopping-complete-celebration-5128`.
+Ship #221 ICS export fix — PR opened, awaiting merge.
 
 ## Completed
 
-- Completion detection helper + hook (`shopping-list-completion.client.ts`, `use-shopping-list-completion-celebration.ts`)
-- Reusable `ShoppingListCompleteCelebration` component (inline + store-mode chrome variants)
-- Store mode integration: bottom chrome celebration, progress pill pulse, enhanced “Alt er krysset av” card
-- Shared guest list (`/s/:token`) integration with inline celebration + completion card
-- Norwegian copy with emoji: “Ferdig! 🛒” / “God handletur — alt er krysset av.”
-- `prefers-reduced-motion` respected via static panel / no enter animation
+- Normalized `\r\n` and `\r` to `\n` before ICS text escaping in `app/lib/calendar.server.ts`
+- Added tests that generated ICS lines contain no bare carriage returns
+- Validated, committed, pushed; PR with `Closes #221`
+- Merged `origin/main` (resolved `AGENT_HANDOFF.md` conflict)
 
 ## Files To Read First
 
-- `app/lib/shopping-list-completion.client.ts` — edge detection
-- `app/lib/use-shopping-list-completion-celebration.ts` — React hook
-- `app/components/shopping-list-complete-celebration.tsx` — UI
-- `app/routes/family-meal-plan-store-mode.tsx` — primary integration
-- `app/routes/shopping-list-share.tsx` — guest list integration
+- `app/lib/calendar.server.ts` - ICS generation and `escapeText`
+- `app/lib/calendar.server.test.ts` - CRLF/CR description coverage
 
 ## Validation
 
+- `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run -- shopping-list-completion use-shopping-list-completion` — 12 tests passed
-- `npm run typecheck` — blocked locally (missing `DATABASE_URL` for `prisma:generate`)
+- `npm run test:run` — 473 tests passed
+- `npm run typecheck` — passed
 
 ## Open Items
 
-- Manual smoke: store mode check last item → celebration; reload when complete → no celebration; uncheck → dismiss
-- Manual smoke: shared list same flow
-- `npm run typecheck` in CI should pass with env configured
+- Re-export a week plan after merge/deploy and open the `.ics` in macOS Calendar
+- Issue #221 closes on PR merge via `Closes #221`
 
 ## Next Step
 
-Review/merge PR; closes #219 on merge.
+Review/merge the open PR for #221.
