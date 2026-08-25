@@ -14,6 +14,7 @@ import {
 } from "react-router";
 
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
+import { ShoppingListCompleteCelebration } from "../components/shopping-list-complete-celebration";
 import { ShoppingDateSelect } from "../components/shopping-list-item-expanded";
 import { StoreModeDeprioritizeBoughtToggle } from "../components/store-mode-deprioritize-bought-toggle";
 import {
@@ -30,6 +31,7 @@ import {
   updateFamilyShoppingItem,
   updateFamilyShoppingItemQuantity,
 } from "../lib/family-shopping-write.server";
+import { useShoppingListCompletionCelebration } from "../lib/use-shopping-list-completion-celebration";
 import {
   buildStoreModeDeprioritizeBoughtStorageKey,
   buildStoreModeViewStorageKey,
@@ -956,6 +958,9 @@ export default function FamilyMealPlanStoreModeRoute({
     () => computeStoreModeProgress(displayDueItems),
     [displayDueItems],
   );
+  const { isCelebrating } = useShoppingListCompletionCelebration(
+    displayProgress,
+  );
   const displaySectionGroups = useMemo(
     () =>
       dueSectionGroups.map((section) => ({
@@ -1053,8 +1058,14 @@ export default function FamilyMealPlanStoreModeRoute({
   const handleDismissLastCheck = useCallback(() => {
     setLastCheckedAction(null);
   }, []);
-  const pageClass = lastCheckedAction
-    ? storeModePageClass.replace("pb-36", "pb-52")
+  const pageBottomPaddingClass =
+    lastCheckedAction && isCelebrating
+      ? "pb-64"
+      : lastCheckedAction || isCelebrating
+        ? "pb-52"
+        : null;
+  const pageClass = pageBottomPaddingClass
+    ? storeModePageClass.replace("pb-36", pageBottomPaddingClass)
     : storeModePageClass;
   const noticeContent = loaderData.notice
     ? getStoreModeNoticeContent(loaderData.notice)
@@ -1202,7 +1213,11 @@ export default function FamilyMealPlanStoreModeRoute({
           <span className="hidden text-stone-300 sm:inline" aria-hidden="true">
             ·
           </span>
-          <span className={storeModeProgressPillClass}>
+          <span
+            className={`${storeModeProgressPillClass}${
+              isCelebrating ? " motion-safe:animate-pulse" : ""
+            }`}
+          >
             <span aria-hidden="true" className={storeModeProgressDotClass} />
             {displayProgress.checkedCount}/{displayProgress.totalCount}
           </span>
@@ -1212,6 +1227,12 @@ export default function FamilyMealPlanStoreModeRoute({
               to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
             >
               Handleliste
+            </Link>
+            <Link
+              className="text-stone-600 underline-offset-2 hover:text-stone-950 hover:underline"
+              to={`/families/${loaderData.family.id}/store-mode/share`}
+            >
+              Del liste
             </Link>
             <Link
               className="text-stone-600 underline-offset-2 hover:text-stone-950 hover:underline"
@@ -1330,7 +1351,13 @@ export default function FamilyMealPlanStoreModeRoute({
             {deprioritizeBought &&
             activeSections.length > 0 &&
             !hasUncheckedDueItems ? (
-              <article className={`${storeModeSurfaceCardClass} p-6`}>
+              <article
+                className={`${storeModeSurfaceCardClass} p-6${
+                  isCelebrating
+                    ? " border border-emerald-200/80 bg-emerald-50/40 motion-safe:animate-pulse motion-reduce:animate-none"
+                    : ""
+                }`}
+              >
                 <h3 className="text-base font-semibold text-stone-950">
                   Alt er krysset av
                 </h3>
@@ -1450,6 +1477,9 @@ export default function FamilyMealPlanStoreModeRoute({
 
       <div className={storeModeBottomChromeShellClass}>
         <div className="pointer-events-auto mx-auto flex max-w-4xl min-w-0 flex-col gap-2">
+          {isCelebrating ? (
+            <ShoppingListCompleteCelebration variant="chrome" />
+          ) : null}
           {lastCheckedAction ? (
             <div
               aria-live="polite"

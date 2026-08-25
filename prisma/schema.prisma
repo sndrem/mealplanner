@@ -94,6 +94,7 @@ model User {
   responsibleMealPlanEntries      MealPlanEntry[]        @relation("MealPlanEntryResponsible")
   shoppingItemCheckEvents         ShoppingItemCheckEvent[] @relation("ShoppingItemCheckEventActor")
   passwordResetTokens             PasswordResetToken[]
+  createdShoppingListShares       ShoppingListShare[]      @relation("ShoppingListShareCreatedBy")
 
   @@index([displayName])
 }
@@ -131,6 +132,7 @@ model Family {
   shoppingCatalogItems FamilyShoppingCatalogItem[]
   shoppingItemCheckEvents ShoppingItemCheckEvent[]
   ingredientCategories    IngredientCategory[]
+  shoppingListShares      ShoppingListShare[]
 
   @@index([createdByUserId])
   @@index([name])
@@ -548,6 +550,21 @@ model UserStorePreference {
   @@index([userId])
   @@index([familyId])
   @@index([selectedStoreId])
+}
+
+model ShoppingListShare {
+  id              String   @id @default(cuid())
+  familyId        String
+  createdByUserId String
+  tokenHash       String   @unique
+  snapshot        Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  family          Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdByUser   User     @relation("ShoppingListShareCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([familyId, createdAt])
+  @@index([createdByUserId])
 }
 
 model UserFamilyShoppingPreference {

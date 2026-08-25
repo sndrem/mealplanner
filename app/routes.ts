@@ -8,6 +8,7 @@ export default [
   route("forgot-password", "routes/forgot-password.tsx"),
   route("reset-password", "routes/reset-password.tsx"),
   route("api/generate-recipe-description", "routes/api.generate-recipe-description.ts"),
+  route("s/:token", "routes/shopping-list-share.tsx"),
   layout("routes/app-layout.tsx", [
     route("app", "routes/app.tsx"),
     route("families/:familyId", "routes/family.tsx"),
@@ -40,6 +41,10 @@ export default [
       "routes/family-meal-plan-store-mode-redirect.ts",
     ),
     route("families/:familyId/store-mode", "routes/family-meal-plan-store-mode.tsx"),
+    route(
+      "families/:familyId/store-mode/share",
+      "routes/family-store-mode-share.tsx",
+    ),
     route("families/:familyId/shopping", "routes/family-shopping.tsx"),
     route(
       "families/:familyId/shopping/ingredient-search",

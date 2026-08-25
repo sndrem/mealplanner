@@ -77,7 +77,7 @@ export type StoreModeCategoryUpdateRequest =
     };
 
 interface StoreModeShoppingItemCardProps {
-  categories: StoreCategory[];
+  categories?: StoreCategory[];
   categoryError?: string | null;
   isRecentlyAdded?: boolean;
   isSavingCategory?: boolean;
@@ -96,6 +96,7 @@ interface StoreModeShoppingItemCardProps {
     sourceType: "FAMILY" | "GENERATED";
   }) => void;
   onToggle: () => void;
+  readOnly?: boolean;
   selectedStoreId: string | undefined;
 }
 
@@ -103,7 +104,7 @@ const badgeClass = "rounded-full px-2 py-0.5 text-[11px] font-medium leading-4";
 const NOTE_SAVE_DEBOUNCE_MS = 450;
 
 export function StoreModeShoppingItemCard({
-  categories,
+  categories = [],
   categoryError = null,
   isRecentlyAdded = false,
   isSavingCategory = false,
@@ -113,6 +114,7 @@ export function StoreModeShoppingItemCard({
   onUpdateCategory,
   onUpdateQuantity,
   onToggle,
+  readOnly = false,
   selectedStoreId,
 }: StoreModeShoppingItemCardProps) {
   const quantityBadge = formatGeneratedQuantityBadge(item);
@@ -124,7 +126,8 @@ export function StoreModeShoppingItemCard({
   const [noteDraft, setNoteDraft] = useState(item.note ?? "");
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const showCategoryEdit =
-    item.sourceType === "FAMILY" || item.sourceType === "MANUAL";
+    !readOnly &&
+    (item.sourceType === "FAMILY" || item.sourceType === "MANUAL");
   const savedNote = item.note ?? "";
   const hasNote = Boolean(noteDraft.trim());
   const isNoteDirty = noteDraft.trim() !== savedNote.trim();
@@ -256,7 +259,8 @@ export function StoreModeShoppingItemCard({
     ? "text-sm font-semibold leading-5 text-stone-500 line-through decoration-stone-400"
     : "text-sm font-semibold leading-5 text-stone-950";
   const showQuantityEdit =
-    item.sourceType === "FAMILY" || item.sourceType === "GENERATED";
+    !readOnly &&
+    (item.sourceType === "FAMILY" || item.sourceType === "GENERATED");
 
   useEffect(() => {
     if (!isQuantityModalOpen) {
@@ -332,7 +336,7 @@ export function StoreModeShoppingItemCard({
                 Foretrekker {item.preferredStore.name}
               </span>
             ) : null}
-            {hasNote ? (
+            {hasNote && !readOnly ? (
               <button
                 aria-expanded={isDetailsOpen}
                 aria-label={
@@ -347,13 +351,19 @@ export function StoreModeShoppingItemCard({
                 }}
                 type="button"
               >
-                <StoreModeNoteIcon className="h-3 w-3" />
+                <StoreModeNoteIcon className="h-3.5 w-3.5" />
                 Notat
               </button>
             ) : null}
           </span>
+          {readOnly && item.note ? (
+            <p className="mt-1 break-words text-xs leading-4 text-stone-600">
+              {item.note}
+            </p>
+          ) : null}
         </div>
 
+        {readOnly ? null : (
         <details
           className="group mt-auto flex w-7 min-w-7 flex-col-reverse items-stretch self-start pointer-events-auto open:w-1/2 open:min-w-[50%] open:max-w-full"
           onToggle={(event) => {
@@ -439,6 +449,7 @@ export function StoreModeShoppingItemCard({
             ) : null}
           </div>
         </details>
+        )}
       </div>
 
       {isQuantityModalOpen &&

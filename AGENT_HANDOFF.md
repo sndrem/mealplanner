@@ -9,6 +9,7 @@ Ship #221 ICS export fix — PR opened, awaiting merge.
 - Normalized `\r\n` and `\r` to `\n` before ICS text escaping in `app/lib/calendar.server.ts`
 - Added tests that generated ICS lines contain no bare carriage returns
 - Validated, committed, pushed; PR with `Closes #221`
+- Merged `origin/main` (resolved `AGENT_HANDOFF.md` conflict)
 
 ## Files To Read First
 
