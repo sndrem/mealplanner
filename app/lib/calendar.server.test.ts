@@ -71,6 +71,34 @@ describe("calendar.server", () => {
     expect(content).toContain("UID:meal-plan-1\\\\2026-05-15");
     expect(content).toContain("DTSTART;TZID=Europe/Oslo:20260515T160000");
     expect(content).toContain("DTEND;TZID=Europe/Oslo:20260515T170000");
+    expectIcsLinesHaveNoBareCarriageReturns(content);
+  });
+
+  it("escapes CRLF and CR recipe descriptions without breaking ICS line endings", () => {
+    const content = createCalendarFile("Mealplanner - Uke 35", [
+      {
+        date: "2026-08-25",
+        description:
+          "Planlagt for tirsdag 25. august 2026 i Uke 35. 1. Salt og pepre kyllingfilter av lårfilet\r\n2. Sleng i poteter, gulrøtter, champignon og løk\r\n3. Ha i kyllingkraft",
+        title: "Middag: Kremet kyllinggryte med sopp i Crock pot",
+        uid: "meal-plan-1-2026-08-25@mealplanner",
+      },
+      {
+        date: "2026-08-26",
+        description: "Planlagt for onsdag 26. august 2026 i Uke 35. Steg 1\rSteg 2",
+        title: "Middag: Bakt laksepasta",
+        uid: "meal-plan-1-2026-08-26@mealplanner",
+      },
+    ]);
+
+    expect(content).toContain(
+      "DESCRIPTION:Planlagt for tirsdag 25. august 2026 i Uke 35. 1. Salt og pepre kyllingfilter av lårfilet\\n2. Sleng i poteter\\, gulrøtter\\, champignon og løk\\n3. Ha i kyllingkraft",
+    );
+    expect(content).toContain(
+      "DESCRIPTION:Planlagt for onsdag 26. august 2026 i Uke 35. Steg 1\\nSteg 2",
+    );
+    expect(content.match(/BEGIN:VEVENT/g)).toHaveLength(2);
+    expectIcsLinesHaveNoBareCarriageReturns(content);
   });
 
   it("exports recipe-backed and freezer-backed meal-plan dinners", async () => {
@@ -82,7 +110,7 @@ describe("calendar.server", () => {
           freezerItem: null,
           freezerItemId: null,
           recipe: {
-            description: null,
+            description: "Steg 1\r\nSteg 2",
             title: "Taco fredag",
           },
           recipeId: "recipe-1",
@@ -125,6 +153,8 @@ describe("calendar.server", () => {
     expect(result.content).toContain("SUMMARY:Middag: Taco fredag");
     expect(result.content).toContain("SUMMARY:Middag: Chili fra fryseren");
     expect(result.content).toContain("Tina i micro");
+    expect(result.content).toContain("Steg 1\\nSteg 2");
+    expectIcsLinesHaveNoBareCarriageReturns(result.content);
   });
 
   it("exports a single day as a timed dinner calendar file", async () => {
@@ -184,3 +214,9 @@ describe("calendar.server", () => {
     });
   });
 });
+
+function expectIcsLinesHaveNoBareCarriageReturns(content: string) {
+  for (const line of content.split("\r\n")) {
+    expect(line).not.toMatch(/[\r\n]/);
+  }
+}

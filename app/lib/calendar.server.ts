@@ -331,6 +331,8 @@ function formatDateTimeStamp(value: Date) {
 
 function escapeText(value: string) {
   return value
+    .replaceAll("\r\n", "\n")
+    .replaceAll("\r", "\n")
     .replaceAll("\\", "\\\\")
     .replaceAll(";", "\\;")
     .replaceAll(",", "\\,")
