@@ -17,12 +17,14 @@ import {
 
 export function RecipeReminderModal({
   familyId,
+  initialSuggestionId,
   onClose,
   recipeId,
   recipeTitle,
   suggestions = [],
 }: {
   familyId: string;
+  initialSuggestionId?: string;
   onClose: () => void;
   recipeId: string;
   recipeTitle: string;
@@ -33,10 +35,13 @@ export function RecipeReminderModal({
     () => applyRecipeReminderPreset("tomorrow-morning", new Date()),
     [],
   );
-  const [title, setTitle] = useState(recipeTitle);
+  const initialSuggestion = suggestions.find(
+    (suggestion) => suggestion.id === initialSuggestionId,
+  );
+  const [title, setTitle] = useState(initialSuggestion?.title ?? recipeTitle);
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<
     string | undefined
-  >();
+  >(initialSuggestion?.id);
   const [presetId, setPresetId] = useState<RecipeReminderPresetId>(
     "tomorrow-morning",
   );

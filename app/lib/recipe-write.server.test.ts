@@ -9,6 +9,10 @@ const { dbMock, requireFamilyAdminMock, transactionMock, r2Mocks } = vi.hoisted(
       createMany: vi.fn(),
       deleteMany: vi.fn(),
     },
+    recipeReminderSuggestion: {
+      createMany: vi.fn(),
+      deleteMany: vi.fn(),
+    },
   };
 
   return {
@@ -67,6 +71,7 @@ import {
   createFamilyRecipe,
   deleteFamilyRecipe,
   parseFamilyRecipeCoverInput,
+  parseFamilyRecipeValues,
   updateFamilyRecipe,
   validateRecipeCoverFile,
 } from "./recipe-write.server";
@@ -84,6 +89,11 @@ const baseValues = {
     },
   ],
   prepMinutes: "30",
+  reminderSuggestions: [] as Array<{
+    note: string;
+    timingKind: string;
+    title: string;
+  }>,
   tags: "middag, rask",
   title: "Kyllingwok",
 };
@@ -199,6 +209,125 @@ describe("recipe-write.server", () => {
       },
     });
     expect(transactionMock.recipeIngredient.createMany).toHaveBeenCalled();
+    expect(transactionMock.recipeReminderSuggestion.deleteMany).toHaveBeenCalledWith({
+      where: {
+        recipeId: "recipe-1",
+      },
+    });
+    expect(transactionMock.recipeReminderSuggestion.createMany).not.toHaveBeenCalled();
+  });
+
+  it("replaces reminder suggestions transactionally on update", async () => {
+    dbMock.recipe.findFirst.mockResolvedValue({
+      id: "recipe-1",
+      imageKey: null,
+    });
+
+    const result = await updateFamilyRecipe({
+      familyId: "family-1",
+      recipeId: "recipe-1",
+      userId: "user-1",
+      values: {
+        ...baseValues,
+        reminderSuggestions: [
+          {
+            note: "Ta ut kvelden før",
+            timingKind: "HOURS_BEFORE_16",
+            title: "Ta deigen ut av kjøleskapet",
+          },
+          {
+            note: "",
+            timingKind: "MORNING_OF",
+            title: "Sett ovnen på",
+          },
+        ],
+      },
+    });
+
+    expect(result).toEqual({ status: "UPDATED" });
+    expect(transactionMock.recipeReminderSuggestion.deleteMany).toHaveBeenCalledWith({
+      where: {
+        recipeId: "recipe-1",
+      },
+    });
+    expect(transactionMock.recipeReminderSuggestion.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          note: "Ta ut kvelden før",
+          recipeId: "recipe-1",
+          sortOrder: 1,
+          timingKind: "HOURS_BEFORE_16",
+          title: "Ta deigen ut av kjøleskapet",
+        },
+        {
+          note: null,
+          recipeId: "recipe-1",
+          sortOrder: 2,
+          timingKind: "MORNING_OF",
+          title: "Sett ovnen på",
+        },
+      ],
+    });
+  });
+
+  it("rejects reminder rows that have a note but no title", async () => {
+    dbMock.recipe.findFirst.mockResolvedValue({
+      id: "recipe-1",
+      imageKey: null,
+    });
+
+    const result = await updateFamilyRecipe({
+      familyId: "family-1",
+      recipeId: "recipe-1",
+      userId: "user-1",
+      values: {
+        ...baseValues,
+        reminderSuggestions: [
+          {
+            note: "Husk deigen",
+            timingKind: "",
+            title: "   ",
+          },
+        ],
+      },
+    });
+
+    expect(result.status).toBe("VALIDATION_ERROR");
+    if (result.status !== "VALIDATION_ERROR") {
+      return;
+    }
+
+    expect(result.fieldErrors.reminderTitles?.[0]).toBe("Skriv inn en tittel.");
+    expect(transactionMock.recipeReminderSuggestion.createMany).not.toHaveBeenCalled();
+  });
+
+  it("parses reminder suggestion fields from form data", () => {
+    const formData = new FormData();
+    formData.set("title", "Pizza");
+    formData.append("ingredientIndex", "0");
+    formData.set("ingredientDisplayName:0", "Mel");
+    formData.set("ingredientCategoryId:0", "category-dry");
+    formData.append("reminderIndex", "0");
+    formData.set("reminderTitle:0", "Ta deigen ut");
+    formData.set("reminderNote:0", "Fra kjøleskapet");
+    formData.set("reminderTimingKind:0", "HOURS_BEFORE_16");
+    formData.append("reminderIndex", "1");
+    formData.set("reminderTitle:1", "   ");
+    formData.set("reminderNote:1", "");
+    formData.set("reminderTimingKind:1", "");
+
+    expect(parseFamilyRecipeValues(formData).reminderSuggestions).toEqual([
+      {
+        note: "Fra kjøleskapet",
+        timingKind: "HOURS_BEFORE_16",
+        title: "Ta deigen ut",
+      },
+      {
+        note: "",
+        timingKind: "",
+        title: "   ",
+      },
+    ]);
   });
 
   it("uploads a cover image when creating a recipe", async () => {

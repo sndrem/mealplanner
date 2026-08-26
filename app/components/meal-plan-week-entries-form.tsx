@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import { Form, Link } from "react-router";
 
 import { MealPlanRecipePicker } from "./meal-plan-recipe-picker";
+import { RecipeReminderModal } from "./recipe-reminder-modal";
 import { formatDateOnly, isPlanDateToday } from "../lib/meal-plan-dates";
 import {
   encodeMealSelection,
@@ -13,6 +21,11 @@ import {
   parseMealSelection,
   swapOrMoveMealSelection,
 } from "../lib/meal-plan-display";
+import {
+  getRecipeReminderTimingLabel,
+  type RecipeReminderSuggestion,
+  type RecipeReminderTimingKind,
+} from "../lib/recipe-reminder";
 
 const MEAL_PLAN_DAY_MEAL = "meal-plan-day-meal";
 
@@ -35,6 +48,7 @@ interface MealPlanRecipeOption {
   id: string;
   imageUrl?: string | null;
   prepMinutes: number | null;
+  reminderSuggestions: RecipeReminderSuggestion[];
   tags: string[];
   title: string;
 }
@@ -273,14 +287,13 @@ export function MealPlanWeekEntriesForm({
   );
 
   const isEntryMutationPending =
-    isSavingEntries || isResettingEntries || isAutoFillingEntries || Boolean(isAutosaving);
+    isSavingEntries ||
+    isResettingEntries ||
+    isAutoFillingEntries ||
+    Boolean(isAutosaving);
 
   return (
-    <Form
-      className="mt-4 min-w-0 space-y-3"
-      method="post"
-      ref={formRef}
-    >
+    <Form className="mt-4 min-w-0 space-y-3" method="post" ref={formRef}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           className={
@@ -333,7 +346,9 @@ export function MealPlanWeekEntriesForm({
           type="submit"
           value="reset-meal-plan-entries"
         >
-          {isResettingEntries ? "Tilbakestiller..." : "Tilbakestill ukeoversikt"}
+          {isResettingEntries
+            ? "Tilbakestiller..."
+            : "Tilbakestill ukeoversikt"}
         </button>
       </div>
     </Form>
@@ -387,10 +402,19 @@ function MealPlanDayRow({
     entry.responsibleUserId,
   );
   const [byttMedValue, setByttMedValue] = useState("");
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [reminderPrefillId, setReminderPrefillId] = useState<
+    string | undefined
+  >();
 
   useEffect(() => {
     setSelectedResponsibleUserId(entry.responsibleUserId);
   }, [entry.responsibleUserId]);
+
+  function openReminderModal(suggestionId?: string) {
+    setReminderPrefillId(suggestionId);
+    setIsReminderModalOpen(true);
+  }
 
   const parsedSelection = parseMealSelection(mealSelection);
   const selectedRecipe =
@@ -414,18 +438,19 @@ function MealPlanDayRow({
     !parsedSelection.freezerItemId &&
     Boolean(entry.note.trim());
   const hasFreezerSelection = Boolean(parsedSelection.freezerItemId);
+  const hasReminderSuggestions = Boolean(
+    selectedRecipe?.reminderSuggestions?.length,
+  );
   const isFillingEmptyDay =
     isAutoFillingEntries &&
     !parsedSelection.recipeId &&
     !parsedSelection.freezerItemId &&
     !entry.note.trim();
   const responsibleMember =
-    familyMembers.find(
-      (member) => member.id === selectedResponsibleUserId,
-    ) ?? null;
+    familyMembers.find((member) => member.id === selectedResponsibleUserId) ??
+    null;
   const selectableFreezerItems = freezerItems.filter(
-    (item) =>
-      item.quantity > 0 || item.id === parsedSelection.freezerItemId,
+    (item) => item.quantity > 0 || item.id === parsedSelection.freezerItemId,
   );
 
   const formFields = (
@@ -436,7 +461,11 @@ function MealPlanDayRow({
         type="hidden"
         value={entry.updatedAt}
       />
-      <input name={`mealSelection:${date}`} type="hidden" value={mealSelection} />
+      <input
+        name={`mealSelection:${date}`}
+        type="hidden"
+        value={mealSelection}
+      />
       <input
         name={`responsibleUserId:${date}`}
         type="hidden"
@@ -455,46 +484,60 @@ function MealPlanDayRow({
 
   if (isReorderMode) {
     return (
-      <MealPlanReorderDayRow
-        date={date}
-        formFields={formFields}
-        hasFreezerSelection={hasFreezerSelection}
-        hasMealSelection={hasMealSelection}
-        hasNoteOnly={hasNoteOnly}
-        isToday={isToday}
-        mealLabel={mealLabel}
-        onSwapOrMove={onSwapOrMove}
-        responsibleMember={responsibleMember}
-        visibleDates={visibleDates}
-        byttMedValue={byttMedValue}
-        setByttMedValue={setByttMedValue}
-      />
+      <>
+        <MealPlanReorderDayRow
+          byttMedValue={byttMedValue}
+          date={date}
+          formFields={formFields}
+          hasFreezerSelection={hasFreezerSelection}
+          hasMealSelection={hasMealSelection}
+          hasNoteOnly={hasNoteOnly}
+          hasReminderSuggestions={hasReminderSuggestions}
+          isToday={isToday}
+          mealLabel={mealLabel}
+          onReminderClick={() => openReminderModal()}
+          onSwapOrMove={onSwapOrMove}
+          responsibleMember={responsibleMember}
+          setByttMedValue={setByttMedValue}
+          visibleDates={visibleDates}
+        />
+        {isReminderModalOpen && selectedRecipe ? (
+          <RecipeReminderModal
+            familyId={familyId}
+            initialSuggestionId={reminderPrefillId}
+            onClose={() => {
+              setIsReminderModalOpen(false);
+              setReminderPrefillId(undefined);
+            }}
+            recipeId={selectedRecipe.id}
+            recipeTitle={selectedRecipe.title}
+            suggestions={selectedRecipe.reminderSuggestions}
+          />
+        ) : null}
+      </>
     );
   }
 
+  const isDayOpen = activeAssignDate === date;
+
+  function toggleDayOpen() {
+    onActiveAssignDateChange(isDayOpen ? null : date);
+  }
+
   return (
-    <details
+    <div
       className={
         isToday
-          ? "group min-w-0 max-w-full overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 ring-1 ring-emerald-100"
-          : "group min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+          ? "min-w-0 max-w-full overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 ring-1 ring-emerald-100"
+          : "min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
       }
-      onToggle={(event) => {
-        const isOpen = event.currentTarget.open;
-
-        if (isOpen) {
-          onActiveAssignDateChange(date);
-          return;
-        }
-
-        if (activeAssignDate === date) {
-          onActiveAssignDateChange(null);
-        }
-      }}
-      open={activeAssignDate === date}
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 marker:content-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
-        <div className="min-w-0 flex-1">
+      <div className="flex items-start justify-between gap-2 p-3">
+        <button
+          className="min-w-0 flex-1 rounded-xl text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500"
+          onClick={toggleDayOpen}
+          type="button"
+        >
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
             {formatWeekdayLabel(date)}
           </p>
@@ -502,7 +545,7 @@ function MealPlanDayRow({
             {isFillingEmptyDay ? "Fyller tom dag..." : mealLabel}
           </p>
           <p className="text-xs text-slate-500">{formatDateLabel(date)}</p>
-        </div>
+        </button>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {isToday ? (
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
@@ -519,115 +562,169 @@ function MealPlanDayRow({
               Fryser
             </span>
           ) : null}
+          {hasReminderSuggestions ? (
+            <button
+              className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-800 ring-1 ring-violet-200 transition hover:bg-violet-200"
+              onClick={() => openReminderModal()}
+              type="button"
+            >
+              Påminnelse
+            </button>
+          ) : null}
           {responsibleMember ? (
             <span className="max-w-32 truncate rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
               {responsibleMember.displayName}
             </span>
           ) : null}
-          <span className="text-xs text-slate-400 group-open:hidden">Åpne</span>
-          <span className="hidden text-xs text-slate-400 group-open:inline">
-            Lukk
-          </span>
-        </div>
-      </summary>
-
-      <div className="min-w-0 space-y-3 border-t border-slate-200 px-3 pb-3 pt-3">
-        <input name="entryDate" type="hidden" value={date} />
-        <input
-          name={`entryUpdatedAt:${date}`}
-          type="hidden"
-          value={entry.updatedAt}
-        />
-
-        {canExportDay ? (
-          <a
-            className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
-            href={`/families/${familyId}/meal-plans/${mealPlanId}/days/${date}/calendar.ics`}
-            target={calendarDownloadTarget}
+          <button
+            className="text-xs text-slate-400"
+            onClick={toggleDayOpen}
+            type="button"
           >
-            Eksporter dag (.ics)
-          </a>
-        ) : null}
-
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-700">Middag</p>
-          <MealPlanRecipePicker
-            freezerItems={selectableFreezerItems}
-            inPlanRecipeIds={inPlanRecipeIds}
-            name={`mealSelection:${date}`}
-            onChange={onMealSelectionChange}
-            recentlyUsedRecipeIds={recentlyUsedRecipeIds}
-            recipes={recipes}
-            triggerLabel={pickerTriggerLabel}
-            value={mealSelection}
-          />
-          {parsedSelection.recipeId ? (
-            <Link
-              className="mt-2 inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
-              to={`/families/${familyId}/recipes/${parsedSelection.recipeId}`}
-            >
-              Se oppskrift
-            </Link>
-          ) : null}
-        </div>
-
-        <label className="block min-w-0 text-sm font-medium text-slate-700">
-          Ansvarlig
-          <select
-            className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-            name={`responsibleUserId:${date}`}
-            onChange={(event) =>
-              setSelectedResponsibleUserId(event.target.value)
-            }
-            value={selectedResponsibleUserId}
-          >
-            <option value="">Ingen valgt</option>
-            {familyMembers.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.displayName}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="block min-w-0 text-sm font-medium text-slate-700">
-          Notat
-          <textarea
-            className="mt-2 box-border min-h-24 w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-            defaultValue={entry.note}
-            name={`note:${date}`}
-            placeholder="F.eks. bytt ut ris med pasta eller husk rester til dagen etter"
-          />
-        </label>
-
-        <div className="min-w-0 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-          <p className="wrap-break-word text-sm leading-6 text-slate-600">
-            {selectedRecipe
-              ? `${selectedRecipe.description ?? "Ingen beskrivelse."} · ${selectedRecipe.prepMinutes ?? "?"} min · ${selectedRecipe.defaultServings ?? "?"} personer`
-              : selectedFreezerItem
-                ? selectedFreezerItem.note
-                  ? `Fryserrett. ${selectedFreezerItem.note}`
-                  : "Fryserrett valgt for denne dagen."
-                : entry.note
-                  ? "Bare notat lagres for denne dagen."
-                  : "Ingen rett valgt enda."}
-          </p>
-
-          {selectedRecipe?.tags.length ? (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {selectedRecipe.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          ) : null}
+            {isDayOpen ? "Lukk" : "Åpne"}
+          </button>
         </div>
       </div>
-    </details>
+
+      {isDayOpen ? (
+        <div className="min-w-0 space-y-3 border-t border-slate-200 px-3 pb-3 pt-3">
+          <input name="entryDate" type="hidden" value={date} />
+          <input
+            name={`entryUpdatedAt:${date}`}
+            type="hidden"
+            value={entry.updatedAt}
+          />
+
+          {canExportDay ? (
+            <a
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+              href={`/families/${familyId}/meal-plans/${mealPlanId}/days/${date}/calendar.ics`}
+              target={calendarDownloadTarget}
+            >
+              Eksporter dag (.ics)
+            </a>
+          ) : null}
+
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-700">Middag</p>
+            <MealPlanRecipePicker
+              freezerItems={selectableFreezerItems}
+              inPlanRecipeIds={inPlanRecipeIds}
+              name={`mealSelection:${date}`}
+              onChange={onMealSelectionChange}
+              recentlyUsedRecipeIds={recentlyUsedRecipeIds}
+              recipes={recipes}
+              triggerLabel={pickerTriggerLabel}
+              value={mealSelection}
+            />
+            {parsedSelection.recipeId ? (
+              <Link
+                className="mt-2 inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+                to={`/families/${familyId}/recipes/${parsedSelection.recipeId}`}
+              >
+                Se oppskrift
+              </Link>
+            ) : null}
+          </div>
+
+          <label className="block min-w-0 text-sm font-medium text-slate-700">
+            Ansvarlig
+            <select
+              className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              name={`responsibleUserId:${date}`}
+              onChange={(event) =>
+                setSelectedResponsibleUserId(event.target.value)
+              }
+              value={selectedResponsibleUserId}
+            >
+              <option value="">Ingen valgt</option>
+              {familyMembers.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block min-w-0 text-sm font-medium text-slate-700">
+            Notat
+            <textarea
+              className="mt-2 box-border min-h-24 w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              defaultValue={entry.note}
+              name={`note:${date}`}
+              placeholder="F.eks. bytt ut ris med pasta eller husk rester til dagen etter"
+            />
+          </label>
+
+          <div className="min-w-0 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+            <p className="wrap-break-word text-sm leading-6 text-slate-600 whitespace-break-spaces">
+              {selectedRecipe
+                ? `${selectedRecipe.description ?? "Ingen beskrivelse."} · ${selectedRecipe.prepMinutes ?? "?"} min · ${selectedRecipe.defaultServings ?? "?"} personer`
+                : selectedFreezerItem
+                  ? selectedFreezerItem.note
+                    ? `Fryserrett. ${selectedFreezerItem.note}`
+                    : "Fryserrett valgt for denne dagen."
+                  : entry.note
+                    ? "Bare notat lagres for denne dagen."
+                    : "Ingen rett valgt enda."}
+            </p>
+
+            {selectedRecipe?.tags.length ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {selectedRecipe.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            {selectedRecipe?.reminderSuggestions?.length ? (
+              <MealPlanReminderSuggestions
+                onSuggestionClick={openReminderModal}
+                suggestions={selectedRecipe.reminderSuggestions}
+              />
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <>
+          <input name="entryDate" type="hidden" value={date} />
+          <input
+            name={`entryUpdatedAt:${date}`}
+            type="hidden"
+            value={entry.updatedAt}
+          />
+          <input
+            name={`mealSelection:${date}`}
+            type="hidden"
+            value={mealSelection}
+          />
+          <input
+            name={`responsibleUserId:${date}`}
+            type="hidden"
+            value={selectedResponsibleUserId}
+          />
+          <input name={`note:${date}`} type="hidden" value={entry.note} />
+        </>
+      )}
+
+      {isReminderModalOpen && selectedRecipe ? (
+        <RecipeReminderModal
+          familyId={familyId}
+          initialSuggestionId={reminderPrefillId}
+          onClose={() => {
+            setIsReminderModalOpen(false);
+            setReminderPrefillId(undefined);
+          }}
+          recipeId={selectedRecipe.id}
+          recipeTitle={selectedRecipe.title}
+          suggestions={selectedRecipe.reminderSuggestions}
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -640,10 +737,12 @@ function MealPlanReorderDayRow({
   hasNoteOnly,
   isToday,
   mealLabel,
+  onReminderClick,
   onSwapOrMove,
   responsibleMember,
   setByttMedValue,
   visibleDates,
+  hasReminderSuggestions,
 }: {
   byttMedValue: string;
   date: string;
@@ -651,8 +750,10 @@ function MealPlanReorderDayRow({
   hasFreezerSelection: boolean;
   hasMealSelection: boolean;
   hasNoteOnly: boolean;
+  hasReminderSuggestions: boolean;
   isToday: boolean;
   mealLabel: string;
+  onReminderClick: () => void;
   onSwapOrMove: (fromDate: string, toDate: string) => void;
   responsibleMember: MealPlanFamilyMemberOption | null;
   setByttMedValue: (value: string) => void;
@@ -766,6 +867,19 @@ function MealPlanReorderDayRow({
               Fryser
             </span>
           ) : null}
+          {hasReminderSuggestions ? (
+            <button
+              className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-800 ring-1 ring-violet-200 transition hover:bg-violet-200"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onReminderClick();
+              }}
+              type="button"
+            >
+              Påminnelse
+            </button>
+          ) : null}
           {responsibleMember ? (
             <span className="max-w-32 truncate rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
               {responsibleMember.displayName}
@@ -823,6 +937,49 @@ function getMealDaySummaryLabel(
     recipe: selectedRecipe ? { title: selectedRecipe.title } : null,
     recipeId: selectedRecipe?.id ?? null,
   });
+}
+
+function MealPlanReminderSuggestions({
+  onSuggestionClick,
+  suggestions,
+}: {
+  onSuggestionClick: (suggestionId?: string) => void;
+  suggestions: RecipeReminderSuggestion[];
+}) {
+  return (
+    <div className="mt-2 space-y-2">
+      <p className="text-xs font-medium text-violet-900">
+        Påminnelser · trykk for å opprette
+      </p>
+      <ul className="space-y-2">
+        {suggestions.map((suggestion) => {
+          const timingLabel = getRecipeReminderTimingLabel(
+            suggestion.timingKind as RecipeReminderTimingKind | null,
+          );
+
+          return (
+            <li key={suggestion.id ?? suggestion.title}>
+              <button
+                className="w-full rounded-2xl bg-violet-50 px-3 py-2 text-left ring-1 ring-violet-100 transition hover:bg-violet-100"
+                onClick={() => onSuggestionClick(suggestion.id)}
+                type="button"
+              >
+                <p className="text-sm font-medium text-violet-950">
+                  {suggestion.title}
+                  {timingLabel ? ` · ${timingLabel}` : ""}
+                </p>
+                {suggestion.note ? (
+                  <p className="mt-1 text-xs leading-5 text-violet-800">
+                    {suggestion.note}
+                  </p>
+                ) : null}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 }
 
 function formatDateLabel(date: string) {

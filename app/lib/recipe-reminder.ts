@@ -1,8 +1,143 @@
 export const RECIPE_REMINDER_SHORTCUT_NAME = "Create Recipe Reminder";
 
+export const RECIPE_REMINDER_TITLE_MAX_LENGTH = 80;
+export const RECIPE_REMINDER_NOTE_MAX_LENGTH = 280;
+export const RECIPE_REMINDER_MAX_COUNT = 10;
+
+export const RECIPE_REMINDER_TIMING_KINDS = [
+  "MORNING_OF",
+  "EVENING_BEFORE",
+  "HOURS_BEFORE_8",
+  "HOURS_BEFORE_16",
+  "HOURS_BEFORE_24",
+] as const;
+
+export type RecipeReminderTimingKind =
+  (typeof RECIPE_REMINDER_TIMING_KINDS)[number];
+
+export const RECIPE_REMINDER_TIMING_LABELS: Record<
+  RecipeReminderTimingKind,
+  string
+> = {
+  EVENING_BEFORE: "Kvelden før",
+  HOURS_BEFORE_16: "16 timer før",
+  HOURS_BEFORE_24: "24 timer før",
+  HOURS_BEFORE_8: "8 timer før",
+  MORNING_OF: "Morgenen samme dag",
+};
+
 export interface RecipeReminderSuggestion {
   id?: string;
+  note?: string | null;
+  sortOrder?: number;
+  timingKind?: RecipeReminderTimingKind | null;
   title: string;
+}
+
+export interface RecipeReminderSuggestionInput {
+  note: string;
+  timingKind: string;
+  title: string;
+}
+
+export interface RecipeReminderSuggestionFieldErrors {
+  notes?: Record<number, string>;
+  titles?: Record<number, string>;
+  timingKinds?: Record<number, string>;
+}
+
+export function isRecipeReminderTimingKind(
+  value: string,
+): value is RecipeReminderTimingKind {
+  return (RECIPE_REMINDER_TIMING_KINDS as readonly string[]).includes(value);
+}
+
+export function getRecipeReminderTimingLabel(
+  timingKind: RecipeReminderTimingKind | null | undefined,
+) {
+  if (!timingKind) {
+    return null;
+  }
+
+  return RECIPE_REMINDER_TIMING_LABELS[timingKind];
+}
+
+export function parseRecipeReminderSuggestionRows(
+  rows: RecipeReminderSuggestionInput[],
+): {
+  errors: RecipeReminderSuggestionFieldErrors;
+  ok: boolean;
+  suggestions: Array<{
+    note: string | null;
+    timingKind: RecipeReminderTimingKind | null;
+    title: string;
+  }>;
+  tooMany: boolean;
+} {
+  const kept = rows.map((row, index) => ({
+    index,
+    note: row.note.trim(),
+    timingKind: row.timingKind.trim(),
+    title: row.title.trim(),
+  }));
+  const filled = kept.filter(
+    (row) => row.title || row.note || row.timingKind,
+  );
+  const titles: Record<number, string> = {};
+  const notes: Record<number, string> = {};
+  const timingKinds: Record<number, string> = {};
+  const tooMany = filled.length > RECIPE_REMINDER_MAX_COUNT;
+
+  const suggestions = filled.map((row) => {
+    if (!row.title) {
+      titles[row.index] = "Skriv inn en tittel.";
+    } else if (row.title.length > RECIPE_REMINDER_TITLE_MAX_LENGTH) {
+      titles[row.index] =
+        `Tittelen kan være maks ${RECIPE_REMINDER_TITLE_MAX_LENGTH} tegn.`;
+    }
+
+    if (row.note.length > RECIPE_REMINDER_NOTE_MAX_LENGTH) {
+      notes[row.index] =
+        `Notatet kan være maks ${RECIPE_REMINDER_NOTE_MAX_LENGTH} tegn.`;
+    }
+
+    let timingKind: RecipeReminderTimingKind | null = null;
+
+    if (row.timingKind) {
+      if (isRecipeReminderTimingKind(row.timingKind)) {
+        timingKind = row.timingKind;
+      } else {
+        timingKinds[row.index] = "Velg et gyldig tidspunkt.";
+      }
+    }
+
+    return {
+      note: row.note || null,
+      timingKind,
+      title: row.title,
+    };
+  });
+
+  const errors: RecipeReminderSuggestionFieldErrors = {};
+
+  if (Object.keys(titles).length > 0) {
+    errors.titles = titles;
+  }
+
+  if (Object.keys(notes).length > 0) {
+    errors.notes = notes;
+  }
+
+  if (Object.keys(timingKinds).length > 0) {
+    errors.timingKinds = timingKinds;
+  }
+
+  return {
+    errors,
+    ok: Object.keys(errors).length === 0 && !tooMany,
+    suggestions,
+    tooMany,
+  };
 }
 
 export interface RecipeReminderInput {

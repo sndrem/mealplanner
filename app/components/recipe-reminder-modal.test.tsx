@@ -90,6 +90,26 @@ describe("RecipeReminderModal", () => {
     );
   });
 
+  it("prefills the title from initialSuggestionId", () => {
+    renderWithRouter(
+      <RecipeReminderModal
+        familyId="family-1"
+        initialSuggestionId="dough"
+        onClose={vi.fn()}
+        recipeId="recipe-1"
+        recipeTitle="Pizza"
+        suggestions={[
+          { id: "dough", title: "Ta deigen ut av kjøleskapet" },
+          { id: "bake", title: "Sett ovnen på" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByLabelText("Tekst")).toHaveValue(
+      "Ta deigen ut av kjøleskapet",
+    );
+  });
+
   it("explains that the shortcut is required and disables create off iOS", () => {
     stubNavigator({
       maxTouchPoints: 0,

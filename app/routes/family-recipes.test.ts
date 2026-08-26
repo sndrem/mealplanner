@@ -127,6 +127,7 @@ describe("family recipes route", () => {
         },
       ],
       prepMinutes: "",
+      reminderSuggestions: [],
       tags: "",
       title: "Familiepai",
     });
@@ -173,6 +174,7 @@ describe("family recipes route", () => {
         },
       ],
       prepMinutes: "",
+      reminderSuggestions: [],
       tags: "",
       title: "Familiepai",
     });
@@ -213,6 +215,7 @@ describe("family recipes route", () => {
         },
       ],
       prepMinutes: "",
+      reminderSuggestions: [],
       tags: "",
       title: "Familiepai",
     });

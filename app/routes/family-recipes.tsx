@@ -205,6 +205,7 @@ export default function FamilyRecipesRoute({
             },
           ],
           prepMinutes: "45",
+          reminderSuggestions: [],
           tags: "",
           title: "",
         };
