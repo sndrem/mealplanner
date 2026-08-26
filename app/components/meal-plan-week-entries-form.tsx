@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
@@ -111,14 +111,17 @@ export function MealPlanWeekEntriesForm({
   entryValues,
   familyId,
   familyMembers,
+  formRef,
   freezerItems,
   isAutoFillingEntries,
+  isAutosaving,
   isResettingEntries,
   isSavingEntries,
   mealPlanId,
   mealSelectionsByDate,
   onActiveAssignDateChange,
   onMealSelectionsByDateChange,
+  onUserMealSelectionsChange,
   recentlyUsedRecipeIds,
   recipes,
   visibleDates,
@@ -131,14 +134,21 @@ export function MealPlanWeekEntriesForm({
   entryValues: Record<string, MealPlanEntryFormState>;
   familyId: string;
   familyMembers: MealPlanFamilyMemberOption[];
+  formRef?: RefObject<HTMLFormElement | null>;
   freezerItems: MealPlanFreezerOption[];
   isAutoFillingEntries: boolean;
+  isAutosaving?: boolean;
   isResettingEntries: boolean;
   isSavingEntries: boolean;
   mealPlanId: string;
   mealSelectionsByDate: Record<string, string>;
   onActiveAssignDateChange: (date: string | null) => void;
   onMealSelectionsByDateChange: (
+    value:
+      | Record<string, string>
+      | ((current: Record<string, string>) => Record<string, string>),
+  ) => void;
+  onUserMealSelectionsChange: (
     value:
       | Record<string, string>
       | ((current: Record<string, string>) => Record<string, string>),
@@ -167,15 +177,18 @@ export function MealPlanWeekEntriesForm({
   }, [mealSelectionsByDate]);
 
   useEffect(() => {
+    if (isAutosaving) {
+      return;
+    }
+
     onMealSelectionsByDateChange(
       buildMealSelectionsByDate(visibleDates, entryValues),
     );
-    setIsReorderMode(false);
-    onActiveAssignDateChange(null);
-    // Only reset when the server snapshot changes. Including entryValues/visibleDates
-    // would wipe in-progress drag swaps whenever parent re-renders with new object identity.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: snapshot-gated reset
-  }, [entriesSnapshot]);
+    // Sync meals from the server snapshot without closing the open day or
+    // reorder mode. Including entryValues/visibleDates would wipe in-progress
+    // drag swaps whenever the parent re-renders with new object identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: snapshot-gated sync
+  }, [entriesSnapshot, isAutosaving]);
 
   useEffect(() => {
     if (!isResettingEntries) {
@@ -201,7 +214,7 @@ export function MealPlanWeekEntriesForm({
   }, [isSavingEntries]);
 
   const applySwapOrMove = (fromDate: string, toDate: string) => {
-    onMealSelectionsByDateChange((current) =>
+    onUserMealSelectionsChange((current) =>
       swapOrMoveMealSelection(current, fromDate, toDate),
     );
   };
@@ -243,7 +256,7 @@ export function MealPlanWeekEntriesForm({
               mealSelection={mealSelectionsByDate[date] ?? ""}
               onActiveAssignDateChange={onActiveAssignDateChange}
               onMealSelectionChange={(value) => {
-                onMealSelectionsByDateChange((current) => ({
+                onUserMealSelectionsChange((current) => ({
                   ...current,
                   [date]: value,
                 }));
@@ -259,11 +272,14 @@ export function MealPlanWeekEntriesForm({
     </div>
   );
 
+  const isEntryMutationPending =
+    isSavingEntries || isResettingEntries || isAutoFillingEntries || Boolean(isAutosaving);
+
   return (
     <Form
-      key={entriesSnapshot}
       className="mt-4 min-w-0 space-y-3"
       method="post"
+      ref={formRef}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
@@ -296,14 +312,14 @@ export function MealPlanWeekEntriesForm({
         <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {entryFormError}
         </p>
+      ) : isAutosaving ? (
+        <p className="text-sm text-slate-500">Lagrer…</p>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <button
           className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-          disabled={
-            isSavingEntries || isResettingEntries || isAutoFillingEntries
-          }
+          disabled={isEntryMutationPending}
           name="intent"
           type="submit"
           value="save-meal-plan-entries"
@@ -312,9 +328,7 @@ export function MealPlanWeekEntriesForm({
         </button>
         <button
           className="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
-          disabled={
-            isSavingEntries || isResettingEntries || isAutoFillingEntries
-          }
+          disabled={isEntryMutationPending}
           name="intent"
           type="submit"
           value="reset-meal-plan-entries"

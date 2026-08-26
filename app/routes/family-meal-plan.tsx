@@ -2,10 +2,11 @@ import {
   Form,
   Link,
   isRouteErrorResponse,
+  useFetcher,
   useNavigation,
   type MetaFunction,
 } from "react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MealPlanWeekEntriesForm } from "../components/meal-plan-week-entries-form";
 import { RecipePickerMedia } from "../components/recipe-picker-card";
@@ -30,6 +31,7 @@ import {
   formatShortDateLabel,
   parseMealSelection,
 } from "../lib/meal-plan-display";
+import { useMealPlanEntriesAutosave } from "../lib/use-meal-plan-entries-autosave";
 import {
   deriveRecipeTagOptions,
   filterRecipePickerList,
@@ -59,6 +61,7 @@ type MealPlanNotice =
 type MealPlanIntent =
   | "approve-meal-plan"
   | "auto-fill-meal-plan-entries"
+  | "autosave-meal-plan-entries"
   | "mark-comment-addressed"
   | "reopen-meal-plan"
   | "reset-meal-plan-entries"
@@ -98,6 +101,7 @@ interface MealPlanActionData {
   };
   formError?: string;
   intent?: MealPlanIntent;
+  ok?: boolean;
   shareFormError?: string;
   statusFormError?: string;
   values?: {
@@ -318,6 +322,7 @@ export async function action({
   }
 
   if (
+    intent === "autosave-meal-plan-entries" ||
     intent === "save-meal-plan-entries" ||
     intent === "reset-meal-plan-entries"
   ) {
@@ -354,6 +359,13 @@ export async function action({
         entryFormError: result.formError,
         entryValues: indexMealPlanEntryValues(result.values, entryVersions),
         intent,
+      } satisfies MealPlanActionData;
+    }
+
+    if (intent === "autosave-meal-plan-entries") {
+      return {
+        intent,
+        ok: true,
       } satisfies MealPlanActionData;
     }
 
@@ -540,6 +552,17 @@ export default function FamilyMealPlanRoute({
     isPending && pendingIntent === "save-meal-plan-entries";
   const isResettingEntries =
     isPending && pendingIntent === "reset-meal-plan-entries";
+  const autosaveFetcher = useFetcher<MealPlanActionData>();
+  const entriesFormRef = useRef<HTMLFormElement>(null);
+  const {
+    entryFormError: autosaveEntryFormError,
+    isAutosaving,
+    scheduleAutosave,
+  } = useMealPlanEntriesAutosave({
+    blocked: isResettingEntries || isAutoFillingEntries,
+    fetcher: autosaveFetcher,
+    formRef: entriesFormRef,
+  });
   const isUpdatingMetadata = isPending && pendingIntent === "update-meal-plan";
   const isSharingMealPlan = isPending && pendingIntent === "share-meal-plan";
   const isMarkingCommentAddressed =
@@ -604,12 +627,18 @@ export default function FamilyMealPlanRoute({
       : isReopeningMealPlan
         ? "Gjenåpner..."
         : "Gjenåpne som utkast";
-  const entryValues =
-    (actionData?.intent === "save-meal-plan-entries" ||
-      actionData?.intent === "reset-meal-plan-entries") &&
-    actionData.entryValues
-      ? actionData.entryValues
-      : loaderData.entriesByDate;
+  const failedEntryActionData =
+    autosaveFetcher.data?.intent === "autosave-meal-plan-entries" &&
+    autosaveFetcher.data.entryValues
+      ? autosaveFetcher.data
+      : (actionData?.intent === "save-meal-plan-entries" ||
+            actionData?.intent === "reset-meal-plan-entries") &&
+          actionData.entryValues
+        ? actionData
+        : null;
+  const entryValues = failedEntryActionData?.entryValues
+    ? failedEntryActionData.entryValues
+    : loaderData.entriesByDate;
   const displayEntryValues = isResettingEntries
     ? Object.fromEntries(
         loaderData.visibleDates.map((date) => {
@@ -648,12 +677,25 @@ export default function FamilyMealPlanRoute({
   const calendarExportDateSet = new Set(loaderData.calendarExportDates);
   const hasMealPlanCalendarExport = calendarExportDateSet.size > 0;
 
+  const handleUserMealSelectionsChange = useCallback(
+    (
+      value:
+        | Record<string, string>
+        | ((current: Record<string, string>) => Record<string, string>),
+    ) => {
+      setMealSelectionsByDate(value);
+      scheduleAutosave();
+    },
+    [scheduleAutosave],
+  );
+
   const assignRecipeToDate = (recipeId: string, date: string) => {
     setMealSelectionsByDate((current) => ({
       ...current,
       [date]: `recipe:${recipeId}`,
     }));
     setActiveAssignDate(date);
+    scheduleAutosave();
   };
 
   return (
@@ -854,24 +896,28 @@ export default function FamilyMealPlanRoute({
               calendarDownloadTarget={CALENDAR_DOWNLOAD_TARGET}
               calendarExportDateSet={calendarExportDateSet}
               entryFormError={
-                (actionData?.intent === "save-meal-plan-entries" ||
+                autosaveEntryFormError ||
+                ((actionData?.intent === "save-meal-plan-entries" ||
                   actionData?.intent === "reset-meal-plan-entries") &&
                 actionData.entryFormError
                   ? actionData.entryFormError
-                  : undefined
+                  : undefined)
               }
               entriesSnapshot={loaderData.entriesSnapshot}
               entryValues={displayEntryValues}
               familyId={loaderData.family.id}
               familyMembers={loaderData.familyMembers}
+              formRef={entriesFormRef}
               freezerItems={loaderData.freezerItems}
               isAutoFillingEntries={isAutoFillingEntries}
+              isAutosaving={isAutosaving}
               isResettingEntries={isResettingEntries}
               isSavingEntries={isSavingEntries}
               mealPlanId={loaderData.mealPlan.id}
               mealSelectionsByDate={mealSelectionsByDate}
               onActiveAssignDateChange={setActiveAssignDate}
               onMealSelectionsByDateChange={setMealSelectionsByDate}
+              onUserMealSelectionsChange={handleUserMealSelectionsChange}
               recentlyUsedRecipeIds={loaderData.recentlyUsedRecipeIds}
               recipes={loaderData.recipes}
               visibleDates={loaderData.visibleDates}
@@ -900,6 +946,7 @@ export default function FamilyMealPlanRoute({
                 disabled={
                   !canAutoFillEntries ||
                   isAutoFillingEntries ||
+                  isAutosaving ||
                   isSavingEntries ||
                   isResettingEntries
                 }
