@@ -2,32 +2,35 @@
 
 ## Current Objective
 
-Ship #227 — trim `MEALPLANNER_APP_URL` in the weekend reminder GitHub Action so a trailing newline or quotes does not make curl reject the URL.
+Ship client-only iOS Shortcuts “Påminn meg” on recipe detail. Recipe reminder templates remain [#229](https://github.com/sndrem/mealplanner/issues/229).
 
 ## Completed
 
-- Workflow trims CR/LF/whitespace/quotes/angle brackets from the secret
-- Requires an `https://` origin and logs the sanitized POST URL
-- Docs say to paste origin only, no quotes or trailing slash
+- `app/lib/recipe-reminder.ts` — payload/URL helpers, presets, platform detection, `createRecipeReminder`
+- `RecipeReminderModal` — editable title, presets, custom date/time, Shortcut install help
+- **Påminn meg** on `FamilyRecipeEditorCard` for all viewers
+- Modal accepts optional `suggestions` for later #229 prefills (not persisted yet)
 
 ## Files To Read First
 
-- `.github/workflows/weekend-plan-reminders.yml` - URL sanitization before curl
-- `docs/deploy-fly.md` - secret format for `MEALPLANNER_APP_URL`
+- `app/lib/recipe-reminder.ts` — URL/payload construction and types
+- `app/components/recipe-reminder-modal.tsx` — mobile modal UX
+- `app/components/family-recipe-editor-card.tsx` — button placement
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 547 tests passed
+- `npm run test:run` — 562 tests passed
 - `npm run typecheck` — passed
-- Browser — not run
+- Browser / iPhone Safari — not run; needs a real device with Shortcut installed
 
 ## Open Items
 
-- Re-save GitHub secret `MEALPLANNER_APP_URL` as `https://mealplanner-xzvzow.fly.dev` (or the custom domain), no quotes or newline
-- After merge, re-run **Weekend plan reminders** with `force`
+- User must install Shortcut named exactly `Create Recipe Reminder` that parses the JSON text input
+- #229: store suggestions on recipes and show them on the meal plan
+- Optional: publish an iCloud Shortcut link in the help panel once one exists
 
 ## Next Step
 
-Review and merge the pull request for #227.
+Review and merge the PR; then manual check on iPhone Safari.

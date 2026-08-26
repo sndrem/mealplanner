@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Form, useNavigation } from "react-router";
 
 import { RecipePickerMedia } from "./recipe-picker-card";
+import { RecipeReminderModal } from "./recipe-reminder-modal";
 import { compressRecipeCoverImage } from "../lib/recipe-cover-image";
 import type {
   FamilyRecipeFieldErrors,
@@ -26,6 +27,7 @@ interface DraftIngredientRow extends FamilyRecipeIngredientValues {
 interface FamilyRecipeEditorCardProps {
   canManageRecipes: boolean;
   categories: RecipeCategory[];
+  familyId: string;
   familyStores: RecipeStore[];
   initialEditing?: boolean;
   mealPlanEntryCount: number;
@@ -53,6 +55,7 @@ interface FamilyRecipeEditorCardProps {
 export function FamilyRecipeEditorCard({
   canManageRecipes,
   categories,
+  familyId,
   familyStores,
   initialEditing = false,
   mealPlanEntryCount,
@@ -86,6 +89,7 @@ export function FamilyRecipeEditorCard({
   const [ignoreSubmittedValues, setIgnoreSubmittedValues] = useState(false);
   const sourceValues =
     updateValues && !ignoreSubmittedValues ? updateValues : persistedValues;
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(
     Boolean(updateValues) || initialEditing,
   );
@@ -278,14 +282,25 @@ export function FamilyRecipeEditorCard({
             ) : null}
           </div>
         </div>
-        {canManageRecipes && !isEditing ? (
-          <button
-            className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
-            onClick={() => setIsEditing(true)}
-            type="button"
-          >
-            Rediger oppskrift
-          </button>
+        {!isEditing ? (
+          <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+            <button
+              className="inline-flex items-center justify-center rounded-2xl bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
+              onClick={() => setIsReminderModalOpen(true)}
+              type="button"
+            >
+              Påminn meg
+            </button>
+            {canManageRecipes ? (
+              <button
+                className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                onClick={() => setIsEditing(true)}
+                type="button"
+              >
+                Rediger oppskrift
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -365,6 +380,15 @@ export function FamilyRecipeEditorCard({
           familyStores={familyStores}
         />
       )}
+
+      {isReminderModalOpen ? (
+        <RecipeReminderModal
+          familyId={familyId}
+          onClose={() => setIsReminderModalOpen(false)}
+          recipeId={recipe.id}
+          recipeTitle={isUpdatingRecipe ? draftValues.title : recipe.title}
+        />
+      ) : null}
 
       {canManageRecipes && !isEditing ? (
         <div className="mt-4 space-y-3">

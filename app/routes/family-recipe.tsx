@@ -249,6 +249,7 @@ export default function FamilyRecipeRoute({
         <FamilyRecipeEditorCard
           canManageRecipes={canManageRecipes}
           categories={loaderData.categories}
+          familyId={loaderData.family.id}
           familyStores={loaderData.familyStores}
           initialEditing={loaderData.startInEditMode}
           mealPlanEntryCount={loaderData.mealPlanEntryCount}
