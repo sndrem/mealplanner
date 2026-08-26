@@ -45,10 +45,33 @@ jobs:
             exit 1
           fi
 
-          url="${APP_URL%/}/internal/jobs/weekend-plan-reminders"
+          # GitHub secret paste often includes a trailing newline or wrapping quotes.
+          APP_URL="${APP_URL//$'\r'/}"
+          APP_URL="${APP_URL//$'\n'/}"
+          APP_URL="${APP_URL#"${APP_URL%%[![:space:]]*}"}"
+          APP_URL="${APP_URL%"${APP_URL##*[![:space:]]}"}"
+          APP_URL="${APP_URL#\"}"
+          APP_URL="${APP_URL%\"}"
+          APP_URL="${APP_URL#\'}"
+          APP_URL="${APP_URL%\'}"
+          APP_URL="${APP_URL#<}"
+          APP_URL="${APP_URL%>}"
+          APP_URL="${APP_URL%/}"
+
+          case "$APP_URL" in
+            https://*) ;;
+            *)
+              echo "MEALPLANNER_APP_URL must be an https origin with no path, e.g. https://mealplanner-xzvzow.fly.dev"
+              exit 1
+              ;;
+          esac
+
+          url="${APP_URL}/internal/jobs/weekend-plan-reminders"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then
             url="${url}?force=true"
           fi
+
+          echo "POST ${url}"
 
           curl -fsS -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \

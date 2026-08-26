@@ -2,21 +2,18 @@
 
 ## Current Objective
 
-Ship #225 — Thursday weekend-plan reminder emails. Branch `issue/225-weekend-plan-reminder` is validated and ready for PR.
+Ship #227 — trim `MEALPLANNER_APP_URL` in the weekend reminder GitHub Action so a trailing newline or quotes does not make curl reject the URL.
 
 ## Completed
 
-- Admins can set, change, or clear a family reminder email on the Familie tab
-- Thursday 12:00 Europe/Oslo job emails that address when Saturday or Sunday dinner is unplanned
-- Postgres claims the calendar week before send so extra machines or Action retries cannot duplicate mail
-- GitHub Action POSTs to a secret job route; `workflow_dispatch` can pass `force`
-- Operator set Fly `CRON_SECRET` and GitHub `CRON_SECRET` + `MEALPLANNER_APP_URL`
+- Workflow trims CR/LF/whitespace/quotes/angle brackets from the secret
+- Requires an `https://` origin and logs the sanitized POST URL
+- Docs say to paste origin only, no quotes or trailing slash
 
 ## Files To Read First
 
-- `app/lib/weekend-plan-reminder.server.ts` - window check, empty Sat/Sun, claim-then-send
-- `app/routes/family.tsx` - Helgevarsling form and `save-reminder-email` action
-- `.github/workflows/weekend-plan-reminders.yml` - Thursday UTC schedule and force dispatch
+- `.github/workflows/weekend-plan-reminders.yml` - URL sanitization before curl
+- `docs/deploy-fly.md` - secret format for `MEALPLANNER_APP_URL`
 
 ## Validation
 
@@ -28,9 +25,9 @@ Ship #225 — Thursday weekend-plan reminder emails. Branch `issue/225-weekend-p
 
 ## Open Items
 
-- Manual after merge: save a family email, leave Sat or Sun blank, `workflow_dispatch` with force, confirm one mail; run again same week — no second mail
-- Issue #225 closes on PR merge via `Closes #225`
+- Re-save GitHub secret `MEALPLANNER_APP_URL` as `https://mealplanner-xzvzow.fly.dev` (or the custom domain), no quotes or newline
+- After merge, re-run **Weekend plan reminders** with `force`
 
 ## Next Step
 
-Review and merge the pull request for #225.
+Review and merge the pull request for #227.

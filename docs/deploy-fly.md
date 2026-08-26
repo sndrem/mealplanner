@@ -156,7 +156,7 @@ fly tokens create deploy -a mealplanner-xzvzow
 
 Add the token value as `FLY_API_TOKEN`.
 
-For Thursday weekend-plan reminders, also add repository secrets `CRON_SECRET` (same value as the Fly `CRON_SECRET` secret) and `MEALPLANNER_APP_URL` (e.g. `https://mealplanner-xzvzow.fly.dev`). The scheduled workflow [`.github/workflows/weekend-plan-reminders.yml`](../.github/workflows/weekend-plan-reminders.yml) POSTs to `/internal/jobs/weekend-plan-reminders`. Manual **Run workflow** can pass `force` to bypass the Thursday 12:00 Europe/Oslo window.
+For Thursday weekend-plan reminders, also add repository secrets `CRON_SECRET` (same value as the Fly `CRON_SECRET` secret) and `MEALPLANNER_APP_URL`. Paste the origin only, with no quotes, path, or trailing slash, e.g. `https://mealplanner-xzvzow.fly.dev`. The scheduled workflow [`.github/workflows/weekend-plan-reminders.yml`](../.github/workflows/weekend-plan-reminders.yml) POSTs to `/internal/jobs/weekend-plan-reminders`. Manual **Run workflow** can pass `force` to bypass the Thursday 12:00 Europe/Oslo window.
 
 Runtime secrets (`DATABASE_URL`, `SESSION_SECRET`, `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `CRON_SECRET`, etc.) stay on Fly via `fly secrets set`. `CRON_SECRET` is the exception that is **also** stored in GitHub so the reminder workflow can authenticate.
 
