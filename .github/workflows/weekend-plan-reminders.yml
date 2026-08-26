@@ -1,0 +1,56 @@
+name: Weekend plan reminders
+
+on:
+  schedule:
+    - cron: "0 10,11 * * 4"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Bypass Thursday 12:00 Europe/Oslo window
+        type: boolean
+        default: true
+
+concurrency:
+  group: weekend-plan-reminders
+  cancel-in-progress: false
+
+jobs:
+  send-reminders:
+    name: Send weekend plan reminders
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Skip unless Thursday 12:00 Europe/Oslo
+        if: github.event_name == 'schedule'
+        id: window
+        run: |
+          oslo="$(TZ=Europe/Oslo date +%u/%H)"
+          echo "Europe/Oslo weekday/hour: $oslo"
+          if [ "$oslo" != "4/12" ]; then
+            echo "Outside reminder window; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger reminder job
+        if: github.event_name != 'schedule' || steps.window.outputs.skip != 'true'
+        env:
+          APP_URL: ${{ secrets.MEALPLANNER_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "MEALPLANNER_APP_URL and CRON_SECRET secrets are required."
+            exit 1
+          fi
+
+          url="${APP_URL%/}/internal/jobs/weekend-plan-reminders"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then
+            url="${url}?force=true"
+          fi
+
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            "$url"

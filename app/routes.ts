@@ -7,6 +7,10 @@ export default [
   route("register", "routes/register.tsx"),
   route("forgot-password", "routes/forgot-password.tsx"),
   route("reset-password", "routes/reset-password.tsx"),
+  route(
+    "internal/jobs/weekend-plan-reminders",
+    "routes/internal.jobs.weekend-plan-reminders.ts",
+  ),
   route("api/generate-recipe-description", "routes/api.generate-recipe-description.ts"),
   route("s/:token", "routes/shopping-list-share.tsx"),
   layout("routes/app-layout.tsx", [

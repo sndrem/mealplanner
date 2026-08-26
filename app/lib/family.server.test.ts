@@ -13,6 +13,7 @@ const { dbMock, randomIntMock, txMock } = vi.hoisted(() => {
   const db = {
     family: {
       findUnique: vi.fn(),
+      update: vi.fn(),
     },
     familyMembership: {
       create: vi.fn(),
@@ -48,11 +49,13 @@ vi.mock("./db.server", () => {
 import {
   createFamilyForUser,
   getFamilyMembershipForUser,
+  getFamilyReminderEmail,
   joinFamilyByCode,
   listFamilyMembers,
   removeFamilyMember,
   requireFamilyAdmin,
   requireFamilyMembership,
+  updateFamilyReminderEmail,
 } from "./family.server";
 
 describe("family.server", () => {
@@ -489,5 +492,126 @@ describe("family.server", () => {
     expect(result).toEqual({
       status: "NOT_FOUND",
     });
+  });
+
+  it("saves a normalized family reminder email for admins", async () => {
+    dbMock.familyMembership.findUnique.mockResolvedValue({
+      family: {
+        id: "family-1",
+        joinCode: "ABC123",
+        name: "Solberg",
+      },
+      familyId: "family-1",
+      id: "membership-admin",
+      role: "ADMIN",
+      userId: "user-admin",
+    });
+    dbMock.family.update.mockResolvedValue({ reminderEmail: "familie@example.com" });
+
+    const result = await updateFamilyReminderEmail({
+      actorUserId: "user-admin",
+      email: " Familie@Example.com ",
+      familyId: "family-1",
+    });
+
+    expect(dbMock.family.update).toHaveBeenCalledWith({
+      data: { reminderEmail: "familie@example.com" },
+      where: { id: "family-1" },
+    });
+    expect(result).toEqual({
+      reminderEmail: "familie@example.com",
+      status: "SAVED",
+    });
+  });
+
+  it("clears the family reminder email when the value is empty", async () => {
+    dbMock.familyMembership.findUnique.mockResolvedValue({
+      family: {
+        id: "family-1",
+        joinCode: "ABC123",
+        name: "Solberg",
+      },
+      familyId: "family-1",
+      id: "membership-admin",
+      role: "ADMIN",
+      userId: "user-admin",
+    });
+    dbMock.family.update.mockResolvedValue({ reminderEmail: null });
+
+    const result = await updateFamilyReminderEmail({
+      actorUserId: "user-admin",
+      email: "   ",
+      familyId: "family-1",
+    });
+
+    expect(dbMock.family.update).toHaveBeenCalledWith({
+      data: { reminderEmail: null },
+      where: { id: "family-1" },
+    });
+    expect(result).toEqual({
+      reminderEmail: null,
+      status: "CLEARED",
+    });
+  });
+
+  it("rejects an invalid family reminder email without writing", async () => {
+    dbMock.familyMembership.findUnique.mockResolvedValue({
+      family: {
+        id: "family-1",
+        joinCode: "ABC123",
+        name: "Solberg",
+      },
+      familyId: "family-1",
+      id: "membership-admin",
+      role: "ADMIN",
+      userId: "user-admin",
+    });
+
+    const result = await updateFamilyReminderEmail({
+      actorUserId: "user-admin",
+      email: "not-an-email",
+      familyId: "family-1",
+    });
+
+    expect(dbMock.family.update).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      status: "INVALID_EMAIL",
+    });
+  });
+
+  it("refuses reminder email updates from regular members", async () => {
+    dbMock.familyMembership.findUnique.mockResolvedValue({
+      family: {
+        id: "family-1",
+        joinCode: "ABC123",
+        name: "Solberg",
+      },
+      familyId: "family-1",
+      id: "membership-member",
+      role: "MEMBER",
+      userId: "user-member",
+    });
+
+    await expect(
+      updateFamilyReminderEmail({
+        actorUserId: "user-member",
+        email: "familie@example.com",
+        familyId: "family-1",
+      }),
+    ).rejects.toMatchObject({
+      status: 403,
+      statusText: "Forbidden",
+    });
+    expect(dbMock.family.update).not.toHaveBeenCalled();
+  });
+
+  it("returns the stored family reminder email", async () => {
+    dbMock.family.findUnique.mockResolvedValue({
+      reminderEmail: "familie@example.com",
+    });
+
+    await expect(getFamilyReminderEmail("family-1")).resolves.toBe(
+      "familie@example.com",
+    );
   });
 });

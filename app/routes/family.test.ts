@@ -11,9 +11,11 @@ vi.mock("../lib/auth.server", async () => {
 
 vi.mock("../lib/family.server", () => {
   return {
+    getFamilyReminderEmail: vi.fn(),
     listFamilyMembers: vi.fn(),
     removeFamilyMember: vi.fn(),
     requireFamilyMembership: vi.fn(),
+    updateFamilyReminderEmail: vi.fn(),
   };
 });
 
@@ -29,7 +31,13 @@ vi.mock("../lib/family-home.server", () => ({
 
 import { requireUser } from "../lib/auth.server";
 import { getFamilyWeekDinnerMenu } from "../lib/family-home.server";
-import { listFamilyMembers, removeFamilyMember, requireFamilyMembership } from "../lib/family.server";
+import {
+  getFamilyReminderEmail,
+  listFamilyMembers,
+  removeFamilyMember,
+  requireFamilyMembership,
+  updateFamilyReminderEmail,
+} from "../lib/family.server";
 import { listMealPlansForFamily } from "../lib/meal-plan.server";
 import { action, loader } from "./family";
 
@@ -125,6 +133,7 @@ function mockMealPlansForFamily() {
     userRole: "ADMIN",
   });
   vi.mocked(getFamilyWeekDinnerMenu).mockResolvedValue(mockWeekDays as never);
+  vi.mocked(getFamilyReminderEmail).mockResolvedValue(null);
 }
 
 describe("family route", () => {
@@ -161,6 +170,7 @@ describe("family route", () => {
       },
     ]);
     mockMealPlansForFamily();
+    vi.mocked(getFamilyReminderEmail).mockResolvedValue("familie@example.com");
 
     const result = await loader({
       params: {
@@ -193,11 +203,13 @@ describe("family route", () => {
       userId: "user-1",
     });
     expect(result.weekDays).toEqual(mockWeekDays);
+    expect(getFamilyReminderEmail).toHaveBeenCalledWith("family-1");
     expect(result).toMatchObject({
       family: {
         id: "family-1",
         joinCode: "ABC123",
         name: "Solberg",
+        reminderEmail: "familie@example.com",
       },
       members: [
         {
@@ -267,12 +279,14 @@ describe("family route", () => {
     } as unknown as Parameters<typeof loader>[0]);
 
     expect(listFamilyMembers).not.toHaveBeenCalled();
+    expect(getFamilyReminderEmail).not.toHaveBeenCalled();
     expect(result).toEqual({
       activeTab: "oversikt",
       family: {
         id: "family-1",
         joinCode: null,
         name: "Solberg",
+        reminderEmail: null,
       },
       members: [],
       notice: null,
@@ -418,6 +432,121 @@ describe("family route", () => {
     const formData = new FormData();
     formData.set("intent", "remove-member");
     formData.set("targetUserId", "user-2");
+
+    await expect(
+      action({
+        params: {
+          familyId: "family-1",
+        },
+        request: buildRequest("http://localhost/families/family-1", formData),
+        context: {} as never,
+      } as unknown as Parameters<typeof action>[0]),
+    ).rejects.toMatchObject({
+      status: 403,
+      statusText: "Forbidden",
+    });
+  });
+
+  it("redirects after an admin saves a reminder email", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(updateFamilyReminderEmail).mockResolvedValue({
+      reminderEmail: "familie@example.com",
+      status: "SAVED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "save-reminder-email");
+    formData.set("reminderEmail", " Familie@Example.com ");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest("http://localhost/families/family-1", formData),
+      context: {} as never,
+    } as unknown as Parameters<typeof action>[0]);
+
+    expect(updateFamilyReminderEmail).toHaveBeenCalledWith({
+      actorUserId: "user-1",
+      email: " Familie@Example.com ",
+      familyId: "family-1",
+    });
+    expect(result).toBeInstanceOf(Response);
+
+    const response = result as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "http://localhost/families/family-1?notice=reminder-email-saved&tab=familie",
+    );
+  });
+
+  it("redirects after an admin clears the reminder email", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(updateFamilyReminderEmail).mockResolvedValue({
+      reminderEmail: null,
+      status: "CLEARED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "save-reminder-email");
+    formData.set("reminderEmail", "");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest("http://localhost/families/family-1", formData),
+      context: {} as never,
+    } as unknown as Parameters<typeof action>[0]);
+
+    const response = result as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "http://localhost/families/family-1?notice=reminder-email-cleared&tab=familie",
+    );
+  });
+
+  it("returns a field error for an invalid reminder email", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(updateFamilyReminderEmail).mockResolvedValue({
+      status: "INVALID_EMAIL",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "save-reminder-email");
+    formData.set("reminderEmail", "not-an-email");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest("http://localhost/families/family-1", formData),
+      context: {} as never,
+    } as unknown as Parameters<typeof action>[0]);
+
+    expect(result).toEqual({
+      fieldErrors: {
+        reminderEmail: "Skriv inn en gyldig e-postadresse.",
+      },
+      intent: "save-reminder-email",
+      values: {
+        reminderEmail: "not-an-email",
+      },
+    });
+  });
+
+  it("rethrows forbidden reminder email updates from members", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(updateFamilyReminderEmail).mockRejectedValue(
+      new Response("Du har ikke tilgang til å administrere denne familien.", {
+        status: 403,
+        statusText: "Forbidden",
+      }),
+    );
+
+    const formData = new FormData();
+    formData.set("intent", "save-reminder-email");
+    formData.set("reminderEmail", "familie@example.com");
 
     await expect(
       action({

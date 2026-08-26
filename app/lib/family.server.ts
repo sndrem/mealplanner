@@ -2,7 +2,10 @@ import { randomInt } from "node:crypto";
 
 import type { Prisma } from "@prisma/client";
 
+import { normalizeEmail } from "./auth.server";
 import { db } from "./db.server";
+
+const FAMILY_REMINDER_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const JOIN_CODE_LENGTH = 6;
@@ -249,6 +252,64 @@ export async function removeFamilyMember({
   return {
     status: "REMOVED" as const,
     removedUser: targetMembership.user,
+  };
+}
+
+export async function getFamilyReminderEmail(familyId: string) {
+  const family = await db.family.findUnique({
+    where: { id: familyId },
+    select: { reminderEmail: true },
+  });
+
+  return family?.reminderEmail ?? null;
+}
+
+export function isFamilyReminderEmailValid(email: string) {
+  return FAMILY_REMINDER_EMAIL_PATTERN.test(email);
+}
+
+export async function updateFamilyReminderEmail({
+  actorUserId,
+  email,
+  familyId,
+}: {
+  actorUserId: string;
+  email: string;
+  familyId: string;
+}) {
+  await requireFamilyAdmin({
+    familyId,
+    userId: actorUserId,
+  });
+
+  const trimmedEmail = email.trim();
+
+  if (!trimmedEmail) {
+    await db.family.update({
+      data: { reminderEmail: null },
+      where: { id: familyId },
+    });
+
+    return {
+      reminderEmail: null,
+      status: "CLEARED" as const,
+    };
+  }
+
+  const normalizedEmail = normalizeEmail(trimmedEmail);
+
+  if (!isFamilyReminderEmailValid(normalizedEmail)) {
+    return { status: "INVALID_EMAIL" as const };
+  }
+
+  await db.family.update({
+    data: { reminderEmail: normalizedEmail },
+    where: { id: familyId },
+  });
+
+  return {
+    reminderEmail: normalizedEmail,
+    status: "SAVED" as const,
   };
 }
 

@@ -28,6 +28,12 @@ Optional (password reset mail). The app starts without them; forgot-password ema
 | `SMTP_PASS` | SMTP password (Gmail app password) |
 | `EMAIL_FROM` | From header, e.g. `Mealplanner <you@gmail.com>` (defaults to `SMTP_USER`) |
 
+Optional (Thursday weekend-plan reminders). The app starts without this; the job route returns 503 until it is set. Use the **same** value as the GitHub Actions `CRON_SECRET` secret:
+
+| Variable | Purpose |
+| -------- | ------- |
+| `CRON_SECRET` | Bearer token for `POST /internal/jobs/weekend-plan-reminders` |
+
 Optional (recipe cover images via Cloudflare R2). The app starts without them; image upload is disabled until all R2 variables are set:
 
 | Variable | Purpose |
@@ -58,6 +64,7 @@ fly secrets set \
   SMTP_USER="you@gmail.com" \
   SMTP_PASS="<gmail-app-password>" \
   EMAIL_FROM="Mealplanner <you@gmail.com>" \
+  CRON_SECRET="<generate-a-long-random-string>" \
   R2_ACCOUNT_ID="<cloudflare-account-id>" \
   R2_ACCESS_KEY_ID="<access-key-id>" \
   R2_SECRET_ACCESS_KEY="<secret-access-key>" \
@@ -149,7 +156,9 @@ fly tokens create deploy -a mealplanner-xzvzow
 
 Add the token value as `FLY_API_TOKEN`.
 
-Runtime secrets (`DATABASE_URL`, `SESSION_SECRET`, `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, etc.) stay on Fly via `fly secrets set`; they are not stored in GitHub.
+For Thursday weekend-plan reminders, also add repository secrets `CRON_SECRET` (same value as the Fly `CRON_SECRET` secret) and `MEALPLANNER_APP_URL` (e.g. `https://mealplanner-xzvzow.fly.dev`). The scheduled workflow [`.github/workflows/weekend-plan-reminders.yml`](../.github/workflows/weekend-plan-reminders.yml) POSTs to `/internal/jobs/weekend-plan-reminders`. Manual **Run workflow** can pass `force` to bypass the Thursday 12:00 Europe/Oslo window.
+
+Runtime secrets (`DATABASE_URL`, `SESSION_SECRET`, `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `CRON_SECRET`, etc.) stay on Fly via `fly secrets set`. `CRON_SECRET` is the exception that is **also** stored in GitHub so the reminder workflow can authenticate.
 
 ### Pre-deploy checks
 

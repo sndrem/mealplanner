@@ -93,11 +93,14 @@ SMTP_PORT="587"
 SMTP_USER=""
 SMTP_PASS=""
 EMAIL_FROM=""
+CRON_SECRET=""
 ```
 
 `SESSION_SECRET` must be at least 32 characters and is used to sign the login session cookie.
 
 SMTP settings are optional at startup. When `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` are unset, password-reset emails are logged to the server console instead of being sent. A Gmail inbox works without a custom domain: enable 2-Step Verification, create an [App Password](https://myaccount.google.com/apppasswords), then set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER` to the Gmail address, `SMTP_PASS` to the app password, and `EMAIL_FROM` to `Mealplanner <that-gmail-address>`. Gmail will send from the Gmail address itself.
+
+`CRON_SECRET` is optional at startup. The Thursday weekend-plan reminder job refuses all requests until it is set. Generate a long random value and use the same secret on Fly and in GitHub Actions (`CRON_SECRET` plus `MEALPLANNER_APP_URL`).
 
 If any required variable is missing or invalid, the server fails fast during startup instead of waiting until the first database access.
 
