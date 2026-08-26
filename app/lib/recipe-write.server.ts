@@ -1,7 +1,12 @@
-import { Prisma, RecipeScope } from "@prisma/client";
+import { Prisma, RecipeScope, type RecipeReminderTimingKind } from "@prisma/client";
 
 import { db } from "./db.server";
 import { requireFamilyAdmin } from "./family.server";
+import {
+  parseRecipeReminderSuggestionRows,
+  RECIPE_REMINDER_MAX_COUNT,
+  type RecipeReminderSuggestionInput,
+} from "./recipe-reminder";
 import {
   deleteR2Object,
   isR2Configured,
@@ -25,6 +30,7 @@ export interface FamilyRecipeValues {
   description: string;
   ingredients: FamilyRecipeIngredientValues[];
   prepMinutes: string;
+  reminderSuggestions: RecipeReminderSuggestionInput[];
   tags: string;
   title: string;
 }
@@ -34,14 +40,20 @@ export interface FamilyRecipeCoverInput {
   remove: boolean;
 }
 
-export function parseFamilyRecipeValues(formData: FormData): FamilyRecipeValues {
+function parseIndexedFormRows(formData: FormData, fieldName: string) {
   const indices = formData
-    .getAll("ingredientIndex")
+    .getAll(fieldName)
     .map((value) => String(value))
     .filter((value) => value.length > 0);
-  const uniqueIndices = [...new Set(indices)].sort(
+
+  return [...new Set(indices)].sort(
     (left, right) => Number(left) - Number(right),
   );
+}
+
+export function parseFamilyRecipeValues(formData: FormData): FamilyRecipeValues {
+  const uniqueIndices = parseIndexedFormRows(formData, "ingredientIndex");
+  const reminderIndices = parseIndexedFormRows(formData, "reminderIndex");
 
   return {
     defaultServings: String(formData.get("defaultServings") ?? ""),
@@ -56,6 +68,11 @@ export function parseFamilyRecipeValues(formData: FormData): FamilyRecipeValues 
       unit: String(formData.get(`ingredientUnit:${index}`) ?? ""),
     })),
     prepMinutes: String(formData.get("prepMinutes") ?? ""),
+    reminderSuggestions: reminderIndices.map((index) => ({
+      note: String(formData.get(`reminderNote:${index}`) ?? ""),
+      timingKind: String(formData.get(`reminderTimingKind:${index}`) ?? ""),
+      title: String(formData.get(`reminderTitle:${index}`) ?? ""),
+    })),
     tags: String(formData.get("tags") ?? ""),
     title: String(formData.get("title") ?? ""),
   };
@@ -87,6 +104,10 @@ export interface FamilyRecipeFieldErrors {
   ingredientCategories?: Record<number, string>;
   ingredientDisplayNames?: Record<number, string>;
   prepMinutes?: string;
+  reminderNotes?: Record<number, string>;
+  reminderSuggestions?: string;
+  reminderTimingKinds?: Record<number, string>;
+  reminderTitles?: Record<number, string>;
   title?: string;
 }
 
@@ -379,6 +400,26 @@ export async function updateFamilyRecipe({
           unit: ingredient.unit,
         })),
       });
+
+      await tx.recipeReminderSuggestion.deleteMany({
+        where: {
+          recipeId: existingRecipe.id,
+        },
+      });
+
+      if (validation.parsed.reminderSuggestions.length > 0) {
+        await tx.recipeReminderSuggestion.createMany({
+          data: validation.parsed.reminderSuggestions.map(
+            (suggestion, index) => ({
+              note: suggestion.note,
+              recipeId: existingRecipe.id,
+              sortOrder: index + 1,
+              timingKind: suggestion.timingKind,
+              title: suggestion.title,
+            }),
+          ),
+        });
+      }
     });
   } catch (error) {
     if (uploadedKey) {
@@ -477,6 +518,13 @@ async function validateFamilyRecipeValues({
       unit: ingredient.unit.trim(),
     })),
     prepMinutes: values.prepMinutes.trim(),
+    reminderSuggestions: (values.reminderSuggestions ?? []).map(
+      (suggestion) => ({
+        note: suggestion.note,
+        timingKind: suggestion.timingKind,
+        title: suggestion.title,
+      }),
+    ),
     tags: values.tags.trim(),
     title: values.title.trim(),
   };
@@ -548,13 +596,37 @@ async function validateFamilyRecipeValues({
     fieldErrors.ingredientCategories = ingredientCategories;
   }
 
+  const reminderParse = parseRecipeReminderSuggestionRows(
+    normalizedValues.reminderSuggestions,
+  );
+
+  if (reminderParse.tooMany) {
+    fieldErrors.reminderSuggestions = `Du kan legge til maks ${RECIPE_REMINDER_MAX_COUNT} påminnelser.`;
+  }
+
+  if (reminderParse.errors.titles) {
+    fieldErrors.reminderTitles = reminderParse.errors.titles;
+  }
+
+  if (reminderParse.errors.notes) {
+    fieldErrors.reminderNotes = reminderParse.errors.notes;
+  }
+
+  if (reminderParse.errors.timingKinds) {
+    fieldErrors.reminderTimingKinds = reminderParse.errors.timingKinds;
+  }
+
   if (
     fieldErrors.title ||
     fieldErrors.defaultServings ||
     fieldErrors.prepMinutes ||
     fieldErrors.ingredients ||
     fieldErrors.ingredientDisplayNames ||
-    fieldErrors.ingredientCategories
+    fieldErrors.ingredientCategories ||
+    fieldErrors.reminderSuggestions ||
+    fieldErrors.reminderTitles ||
+    fieldErrors.reminderNotes ||
+    fieldErrors.reminderTimingKinds
   ) {
     return {
       fieldErrors,
@@ -576,6 +648,11 @@ async function validateFamilyRecipeValues({
         unit: ingredient.unit || null,
       })),
       prepMinutes: prepResult.ok ? (prepResult.value ?? 45) : null,
+      reminderSuggestions: reminderParse.suggestions.map((suggestion) => ({
+        note: suggestion.note,
+        timingKind: suggestion.timingKind as RecipeReminderTimingKind | null,
+        title: suggestion.title,
+      })),
       tags: parseTags(normalizedValues.tags),
       title: normalizedValues.title,
     },

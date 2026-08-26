@@ -549,6 +549,15 @@ describe("meal-plan.server", () => {
         id: "kylling-taco",
         imageKey: null,
         prepMinutes: 25,
+        reminderSuggestions: [
+          {
+            id: "dough",
+            note: "Fra kjøleskapet",
+            sortOrder: 1,
+            timingKind: "HOURS_BEFORE_16",
+            title: "Ta deigen ut av kjøleskapet",
+          },
+        ],
         tags: ["rask"],
         title: "Kyllingtaco",
       },
@@ -568,6 +577,15 @@ describe("meal-plan.server", () => {
         id: "kylling-taco",
         imageUrl: null,
         prepMinutes: 25,
+        reminderSuggestions: [
+          {
+            id: "dough",
+            note: "Fra kjøleskapet",
+            sortOrder: 1,
+            timingKind: "HOURS_BEFORE_16",
+            title: "Ta deigen ut av kjøleskapet",
+          },
+        ],
         tags: ["rask"],
         title: "Kyllingtaco",
       },
@@ -581,6 +599,16 @@ describe("meal-plan.server", () => {
         id: true,
         imageKey: true,
         prepMinutes: true,
+        reminderSuggestions: {
+          orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+          select: {
+            id: true,
+            note: true,
+            sortOrder: true,
+            timingKind: true,
+            title: true,
+          },
+        },
         tags: true,
         title: true,
       },

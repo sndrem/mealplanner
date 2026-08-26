@@ -4,6 +4,14 @@ import { Form, useNavigation } from "react-router";
 import { RecipePickerMedia } from "./recipe-picker-card";
 import { RecipeReminderModal } from "./recipe-reminder-modal";
 import { compressRecipeCoverImage } from "../lib/recipe-cover-image";
+import {
+  getRecipeReminderTimingLabel,
+  RECIPE_REMINDER_TIMING_KINDS,
+  RECIPE_REMINDER_TIMING_LABELS,
+  type RecipeReminderSuggestion,
+  type RecipeReminderSuggestionInput,
+  type RecipeReminderTimingKind,
+} from "../lib/recipe-reminder";
 import type {
   FamilyRecipeFieldErrors,
   FamilyRecipeIngredientValues,
@@ -44,6 +52,7 @@ interface FamilyRecipeEditorCardProps {
       unit: string | null;
     }>;
     prepMinutes: number | null;
+    reminderSuggestions: RecipeReminderSuggestion[];
     tags: string[];
     title: string;
   };
@@ -90,6 +99,9 @@ export function FamilyRecipeEditorCard({
   const sourceValues =
     updateValues && !ignoreSubmittedValues ? updateValues : persistedValues;
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [reminderPrefillId, setReminderPrefillId] = useState<
+    string | undefined
+  >();
   const [isEditing, setIsEditing] = useState(
     Boolean(updateValues) || initialEditing,
   );
@@ -286,7 +298,10 @@ export function FamilyRecipeEditorCard({
           <div className="flex shrink-0 flex-col gap-2 sm:items-end">
             <button
               className="inline-flex items-center justify-center rounded-2xl bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
-              onClick={() => setIsReminderModalOpen(true)}
+              onClick={() => {
+                setReminderPrefillId(undefined);
+                setIsReminderModalOpen(true);
+              }}
               type="button"
             >
               Påminn meg
@@ -378,15 +393,25 @@ export function FamilyRecipeEditorCard({
           draftIngredients={draftIngredients}
           draftValues={draftValues}
           familyStores={familyStores}
+          onSuggestionClick={(suggestionId) => {
+            setReminderPrefillId(suggestionId);
+            setIsReminderModalOpen(true);
+          }}
+          reminderSuggestions={recipe.reminderSuggestions ?? []}
         />
       )}
 
       {isReminderModalOpen ? (
         <RecipeReminderModal
           familyId={familyId}
-          onClose={() => setIsReminderModalOpen(false)}
+          initialSuggestionId={reminderPrefillId}
+          onClose={() => {
+            setIsReminderModalOpen(false);
+            setReminderPrefillId(undefined);
+          }}
           recipeId={recipe.id}
           recipeTitle={isUpdatingRecipe ? draftValues.title : recipe.title}
+          suggestions={recipe.reminderSuggestions}
         />
       ) : null}
 
@@ -679,6 +704,12 @@ function RecipeFields({
         />
       </label>
 
+      <ReminderSuggestionEditor
+        fieldErrors={fieldErrors}
+        reminderSuggestions={draftValues.reminderSuggestions ?? []}
+        setDraftValues={setDraftValues}
+      />
+
       <div className="space-y-4">
         <div>
           <h3 className="text-base font-semibold text-slate-950">
@@ -721,6 +752,218 @@ function RecipeFields({
         </button>
       </div>
     </>
+  );
+}
+
+function emptyReminderSuggestion(): RecipeReminderSuggestionInput {
+  return {
+    note: "",
+    timingKind: "",
+    title: "",
+  };
+}
+
+function ReminderSuggestionEditor({
+  fieldErrors,
+  reminderSuggestions = [],
+  setDraftValues,
+}: {
+  fieldErrors?: FamilyRecipeFieldErrors;
+  reminderSuggestions?: RecipeReminderSuggestionInput[];
+  setDraftValues: React.Dispatch<React.SetStateAction<FamilyRecipeValues>>;
+}) {
+  const rows = reminderSuggestions.map((suggestion, index) => ({
+    ...suggestion,
+    key: `reminder-${index}`,
+  }));
+
+  function updateRow(
+    key: string,
+    patch: Partial<RecipeReminderSuggestionInput>,
+  ) {
+    const index = rows.findIndex((row) => row.key === key);
+
+    if (index === -1) {
+      return;
+    }
+
+    setDraftValues((current) => {
+      const next = [...current.reminderSuggestions];
+      next[index] = {
+        ...next[index],
+        ...patch,
+      };
+
+      return {
+        ...current,
+        reminderSuggestions: next,
+      };
+    });
+  }
+
+  function addRow() {
+    setDraftValues((current) => ({
+      ...current,
+      reminderSuggestions: [
+        ...current.reminderSuggestions,
+        emptyReminderSuggestion(),
+      ],
+    }));
+  }
+
+  function removeRow(key: string) {
+    const index = rows.findIndex((row) => row.key === key);
+
+    if (index === -1) {
+      return;
+    }
+
+    setDraftValues((current) => ({
+      ...current,
+      reminderSuggestions: current.reminderSuggestions.filter(
+        (_, rowIndex) => rowIndex !== index,
+      ),
+    }));
+  }
+
+  function moveRow(key: string, direction: "up" | "down") {
+    const index = rows.findIndex((row) => row.key === key);
+
+    if (index === -1) {
+      return;
+    }
+
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+
+    if (targetIndex < 0 || targetIndex >= rows.length) {
+      return;
+    }
+
+    setDraftValues((current) => {
+      const next = [...current.reminderSuggestions];
+      const [moved] = next.splice(index, 1);
+      next.splice(targetIndex, 0, moved);
+
+      return {
+        ...current,
+        reminderSuggestions: next,
+      };
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold text-slate-950">Påminnelser</h3>
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          Valgfrie forslag som vises på ukeplanen. De oppretter ikke
+          automatisk noe i Apple Påminnelser.
+        </p>
+      </div>
+      {fieldErrors?.reminderSuggestions ? (
+        <p className="text-sm text-rose-600">{fieldErrors.reminderSuggestions}</p>
+      ) : null}
+
+      {rows.map((row, index) => (
+        <div
+          className="rounded-[24px] border border-slate-200 bg-slate-50 p-4"
+          key={row.key}
+        >
+          <input name="reminderIndex" type="hidden" value={String(index)} />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+              Påminnelse {index + 1}
+            </span>
+            <button
+              className="rounded-xl bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+              onClick={() => moveRow(row.key, "up")}
+              type="button"
+            >
+              Opp
+            </button>
+            <button
+              className="rounded-xl bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+              onClick={() => moveRow(row.key, "down")}
+              type="button"
+            >
+              Ned
+            </button>
+            <button
+              className="rounded-xl bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700 ring-1 ring-rose-200"
+              onClick={() => removeRow(row.key)}
+              type="button"
+            >
+              Fjern
+            </button>
+          </div>
+
+          <label className="mt-4 block text-sm font-medium text-slate-700">
+            Tittel
+            <input
+              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              name={`reminderTitle:${index}`}
+              onChange={(event) => updateRow(row.key, { title: event.target.value })}
+              placeholder="Ta deigen ut av kjøleskapet"
+              type="text"
+              value={row.title}
+            />
+          </label>
+          {fieldErrors?.reminderTitles?.[index] ? (
+            <p className="mt-2 text-sm text-rose-600">
+              {fieldErrors.reminderTitles[index]}
+            </p>
+          ) : null}
+
+          <label className="mt-3 block text-sm font-medium text-slate-700">
+            Notat (valgfritt)
+            <textarea
+              className="mt-2 min-h-20 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              name={`reminderNote:${index}`}
+              onChange={(event) => updateRow(row.key, { note: event.target.value })}
+              placeholder="F.eks. ta ut dagen før"
+              value={row.note}
+            />
+          </label>
+          {fieldErrors?.reminderNotes?.[index] ? (
+            <p className="mt-2 text-sm text-rose-600">
+              {fieldErrors.reminderNotes[index]}
+            </p>
+          ) : null}
+
+          <label className="mt-3 block text-sm font-medium text-slate-700">
+            Når (valgfritt)
+            <select
+              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              name={`reminderTimingKind:${index}`}
+              onChange={(event) =>
+                updateRow(row.key, { timingKind: event.target.value })
+              }
+              value={row.timingKind}
+            >
+              <option value="">Ikke angitt</option>
+              {RECIPE_REMINDER_TIMING_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {RECIPE_REMINDER_TIMING_LABELS[kind]}
+                </option>
+              ))}
+            </select>
+          </label>
+          {fieldErrors?.reminderTimingKinds?.[index] ? (
+            <p className="mt-2 text-sm text-rose-600">
+              {fieldErrors.reminderTimingKinds[index]}
+            </p>
+          ) : null}
+        </div>
+      ))}
+
+      <button
+        className="w-full rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100 sm:w-auto"
+        onClick={addRow}
+        type="button"
+      >
+        Legg til påminnelse
+      </button>
+    </div>
   );
 }
 
@@ -878,11 +1121,15 @@ function RecipeReadOnlySummary({
   draftIngredients,
   draftValues,
   familyStores,
+  onSuggestionClick,
+  reminderSuggestions,
 }: {
   categories: RecipeCategory[];
   draftIngredients: DraftIngredientRow[];
   draftValues: FamilyRecipeValues;
   familyStores: RecipeStore[];
+  onSuggestionClick: (suggestionId: string | undefined) => void;
+  reminderSuggestions: RecipeReminderSuggestion[];
 }) {
   const categoryById = new Map(
     categories.map((category) => [category.id, category]),
@@ -920,6 +1167,40 @@ function RecipeReadOnlySummary({
             </span>
           ))}
       </div>
+      {reminderSuggestions.length > 0 ? (
+        <div>
+          <h3 className="text-base font-semibold text-slate-950">Påminnelser</h3>
+          <ul className="mt-3 space-y-2">
+            {reminderSuggestions.map((suggestion) => {
+              const timingLabel = getRecipeReminderTimingLabel(
+                suggestion.timingKind as RecipeReminderTimingKind | null,
+              );
+
+              return (
+                <li key={suggestion.id ?? suggestion.title}>
+                  <button
+                    className="w-full rounded-[20px] border border-violet-200 bg-violet-50 px-4 py-3 text-left transition hover:bg-violet-100"
+                    onClick={() => onSuggestionClick(suggestion.id)}
+                    type="button"
+                  >
+                    <p className="font-medium text-violet-950">
+                      {suggestion.title}
+                    </p>
+                    {timingLabel ? (
+                      <p className="mt-1 text-sm text-violet-800">{timingLabel}</p>
+                    ) : null}
+                    {suggestion.note ? (
+                      <p className="mt-1 text-sm text-violet-800">
+                        {suggestion.note}
+                      </p>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
       <ol className="space-y-3">
         {draftIngredients.map((row, index) => (
           <li
@@ -971,6 +1252,11 @@ function toRecipeValues(
             },
           ],
     prepMinutes: recipe.prepMinutes?.toString() ?? "",
+    reminderSuggestions: (recipe.reminderSuggestions ?? []).map((suggestion) => ({
+      note: suggestion.note ?? "",
+      timingKind: suggestion.timingKind ?? "",
+      title: suggestion.title,
+    })),
     tags: recipe.tags.join(", "),
     title: recipe.title,
   };

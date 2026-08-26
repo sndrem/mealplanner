@@ -60,6 +60,16 @@ const recipeOptionSelect = Prisma.validator<Prisma.RecipeSelect>()({
   id: true,
   imageKey: true,
   prepMinutes: true,
+  reminderSuggestions: {
+    orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }],
+    select: {
+      id: true,
+      note: true,
+      sortOrder: true,
+      timingKind: true,
+      title: true,
+    },
+  },
   tags: true,
   title: true,
 });

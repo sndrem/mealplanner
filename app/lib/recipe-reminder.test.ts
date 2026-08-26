@@ -10,8 +10,10 @@ import {
   formatLocalDateInput,
   formatLocalTimeInput,
   getRecipeReminderPlatformSupport,
+  getRecipeReminderTimingLabel,
   parseLocalDateTime,
   parseRecipeReminderShortcutUrl,
+  parseRecipeReminderSuggestionRows,
   RECIPE_REMINDER_SHORTCUT_NAME,
 } from "./recipe-reminder";
 
@@ -227,5 +229,74 @@ describe("recipe-reminder", () => {
     expect(canLaunchRecipeReminderShortcut("ios")).toBe(true);
     expect(canLaunchRecipeReminderShortcut("macos")).toBe(true);
     expect(canLaunchRecipeReminderShortcut("unsupported")).toBe(false);
+  });
+
+  it("labels timing hints in Norwegian", () => {
+    expect(getRecipeReminderTimingLabel("MORNING_OF")).toBe(
+      "Morgenen samme dag",
+    );
+    expect(getRecipeReminderTimingLabel("HOURS_BEFORE_16")).toBe("16 timer før");
+    expect(getRecipeReminderTimingLabel(null)).toBeNull();
+  });
+
+  it("parses reminder suggestion rows, dropping empty ones", () => {
+    const result = parseRecipeReminderSuggestionRows([
+      {
+        note: "",
+        timingKind: "",
+        title: "",
+      },
+      {
+        note: "Fra kjøleskapet",
+        timingKind: "HOURS_BEFORE_16",
+        title: "Ta deigen ut",
+      },
+      {
+        note: "",
+        timingKind: "MORNING_OF",
+        title: "  Sett ovnen på  ",
+      },
+    ]);
+
+    expect(result.ok).toBe(true);
+    expect(result.tooMany).toBe(false);
+    expect(result.suggestions).toEqual([
+      {
+        note: "Fra kjøleskapet",
+        timingKind: "HOURS_BEFORE_16",
+        title: "Ta deigen ut",
+      },
+      {
+        note: null,
+        timingKind: "MORNING_OF",
+        title: "Sett ovnen på",
+      },
+    ]);
+  });
+
+  it("requires a title when a reminder row is kept", () => {
+    const result = parseRecipeReminderSuggestionRows([
+      {
+        note: "Husk deigen",
+        timingKind: "",
+        title: "   ",
+      },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.titles?.[0]).toBe("Skriv inn en tittel.");
+  });
+
+  it("rejects more than ten reminder suggestions", () => {
+    const result = parseRecipeReminderSuggestionRows(
+      Array.from({ length: 11 }, (_, index) => ({
+        note: "",
+        timingKind: "",
+        title: `Påminnelse ${index + 1}`,
+      })),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.tooMany).toBe(true);
   });
 });

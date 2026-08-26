@@ -2,35 +2,35 @@
 
 ## Current Objective
 
-Ship client-only iOS Shortcuts “Påminn meg” on recipe detail. Recipe reminder templates remain [#229](https://github.com/sndrem/mealplanner/issues/229).
+Ship recipe reminder suggestions on recipes and the meal plan ([#229](https://github.com/sndrem/mealplanner/issues/229)).
 
 ## Completed
 
-- `app/lib/recipe-reminder.ts` — payload/URL helpers, presets, platform detection, `createRecipeReminder`
-- `RecipeReminderModal` — editable title, presets, custom date/time, Shortcut install help
-- **Påminn meg** on `FamilyRecipeEditorCard` for all viewers
-- Modal accepts optional `suggestions` for later #229 prefills (not persisted yet)
+- Persisted `RecipeReminderSuggestion` rows (title, optional note, optional display-only timing)
+- Recipe editor: add/edit/reorder/remove suggestions; read view opens Påminn meg with prefill
+- Meal plan: collapsed **Påminnelse** chip and expanded suggestion rows open the Shortcut modal
+- Day cards use a controlled expand header so the chip works when the day is closed
 
 ## Files To Read First
 
-- `app/lib/recipe-reminder.ts` — URL/payload construction and types
-- `app/components/recipe-reminder-modal.tsx` — mobile modal UX
-- `app/components/family-recipe-editor-card.tsx` — button placement
+- `app/components/meal-plan-week-entries-form.tsx` — meal-plan chips and modal trigger
+- `app/components/family-recipe-editor-card.tsx` — recipe editor suggestions UI
+- `app/lib/recipe-write.server.ts` — parse/save suggestions
+- `prisma/schema.prisma` — `RecipeReminderSuggestion` model
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 562 tests passed
+- `npm run test:run` — 570 tests passed
 - `npm run typecheck` — passed
-- Browser / iPhone Safari — not run; needs a real device with Shortcut installed
+- Browser / iPhone Safari Shortcut launch — not fully verified in this session
 
 ## Open Items
 
-- User must install Shortcut named exactly `Create Recipe Reminder` that parses the JSON text input
-- #229: store suggestions on recipes and show them on the meal plan
-- Optional: publish an iCloud Shortcut link in the help panel once one exists
+- Manual: collapsed meal-plan **Påminnelse** → modal → **Opprett i Påminnelser** on iPhone
+- Timing remains display-only (no due-date computation from meal-plan dates)
 
 ## Next Step
 
-Review and merge the PR; then manual check on iPhone Safari.
+Review and merge the PR for #229.

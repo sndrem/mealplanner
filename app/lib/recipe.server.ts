@@ -29,6 +29,15 @@ export const recipeIngredientSelect =
     unit: true,
   });
 
+export const recipeReminderSuggestionSelect =
+  Prisma.validator<Prisma.RecipeReminderSuggestionSelect>()({
+    id: true,
+    note: true,
+    sortOrder: true,
+    timingKind: true,
+    title: true,
+  });
+
 export const managedRecipeSelect = Prisma.validator<Prisma.RecipeSelect>()({
   createdAt: true,
   defaultServings: true,
@@ -41,6 +50,10 @@ export const managedRecipeSelect = Prisma.validator<Prisma.RecipeSelect>()({
     select: recipeIngredientSelect,
   },
   prepMinutes: true,
+  reminderSuggestions: {
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    select: recipeReminderSuggestionSelect,
+  },
   scope: true,
   tags: true,
   title: true,
@@ -185,6 +198,7 @@ export async function getFamilyRecipeDetail({
       imageUrl: getRecipeImageUrl(recipe.imageKey),
       ingredients: recipe.ingredients,
       prepMinutes: recipe.prepMinutes,
+      reminderSuggestions: recipe.reminderSuggestions,
       scope: recipe.scope,
       tags: recipe.tags,
       title: recipe.title,
