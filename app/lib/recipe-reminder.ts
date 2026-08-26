@@ -80,9 +80,7 @@ export function parseRecipeReminderSuggestionRows(
     timingKind: row.timingKind.trim(),
     title: row.title.trim(),
   }));
-  const filled = kept.filter(
-    (row) => row.title || row.note || row.timingKind,
-  );
+  const filled = kept.filter((row) => row.title || row.note || row.timingKind);
   const titles: Record<number, string> = {};
   const notes: Record<number, string> = {};
   const timingKinds: Record<number, string> = {};
@@ -185,21 +183,21 @@ export interface RecipeReminderPreset {
 export const RECIPE_REMINDER_PRESETS: readonly RecipeReminderPreset[] = [
   {
     dayOffset: 1,
-    hour: 8,
+    hour: 6,
     id: "tomorrow-morning",
     label: "I morgen tidlig",
-    minute: 0,
+    minute: 30,
   },
   {
     dayOffset: 1,
-    hour: 15,
+    hour: 16,
     id: "tomorrow-afternoon",
     label: "I morgen ettermiddag",
     minute: 0,
   },
   {
     dayOffset: 1,
-    hour: 18,
+    hour: 20,
     id: "tomorrow-evening",
     label: "I morgen kveld",
     minute: 0,
@@ -296,7 +294,12 @@ export function applyRecipeReminderPreset(
 ) {
   const preset = RECIPE_REMINDER_PRESETS.find((item) => item.id === presetId);
 
-  if (!preset || preset.dayOffset == null || preset.hour == null || preset.minute == null) {
+  if (
+    !preset ||
+    preset.dayOffset == null ||
+    preset.hour == null ||
+    preset.minute == null
+  ) {
     throw new Error(`Unknown reminder preset: ${presetId}`);
   }
 
