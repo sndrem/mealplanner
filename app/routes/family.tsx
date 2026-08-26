@@ -4,9 +4,11 @@ import type { Route } from "./+types/family";
 import { FamilyHomeTabs } from "../components/family-home-tabs";
 import { requireUser } from "../lib/auth.server";
 import {
+  getFamilyReminderEmail,
   listFamilyMembers,
   removeFamilyMember,
   requireFamilyMembership,
+  updateFamilyReminderEmail,
 } from "../lib/family.server";
 import { getFamilyWeekDinnerMenu } from "../lib/family-home.server";
 import { formatMealPlanWindow } from "../lib/meal-plan-display";
@@ -14,7 +16,10 @@ import { formatDateOnly } from "../lib/meal-plan-dates";
 import { isMealPlanPast } from "../lib/meal-plan-week";
 import { listMealPlansForFamily } from "../lib/meal-plan.server";
 
-type FamilyNotice = "member-removed";
+type FamilyNotice =
+  | "member-removed"
+  | "reminder-email-cleared"
+  | "reminder-email-saved";
 
 type FamilyHomeTab = "familie" | "oversikt";
 
@@ -27,14 +32,25 @@ type SerializedMealPlanSummary = {
 };
 
 interface FamilyActionData {
+  fieldErrors?: {
+    reminderEmail?: string;
+  };
   formError?: string;
+  intent?: string;
   targetUserId?: string;
+  values?: {
+    reminderEmail?: string;
+  };
 }
 
 function getFamilyNotice(request: Request): FamilyNotice | null {
   const notice = new URL(request.url).searchParams.get("notice");
 
-  if (notice === "member-removed") {
+  if (
+    notice === "member-removed" ||
+    notice === "reminder-email-cleared" ||
+    notice === "reminder-email-saved"
+  ) {
     return notice;
   }
 
@@ -73,6 +89,18 @@ function getFamilyNoticeContent(notice: FamilyNotice) {
       return {
         description: "Medlemmet ble fjernet fra familien.",
         title: "Endringen er lagret",
+      };
+    case "reminder-email-cleared":
+      return {
+        description:
+          "Varslings-e-posten er fjernet. Familien får ikke lenger påminnelse om helgen.",
+        title: "Endringen er lagret",
+      };
+    case "reminder-email-saved":
+      return {
+        description:
+          "Vi sender en e-post torsdag kl. 12 hvis lørdag eller søndag mangler middag.",
+        title: "Varslings-e-posten er lagret",
       };
   }
 }
@@ -254,7 +282,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     familyId,
     userId: user.id,
   });
-  const [members, mealPlanResult, weekDays] = await Promise.all([
+  const [members, mealPlanResult, weekDays, reminderEmail] = await Promise.all([
     membership.role === "ADMIN"
       ? listFamilyMembers(familyId)
       : Promise.resolve([]),
@@ -266,6 +294,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       familyId,
       userId: user.id,
     }),
+    membership.role === "ADMIN"
+      ? getFamilyReminderEmail(familyId)
+      : Promise.resolve(null),
   ]);
 
   const serializedMealPlans = mealPlanResult.mealPlans.map(
@@ -278,6 +309,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       id: membership.family.id,
       joinCode: membership.role === "ADMIN" ? membership.family.joinCode : null,
       name: membership.family.name,
+      reminderEmail,
     },
     members,
     notice: getFamilyNotice(request),
@@ -301,6 +333,34 @@ export async function action({ params, request }: Route.ActionArgs) {
 
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
+
+  if (intent === "save-reminder-email") {
+    const reminderEmail = String(formData.get("reminderEmail") ?? "");
+    const result = await updateFamilyReminderEmail({
+      actorUserId: user.id,
+      email: reminderEmail,
+      familyId,
+    });
+
+    if (result.status === "INVALID_EMAIL") {
+      return {
+        fieldErrors: {
+          reminderEmail: "Skriv inn en gyldig e-postadresse.",
+        },
+        intent,
+        values: { reminderEmail },
+      } satisfies FamilyActionData;
+    }
+
+    return buildFamilyRedirect({
+      familyId,
+      notice:
+        result.status === "CLEARED"
+          ? "reminder-email-cleared"
+          : "reminder-email-saved",
+      request,
+    });
+  }
 
   if (intent !== "remove-member") {
     return {
@@ -364,8 +424,19 @@ export default function FamilyRoute({
   );
   const isRemovingMember =
     navigation.state !== "idle" && pendingIntent === "remove-member";
+  const isSavingReminderEmail =
+    navigation.state !== "idle" && pendingIntent === "save-reminder-email";
   const isAdmin = loaderData.userRole === "ADMIN";
   const familyId = loaderData.family.id;
+  const reminderEmailValue = isSavingReminderEmail
+    ? String(navigation.formData?.get("reminderEmail") ?? "")
+    : (actionData?.values?.reminderEmail ??
+      loaderData.family.reminderEmail ??
+      "");
+  const reminderEmailError =
+    actionData?.intent === "save-reminder-email"
+      ? actionData.fieldErrors?.reminderEmail
+      : undefined;
   const displayMembers = isRemovingMember
     ? loaderData.members.filter(
         (member) => member.user.id !== pendingTargetUserId,
@@ -447,6 +518,52 @@ export default function FamilyRoute({
                   </article>
                 )}
               </section>
+
+              {isAdmin ? (
+                <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                  <div className="flex flex-col gap-2">
+                    <h2 className="text-lg font-semibold text-slate-950">
+                      Helgevarsling
+                    </h2>
+                    <p className="text-sm leading-6 text-slate-600">
+                      Få en e-post torsdag kl. 12 hvis lørdag eller søndag
+                      mangler middag. La feltet stå tomt for å slå av
+                      varslingen.
+                    </p>
+                  </div>
+
+                  <Form className="mt-6 flex flex-col gap-4" method="post">
+                    <input
+                      name="intent"
+                      type="hidden"
+                      value="save-reminder-email"
+                    />
+                    <label className="block text-sm font-medium text-slate-700">
+                      Familie-e-post
+                      <input
+                        autoComplete="email"
+                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-950 outline-none transition focus:border-slate-400"
+                        defaultValue={reminderEmailValue}
+                        key={reminderEmailValue}
+                        name="reminderEmail"
+                        placeholder="familie@eksempel.no"
+                        type="email"
+                      />
+                    </label>
+                    {reminderEmailError ? (
+                      <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        {reminderEmailError}
+                      </p>
+                    ) : null}
+                    <button
+                      className="inline-flex w-fit items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                      type="submit"
+                    >
+                      {isSavingReminderEmail ? "Lagrer..." : "Lagre e-post"}
+                    </button>
+                  </Form>
+                </section>
+              ) : null}
 
               {isAdmin ? (
                 <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
