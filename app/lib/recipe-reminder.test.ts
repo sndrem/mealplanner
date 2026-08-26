@@ -183,7 +183,18 @@ describe("recipe-reminder", () => {
     const dueAt = applyRecipeReminderPreset("tomorrow-morning", now);
 
     expect(formatLocalDateInput(dueAt)).toBe("2026-08-27");
-    expect(formatLocalTimeInput(dueAt)).toBe("08:00");
+    expect(formatLocalTimeInput(dueAt)).toBe("06:30");
+  });
+
+  it("applies afternoon and evening presets in local time", () => {
+    const now = new Date(2026, 7, 26, 14, 30, 0);
+
+    expect(
+      formatLocalTimeInput(applyRecipeReminderPreset("tomorrow-afternoon", now)),
+    ).toBe("16:00");
+    expect(
+      formatLocalTimeInput(applyRecipeReminderPreset("tomorrow-evening", now)),
+    ).toBe("20:00");
   });
 
   it("parses local date and time fields without using UTC", () => {
