@@ -144,7 +144,7 @@ Routine production releases use [`.github/workflows/fly-deploy.yml`](../.github/
 | `workflow_run` (`Auto-merge PR` completed) | After auto-merge squash-merges a PR — needed because GITHUB_TOKEN merges do not fire `push` |
 | `workflow_dispatch` | Manually from **Actions → Deploy to Fly.io → Run workflow** (must run on the `main` branch) |
 
-Pull request branches do not trigger this workflow.
+Pull request branches do not trigger this workflow. The same GITHUB_TOKEN merge path also skips GitHub's `Closes #N` handling; [`.github/workflows/auto-merge.yml`](../.github/workflows/auto-merge.yml) closes linked issues after a successful squash merge.
 
 ### GitHub secret (one-time setup)
 

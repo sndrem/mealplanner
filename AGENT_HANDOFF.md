@@ -2,18 +2,19 @@
 
 ## Current Objective
 
-Ship the mobile layout fix for Dato and Klokkeslett in the recipe reminder modal ([#233](https://github.com/sndrem/mealplanner/issues/233)).
+Fix auto-merge so linked issues close after a squash merge ([#234](https://github.com/sndrem/mealplanner/issues/234)).
 
 ## Completed
 
-- Date/time fields use `grid gap-3 sm:grid-cols-2` so they stack on mobile and sit side by side from `sm`
-- Modal test asserts the layout classes
-- Branch `issue/233-stack-reminder-datetime-mobile` cut from current `origin/main`
+- Confirmed `GITHUB_TOKEN` API squash-merges skip GitHub's `Closes #N` handling (same limitation as missing `push` events)
+- Auto-merge workflow now closes linked issues after a successful merge (GraphQL `closingIssuesReferences` plus closing keywords in the PR title/body)
+- Issue-close failures warn instead of failing the job so Fly deploy still runs
+- Branch cut from current `origin/main` after `git pull --ff-only`
 
 ## Files To Read First
 
-- `app/components/recipe-reminder-modal.tsx` — date/time grid layout
-- `app/components/recipe-reminder-modal.test.tsx` — layout class assertion
+- `.github/workflows/auto-merge.yml` — merge + explicit issue close
+- `docs/deploy-fly.md` — GITHUB_TOKEN merge limitations
 
 ## Validation
 
@@ -21,13 +22,12 @@ Ship the mobile layout fix for Dato and Klokkeslett in the recipe reminder modal
 - `npm run lint` — passed
 - `npm run test:run` — 571 tests passed
 - `npm run typecheck` — passed
-- Browser / iOS Safari visual check — not run (no browser tools in this session)
 
 ## Open Items
 
-- Manual: open **Påminn meg** on a phone-width viewport and confirm Dato/Klokkeslett stack without overlap
-- Manual: confirm `sm`+ still shows two columns
+- This PR's own merge still uses the old workflow on `main`, so #234 may need a manual close after merge
+- Manual: next auto-merged PR with `Closes #<n>` should close via `github-actions[bot]`
 
 ## Next Step
 
-Review and merge the PR for #233.
+Review and merge the PR for #234.
