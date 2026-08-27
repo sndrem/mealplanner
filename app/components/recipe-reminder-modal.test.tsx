@@ -61,8 +61,12 @@ describe("RecipeReminderModal", () => {
     expect(
       screen.getByRole("button", { name: "I morgen tidlig" }),
     ).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByLabelText("Dato")).toBeInTheDocument();
-    expect(screen.getByLabelText("Klokkeslett")).toBeInTheDocument();
+    const dateField = screen.getByLabelText("Dato");
+    const timeField = screen.getByLabelText("Klokkeslett");
+    const datetimeLayout = dateField.closest("div");
+    expect(datetimeLayout).toContainElement(timeField);
+    expect(datetimeLayout).toHaveClass("grid", "gap-3", "sm:grid-cols-2");
+    expect(datetimeLayout).not.toHaveClass("grid-cols-2");
     expect(
       screen.getByRole("button", { name: "Opprett i Påminnelser" }),
     ).toBeEnabled();
