@@ -332,6 +332,7 @@ describe("shopping-list-client", () => {
       }),
       amount: null,
       firstDate: "2026-08-17",
+      isStockItem: false,
       lastDate: "2026-08-17",
       occurrenceCount: 1,
       occurrences: [],

@@ -863,6 +863,7 @@ export default function FamilyMealPlanShoppingRoute({
             collaborationVersion: "",
             firstDate:
               ingredient.occurrences[0]?.date ?? loaderData.mealPlan.startDate,
+            isStockItem: true,
             lastDate:
               ingredient.occurrences.at(-1)?.date ??
               loaderData.mealPlan.endDate,

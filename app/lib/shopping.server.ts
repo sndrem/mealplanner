@@ -265,6 +265,7 @@ export interface ProjectedShoppingOccurrence {
 export interface ProjectedGeneratedShoppingItem extends ProjectedShoppingItemBase {
   amount: string | null;
   firstDate: Date;
+  isStockItem: boolean;
   lastDate: Date;
   occurrenceCount: number;
   recipeCount: number;
@@ -1018,6 +1019,29 @@ export async function getMealPlanStoreModeData({
     endDate: plan.endDate,
     startDate: plan.startDate,
   }));
+  const stockIngredientsForStoreMode = mealPlansForStoreMode.reduce(
+    (accumulator, plan) => {
+      const includeDespiteStockKeys = new Set(
+        plan.shoppingOverrides
+          .filter(
+            (override) =>
+              override.sourceType === ShoppingItemSource.GENERATED &&
+              override.includeDespiteStock,
+          )
+          .map((override) => override.sourceKey),
+      );
+      const stockIngredients = getStockIngredientsForMealPlan({
+        includeDespiteStockKeys,
+        mealPlan: plan,
+        stockMatchSet,
+      });
+
+      accumulator.push(...stockIngredients);
+
+      return accumulator;
+    },
+    [] as ProjectedStockIngredientSummary[],
+  );
 
   return {
     activeShoppingDate,
@@ -1041,6 +1065,7 @@ export async function getMealPlanStoreModeData({
     mealPlan: shoppingDateOwnerPlan,
     progress: buildStoreModeProgress(mergedDueItems),
     selectedStore,
+    stockIngredientsForStoreMode,
     stores: stores.map((store) => ({
       id: store.id,
       name: store.name,
@@ -1183,6 +1208,7 @@ function mapGeneratedProjectionBucketToItem({
     category: bucket.category,
     checked: override?.checked ?? false,
     firstDate: occurrences[0]!.date,
+    isStockItem: override?.includeDespiteStock ?? false,
     lastDate: occurrences[occurrences.length - 1]!.date,
     mealPlanId: mealPlan.id,
     mealPlanTitle: mealPlan.title,
