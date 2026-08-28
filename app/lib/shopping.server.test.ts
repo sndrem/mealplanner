@@ -3107,6 +3107,7 @@ describe("shopping.server", () => {
         checked: false,
         collaborationVersion: "v2",
         firstDate: new Date("2026-05-16T00:00:00.000Z"),
+        isStockItem: false,
         lastDate: new Date("2026-05-16T00:00:00.000Z"),
         mealPlanId: "meal-plan-1",
         mealPlanTitle: "Uke 20",

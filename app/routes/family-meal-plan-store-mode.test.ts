@@ -140,6 +140,7 @@ describe("family store mode route", () => {
     ]);
     vi.mocked(getFamilyStoreModeData).mockResolvedValue({
       activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+      canFocusNext: true,
       dueSectionGroups: [
         {
           category: {
@@ -156,6 +157,7 @@ describe("family store mode route", () => {
               },
               checked: false,
               firstDate: new Date("2026-05-15T00:00:00.000Z"),
+              isStockItem: false,
               lastDate: new Date("2026-05-15T00:00:00.000Z"),
               name: "Paprika",
               note: null,
@@ -227,7 +229,6 @@ describe("family store mode route", () => {
         id: "store-1",
         name: "Meny",
       },
-      canFocusNext: true,
       effectiveTripFocus: "CURRENT",
       tripFocus: "CURRENT",
       stores: [
@@ -245,6 +246,7 @@ describe("family store mode route", () => {
         "2026-05-22",
         "2026-05-23",
       ],
+      stockIngredientsForStoreMode: [],
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
     vi.mocked(listShoppingCheckHistoryForStoreMode).mockResolvedValue([]);
@@ -321,7 +323,9 @@ describe("family store mode route", () => {
     vi.mocked(listIngredientCategories).mockResolvedValue([]);
     vi.mocked(getFamilyStoreModeData).mockResolvedValue({
       activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+      canFocusNext: false,
       dueSectionGroups: [],
+      effectiveTripFocus: "CURRENT",
       family: {
         id: "family-1",
         name: "Solberg",
@@ -354,17 +358,16 @@ describe("family store mode route", () => {
         id: "store-1",
         name: "Meny",
       },
-      canFocusNext: false,
-      effectiveTripFocus: "CURRENT",
-      tripFocus: "CURRENT",
+      selectableShoppingDates: ["2026-05-15", "2026-05-16"],
+      stockIngredientsForStoreMode: [],
       stores: [
         {
           id: "store-1",
           name: "Meny",
         },
       ],
+      tripFocus: "CURRENT",
       userRole: "ADMIN",
-      selectableShoppingDates: ["2026-05-15", "2026-05-16"],
       visibleDates: ["2026-05-15", "2026-05-16"],
     });
     vi.mocked(listShoppingCheckHistoryForStoreMode).mockResolvedValue([

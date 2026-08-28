@@ -69,6 +69,7 @@ import {
   type RecentManualShoppingItem,
 } from "../lib/shopping.server";
 import {
+  optInStockShoppingItems,
   parseManualShoppingItemValues,
   toggleShoppingItemChecked,
   updateActiveShoppingDate,
@@ -117,10 +118,13 @@ type StoreModeNotice =
   | "family-shopping-item-added"
   | "selected-store-updated"
   | "shopping-item-check-state-updated"
+  | "stock-shopping-items-opted-in"
   | "store-mode-trip-focus-updated";
 
 type StoreModeIntent =
   | "quick-add-family-shopping-item"
+  | "opt-in-stock-shopping-item"
+  | "opt-in-stock-shopping-items"
   | "update-family-shopping-item-category"
   | "update-family-shopping-item-quantity"
   | "update-generated-shopping-item-quantity"
@@ -223,6 +227,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     selectedStore: result.selectedStore,
     selectableShoppingDates: result.selectableShoppingDates,
     shoppingHistory,
+    stockIngredientsForStoreMode: result.stockIngredientsForStoreMode,
     stores: result.stores,
     tripFocus: result.tripFocus,
     userRole: result.userRole,
@@ -359,6 +364,39 @@ export async function action({ params, request }: Route.ActionArgs) {
       ok: true,
       recentManualItem: result.recentManualItem,
     } satisfies StoreModeActionData;
+  }
+
+  if (
+    intent === "opt-in-stock-shopping-item" ||
+    intent === "opt-in-stock-shopping-items"
+  ) {
+    const sourceKeys =
+      intent === "opt-in-stock-shopping-items"
+        ? formData.getAll("sourceKey").map(String)
+        : [String(formData.get("sourceKey") ?? "")];
+    const result = await optInStockShoppingItems({
+      familyId,
+      mealPlanId: anchorMealPlanId,
+      sourceKeys,
+      userId: user.id,
+    });
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    return buildFamilyStoreModeRedirect({
+      familyId,
+      notice: "stock-shopping-items-opted-in",
+      request,
+    });
   }
 
   if (intent === "toggle-family-shopping-item-checked") {
@@ -1380,6 +1418,118 @@ export default function FamilyMealPlanStoreModeRoute({
           </section>
         )}
 
+        {loaderData.stockIngredientsForStoreMode.length > 0 ? (
+          <details className={storeModeMutedPanelClass} style={{ borderColor: "rgb(217 119 6)", backgroundColor: "rgb(255 251 235)" }}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
+              <span className="text-lg font-semibold tracking-tight text-amber-950">
+                Basisvarer
+              </span>
+              <span className={storeModeCountChipClass} style={{ backgroundColor: "rgb(217 119 6 / 0.15)", color: "rgb(120 53 15)" }}>
+                {loaderData.stockIngredientsForStoreMode.length} varer
+              </span>
+            </summary>
+
+            <div className="mt-4 space-y-3">
+              <p className="text-sm leading-6 text-amber-900">
+                Disse varene er vanligvis på lager og vises ikke i handlelisten
+                med mindre du legger dem til for denne turen.
+              </p>
+              <Form className="flex flex-wrap gap-3" method="post">
+                <input
+                  name="intent"
+                  type="hidden"
+                  value="opt-in-stock-shopping-items"
+                />
+                {loaderData.stockIngredientsForStoreMode.map((ingredient) => (
+                  <input
+                    key={ingredient.sourceKey}
+                    name="sourceKey"
+                    type="hidden"
+                    value={ingredient.sourceKey}
+                  />
+                ))}
+                <button
+                  className="rounded-2xl bg-amber-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-950 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={
+                    navigation.state !== "idle" &&
+                    pendingIntent === "opt-in-stock-shopping-items"
+                  }
+                  type="submit"
+                >
+                  Legg til alle i handlelisten
+                </button>
+              </Form>
+              <ul className="grid gap-3">
+                {loaderData.stockIngredientsForStoreMode.map((ingredient) => (
+                  <li
+                    key={ingredient.sourceKey}
+                    className="rounded-[20px] border border-amber-200 bg-white px-4 py-4"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">
+                          {ingredient.name}
+                          {ingredient.quantityLabel
+                            ? ` · ${ingredient.quantityLabel}`
+                            : ""}
+                        </p>
+                        {ingredient.occurrenceCount > 1 ? (
+                          <ul className="mt-1 space-y-1 text-xs leading-5 text-slate-600">
+                            {ingredient.occurrences.map((occurrence) => (
+                              <li
+                                key={`${occurrence.mealPlanEntryId}:${occurrence.recipeIngredientId}`}
+                              >
+                                {occurrence.recipeTitle}
+                                {occurrence.quantityLabel
+                                  ? ` · ${occurrence.quantityLabel}`
+                                  : ""}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-1 text-xs leading-5 text-slate-600">
+                            {`Brukt i ${ingredient.occurrences[0]?.recipeTitle ?? "oppskrift"}`}
+                            {ingredient.occurrences[0]?.date
+                              ? ` · ${formatDateLabel(formatDateOnly(ingredient.occurrences[0].date))}`
+                              : ""}
+                            {ingredient.occurrences[0]?.quantityLabel
+                              ? ` · ${ingredient.occurrences[0].quantityLabel}`
+                              : ""}
+                          </p>
+                        )}
+                      </div>
+                      <Form method="post">
+                        <input
+                          name="intent"
+                          type="hidden"
+                          value="opt-in-stock-shopping-item"
+                        />
+                        <input
+                          name="sourceKey"
+                          type="hidden"
+                          value={ingredient.sourceKey}
+                        />
+                        <button
+                          className="rounded-xl bg-amber-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-amber-950 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={
+                            navigation.state !== "idle" &&
+                            pendingIntent === "opt-in-stock-shopping-item" &&
+                            navigation.formData?.get("sourceKey") ===
+                              ingredient.sourceKey
+                          }
+                          type="submit"
+                        >
+                          Legg til i handlelisten
+                        </button>
+                      </Form>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
+        ) : null}
+
         <section className={`${storeModeSurfaceCardClass} p-6`}>
           <h2 className="text-lg font-semibold tracking-tight text-stone-950">
             Før handledato
@@ -1564,6 +1714,7 @@ function getStoreModeNotice(request: Request): StoreModeNotice | null {
     notice === "family-shopping-item-added" ||
     notice === "selected-store-updated" ||
     notice === "shopping-item-check-state-updated" ||
+    notice === "stock-shopping-items-opted-in" ||
     notice === "store-mode-trip-focus-updated"
   ) {
     return notice;
@@ -1598,6 +1749,12 @@ function getStoreModeNoticeContent(notice: StoreModeNotice) {
       return {
         description: "Varen ble lagt til og vises i handlelisten.",
         title: "Vare lagt til",
+      };
+    case "stock-shopping-items-opted-in":
+      return {
+        description:
+          "Basisvarene ble lagt til i handlelisten og vises i kategoriene.",
+        title: "Basisvarer lagt til",
       };
   }
 }
