@@ -362,6 +362,7 @@ describe("family meal plan shopping route", () => {
                   },
                   checked: false,
                   firstDate: "2026-05-15",
+                  isStockItem: false,
                   lastDate: "2026-05-16",
                   name: "Lime",
                   note: null,
