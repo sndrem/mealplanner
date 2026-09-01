@@ -29,7 +29,22 @@ vi.mock("../lib/family-home.server", () => ({
   getFamilyWeekDinnerMenu: vi.fn(),
 }));
 
+vi.mock("../lib/calendar-subscription.server", () => {
+  return {
+    buildCalendarSubscriptionUrls: vi.fn(),
+    createOrRotateFamilyCalendarSubscription: vi.fn(),
+    getFamilyCalendarSubscriptionStatus: vi.fn(),
+    revokeFamilyCalendarSubscription: vi.fn(),
+  };
+});
+
 import { requireUser } from "../lib/auth.server";
+import {
+  buildCalendarSubscriptionUrls,
+  createOrRotateFamilyCalendarSubscription,
+  getFamilyCalendarSubscriptionStatus,
+  revokeFamilyCalendarSubscription,
+} from "../lib/calendar-subscription.server";
 import { getFamilyWeekDinnerMenu } from "../lib/family-home.server";
 import {
   getFamilyReminderEmail,
@@ -134,6 +149,9 @@ function mockMealPlansForFamily() {
   });
   vi.mocked(getFamilyWeekDinnerMenu).mockResolvedValue(mockWeekDays as never);
   vi.mocked(getFamilyReminderEmail).mockResolvedValue(null);
+  vi.mocked(getFamilyCalendarSubscriptionStatus).mockResolvedValue({
+    exists: false,
+  });
 }
 
 describe("family route", () => {
@@ -204,6 +222,9 @@ describe("family route", () => {
     });
     expect(result.weekDays).toEqual(mockWeekDays);
     expect(getFamilyReminderEmail).toHaveBeenCalledWith("family-1");
+    expect(getFamilyCalendarSubscriptionStatus).toHaveBeenCalledWith({
+      familyId: "family-1",
+    });
     expect(result).toMatchObject({
       family: {
         id: "family-1",
@@ -211,6 +232,7 @@ describe("family route", () => {
         name: "Solberg",
         reminderEmail: "familie@example.com",
       },
+      hasCalendarSubscription: false,
       members: [
         {
           id: "membership-1",
@@ -280,6 +302,7 @@ describe("family route", () => {
 
     expect(listFamilyMembers).not.toHaveBeenCalled();
     expect(getFamilyReminderEmail).not.toHaveBeenCalled();
+    expect(getFamilyCalendarSubscriptionStatus).not.toHaveBeenCalled();
     expect(result).toEqual({
       activeTab: "oversikt",
       family: {
@@ -288,6 +311,7 @@ describe("family route", () => {
         name: "Solberg",
         reminderEmail: null,
       },
+      hasCalendarSubscription: false,
       members: [],
       notice: null,
       recentMealPlans: [
@@ -547,6 +571,94 @@ describe("family route", () => {
     const formData = new FormData();
     formData.set("intent", "save-reminder-email");
     formData.set("reminderEmail", "familie@example.com");
+
+    await expect(
+      action({
+        params: {
+          familyId: "family-1",
+        },
+        request: buildRequest("http://localhost/families/family-1", formData),
+        context: {} as never,
+      } as unknown as Parameters<typeof action>[0]),
+    ).rejects.toMatchObject({
+      status: 403,
+      statusText: "Forbidden",
+    });
+  });
+
+  it("returns subscribe URLs after an admin creates a calendar subscription", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(createOrRotateFamilyCalendarSubscription).mockResolvedValue({
+      token: "feed-token",
+    });
+    vi.mocked(buildCalendarSubscriptionUrls).mockReturnValue({
+      httpsUrl: "https://example.com/c/feed-token/calendar.ics",
+      webcalUrl: "webcal://example.com/c/feed-token/calendar.ics",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "create-calendar-subscription");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest("http://localhost/families/family-1?tab=familie", formData),
+      context: {} as never,
+    } as unknown as Parameters<typeof action>[0]);
+
+    expect(createOrRotateFamilyCalendarSubscription).toHaveBeenCalledWith({
+      familyId: "family-1",
+      userId: "user-1",
+    });
+    expect(buildCalendarSubscriptionUrls).toHaveBeenCalledWith({
+      origin: "http://localhost",
+      token: "feed-token",
+    });
+    expect(result).toEqual({
+      httpsUrl: "https://example.com/c/feed-token/calendar.ics",
+      intent: "create-calendar-subscription",
+      webcalUrl: "webcal://example.com/c/feed-token/calendar.ics",
+    });
+  });
+
+  it("redirects after an admin revokes a calendar subscription", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(revokeFamilyCalendarSubscription).mockResolvedValue(undefined);
+
+    const formData = new FormData();
+    formData.set("intent", "revoke-calendar-subscription");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest("http://localhost/families/family-1", formData),
+      context: {} as never,
+    } as unknown as Parameters<typeof action>[0]);
+
+    expect(revokeFamilyCalendarSubscription).toHaveBeenCalledWith({
+      familyId: "family-1",
+      userId: "user-1",
+    });
+    const response = result as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "http://localhost/families/family-1?notice=calendar-subscription-revoked&tab=familie",
+    );
+  });
+
+  it("rethrows forbidden calendar subscription updates from members", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(createOrRotateFamilyCalendarSubscription).mockRejectedValue(
+      new Response("Du har ikke tilgang til å administrere denne familien.", {
+        status: 403,
+        statusText: "Forbidden",
+      }),
+    );
+
+    const formData = new FormData();
+    formData.set("intent", "create-calendar-subscription");
 
     await expect(
       action({

@@ -27,6 +27,7 @@ const mealPlanCalendarSelect = Prisma.validator<Prisma.MealPlanSelect>()({
         },
       },
       recipeId: true,
+      updatedAt: true,
     },
     where: {
       mealType: MealType.DINNER,
@@ -40,9 +41,49 @@ const mealPlanCalendarSelect = Prisma.validator<Prisma.MealPlanSelect>()({
 export interface CalendarEventInput {
   date: string;
   description: string;
+  lastModified?: Date;
   title: string;
   uid: string;
 }
+
+export interface CreateCalendarFileOptions {
+  includeRefreshInterval?: boolean;
+  useEventTimestamps?: boolean;
+}
+
+export interface CalendarMealEntry {
+  freezerItem: {
+    label: string;
+    note: string | null;
+  } | null;
+  freezerItemId: string | null;
+  recipe: {
+    description: string | null;
+    title: string;
+  } | null;
+  recipeId: string | null;
+}
+
+const EUROPE_OSLO_VTIMEZONE = [
+  "BEGIN:VTIMEZONE",
+  `TZID:${CALENDAR_TIME_ZONE}`,
+  `X-LIC-LOCATION:${CALENDAR_TIME_ZONE}`,
+  "BEGIN:DAYLIGHT",
+  "TZOFFSETFROM:+0100",
+  "TZOFFSETTO:+0200",
+  "TZNAME:CEST",
+  "DTSTART:19700329T020000",
+  "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU",
+  "END:DAYLIGHT",
+  "BEGIN:STANDARD",
+  "TZOFFSETFROM:+0200",
+  "TZOFFSETTO:+0100",
+  "TZNAME:CET",
+  "DTSTART:19701025T030000",
+  "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU",
+  "END:STANDARD",
+  "END:VTIMEZONE",
+].join("\r\n");
 
 interface MealPlanCalendarExportInput {
   familyId: string;
@@ -110,20 +151,36 @@ export function createCalendarFile(
   calendarName: string,
   events: CalendarEventInput[],
   stamp = new Date(),
+  options: CreateCalendarFileOptions = {},
 ): string {
-  const eventContent = events.map((event) => createCalendarEvent(event, stamp)).join("\r\n");
-
-  return [
+  const eventContent = events
+    .map((event) => createCalendarEvent(event, stamp, options.useEventTimestamps))
+    .join("\r\n");
+  const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Mealplanner//NO",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
+  ];
+
+  if (options.includeRefreshInterval) {
+    lines.push("REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H");
+  }
+
+  lines.push(
     `X-WR-TIMEZONE:${CALENDAR_TIME_ZONE}`,
     `X-WR-CALNAME:${escapeText(calendarName)}`,
-    eventContent,
-    "END:VCALENDAR",
-  ].join("\r\n");
+    EUROPE_OSLO_VTIMEZONE,
+  );
+
+  if (eventContent) {
+    lines.push(eventContent);
+  }
+
+  lines.push("END:VCALENDAR");
+
+  return lines.join("\r\n");
 }
 
 async function getMealPlanCalendarData({ familyId, mealPlanId, userId }: MealPlanCalendarExportInput) {
@@ -160,9 +217,10 @@ function buildMealPlanEvents(mealPlan: Awaited<ReturnType<typeof getMealPlanCale
     }
 
     return [
-      createMealPlanEvent({
+      createMealPlanCalendarEvent({
         date,
         description: meal.description,
+        lastModified: entry.updatedAt,
         mealPlanId: mealPlan.id,
         mealPlanTitle: mealPlan.title,
         title: meal.title,
@@ -178,22 +236,21 @@ function buildMealPlanEventForDate(
   const entry = mealPlan.entries.find((mealPlanEntry) => formatDateOnly(mealPlanEntry.date) === date);
   const meal = entry ? getCalendarMealDetails(entry) : null;
 
-  if (!meal) {
+  if (!entry || !meal) {
     return null;
   }
 
-  return createMealPlanEvent({
+  return createMealPlanCalendarEvent({
     date,
     description: meal.description,
+    lastModified: entry.updatedAt,
     mealPlanId: mealPlan.id,
     mealPlanTitle: mealPlan.title,
     title: meal.title,
   });
 }
 
-function getCalendarMealDetails(
-  entry: Awaited<ReturnType<typeof getMealPlanCalendarData>>["entries"][number],
-) {
+export function getCalendarMealDetails(entry: CalendarMealEntry) {
   if (entry.recipeId && entry.recipe) {
     return {
       description: entry.recipe.description,
@@ -211,15 +268,17 @@ function getCalendarMealDetails(
   return null;
 }
 
-function createMealPlanEvent({
+export function createMealPlanCalendarEvent({
   date,
   description,
+  lastModified,
   mealPlanId,
   mealPlanTitle,
   title,
 }: {
   date: string;
   description: string | null;
+  lastModified?: Date;
   mealPlanId: string;
   mealPlanTitle: string;
   title: string;
@@ -227,25 +286,38 @@ function createMealPlanEvent({
   return {
     date,
     description: createMealPlanDescription(date, mealPlanTitle, description),
+    lastModified,
     title: `Middag: ${title}`,
     uid: `${mealPlanId}-${date}@mealplanner`,
   };
 }
 
-function createCalendarEvent(event: CalendarEventInput, stamp: Date) {
+function createCalendarEvent(
+  event: CalendarEventInput,
+  stamp: Date,
+  useEventTimestamps = false,
+) {
   const startDateTime = formatIcsLocalDateTime(event.date, DINNER_START_HOUR);
   const endDateTime = formatIcsLocalDateTime(event.date, DINNER_END_HOUR);
-
-  return [
+  const stampSource =
+    useEventTimestamps && event.lastModified ? event.lastModified : stamp;
+  const lines = [
     "BEGIN:VEVENT",
     `UID:${escapeText(event.uid)}`,
-    `DTSTAMP:${formatDateTimeStamp(stamp)}`,
+    `DTSTAMP:${formatDateTimeStamp(stampSource)}`,
     `SUMMARY:${escapeText(event.title)}`,
     `DTSTART;TZID=${CALENDAR_TIME_ZONE}:${startDateTime}`,
     `DTEND;TZID=${CALENDAR_TIME_ZONE}:${endDateTime}`,
     `DESCRIPTION:${escapeText(event.description)}`,
-    "END:VEVENT",
-  ].join("\r\n");
+  ];
+
+  if (event.lastModified) {
+    lines.push(`LAST-MODIFIED:${formatDateTimeStamp(event.lastModified)}`);
+  }
+
+  lines.push("END:VEVENT");
+
+  return lines.join("\r\n");
 }
 
 function createMealPlanDescription(date: string, mealPlanTitle: string, recipeDescription: string | null) {
@@ -263,6 +335,10 @@ function createMealPlanDescription(date: string, mealPlanTitle: string, recipeDe
 
 function getCalendarName(mealPlanTitle: string) {
   return `Mealplanner - ${mealPlanTitle}`;
+}
+
+export function getFamilyCalendarName(familyName: string) {
+  return `Mealplanner - ${familyName}`;
 }
 
 function getMealPlanFileSlug(mealPlanTitle: string) {

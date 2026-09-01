@@ -755,6 +755,12 @@ export default function FamilyMealPlanRoute({
                 )}
                 <Link
                   className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                  to={`/families/${loaderData.family.id}?tab=familie`}
+                >
+                  Abonner i kalenderen
+                </Link>
+                <Link
+                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
                   to={`/families/${loaderData.family.id}/meal-plans`}
                 >
                   Tilbake til ukeplaner
