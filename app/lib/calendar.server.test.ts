@@ -71,6 +71,47 @@ describe("calendar.server", () => {
     expect(content).toContain("UID:meal-plan-1\\\\2026-05-15");
     expect(content).toContain("DTSTART;TZID=Europe/Oslo:20260515T160000");
     expect(content).toContain("DTEND;TZID=Europe/Oslo:20260515T170000");
+    expect(content).toContain("BEGIN:VTIMEZONE");
+    expect(content).toContain("TZID:Europe/Oslo");
+    expect(content).not.toContain("REFRESH-INTERVAL");
+    expectIcsLinesHaveNoBareCarriageReturns(content);
+  });
+
+  it("omits a blank event block for an empty calendar and can emit feed headers", () => {
+    const content = createCalendarFile("Mealplanner - Solberg", [], new Date(), {
+      includeRefreshInterval: true,
+    });
+
+    expect(content).toContain("BEGIN:VCALENDAR");
+    expect(content).toContain("END:VCALENDAR");
+    expect(content).toContain("REFRESH-INTERVAL;VALUE=DURATION:PT1H");
+    expect(content).toContain("X-PUBLISHED-TTL:PT1H");
+    expect(content).not.toContain("BEGIN:VEVENT");
+    expect(content).not.toMatch(/\r\n\r\nEND:VCALENDAR/);
+    expectIcsLinesHaveNoBareCarriageReturns(content);
+  });
+
+  it("uses event timestamps for feed DTSTAMP and LAST-MODIFIED", () => {
+    const content = createCalendarFile(
+      "Mealplanner - Solberg",
+      [
+        {
+          date: "2026-05-15",
+          description: "Taco",
+          lastModified: new Date("2026-05-13T18:00:00.000Z"),
+          title: "Middag: Taco",
+          uid: "meal-plan-1-2026-05-15@mealplanner",
+        },
+      ],
+      new Date(),
+      {
+        useEventTimestamps: true,
+      },
+    );
+
+    expect(content).toContain("DTSTAMP:20260513T180000Z");
+    expect(content).toContain("LAST-MODIFIED:20260513T180000Z");
+    expect(content).not.toContain("DTSTAMP:20260514T093045Z");
     expectIcsLinesHaveNoBareCarriageReturns(content);
   });
 
@@ -114,6 +155,7 @@ describe("calendar.server", () => {
             title: "Taco fredag",
           },
           recipeId: "recipe-1",
+          updatedAt: new Date("2026-05-14T08:00:00.000Z"),
         },
         {
           date: new Date("2026-05-16T00:00:00.000Z"),
@@ -124,6 +166,7 @@ describe("calendar.server", () => {
           freezerItemId: "freezer-1",
           recipe: null,
           recipeId: null,
+          updatedAt: new Date("2026-05-14T08:00:00.000Z"),
         },
         {
           date: new Date("2026-05-17T00:00:00.000Z"),
@@ -131,6 +174,7 @@ describe("calendar.server", () => {
           freezerItemId: null,
           recipe: null,
           recipeId: "",
+          updatedAt: new Date("2026-05-14T08:00:00.000Z"),
         },
       ],
       id: "meal-plan-1",
@@ -190,6 +234,27 @@ describe("calendar.server", () => {
     expect(result.content).toContain("DTSTART;TZID=Europe/Oslo:20260516T160000");
     expect(result.content).toContain("DTEND;TZID=Europe/Oslo:20260516T170000");
     expect(result.content).toContain("Rask middagsfavoritt.");
+  });
+
+  it("rejects an empty meal-plan export before creating a file", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [],
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      title: "Langhelg",
+    });
+
+    await expect(
+      getMealPlanCalendarExport({
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+        userId: "user-1",
+      }),
+    ).rejects.toMatchObject({
+      status: 404,
+      statusText: "Not Found",
+    });
   });
 
   it("rejects invalid day exports before creating a file", async () => {

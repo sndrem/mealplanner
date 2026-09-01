@@ -1,8 +1,15 @@
 import { Form, Link, isRouteErrorResponse, useNavigation } from "react-router";
 
 import type { Route } from "./+types/family";
+import { FamilyCalendarSubscriptionCard } from "../components/family-calendar-subscription-card";
 import { FamilyHomeTabs } from "../components/family-home-tabs";
 import { requireUser } from "../lib/auth.server";
+import {
+  buildCalendarSubscriptionUrls,
+  createOrRotateFamilyCalendarSubscription,
+  getFamilyCalendarSubscriptionStatus,
+  revokeFamilyCalendarSubscription,
+} from "../lib/calendar-subscription.server";
 import {
   getFamilyReminderEmail,
   listFamilyMembers,
@@ -17,6 +24,7 @@ import { isMealPlanPast } from "../lib/meal-plan-week";
 import { listMealPlansForFamily } from "../lib/meal-plan.server";
 
 type FamilyNotice =
+  | "calendar-subscription-revoked"
   | "member-removed"
   | "reminder-email-cleared"
   | "reminder-email-saved";
@@ -36,17 +44,20 @@ interface FamilyActionData {
     reminderEmail?: string;
   };
   formError?: string;
+  httpsUrl?: string;
   intent?: string;
   targetUserId?: string;
   values?: {
     reminderEmail?: string;
   };
+  webcalUrl?: string;
 }
 
 function getFamilyNotice(request: Request): FamilyNotice | null {
   const notice = new URL(request.url).searchParams.get("notice");
 
   if (
+    notice === "calendar-subscription-revoked" ||
     notice === "member-removed" ||
     notice === "reminder-email-cleared" ||
     notice === "reminder-email-saved"
@@ -85,6 +96,12 @@ function buildFamilyRedirect({
 
 function getFamilyNoticeContent(notice: FamilyNotice) {
   switch (notice) {
+    case "calendar-subscription-revoked":
+      return {
+        description:
+          "Kalenderabonnementet er opphevet. Eksisterende abonnement slutter å oppdatere.",
+        title: "Endringen er lagret",
+      };
     case "member-removed":
       return {
         description: "Medlemmet ble fjernet fra familien.",
@@ -282,7 +299,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     familyId,
     userId: user.id,
   });
-  const [members, mealPlanResult, weekDays, reminderEmail] = await Promise.all([
+  const [members, mealPlanResult, weekDays, reminderEmail, calendarSubscription] =
+    await Promise.all([
     membership.role === "ADMIN"
       ? listFamilyMembers(familyId)
       : Promise.resolve([]),
@@ -297,6 +315,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     membership.role === "ADMIN"
       ? getFamilyReminderEmail(familyId)
       : Promise.resolve(null),
+    membership.role === "ADMIN"
+      ? getFamilyCalendarSubscriptionStatus({ familyId })
+      : Promise.resolve({ exists: false }),
   ]);
 
   const serializedMealPlans = mealPlanResult.mealPlans.map(
@@ -311,6 +332,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       name: membership.family.name,
       reminderEmail,
     },
+    hasCalendarSubscription: calendarSubscription.exists,
     members,
     notice: getFamilyNotice(request),
     recentMealPlans: serializedMealPlans.slice(0, 3),
@@ -320,7 +342,10 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   };
 }
 
-export async function action({ params, request }: Route.ActionArgs) {
+export async function action({
+  params,
+  request,
+}: Route.ActionArgs): Promise<FamilyActionData | Response> {
   const user = await requireUser(request);
   const familyId = params.familyId;
 
@@ -358,6 +383,37 @@ export async function action({ params, request }: Route.ActionArgs) {
         result.status === "CLEARED"
           ? "reminder-email-cleared"
           : "reminder-email-saved",
+      request,
+    });
+  }
+
+  if (
+    intent === "create-calendar-subscription" ||
+    intent === "rotate-calendar-subscription"
+  ) {
+    const result = await createOrRotateFamilyCalendarSubscription({
+      familyId,
+      userId: user.id,
+    });
+
+    return {
+      intent,
+      ...buildCalendarSubscriptionUrls({
+        origin: new URL(request.url).origin,
+        token: result.token,
+      }),
+    } satisfies FamilyActionData;
+  }
+
+  if (intent === "revoke-calendar-subscription") {
+    await revokeFamilyCalendarSubscription({
+      familyId,
+      userId: user.id,
+    });
+
+    return buildFamilyRedirect({
+      familyId,
+      notice: "calendar-subscription-revoked",
       request,
     });
   }
@@ -426,6 +482,15 @@ export default function FamilyRoute({
     navigation.state !== "idle" && pendingIntent === "remove-member";
   const isSavingReminderEmail =
     navigation.state !== "idle" && pendingIntent === "save-reminder-email";
+  const isCreatingCalendarSubscription =
+    navigation.state !== "idle" &&
+    pendingIntent === "create-calendar-subscription";
+  const isRotatingCalendarSubscription =
+    navigation.state !== "idle" &&
+    pendingIntent === "rotate-calendar-subscription";
+  const isRevokingCalendarSubscription =
+    navigation.state !== "idle" &&
+    pendingIntent === "revoke-calendar-subscription";
   const isAdmin = loaderData.userRole === "ADMIN";
   const familyId = loaderData.family.id;
   const reminderEmailValue = isSavingReminderEmail
@@ -563,6 +628,20 @@ export default function FamilyRoute({
                     </button>
                   </Form>
                 </section>
+              ) : null}
+
+              {isAdmin ? (
+                <FamilyCalendarSubscriptionCard
+                  hasCalendarSubscription={
+                    loaderData.hasCalendarSubscription &&
+                    !isRevokingCalendarSubscription
+                  }
+                  httpsUrl={actionData?.httpsUrl}
+                  isCreating={isCreatingCalendarSubscription}
+                  isRevoking={isRevokingCalendarSubscription}
+                  isRotating={isRotatingCalendarSubscription}
+                  webcalUrl={actionData?.webcalUrl}
+                />
               ) : null}
 
               {isAdmin ? (

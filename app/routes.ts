@@ -13,6 +13,7 @@ export default [
   ),
   route("api/generate-recipe-description", "routes/api.generate-recipe-description.ts"),
   route("s/:token", "routes/shopping-list-share.tsx"),
+  route("c/:token/calendar.ics", "routes/calendar-subscription.ts"),
   layout("routes/app-layout.tsx", [
     route("app", "routes/app.tsx"),
     route("families/:familyId", "routes/family.tsx"),

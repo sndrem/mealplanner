@@ -2,32 +2,34 @@
 
 ## Current Objective
 
-Fix auto-merge so linked issues close after a squash merge ([#234](https://github.com/sndrem/mealplanner/issues/234)).
+Ship the family iCal subscription feed ([#239](https://github.com/sndrem/mealplanner/issues/239)): commit, push, and open a PR.
 
 ## Completed
 
-- Confirmed `GITHUB_TOKEN` API squash-merges skip GitHub's `Closes #N` handling (same limitation as missing `push` events)
-- Auto-merge workflow now closes linked issues after a successful merge (GraphQL `closingIssuesReferences` plus closing keywords in the PR title/body)
-- Issue-close failures warn instead of failing the job so Fly deploy still runs
+- Family-level live iCal feed at `GET /c/:token/calendar.ics` behind a hashed token
+- ADMIN Familie-tab card to create, copy HTTPS + webcal URLs, rotate, and revoke
+- Existing cookie-gated week/day `.ics` downloads unchanged
 - Branch cut from current `origin/main` after `git pull --ff-only`
 
 ## Files To Read First
 
-- `.github/workflows/auto-merge.yml` — merge + explicit issue close
-- `docs/deploy-fly.md` — GITHUB_TOKEN merge limitations
+- `app/lib/calendar-subscription.server.ts` — token CRUD and 14-day feed query
+- `app/routes/calendar-subscription.ts` — public unauthenticated ICS route
+- `app/components/family-calendar-subscription-card.tsx` — subscribe UI
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 571 tests passed
+- `npm run test:run` — 590 tests passed
 - `npm run typecheck` — passed
+- Browser subscribe flow (iPhone `webcal://`, Google From URL) — not run
 
 ## Open Items
 
-- This PR's own merge still uses the old workflow on `main`, so #234 may need a manual close after merge
-- Manual: next auto-merged PR with `Closes #<n>` should close via `github-actions[bot]`
+- Apply migration `20260901140000_add_calendar_subscription` on deploy/local DB
+- Manual after merge: subscribe from iPhone and Google Calendar; refresh is not instant
 
 ## Next Step
 
-Review and merge the PR for #234.
+Merge the PR for #239 and confirm the migration runs in the usual deploy path.

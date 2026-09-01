@@ -103,6 +103,7 @@ model User {
   shoppingItemCheckEvents         ShoppingItemCheckEvent[]       @relation("ShoppingItemCheckEventActor")
   passwordResetTokens             PasswordResetToken[]
   createdShoppingListShares       ShoppingListShare[]            @relation("ShoppingListShareCreatedBy")
+  createdCalendarSubscriptions    CalendarSubscription[]         @relation("CalendarSubscriptionCreatedBy")
 
   @@index([displayName])
 }
@@ -143,6 +144,7 @@ model Family {
   shoppingItemCheckEvents    ShoppingItemCheckEvent[]
   ingredientCategories       IngredientCategory[]
   shoppingListShares         ShoppingListShare[]
+  calendarSubscription       CalendarSubscription?
 
   @@index([createdByUserId])
   @@index([name])
@@ -589,6 +591,19 @@ model ShoppingListShare {
   createdByUser   User     @relation("ShoppingListShareCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
 
   @@index([familyId, createdAt])
+  @@index([createdByUserId])
+}
+
+model CalendarSubscription {
+  id              String   @id @default(cuid())
+  familyId        String   @unique
+  createdByUserId String?
+  tokenHash       String   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  family          Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdByUser   User?    @relation("CalendarSubscriptionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
   @@index([createdByUserId])
 }
 
