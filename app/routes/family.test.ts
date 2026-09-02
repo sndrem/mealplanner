@@ -38,6 +38,15 @@ vi.mock("../lib/calendar-subscription.server", () => {
   };
 });
 
+vi.mock("../lib/mcp-token.server", () => {
+  return {
+    buildFamilyMcpUrl: vi.fn(),
+    createOrRotateFamilyMcpToken: vi.fn(),
+    getFamilyMcpTokenStatus: vi.fn(),
+    revokeFamilyMcpToken: vi.fn(),
+  };
+});
+
 import { requireUser } from "../lib/auth.server";
 import {
   buildCalendarSubscriptionUrls,
@@ -54,6 +63,12 @@ import {
   updateFamilyReminderEmail,
 } from "../lib/family.server";
 import { listMealPlansForFamily } from "../lib/meal-plan.server";
+import {
+  buildFamilyMcpUrl,
+  createOrRotateFamilyMcpToken,
+  getFamilyMcpTokenStatus,
+  revokeFamilyMcpToken,
+} from "../lib/mcp-token.server";
 import { action, loader } from "./family";
 
 const mockUser = {
@@ -152,6 +167,10 @@ function mockMealPlansForFamily() {
   vi.mocked(getFamilyCalendarSubscriptionStatus).mockResolvedValue({
     exists: false,
   });
+  vi.mocked(getFamilyMcpTokenStatus).mockResolvedValue({
+    exists: false,
+  });
+  vi.mocked(buildFamilyMcpUrl).mockReturnValue("http://localhost/mcp");
 }
 
 describe("family route", () => {
@@ -225,6 +244,9 @@ describe("family route", () => {
     expect(getFamilyCalendarSubscriptionStatus).toHaveBeenCalledWith({
       familyId: "family-1",
     });
+    expect(getFamilyMcpTokenStatus).toHaveBeenCalledWith({
+      familyId: "family-1",
+    });
     expect(result).toMatchObject({
       family: {
         id: "family-1",
@@ -233,6 +255,7 @@ describe("family route", () => {
         reminderEmail: "familie@example.com",
       },
       hasCalendarSubscription: false,
+      hasMcpToken: false,
       members: [
         {
           id: "membership-1",
@@ -303,6 +326,7 @@ describe("family route", () => {
     expect(listFamilyMembers).not.toHaveBeenCalled();
     expect(getFamilyReminderEmail).not.toHaveBeenCalled();
     expect(getFamilyCalendarSubscriptionStatus).not.toHaveBeenCalled();
+    expect(getFamilyMcpTokenStatus).not.toHaveBeenCalled();
     expect(result).toEqual({
       activeTab: "oversikt",
       family: {
@@ -312,7 +336,9 @@ describe("family route", () => {
         reminderEmail: null,
       },
       hasCalendarSubscription: false,
+      hasMcpToken: false,
       members: [],
+      mcpUrl: "http://localhost/mcp",
       notice: null,
       recentMealPlans: [
         {
@@ -620,6 +646,62 @@ describe("family route", () => {
       intent: "create-calendar-subscription",
       webcalUrl: "webcal://example.com/c/feed-token/calendar.ics",
     });
+  });
+
+  it("returns the raw MCP token after an admin creates one", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(createOrRotateFamilyMcpToken).mockResolvedValue({
+      token: "mcp-token",
+    });
+    vi.mocked(buildFamilyMcpUrl).mockReturnValue("http://localhost/mcp");
+
+    const formData = new FormData();
+    formData.set("intent", "create-mcp-token");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest("http://localhost/families/family-1?tab=familie", formData),
+      context: {} as never,
+    } as unknown as Parameters<typeof action>[0]);
+
+    expect(createOrRotateFamilyMcpToken).toHaveBeenCalledWith({
+      familyId: "family-1",
+      userId: "user-1",
+    });
+    expect(buildFamilyMcpUrl).toHaveBeenCalledWith("http://localhost");
+    expect(result).toEqual({
+      intent: "create-mcp-token",
+      mcpToken: "mcp-token",
+      mcpUrl: "http://localhost/mcp",
+    });
+  });
+
+  it("redirects after an admin revokes an MCP token", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(revokeFamilyMcpToken).mockResolvedValue(undefined);
+
+    const formData = new FormData();
+    formData.set("intent", "revoke-mcp-token");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest("http://localhost/families/family-1", formData),
+      context: {} as never,
+    } as unknown as Parameters<typeof action>[0]);
+
+    expect(revokeFamilyMcpToken).toHaveBeenCalledWith({
+      familyId: "family-1",
+      userId: "user-1",
+    });
+    const response = result as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "http://localhost/families/family-1?notice=mcp-token-revoked&tab=familie",
+    );
   });
 
   it("redirects after an admin revokes a calendar subscription", async () => {
