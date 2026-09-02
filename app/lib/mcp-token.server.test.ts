@@ -92,6 +92,18 @@ describe("mcp-token.server", () => {
     );
   });
 
+  it("rewrites public http origins to https", () => {
+    expect(buildFamilyMcpUrl("http://mealplanner-xzvzow.fly.dev")).toBe(
+      "https://mealplanner-xzvzow.fly.dev/mcp",
+    );
+  });
+
+  it("keeps http for localhost so local Inspector can connect", () => {
+    expect(buildFamilyMcpUrl("http://localhost:5174")).toBe(
+      "http://localhost:5174/mcp",
+    );
+  });
+
   it("stores a hashed token and returns the raw token once", async () => {
     dbMock.familyMcpToken.deleteMany.mockResolvedValue({ count: 0 });
     dbMock.familyMcpToken.create.mockResolvedValue({ id: "mcp-1" });

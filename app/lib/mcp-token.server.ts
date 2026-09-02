@@ -13,7 +13,14 @@ export function createFamilyMcpRawToken() {
 }
 
 export function buildFamilyMcpUrl(origin: string) {
-  return `${origin.replace(/\/+$/, "")}/mcp`;
+  const url = new URL(`${origin.replace(/\/+$/, "")}/mcp`);
+  const host = url.hostname;
+
+  if (host !== "localhost" && host !== "127.0.0.1" && host !== "[::1]") {
+    url.protocol = "https:";
+  }
+
+  return url.toString().replace(/\/$/, "");
 }
 
 function parseBearerToken(authorizationHeader: string | null) {
