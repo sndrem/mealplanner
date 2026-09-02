@@ -336,7 +336,7 @@ export default function FamilyMealPlanProposalRoute({
           </p>
         </section>
 
-        <Form className="flex flex-col gap-4" method="post">
+        <Form className="flex flex-col gap-4 mt-16" method="post">
           {loaderData.visibleDates.map((date) => (
             <input
               key={`entryDate:${date}`}
@@ -447,7 +447,7 @@ export default function FamilyMealPlanProposalRoute({
             );
           })}
 
-          <div className="sticky bottom-4 z-40 flex flex-col gap-3">
+          <div className="sticky bottom-4 z-40 flex flex-col gap-3 mt-6">
             <button
               className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-medium text-slate-800 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
               disabled={isPending}
