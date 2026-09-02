@@ -87,7 +87,7 @@ describe("family shopping catalog route", () => {
       userRole: "MEMBER",
     });
     vi.mocked(listIngredientCategories).mockResolvedValue([
-      { displayName: "Annet", familyId: null, id: "category-other" },
+      { displayName: "Annet", familyId: null, id: "category-other", key: "other" },
     ]);
 
     const result = await loader({

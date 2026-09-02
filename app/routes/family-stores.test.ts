@@ -55,6 +55,7 @@ describe("family stores route", () => {
           displayName: "Frukt og gront",
           familyId: null,
           id: "category-produce",
+          key: "produce",
         },
       ],
       family: {
@@ -98,6 +99,7 @@ describe("family stores route", () => {
           displayName: "Frukt og gront",
           familyId: null,
           id: "category-produce",
+          key: "produce",
         },
       ],
       family: {
