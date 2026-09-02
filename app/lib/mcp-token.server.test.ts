@@ -44,6 +44,7 @@ vi.mock("node:crypto", async (importOriginal) => {
 
 import {
   buildFamilyMcpUrl,
+  buildFamilyMealPlanProposalUrl,
   createOrRotateFamilyMcpToken,
   getFamilyMcpTokenStatus,
   hashFamilyMcpToken,
@@ -89,6 +90,18 @@ describe("mcp-token.server", () => {
   it("builds the MCP endpoint URL from an origin", () => {
     expect(buildFamilyMcpUrl("https://mealplanner.example/")).toBe(
       "https://mealplanner.example/mcp",
+    );
+  });
+
+  it("builds a meal plan proposal URL from origin and ids", () => {
+    expect(
+      buildFamilyMealPlanProposalUrl({
+        familyId: "family-1",
+        mealPlanId: "proposal-1",
+        origin: "https://mealplanner.example/",
+      }),
+    ).toBe(
+      "https://mealplanner.example/families/family-1/meal-plans/proposal-1/proposal",
     );
   });
 

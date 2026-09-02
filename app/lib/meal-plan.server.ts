@@ -21,6 +21,13 @@ import {
 import { listActiveFreezerItemsForPlanning } from "./freezer.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import { formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS, getMealPlanMaxSpanMessage } from "./meal-plan-dates";
+import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
+import {
+  formatMealPlanAutoTitle,
+  getCalendarWeekBounds,
+  getCalendarWeekDates,
+  getNextCalendarWeekBounds,
+} from "./meal-plan-week";
 import { getRecipeImageUrl } from "./r2.server";
 import {
   logCollaborationFailure,
@@ -207,6 +214,22 @@ type AutoFillMealPlanEntriesInput = DeleteMealPlanInput;
 type MealPlanApprovalAction = "APPROVE" | "REOPEN";
 export type DinnerAnalyticsTimeframe = "30d" | "90d" | "all";
 
+export type MealPlanProposalDinnerInput = {
+  date: string;
+  freezerItemId?: string | null;
+  note?: string | null;
+  recipeId?: string | null;
+};
+
+export type MealPlanProposalDinner = {
+  date: string;
+  freezerItemId: string | null;
+  freezerLabel: string | null;
+  note: string | null;
+  recipeId: string | null;
+  title: string | null;
+};
+
 export interface DinnerIngredientUsageStat {
   count: number;
   ingredientName: string;
@@ -226,6 +249,18 @@ export interface DinnerLatestRecipeUsageStat {
 
 const AUTO_FILL_NOT_DRAFT_MESSAGE =
   "Godkjente ukeplaner kan ikke fylles automatisk.";
+const PROPOSAL_INVALID_WEEK_MESSAGE =
+  "Uken må være en kalenderuke fra mandag til søndag.";
+const PROPOSAL_WEEK_PAIR_MESSAGE =
+  "Oppgi både weekStart og weekEnd, eller ingen av dem.";
+const PROPOSAL_LIVE_PLAN_EXISTS_MESSAGE =
+  "Det finnes allerede en ukeplan for denne uken.";
+const PROPOSAL_OUTSIDE_WEEK_MESSAGE =
+  "En av middagene ligger utenfor uken.";
+const PROPOSAL_DUPLICATE_DAY_MESSAGE =
+  "Hver dag kan bare ha én middag.";
+const PROPOSAL_NOT_PROPOSED_MESSAGE =
+  "Forslaget kan ikke godkjennes fra gjeldende status.";
 const AUTO_FILL_NO_ELIGIBLE_RECIPES_MESSAGE =
   `Ingen tilgjengelige oppskrifter etter a ha utelatt middager fra de siste ${MEAL_PLAN_MAX_SPAN_DAYS} dagene.`;
 const AUTO_FILL_REPEAT_WARNING_MESSAGE =
@@ -356,6 +391,7 @@ export async function listMealPlansForFamily({
     select: mealPlanSummarySelect,
     where: {
       familyId,
+      status: LIVE_MEAL_PLAN_STATUS_FILTER,
     },
   });
 
@@ -523,6 +559,482 @@ export async function createMealPlan(input: MealPlanMutationInput) {
     },
     mealPlan,
     status: "CREATED" as const,
+  };
+}
+
+export async function createOrReplaceMealPlanProposal({
+  dinners,
+  familyId,
+  title,
+  userId,
+  weekEnd,
+  weekStart,
+}: {
+  dinners: MealPlanProposalDinnerInput[];
+  familyId: string;
+  title?: string;
+  userId: string;
+  weekEnd?: string;
+  weekStart?: string;
+}) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const week = resolveProposalWeekBounds({
+    weekEnd,
+    weekStart,
+  });
+
+  if (!week.ok) {
+    return {
+      formError: week.formError,
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
+  const weekDates = getCalendarWeekDates(week);
+  const startDate = parseDateOnly(week.weekStart)!;
+  const endDate = parseDateOnly(week.weekEnd)!;
+  const expanded = expandProposalDinners({
+    dinners,
+    weekDates,
+  });
+
+  if (!expanded.ok) {
+    return {
+      formError: expanded.formError,
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
+  const livePlans = await db.mealPlan.findMany({
+    select: {
+      id: true,
+    },
+    where: {
+      endDate: {
+        gte: startDate,
+      },
+      familyId,
+      startDate: {
+        lte: endDate,
+      },
+      status: LIVE_MEAL_PLAN_STATUS_FILTER,
+    },
+  });
+
+  if (livePlans.length > 0) {
+    return {
+      formError: PROPOSAL_LIVE_PLAN_EXISTS_MESSAGE,
+      status: "LIVE_PLAN_EXISTS" as const,
+    };
+  }
+
+  const existingProposals = await db.mealPlan.findMany({
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    select: {
+      entries: {
+        select: {
+          date: true,
+          updatedAt: true,
+        },
+        where: {
+          mealType: PLANNING_MEAL_TYPE,
+        },
+      },
+      id: true,
+    },
+    where: {
+      endDate: {
+        gte: startDate,
+      },
+      familyId,
+      startDate: {
+        lte: endDate,
+      },
+      status: MealPlanStatus.PROPOSED,
+    },
+  });
+  const [existingProposal, ...staleProposals] = existingProposals;
+  const proposalTitle =
+    title?.trim() || formatMealPlanAutoTitle(week.weekStart);
+
+  let mealPlanId: string;
+  let createdNewPlan = false;
+
+  if (existingProposal) {
+    mealPlanId = existingProposal.id;
+
+    if (staleProposals.length > 0) {
+      await db.mealPlan.deleteMany({
+        where: {
+          familyId,
+          id: {
+            in: staleProposals.map((proposal) => proposal.id),
+          },
+        },
+      });
+    }
+
+    await db.mealPlan.update({
+      data: {
+        activeShoppingDate: startDate,
+        endDate,
+        startDate,
+        title: proposalTitle,
+        ...buildActorUpdate(userId),
+      },
+      where: {
+        id: mealPlanId,
+      },
+    });
+  } else {
+    const created = await db.mealPlan.create({
+      data: {
+        activeShoppingDate: startDate,
+        endDate,
+        familyId,
+        startDate,
+        status: MealPlanStatus.PROPOSED,
+        title: proposalTitle,
+        ...buildActorUpdate(userId),
+      },
+      select: {
+        id: true,
+      },
+    });
+    createdNewPlan = true;
+    mealPlanId = created.id;
+  }
+
+  const entryVersions = Object.fromEntries(
+    weekDates.map((date) => {
+      const existingEntry = existingProposal?.entries.find(
+        (entry) => formatDateOnly(entry.date) === date,
+      );
+
+      return [date, existingEntry?.updatedAt.toISOString() ?? ""];
+    }),
+  );
+
+  try {
+    const saveResult = await saveMealPlanEntries({
+      entries: expanded.entries,
+      entryVersions,
+      familyId,
+      mealPlanId,
+      userId,
+    });
+
+    if (saveResult.status !== "UPDATED") {
+      if (createdNewPlan) {
+        await db.mealPlan.delete({
+          where: {
+            id: mealPlanId,
+          },
+        });
+      }
+
+      return {
+        formError:
+          saveResult.status === "NOT_FOUND"
+            ? "Fant ikke ukeplanforslaget."
+            : saveResult.formError,
+        status: "VALIDATION_ERROR" as const,
+      };
+    }
+  } catch (error) {
+    if (createdNewPlan) {
+      await db.mealPlan.delete({
+        where: {
+          id: mealPlanId,
+        },
+      });
+    }
+
+    throw error;
+  }
+
+  const proposal = await loadMealPlanProposalSummary(mealPlanId);
+
+  if (!proposal) {
+    return {
+      formError: "Fant ikke ukeplanforslaget.",
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
+  return {
+    status: "CREATED" as const,
+    ...proposal,
+  };
+}
+
+export async function approveMealPlanProposal({
+  familyId,
+  mealPlanId,
+  userId,
+}: DeleteMealPlanInput) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const mealPlan = await db.mealPlan.findFirst({
+    select: {
+      endDate: true,
+      entries: {
+        select: {
+          date: true,
+          mealType: true,
+          updatedAt: true,
+        },
+        where: {
+          mealType: PLANNING_MEAL_TYPE,
+        },
+      },
+      id: true,
+      startDate: true,
+      status: true,
+      updatedAt: true,
+    },
+    where: {
+      familyId,
+      id: mealPlanId,
+    },
+  });
+
+  if (!mealPlan) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  if (mealPlan.status !== MealPlanStatus.PROPOSED) {
+    return {
+      formError:
+        mealPlan.status === MealPlanStatus.APPROVED
+          ? "Ukeplanen er allerede godkjent."
+          : PROPOSAL_NOT_PROPOSED_MESSAGE,
+      status: "INVALID_TRANSITION" as const,
+    };
+  }
+
+  const overlappingLivePlans = await db.mealPlan.findMany({
+    select: {
+      id: true,
+    },
+    where: {
+      endDate: {
+        gte: mealPlan.startDate,
+      },
+      familyId,
+      id: {
+        not: mealPlan.id,
+      },
+      startDate: {
+        lte: mealPlan.endDate,
+      },
+      status: LIVE_MEAL_PLAN_STATUS_FILTER,
+    },
+  });
+
+  if (overlappingLivePlans.length > 0) {
+    return {
+      formError: PROPOSAL_LIVE_PLAN_EXISTS_MESSAGE,
+      status: "LIVE_PLAN_EXISTS" as const,
+    };
+  }
+
+  return approveMealPlan({
+    entriesSnapshot: buildMealPlanEntriesSnapshot(mealPlan.entries),
+    expectedMealPlanUpdatedAt: mealPlan.updatedAt.toISOString(),
+    familyId,
+    mealPlanId,
+    userId,
+  });
+}
+
+async function loadMealPlanProposalSummary(mealPlanId: string) {
+  const mealPlan = await db.mealPlan.findFirst({
+    select: {
+      endDate: true,
+      entries: {
+        select: {
+          date: true,
+          freezerItem: {
+            select: {
+              label: true,
+            },
+          },
+          freezerItemId: true,
+          note: true,
+          recipe: {
+            select: {
+              title: true,
+            },
+          },
+          recipeId: true,
+        },
+        where: {
+          mealType: PLANNING_MEAL_TYPE,
+        },
+      },
+      id: true,
+      startDate: true,
+      title: true,
+    },
+    where: {
+      id: mealPlanId,
+    },
+  });
+
+  if (!mealPlan) {
+    return null;
+  }
+
+  const weekStart = formatDateOnly(mealPlan.startDate);
+  const weekEnd = formatDateOnly(mealPlan.endDate);
+  const dinnerByDate = new Map(
+    mealPlan.entries.map((entry) => [
+      formatDateOnly(entry.date),
+      {
+        date: formatDateOnly(entry.date),
+        freezerItemId: entry.freezerItemId,
+        freezerLabel: entry.freezerItem?.label ?? null,
+        note: entry.note,
+        recipeId: entry.recipeId,
+        title: entry.recipe?.title ?? null,
+      } satisfies MealPlanProposalDinner,
+    ]),
+  );
+
+  return {
+    dinners: getCalendarWeekDates({ weekEnd, weekStart }).map(
+      (date) =>
+        dinnerByDate.get(date) ?? {
+          date,
+          freezerItemId: null,
+          freezerLabel: null,
+          note: null,
+          recipeId: null,
+          title: null,
+        },
+    ),
+    proposalId: mealPlan.id,
+    title: mealPlan.title,
+    weekEnd,
+    weekStart,
+  };
+}
+
+function resolveProposalWeekBounds({
+  weekEnd,
+  weekStart,
+}: {
+  weekEnd?: string;
+  weekStart?: string;
+}) {
+  const trimmedStart = weekStart?.trim() ?? "";
+  const trimmedEnd = weekEnd?.trim() ?? "";
+  const hasStart = trimmedStart.length > 0;
+  const hasEnd = trimmedEnd.length > 0;
+
+  if (hasStart !== hasEnd) {
+    return {
+      formError: PROPOSAL_WEEK_PAIR_MESSAGE,
+      ok: false as const,
+    };
+  }
+
+  if (!hasStart) {
+    const nextWeek = getNextCalendarWeekBounds();
+
+    return {
+      ok: true as const,
+      weekEnd: nextWeek.weekEnd,
+      weekStart: nextWeek.weekStart,
+    };
+  }
+
+  if (!parseDateOnly(trimmedStart) || !parseDateOnly(trimmedEnd)) {
+    return {
+      formError: PROPOSAL_INVALID_WEEK_MESSAGE,
+      ok: false as const,
+    };
+  }
+
+  const calendarWeek = getCalendarWeekBounds(
+    new Date(`${trimmedStart}T12:00:00.000Z`),
+  );
+
+  if (
+    calendarWeek.weekStart !== trimmedStart ||
+    calendarWeek.weekEnd !== trimmedEnd
+  ) {
+    return {
+      formError: PROPOSAL_INVALID_WEEK_MESSAGE,
+      ok: false as const,
+    };
+  }
+
+  return {
+    ok: true as const,
+    weekEnd: trimmedEnd,
+    weekStart: trimmedStart,
+  };
+}
+
+function expandProposalDinners({
+  dinners,
+  weekDates,
+}: {
+  dinners: MealPlanProposalDinnerInput[];
+  weekDates: string[];
+}) {
+  const weekDateSet = new Set(weekDates);
+  const byDate = new Map<string, MealPlanEntryValues>();
+
+  for (const dinner of dinners) {
+    const date = dinner.date.trim();
+
+    if (!weekDateSet.has(date)) {
+      return {
+        formError: PROPOSAL_OUTSIDE_WEEK_MESSAGE,
+        ok: false as const,
+      };
+    }
+
+    if (byDate.has(date)) {
+      return {
+        formError: PROPOSAL_DUPLICATE_DAY_MESSAGE,
+        ok: false as const,
+      };
+    }
+
+    byDate.set(date, {
+      date,
+      freezerItemId: dinner.freezerItemId?.trim() ?? "",
+      note: dinner.note?.trim() ?? "",
+      recipeId: dinner.recipeId?.trim() ?? "",
+      responsibleUserId: "",
+    });
+  }
+
+  return {
+    entries: weekDates.map(
+      (date) =>
+        byDate.get(date) ?? {
+          date,
+          freezerItemId: "",
+          note: "",
+          recipeId: "",
+          responsibleUserId: "",
+        },
+    ),
+    ok: true as const,
   };
 }
 
@@ -1790,7 +2302,9 @@ function isMealPlanStatusTransitionAllowed(
   action: MealPlanApprovalAction,
 ) {
   if (action === "APPROVE") {
-    return status === MealPlanStatus.DRAFT;
+    return (
+      status === MealPlanStatus.DRAFT || status === MealPlanStatus.PROPOSED
+    );
   }
 
   return status === MealPlanStatus.APPROVED;

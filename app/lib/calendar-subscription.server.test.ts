@@ -296,6 +296,9 @@ describe("calendar-subscription.server", () => {
           startDate: {
             lte: new Date("2026-05-24T00:00:00.000Z"),
           },
+          status: {
+            in: ["APPROVED", "DRAFT"],
+          },
         },
       }),
     );

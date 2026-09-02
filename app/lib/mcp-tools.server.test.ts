@@ -11,6 +11,7 @@ const {
   getRecipeManagementDataMock,
   listFamilyFreezerItemsMock,
   listMealPlansForFamilyMock,
+  createOrReplaceMealPlanProposalMock,
   dbMock,
 } = vi.hoisted(() => ({
   dbMock: {
@@ -28,6 +29,7 @@ const {
   getRecipeManagementDataMock: vi.fn(),
   listFamilyFreezerItemsMock: vi.fn(),
   listMealPlansForFamilyMock: vi.fn(),
+  createOrReplaceMealPlanProposalMock: vi.fn(),
 }));
 
 vi.mock("./db.server", () => ({
@@ -44,6 +46,7 @@ vi.mock("./meal-plan-for-date.server", () => ({
 }));
 
 vi.mock("./meal-plan.server", () => ({
+  createOrReplaceMealPlanProposal: createOrReplaceMealPlanProposalMock,
   getMealPlanPlanningData: getMealPlanPlanningDataMock,
   getRecentlyUsedRecipeIds: getRecentlyUsedRecipeIdsMock,
   listMealPlansForFamily: listMealPlansForFamilyMock,
@@ -63,6 +66,7 @@ vi.mock("./freezer.server", () => ({
 }));
 
 import {
+  createMealPlanProposalForMcp,
   getCurrentWeekMealPlanForMcp,
   getRecentDinnersForMcp,
   getRecipeForMcp,
@@ -422,6 +426,70 @@ describe("mcp-tools.server", () => {
 
     await expect(listFreezerItemsForMcp(actor)).resolves.toEqual({
       freezerItems: [{ id: "fz-1", label: "Lasagne", note: null, quantity: 1 }],
+    });
+  });
+
+  it("creates a meal plan proposal and returns a proposal URL", async () => {
+    createOrReplaceMealPlanProposalMock.mockResolvedValue({
+      dinners: [
+        {
+          date: "2026-05-18",
+          freezerItemId: null,
+          freezerLabel: null,
+          note: null,
+          recipeId: "recipe-taco",
+          title: "Taco",
+        },
+      ],
+      proposalId: "proposal-1",
+      status: "CREATED",
+      title: "Uke 21",
+      weekEnd: "2026-05-24",
+      weekStart: "2026-05-18",
+    });
+
+    await expect(
+      createMealPlanProposalForMcp({
+        ...actor,
+        dinners: [{ date: "2026-05-18", recipeId: "recipe-taco" }],
+        origin: "https://mealplanner.example",
+      }),
+    ).resolves.toEqual({
+      dinners: [
+        {
+          date: "2026-05-18",
+          freezerItemId: null,
+          freezerLabel: null,
+          note: null,
+          recipeId: "recipe-taco",
+          title: "Taco",
+        },
+      ],
+      proposalId: "proposal-1",
+      proposalUrl:
+        "https://mealplanner.example/families/family-1/meal-plans/proposal-1/proposal",
+      status: "CREATED",
+      title: "Uke 21",
+      weekEnd: "2026-05-24",
+      weekStart: "2026-05-18",
+    });
+  });
+
+  it("returns proposal validation errors without a URL", async () => {
+    createOrReplaceMealPlanProposalMock.mockResolvedValue({
+      formError: "Det finnes allerede en ukeplan for denne uken.",
+      status: "LIVE_PLAN_EXISTS",
+    });
+
+    await expect(
+      createMealPlanProposalForMcp({
+        ...actor,
+        dinners: [],
+        origin: "https://mealplanner.example",
+      }),
+    ).resolves.toEqual({
+      formError: "Det finnes allerede en ukeplan for denne uken.",
+      status: "LIVE_PLAN_EXISTS",
     });
   });
 });

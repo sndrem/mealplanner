@@ -6,6 +6,7 @@ import { db } from "./db.server";
 import { sendEmail } from "./mailer.server";
 import { formatDateOnly } from "./meal-plan-dates";
 import { formatWeekdayLabel } from "./meal-plan-display";
+import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
 import {
   getCalendarWeekBounds,
   getCalendarWeekDates,
@@ -174,6 +175,7 @@ export async function getUnplannedWeekendDays({
       startDate: {
         lte: weekEndDate,
       },
+      status: LIVE_MEAL_PLAN_STATUS_FILTER,
     },
   });
 

@@ -9,10 +9,12 @@ import {
   getCalendarWeekDates,
 } from "./meal-plan-week";
 import {
+  createOrReplaceMealPlanProposal,
   getMealPlanPlanningData,
   getRecentlyUsedRecipeIds,
   listMealPlansForFamily,
 } from "./meal-plan.server";
+import { buildFamilyMealPlanProposalUrl } from "./mcp-token.server";
 import {
   getAccessibleRecipeDetail,
   getRecipeManagementData,
@@ -234,5 +236,53 @@ export async function listFreezerItemsForMcp({ familyId, userId }: McpActor) {
 
   return {
     freezerItems: data.freezerItems,
+  };
+}
+
+export async function createMealPlanProposalForMcp({
+  dinners,
+  familyId,
+  origin,
+  title,
+  userId,
+  weekEnd,
+  weekStart,
+}: McpActor & {
+  dinners: {
+    date: string;
+    freezerItemId?: string;
+    note?: string;
+    recipeId?: string;
+  }[];
+  origin: string;
+  title?: string;
+  weekEnd?: string;
+  weekStart?: string;
+}) {
+  const result = await createOrReplaceMealPlanProposal({
+    dinners,
+    familyId,
+    title,
+    userId,
+    weekEnd,
+    weekStart,
+  });
+
+  if (result.status !== "CREATED") {
+    return result;
+  }
+
+  return {
+    dinners: result.dinners,
+    proposalId: result.proposalId,
+    proposalUrl: buildFamilyMealPlanProposalUrl({
+      familyId,
+      mealPlanId: result.proposalId,
+      origin,
+    }),
+    status: "CREATED" as const,
+    title: result.title,
+    weekEnd: result.weekEnd,
+    weekStart: result.weekStart,
   };
 }

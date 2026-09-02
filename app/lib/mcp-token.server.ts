@@ -16,6 +16,18 @@ export function buildFamilyMcpUrl(origin: string) {
   return `${origin.replace(/\/+$/, "")}/mcp`;
 }
 
+export function buildFamilyMealPlanProposalUrl({
+  familyId,
+  mealPlanId,
+  origin,
+}: {
+  familyId: string;
+  mealPlanId: string;
+  origin: string;
+}) {
+  return `${origin.replace(/\/+$/, "")}/families/${familyId}/meal-plans/${mealPlanId}/proposal`;
+}
+
 function parseBearerToken(authorizationHeader: string | null) {
   if (!authorizationHeader?.startsWith("Bearer ")) {
     return "";

@@ -22,8 +22,8 @@ export function FamilyMcpTokenCard({
         <h2 className="text-lg font-semibold text-slate-950">AI-tilgang (MCP)</h2>
         <p className="text-sm leading-6 text-slate-600">
           Lag et hemmelig nøkkelord som en AI-agent kan bruke for å lese
-          oppskrifter, ukeplan og handleliste. Del det ikke offentlig. Bytt
-          nøkkel hvis det kommer på avveie.
+          oppskrifter, ukeplan og handleliste, og for å foreslå en ukeplan.
+          Del det ikke offentlig. Bytt nøkkel hvis det kommer på avveie.
         </p>
       </div>
 

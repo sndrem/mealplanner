@@ -2,6 +2,7 @@ import {
   Form,
   Link,
   isRouteErrorResponse,
+  redirect,
   useFetcher,
   useNavigation,
   type MetaFunction,
@@ -30,6 +31,7 @@ import {
   encodeMealSelection,
   formatShortDateLabel,
   parseMealSelection,
+  toLiveMealPlanStatus,
 } from "../lib/meal-plan-display";
 import { useMealPlanEntriesAutosave } from "../lib/use-meal-plan-entries-autosave";
 import {
@@ -150,6 +152,10 @@ export async function loader({
     }),
     listFamilyMembers(familyId),
   ]);
+
+  if (result.mealPlan.status === "PROPOSED") {
+    throw redirect(`/families/${familyId}/meal-plans/${mealPlanId}/proposal`);
+  }
   const familyMembers: MealPlanFamilyMemberOption[] = members.map((member) => ({
     displayName: member.user.displayName,
     id: member.user.id,
@@ -609,7 +615,7 @@ export default function FamilyMealPlanRoute({
     ? "APPROVED"
     : isReopeningMealPlan
       ? "DRAFT"
-      : loaderData.mealPlan.status;
+      : toLiveMealPlanStatus(loaderData.mealPlan.status);
   const displayApprovedAt = isApprovingMealPlan
     ? new Date().toISOString()
     : isReopeningMealPlan

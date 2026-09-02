@@ -1,5 +1,7 @@
 import { db } from "./db.server";
 import { formatDateOnly } from "./meal-plan-dates";
+import { toLiveMealPlanStatus } from "./meal-plan-display";
+import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
 
 const storeModeAnchorMealPlanSelect = {
   id: true,
@@ -42,7 +44,7 @@ export async function findMealPlanCoveringDate({
   const dateOnly = formatDateOnly(referenceDate);
   const dateAtUtcMidnight = new Date(`${dateOnly}T00:00:00.000Z`);
 
-  return db.mealPlan.findFirst({
+  const mealPlan = await db.mealPlan.findFirst({
     orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
     select: mealPlanForDateSelect,
     where: {
@@ -53,8 +55,18 @@ export async function findMealPlanCoveringDate({
       startDate: {
         lte: dateAtUtcMidnight,
       },
+      status: LIVE_MEAL_PLAN_STATUS_FILTER,
     },
   });
+
+  if (!mealPlan) {
+    return null;
+  }
+
+  return {
+    ...mealPlan,
+    status: toLiveMealPlanStatus(mealPlan.status),
+  };
 }
 
 export async function resolveStoreModeAnchorMealPlan({
@@ -73,7 +85,10 @@ export async function resolveStoreModeAnchorMealPlan({
   return db.mealPlan.findFirst({
     orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
     select: storeModeAnchorMealPlanSelect,
-    where: { familyId },
+    where: {
+      familyId,
+      status: LIVE_MEAL_PLAN_STATUS_FILTER,
+    },
   });
 }
 
@@ -95,6 +110,7 @@ export async function resolveStoreModeNextMealPlan({
       startDate: {
         gt: dateAtUtcMidnight,
       },
+      status: LIVE_MEAL_PLAN_STATUS_FILTER,
     },
   });
 }

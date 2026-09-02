@@ -58,9 +58,10 @@ describe("mcp route", () => {
         clientId: "family-1",
         extra: {
           familyId: "family-1",
+          origin: "http://localhost",
           userId: "user-1",
         },
-        scopes: ["mcp:read"],
+        scopes: ["mcp:read", "mcp:write"],
         token: "good-token",
       },
     });

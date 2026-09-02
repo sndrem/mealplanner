@@ -19,7 +19,7 @@ import {
   updateFamilyReminderEmail,
 } from "../lib/family.server";
 import { getFamilyWeekDinnerMenu } from "../lib/family-home.server";
-import { formatMealPlanWindow } from "../lib/meal-plan-display";
+import { formatMealPlanWindow, toLiveMealPlanStatus } from "../lib/meal-plan-display";
 import { formatDateOnly } from "../lib/meal-plan-dates";
 import { isMealPlanPast } from "../lib/meal-plan-week";
 import { listMealPlansForFamily } from "../lib/meal-plan.server";
@@ -148,7 +148,7 @@ function serializeMealPlanSummary(
     endDate: formatDateOnly(mealPlan.endDate),
     id: mealPlan.id,
     startDate: formatDateOnly(mealPlan.startDate),
-    status: mealPlan.status,
+    status: toLiveMealPlanStatus(mealPlan.status),
     title: mealPlan.title,
   };
 }
