@@ -14,6 +14,7 @@ import {
   getMealPlanDateRange,
   unionMealPlanDateRanges,
 } from "./meal-plan.server";
+import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
 import { getFamilyShoppingListMode } from "./shopping-preference.server";
 import {
   getFamilyStockMatchSet,
@@ -377,6 +378,7 @@ export async function getMealPlanShoppingData({
         },
         where: {
           familyId,
+          status: LIVE_MEAL_PLAN_STATUS_FILTER,
         },
       }),
     ]);
@@ -894,6 +896,7 @@ export async function getMealPlanStoreModeData({
           gte: todayAtUtcMidnight,
         },
         familyId,
+        status: LIVE_MEAL_PLAN_STATUS_FILTER,
       },
     }),
     db.store.findMany({

@@ -1,6 +1,8 @@
 # Family MCP server
 
-The app exposes a **read-only** [Model Context Protocol](https://modelcontextprotocol.io) server on the same process as the website (`GET`/`POST` `/mcp`). Production transport is **Streamable HTTP**, not stdio.
+The app exposes a [Model Context Protocol](https://modelcontextprotocol.io) server on the same process as the website (`GET`/`POST` `/mcp`). Production transport is **Streamable HTTP**, not stdio.
+
+Most tools are read-only. `create_meal_plan_proposal` can store a **proposal** for a week; it never approves a live meal plan.
 
 ## Mint a token
 
@@ -38,13 +40,18 @@ Authenticated clients can call:
 
 - `list_recipes` — family and global recipes (title, description, image URL, tags, servings, prep)
 - `get_recipe` — one recipe including ingredients
-- `get_current_week_meal_plan` — Europe/Oslo calendar week dinners
-- `list_meal_plans` — plan summaries
+- `get_current_week_meal_plan` — Europe/Oslo calendar week dinners (live DRAFT/APPROVED plans only)
+- `list_meal_plans` — plan summaries (excludes open proposals)
 - `get_shopping_list` — current family shopping projection
 - `get_recent_dinners` — recently used dinner recipes
 - `list_freezer_items` — freezer stock
+- `create_meal_plan_proposal` — create or replace a proposed dinner plan for a calendar week
 
-The token is scoped to one family. Tools never create or approve meal plans.
+`create_meal_plan_proposal` defaults to **next** Europe/Oslo week (Monday–Sunday) when `weekStart` / `weekEnd` are omitted. Re-running for the same week updates the existing proposal in place and returns the same URL. It fails if a live DRAFT or APPROVED plan already covers that week.
+
+The tool returns `proposalUrl`. Put that in email as **Se forslaget i Mealplanner her**. Opening the link (after login) shows the proposal UI, where a family member can adjust dinners and approve. Approval turns the proposal into a live meal plan. MCP cannot approve or reopen plans.
+
+The token is scoped to one family.
 
 ## Deploy
 

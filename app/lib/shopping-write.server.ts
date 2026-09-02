@@ -7,6 +7,7 @@ import {
 } from "./collaboration.server";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
+import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import {
   recordShoppingCheckEvent,
@@ -2148,6 +2149,7 @@ async function validateOptionalDateInFamilyMealPlans({
     },
     where: {
       familyId,
+      status: LIVE_MEAL_PLAN_STATUS_FILTER,
     },
   });
 

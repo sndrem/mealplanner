@@ -6,6 +6,7 @@ import {
 import { z } from "zod";
 
 import {
+  createMealPlanProposalForMcp,
   getCurrentWeekMealPlanForMcp,
   getRecentDinnersForMcp,
   getRecipeForMcp,
@@ -26,6 +27,17 @@ function requireMcpActor(authInfo: AuthInfo | undefined) {
   }
 
   return { familyId, userId };
+}
+
+function requireMcpOrigin(authInfo: AuthInfo | undefined) {
+  const origin =
+    typeof authInfo?.extra?.origin === "string" ? authInfo.extra.origin : "";
+
+  if (!origin) {
+    throw new Error("MCP request is missing origin.");
+  }
+
+  return origin;
 }
 
 function jsonResult(data: unknown, summary: string) {
@@ -155,6 +167,58 @@ export const mcpHttpHandler = createMcpHandler(
         return jsonResult(
           data,
           `${data.freezerItems.length} freezer items.`,
+        );
+      },
+    );
+
+    server.registerTool(
+      "create_meal_plan_proposal",
+      {
+        description:
+          "Create or replace a proposed dinner plan for a Europe/Oslo calendar week (defaults to next week). Does not approve the plan.",
+        inputSchema: z.object({
+          dinners: z
+            .array(
+              z.object({
+                date: z.string().min(1).describe("YYYY-MM-DD"),
+                freezerItemId: z.string().optional(),
+                note: z.string().optional(),
+                recipeId: z.string().optional(),
+              }),
+            )
+            .describe("Dinners to store. Days omitted stay empty."),
+          title: z.string().optional().describe("Optional meal plan title"),
+          weekEnd: z
+            .string()
+            .optional()
+            .describe("Sunday YYYY-MM-DD of the calendar week"),
+          weekStart: z
+            .string()
+            .optional()
+            .describe("Monday YYYY-MM-DD of the calendar week"),
+        }),
+      },
+      async ({ dinners, title, weekEnd, weekStart }) => {
+        const origin = requireMcpOrigin(authInfo);
+        const data = await createMealPlanProposalForMcp({
+          ...actor,
+          dinners,
+          origin,
+          title,
+          weekEnd,
+          weekStart,
+        });
+
+        if (data.status !== "CREATED") {
+          return {
+            content: [{ text: data.formError, type: "text" as const }],
+            isError: true,
+          };
+        }
+
+        return jsonResult(
+          data,
+          `Proposal ${data.proposalId} ready for ${data.weekStart}–${data.weekEnd}.`,
         );
       },
     );

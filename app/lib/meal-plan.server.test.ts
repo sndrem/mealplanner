@@ -17,6 +17,7 @@ const {
         findUniqueOrThrow: vi.fn(),
         update: vi.fn(),
         updateMany: vi.fn(),
+        deleteMany: vi.fn(),
       },
       mealPlanShare: {
         updateMany: vi.fn(),
@@ -79,6 +80,8 @@ import {
   autoFillMealPlanEntries,
   copyMealPlan,
   createMealPlan,
+  createOrReplaceMealPlanProposal,
+  approveMealPlanProposal,
   deleteMealPlan,
   getDinnerAnalyticsForFamily,
   formatDateOnly,
@@ -230,6 +233,9 @@ describe("meal-plan.server", () => {
       },
       where: {
         familyId: "family-1",
+        status: {
+          in: ["APPROVED", "DRAFT"],
+        },
       },
     });
     expect(result.family).toEqual({
@@ -293,6 +299,153 @@ describe("meal-plan.server", () => {
       },
     });
     expect(dbMock.mealPlan.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a proposed meal plan for a calendar week", async () => {
+    dbMock.mealPlan.findMany.mockResolvedValue([]);
+    dbMock.mealPlan.create.mockResolvedValue({ id: "proposal-1" });
+    dbMock.mealPlan.findFirst.mockImplementation(async ({ select }: { select?: { entries?: unknown } }) => {
+      if (select?.entries) {
+        return {
+          endDate: new Date("2026-05-17T00:00:00.000Z"),
+          entries: [
+            {
+              date: new Date("2026-05-11T00:00:00.000Z"),
+              freezerItem: null,
+              freezerItemId: null,
+              note: null,
+              recipe: { title: "Taco" },
+              recipeId: "recipe-taco",
+            },
+          ],
+          id: "proposal-1",
+          startDate: new Date("2026-05-11T00:00:00.000Z"),
+          title: "Uke 20",
+        };
+      }
+
+      return {
+        endDate: new Date("2026-05-17T00:00:00.000Z"),
+        id: "proposal-1",
+        startDate: new Date("2026-05-11T00:00:00.000Z"),
+      };
+    });
+    dbMock.recipe.findMany.mockResolvedValue([{ id: "recipe-taco" }]);
+
+    const result = await createOrReplaceMealPlanProposal({
+      dinners: [
+        {
+          date: "2026-05-11",
+          recipeId: "recipe-taco",
+        },
+      ],
+      familyId: "family-1",
+      userId: "user-1",
+      weekEnd: "2026-05-17",
+      weekStart: "2026-05-11",
+    });
+
+    expect(result.status).toBe("CREATED");
+    if (result.status !== "CREATED") {
+      throw new Error("expected CREATED");
+    }
+    expect(result.proposalId).toBe("proposal-1");
+    expect(result.weekStart).toBe("2026-05-11");
+    expect(result.dinners[0]).toMatchObject({
+      date: "2026-05-11",
+      recipeId: "recipe-taco",
+      title: "Taco",
+    });
+    expect(dbMock.mealPlan.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          familyId: "family-1",
+          status: "PROPOSED",
+          title: "Uke 20",
+        }),
+      }),
+    );
+  });
+
+  it("replaces an existing proposal for the same week in place", async () => {
+    dbMock.mealPlan.findMany.mockImplementation(async ({ where }: { where?: { status?: unknown } }) => {
+      if (where?.status === "PROPOSED") {
+        return [
+          {
+            entries: [],
+            id: "proposal-1",
+          },
+        ];
+      }
+
+      return [];
+    });
+    dbMock.mealPlan.findFirst.mockImplementation(async ({ select }: { select?: { entries?: unknown } }) => {
+      if (select?.entries) {
+        return {
+          endDate: new Date("2026-05-17T00:00:00.000Z"),
+          entries: [],
+          id: "proposal-1",
+          startDate: new Date("2026-05-11T00:00:00.000Z"),
+          title: "Uke 20",
+        };
+      }
+
+      return {
+        endDate: new Date("2026-05-17T00:00:00.000Z"),
+        id: "proposal-1",
+        startDate: new Date("2026-05-11T00:00:00.000Z"),
+      };
+    });
+
+    const result = await createOrReplaceMealPlanProposal({
+      dinners: [],
+      familyId: "family-1",
+      userId: "user-1",
+      weekEnd: "2026-05-17",
+      weekStart: "2026-05-11",
+    });
+
+    expect(result.status).toBe("CREATED");
+    expect(dbMock.mealPlan.create).not.toHaveBeenCalled();
+    expect(dbMock.mealPlan.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "proposal-1" },
+      }),
+    );
+  });
+
+  it("rejects a proposal when a live meal plan covers the week", async () => {
+    dbMock.mealPlan.findMany.mockResolvedValue([{ id: "live-plan" }]);
+
+    const result = await createOrReplaceMealPlanProposal({
+      dinners: [],
+      familyId: "family-1",
+      userId: "user-1",
+      weekEnd: "2026-05-17",
+      weekStart: "2026-05-11",
+    });
+
+    expect(result).toEqual({
+      formError: "Det finnes allerede en ukeplan for denne uken.",
+      status: "LIVE_PLAN_EXISTS",
+    });
+    expect(dbMock.mealPlan.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects proposal weeks that are not Monday-Sunday", async () => {
+    const result = await createOrReplaceMealPlanProposal({
+      dinners: [],
+      familyId: "family-1",
+      userId: "user-1",
+      weekEnd: "2026-05-16",
+      weekStart: "2026-05-11",
+    });
+
+    expect(result).toEqual({
+      formError: "Uken må være en kalenderuke fra mandag til søndag.",
+      status: "VALIDATION_ERROR",
+    });
   });
 
   it("copies dinner entries into a new target range using relative offsets", async () => {
@@ -783,6 +936,71 @@ describe("meal-plan.server", () => {
       },
     });
     expect(result.status).toBe("APPROVED");
+  });
+
+  it("approves a proposed meal plan", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-17T00:00:00.000Z"),
+      entries: [],
+      id: "proposal-1",
+      startDate: new Date("2026-05-11T00:00:00.000Z"),
+      status: "PROPOSED",
+      updatedAt: new Date("2026-05-16T09:00:00.000Z"),
+    });
+    dbMock.mealPlan.findMany.mockResolvedValue([]);
+    dbMock.mealPlan.update.mockResolvedValue({
+      approvedAt: new Date("2026-05-16T09:30:00.000Z"),
+      approvedByUserId: "user-1",
+      copiedFromMealPlanId: null,
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-17T00:00:00.000Z"),
+      id: "proposal-1",
+      startDate: new Date("2026-05-11T00:00:00.000Z"),
+      status: "APPROVED",
+      title: "Uke 20",
+      updatedAt: new Date("2026-05-16T09:30:00.000Z"),
+    });
+
+    const result = await approveMealPlanProposal({
+      familyId: "family-1",
+      mealPlanId: "proposal-1",
+      userId: "user-1",
+    });
+
+    expect(result.status).toBe("APPROVED");
+    expect(dbMock.mealPlan.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "APPROVED",
+          approvedByUserId: "user-1",
+        }),
+        where: { id: "proposal-1" },
+      }),
+    );
+  });
+
+  it("rejects approving a proposal when a live plan now overlaps", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-17T00:00:00.000Z"),
+      entries: [],
+      id: "proposal-1",
+      startDate: new Date("2026-05-11T00:00:00.000Z"),
+      status: "PROPOSED",
+      updatedAt: new Date("2026-05-16T09:00:00.000Z"),
+    });
+    dbMock.mealPlan.findMany.mockResolvedValue([{ id: "live-plan" }]);
+
+    const result = await approveMealPlanProposal({
+      familyId: "family-1",
+      mealPlanId: "proposal-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      formError: "Det finnes allerede en ukeplan for denne uken.",
+      status: "LIVE_PLAN_EXISTS",
+    });
+    expect(dbMock.mealPlan.update).not.toHaveBeenCalled();
   });
 
   it("reopens an approved meal plan back to draft", async () => {

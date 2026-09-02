@@ -23,9 +23,10 @@ async function handleMcpRequest(request: Request) {
       clientId: auth.familyId,
       extra: {
         familyId: auth.familyId,
+        origin: new URL(request.url).origin,
         userId: auth.userId,
       },
-      scopes: ["mcp:read"],
+      scopes: ["mcp:read", "mcp:write"],
       token: request.headers.get("Authorization")?.slice("Bearer ".length).trim() ?? "",
     },
   });

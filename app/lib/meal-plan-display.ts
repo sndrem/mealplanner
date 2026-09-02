@@ -1,3 +1,9 @@
+export type LiveMealPlanStatus = "APPROVED" | "DRAFT";
+
+export function toLiveMealPlanStatus(status: string): LiveMealPlanStatus {
+  return status === "APPROVED" ? "APPROVED" : "DRAFT";
+}
+
 export function formatMealPlanRecipeSelectLabel(title: string, tags: string[]) {
   const cleaned = tags.map((tag) => tag.trim()).filter(Boolean);
   if (cleaned.length === 0) {

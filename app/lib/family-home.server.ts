@@ -8,6 +8,7 @@ import {
   getDinnerMenuLabel,
 } from "./meal-plan-display";
 import { formatDateOnly, isPlanDateToday } from "./meal-plan-dates";
+import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
 import {
   getCalendarWeekBounds,
   getCalendarWeekDates,
@@ -88,6 +89,7 @@ export async function getFamilyWeekDinnerMenu({
       startDate: {
         lte: weekEndDate,
       },
+      status: LIVE_MEAL_PLAN_STATUS_FILTER,
     },
   });
 

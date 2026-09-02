@@ -10,6 +10,7 @@ import {
 import { db } from "./db.server";
 import { requireFamilyAdmin } from "./family.server";
 import { formatDateOnly } from "./meal-plan-dates";
+import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
 import {
   getCalendarWeekBounds,
   getCalendarWeekDates,
@@ -222,6 +223,7 @@ async function getFamilyCalendarEvents({
       startDate: {
         lte: windowEndDate,
       },
+      status: LIVE_MEAL_PLAN_STATUS_FILTER,
     },
   });
 

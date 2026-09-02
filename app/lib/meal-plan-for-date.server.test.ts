@@ -50,6 +50,9 @@ describe("findMealPlanCoveringDate", () => {
           startDate: {
             lte: new Date("2026-05-16T00:00:00.000Z"),
           },
+          status: {
+            in: ["APPROVED", "DRAFT"],
+          },
         }),
       }),
     );
@@ -104,7 +107,12 @@ describe("resolveStoreModeAnchorMealPlan", () => {
       expect.objectContaining({
         orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
         select: { id: true },
-        where: { familyId: "family-1" },
+        where: {
+          familyId: "family-1",
+          status: {
+            in: ["APPROVED", "DRAFT"],
+          },
+        },
       }),
     );
   });
@@ -143,6 +151,9 @@ describe("resolveStoreModeNextMealPlan", () => {
           familyId: "family-1",
           startDate: {
             gt: new Date("2026-05-14T00:00:00.000Z"),
+          },
+          status: {
+            in: ["APPROVED", "DRAFT"],
           },
         }),
       }),

@@ -245,6 +245,53 @@ describe("family meal plan route", () => {
     });
   });
 
+  it("redirects proposed meal plans to the proposal UI", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(getMealPlanPlanningData).mockResolvedValue({
+      family: {
+        id: "family-1",
+        name: "Solberg",
+      },
+      freezerItems: [],
+      mealPlan: {
+        activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
+        approvedAt: null,
+        approvedByUserId: null,
+        copiedFromMealPlanId: null,
+        createdAt: new Date("2026-05-01T12:00:00.000Z"),
+        endDate: new Date("2026-05-18T00:00:00.000Z"),
+        entries: [],
+        id: "meal-plan-1",
+        startDate: new Date("2026-05-15T00:00:00.000Z"),
+        status: "PROPOSED",
+        title: "Langhelg",
+        updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+      },
+      recipes: [],
+      recentlyUsedRecipeIds: [],
+      userRole: "ADMIN",
+      visibleDates: ["2026-05-15"],
+    } as never);
+    vi.mocked(listFamilyMembers).mockResolvedValue([]);
+
+    try {
+      await loader({
+        params: {
+          familyId: "family-1",
+          mealPlanId: "meal-plan-1",
+        },
+        request: buildRequest(),
+      });
+      throw new Error("expected redirect");
+    } catch (error) {
+      expect(error).toBeInstanceOf(Response);
+      expect((error as Response).status).toBe(302);
+      expect((error as Response).headers.get("Location")).toBe(
+        "/families/family-1/meal-plans/meal-plan-1/proposal",
+      );
+    }
+  });
+
   it("returns planner validation errors from the server module", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(saveMealPlanEntries).mockResolvedValue({

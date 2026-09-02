@@ -28,6 +28,10 @@ export default [
       "families/:familyId/meal-plans/:mealPlanId/review",
       "routes/family-meal-plan-review.tsx",
     ),
+    route(
+      "families/:familyId/meal-plans/:mealPlanId/proposal",
+      "routes/family-meal-plan-proposal.tsx",
+    ),
     route("families/:familyId/meal-plans/:mealPlanId", "routes/family-meal-plan.tsx"),
     route(
       "families/:familyId/meal-plans/:mealPlanId/calendar.ics",

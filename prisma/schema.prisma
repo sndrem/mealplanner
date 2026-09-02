@@ -20,6 +20,7 @@ enum RecipeScope {
 enum MealPlanStatus {
   DRAFT
   APPROVED
+  PROPOSED
 }
 
 enum FamilyShoppingListMode {
