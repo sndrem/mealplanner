@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Form, Link, useNavigation, type MetaFunction } from "react-router";
 
 import { MealPlanRecipePicker } from "../components/meal-plan-recipe-picker";
-import { RecipePickerMedia } from "../components/recipe-picker-card";
 import { requireUser } from "../lib/auth.server";
 import { formatDateOnly } from "../lib/meal-plan-dates";
 import {
@@ -75,11 +74,8 @@ export async function loader({
         date,
         {
           freezerItemId: entry?.freezerItemId ?? "",
-          freezerLabel: entry?.freezerItem?.label ?? "",
           note: entry?.note ?? "",
           recipeId: entry?.recipeId ?? "",
-          recipeImageUrl: entry?.recipe?.imageUrl ?? null,
-          recipeTitle: entry?.recipe?.title ?? "",
           updatedAt: entry?.updatedAt.toISOString() ?? "",
         },
       ];
@@ -326,7 +322,7 @@ export default function FamilyMealPlanProposalRoute({
           </p>
         </section>
 
-        <Form className="flex flex-col gap-4" method="post">
+        <Form className="flex flex-col gap-4 mt-16" method="post">
           {loaderData.visibleDates.map((date) => (
             <input key={`entryDate:${date}`} name="entryDate" type="hidden" value={date} />
           ))}
@@ -354,23 +350,6 @@ export default function FamilyMealPlanProposalRoute({
             const weekday = formatWeekdayLabel(date);
             const capitalizedWeekday =
               weekday.charAt(0).toUpperCase() + weekday.slice(1);
-            const entry = loaderData.entriesByDate[date];
-            const selection = displaySelections[date] ?? "";
-            const parsedSelection = parseMealSelection(selection);
-            const selectedRecipe = loaderData.recipes.find(
-              (recipe) => recipe.id === parsedSelection.recipeId,
-            );
-            const selectedFreezerItem = loaderData.freezerItems.find(
-              (item) => item.id === parsedSelection.freezerItemId,
-            );
-            const selectedLabel =
-              selectedRecipe?.title ||
-              selectedFreezerItem?.label ||
-              entry?.recipeTitle ||
-              entry?.freezerLabel ||
-              "";
-            const selectedImageUrl =
-              selectedRecipe?.imageUrl ?? entry?.recipeImageUrl ?? null;
 
             return (
               <section
@@ -385,17 +364,6 @@ export default function FamilyMealPlanProposalRoute({
                     {formatShortDateLabel(date)}
                   </p>
                 </div>
-                {selectedLabel ? (
-                  <div className="mt-3 flex min-w-0 items-center gap-3">
-                    <RecipePickerMedia
-                      imageUrl={selectedImageUrl}
-                      title={selectedLabel}
-                    />
-                    <p className="min-w-0 truncate text-base font-semibold text-slate-950">
-                      {selectedLabel}
-                    </p>
-                  </div>
-                ) : null}
                 <div className="mt-3">
                   <MealPlanRecipePicker
                     freezerItems={loaderData.freezerItems}
@@ -409,9 +377,8 @@ export default function FamilyMealPlanProposalRoute({
                     }}
                     recentlyUsedRecipeIds={recentlyUsedRecipeIds}
                     recipes={loaderData.recipes}
-                    selectedLabel={selectedLabel || undefined}
                     triggerLabel="Velg middag"
-                    value={selection}
+                    value={displaySelections[date] ?? ""}
                   />
                 </div>
                 <label className="mt-3 block text-sm font-medium text-slate-700">
@@ -432,7 +399,7 @@ export default function FamilyMealPlanProposalRoute({
             );
           })}
 
-          <div className="sticky bottom-4 z-40 flex flex-col gap-3">
+          <div className="sticky bottom-4 z-40 flex flex-col gap-3 mt-6">
             <button
               className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-medium text-slate-800 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
               disabled={isPending}
@@ -452,7 +419,7 @@ export default function FamilyMealPlanProposalRoute({
               {isApprovingMealPlan ? "Godkjent" : "Godkjenn"}
             </button>
           </div>
-        </Form>
+        </>
       </div>
     </main>
   );
