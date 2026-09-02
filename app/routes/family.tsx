@@ -3,6 +3,7 @@ import { Form, Link, isRouteErrorResponse, useNavigation } from "react-router";
 import type { Route } from "./+types/family";
 import { FamilyCalendarSubscriptionCard } from "../components/family-calendar-subscription-card";
 import { FamilyHomeTabs } from "../components/family-home-tabs";
+import { FamilyMcpTokenCard } from "../components/family-mcp-token-card";
 import { requireUser } from "../lib/auth.server";
 import {
   buildCalendarSubscriptionUrls,
@@ -22,9 +23,16 @@ import { formatMealPlanWindow } from "../lib/meal-plan-display";
 import { formatDateOnly } from "../lib/meal-plan-dates";
 import { isMealPlanPast } from "../lib/meal-plan-week";
 import { listMealPlansForFamily } from "../lib/meal-plan.server";
+import {
+  buildFamilyMcpUrl,
+  createOrRotateFamilyMcpToken,
+  getFamilyMcpTokenStatus,
+  revokeFamilyMcpToken,
+} from "../lib/mcp-token.server";
 
 type FamilyNotice =
   | "calendar-subscription-revoked"
+  | "mcp-token-revoked"
   | "member-removed"
   | "reminder-email-cleared"
   | "reminder-email-saved";
@@ -46,6 +54,8 @@ interface FamilyActionData {
   formError?: string;
   httpsUrl?: string;
   intent?: string;
+  mcpToken?: string;
+  mcpUrl?: string;
   targetUserId?: string;
   values?: {
     reminderEmail?: string;
@@ -58,6 +68,7 @@ function getFamilyNotice(request: Request): FamilyNotice | null {
 
   if (
     notice === "calendar-subscription-revoked" ||
+    notice === "mcp-token-revoked" ||
     notice === "member-removed" ||
     notice === "reminder-email-cleared" ||
     notice === "reminder-email-saved"
@@ -100,6 +111,12 @@ function getFamilyNoticeContent(notice: FamilyNotice) {
       return {
         description:
           "Kalenderabonnementet er opphevet. Eksisterende abonnement slutter å oppdatere.",
+        title: "Endringen er lagret",
+      };
+    case "mcp-token-revoked":
+      return {
+        description:
+          "MCP-nøkkelen er opphevet. Eksisterende agenter mister tilgang.",
         title: "Endringen er lagret",
       };
     case "member-removed":
@@ -299,8 +316,14 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     familyId,
     userId: user.id,
   });
-  const [members, mealPlanResult, weekDays, reminderEmail, calendarSubscription] =
-    await Promise.all([
+  const [
+    members,
+    mealPlanResult,
+    weekDays,
+    reminderEmail,
+    calendarSubscription,
+    mcpToken,
+  ] = await Promise.all([
     membership.role === "ADMIN"
       ? listFamilyMembers(familyId)
       : Promise.resolve([]),
@@ -318,6 +341,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     membership.role === "ADMIN"
       ? getFamilyCalendarSubscriptionStatus({ familyId })
       : Promise.resolve({ exists: false }),
+    membership.role === "ADMIN"
+      ? getFamilyMcpTokenStatus({ familyId })
+      : Promise.resolve({ exists: false }),
   ]);
 
   const serializedMealPlans = mealPlanResult.mealPlans.map(
@@ -333,7 +359,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       reminderEmail,
     },
     hasCalendarSubscription: calendarSubscription.exists,
+    hasMcpToken: mcpToken.exists,
     members,
+    mcpUrl: buildFamilyMcpUrl(new URL(request.url).origin),
     notice: getFamilyNotice(request),
     recentMealPlans: serializedMealPlans.slice(0, 3),
     user,
@@ -418,6 +446,32 @@ export async function action({
     });
   }
 
+  if (intent === "create-mcp-token" || intent === "rotate-mcp-token") {
+    const result = await createOrRotateFamilyMcpToken({
+      familyId,
+      userId: user.id,
+    });
+
+    return {
+      intent,
+      mcpToken: result.token,
+      mcpUrl: buildFamilyMcpUrl(new URL(request.url).origin),
+    } satisfies FamilyActionData;
+  }
+
+  if (intent === "revoke-mcp-token") {
+    await revokeFamilyMcpToken({
+      familyId,
+      userId: user.id,
+    });
+
+    return buildFamilyRedirect({
+      familyId,
+      notice: "mcp-token-revoked",
+      request,
+    });
+  }
+
   if (intent !== "remove-member") {
     return {
       formError: "Ukjent handling.",
@@ -491,6 +545,12 @@ export default function FamilyRoute({
   const isRevokingCalendarSubscription =
     navigation.state !== "idle" &&
     pendingIntent === "revoke-calendar-subscription";
+  const isCreatingMcpToken =
+    navigation.state !== "idle" && pendingIntent === "create-mcp-token";
+  const isRotatingMcpToken =
+    navigation.state !== "idle" && pendingIntent === "rotate-mcp-token";
+  const isRevokingMcpToken =
+    navigation.state !== "idle" && pendingIntent === "revoke-mcp-token";
   const isAdmin = loaderData.userRole === "ADMIN";
   const familyId = loaderData.family.id;
   const reminderEmailValue = isSavingReminderEmail
@@ -641,6 +701,21 @@ export default function FamilyRoute({
                   isRevoking={isRevokingCalendarSubscription}
                   isRotating={isRotatingCalendarSubscription}
                   webcalUrl={actionData?.webcalUrl}
+                />
+              ) : null}
+
+              {isAdmin ? (
+                <FamilyMcpTokenCard
+                  hasMcpToken={
+                    (loaderData.hasMcpToken && !isRevokingMcpToken) ||
+                    isCreatingMcpToken ||
+                    Boolean(actionData?.mcpToken)
+                  }
+                  isCreating={isCreatingMcpToken}
+                  isRevoking={isRevokingMcpToken}
+                  isRotating={isRotatingMcpToken}
+                  mcpToken={actionData?.mcpToken}
+                  mcpUrl={actionData?.mcpUrl ?? loaderData.mcpUrl}
                 />
               ) : null}
 

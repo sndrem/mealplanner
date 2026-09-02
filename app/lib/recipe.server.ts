@@ -208,6 +208,70 @@ export async function getFamilyRecipeDetail({
   };
 }
 
+export async function getAccessibleRecipeDetail({
+  familyId,
+  recipeId,
+  userId,
+}: {
+  familyId: string;
+  recipeId: string;
+  userId: string;
+}) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const recipe = await db.recipe.findFirst({
+    select: {
+      ...managedRecipeSelect,
+      _count: {
+        select: {
+          mealPlanEntries: true,
+        },
+      },
+    },
+    where: {
+      id: recipeId,
+      OR: [
+        {
+          scope: RecipeScope.GLOBAL,
+        },
+        {
+          familyId,
+          scope: RecipeScope.FAMILY,
+        },
+      ],
+    },
+  });
+
+  if (!recipe) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  return {
+    mealPlanEntryCount: recipe._count.mealPlanEntries,
+    recipe: {
+      createdAt: recipe.createdAt,
+      defaultServings: recipe.defaultServings,
+      description: recipe.description,
+      familyId: recipe.familyId,
+      id: recipe.id,
+      imageUrl: getRecipeImageUrl(recipe.imageKey),
+      ingredients: recipe.ingredients,
+      prepMinutes: recipe.prepMinutes,
+      reminderSuggestions: recipe.reminderSuggestions,
+      scope: recipe.scope,
+      tags: recipe.tags,
+      title: recipe.title,
+      updatedAt: recipe.updatedAt,
+    },
+    status: "FOUND" as const,
+  };
+}
+
 function withRecipeImageUrl<T extends { imageKey: string | null }>(recipe: T) {
   const { imageKey, ...rest } = recipe;
   return {

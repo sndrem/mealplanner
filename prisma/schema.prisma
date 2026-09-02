@@ -104,6 +104,7 @@ model User {
   passwordResetTokens             PasswordResetToken[]
   createdShoppingListShares       ShoppingListShare[]            @relation("ShoppingListShareCreatedBy")
   createdCalendarSubscriptions    CalendarSubscription[]         @relation("CalendarSubscriptionCreatedBy")
+  createdFamilyMcpTokens          FamilyMcpToken[]               @relation("FamilyMcpTokenCreatedBy")
 
   @@index([displayName])
 }
@@ -145,6 +146,7 @@ model Family {
   ingredientCategories       IngredientCategory[]
   shoppingListShares         ShoppingListShare[]
   calendarSubscription       CalendarSubscription?
+  mcpToken                   FamilyMcpToken?
 
   @@index([createdByUserId])
   @@index([name])
@@ -603,6 +605,20 @@ model CalendarSubscription {
   updatedAt       DateTime @updatedAt
   family          Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
   createdByUser   User?    @relation("CalendarSubscriptionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdByUserId])
+}
+
+model FamilyMcpToken {
+  id              String    @id @default(cuid())
+  familyId        String    @unique
+  createdByUserId String?
+  tokenHash       String    @unique
+  lastUsedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  family          Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdByUser   User?     @relation("FamilyMcpTokenCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([createdByUserId])
 }

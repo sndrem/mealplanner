@@ -34,6 +34,8 @@ Optional (Thursday weekend-plan reminders). The app starts without this; the job
 | -------- | ------- |
 | `CRON_SECRET` | Bearer token for `POST /internal/jobs/weekend-plan-reminders` |
 
+Family MCP (`GET`/`POST` `/mcp`) runs in the same web process. It does not use a Fly secret; admins mint a hashed family token in the app. See [mcp.md](./mcp.md).
+
 Optional (recipe cover images via Cloudflare R2). The app starts without them; image upload is disabled until all R2 variables are set:
 
 | Variable | Purpose |

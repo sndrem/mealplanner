@@ -12,6 +12,7 @@ export default [
     "routes/internal.jobs.weekend-plan-reminders.ts",
   ),
   route("api/generate-recipe-description", "routes/api.generate-recipe-description.ts"),
+  route("mcp", "routes/mcp.ts"),
   route("s/:token", "routes/shopping-list-share.tsx"),
   route("c/:token/calendar.ics", "routes/calendar-subscription.ts"),
   layout("routes/app-layout.tsx", [
