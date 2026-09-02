@@ -6,7 +6,7 @@ import {
   groupRecipePickerResults,
   hasActiveRecipeSearch,
 } from "../lib/recipe-list-search";
-import { parseMealSelection } from "../lib/meal-plan-display";
+import { getMealSelectionTriggerLabel, parseMealSelection } from "../lib/meal-plan-display";
 import {
   RecipePickerCard,
   type RecipePickerCardFreezerItem,
@@ -20,6 +20,7 @@ export function MealPlanRecipePicker({
   onChange,
   recentlyUsedRecipeIds,
   recipes,
+  selectedLabel,
   triggerLabel,
   value,
 }: {
@@ -29,6 +30,7 @@ export function MealPlanRecipePicker({
   onChange: (value: string) => void;
   recentlyUsedRecipeIds: ReadonlySet<string>;
   recipes: RecipePickerCardRecipe[];
+  selectedLabel?: string;
   triggerLabel: string;
   value: string;
 }) {
@@ -40,6 +42,13 @@ export function MealPlanRecipePicker({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const parsedSelection = parseMealSelection(value);
+  const buttonLabel = getMealSelectionTriggerLabel({
+    emptyLabel: triggerLabel,
+    fallbackLabel: selectedLabel,
+    freezerItems,
+    recipes,
+    value,
+  });
   const tagOptions = useMemo(() => deriveRecipeTagOptions(recipes), [recipes]);
   const filteredRecipes = useMemo(
     () =>
@@ -154,7 +163,7 @@ export function MealPlanRecipePicker({
         onClick={() => setIsOpen((current) => !current)}
         type="button"
       >
-        <span className="min-w-0 truncate font-medium">{triggerLabel}</span>
+        <span className="min-w-0 truncate font-medium">{buttonLabel}</span>
         <span className="shrink-0 text-xs text-slate-400">
           {isOpen ? "Lukk" : "Velg"}
         </span>

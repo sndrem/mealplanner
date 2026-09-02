@@ -107,6 +107,50 @@ describe("family meal plan proposal route", () => {
     expect(result.visibleDates).toEqual(["2026-05-11", "2026-05-12"]);
   });
 
+  it("maps stored dinners onto each proposal day", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(getMealPlanPlanningData).mockResolvedValue({
+      ...buildPlanningData(),
+      mealPlan: {
+        ...buildPlanningData().mealPlan,
+        entries: [
+          {
+            date: new Date("2026-05-11T00:00:00.000Z"),
+            freezerItem: null,
+            freezerItemId: null,
+            mealType: "DINNER",
+            note: "Bruk extra ost",
+            recipe: {
+              imageUrl: "https://img.example/taco.jpg",
+              title: "Taco",
+            },
+            recipeId: "recipe-taco",
+            updatedAt: new Date("2026-05-10T12:00:00.000Z"),
+          },
+        ],
+      },
+    } as never);
+
+    const result = await loader({
+      params: { familyId: "family-1", mealPlanId: "proposal-1" },
+      request: new Request(
+        "http://localhost/families/family-1/meal-plans/proposal-1/proposal",
+      ),
+    } as never);
+
+    expect(result.entriesByDate["2026-05-11"]).toMatchObject({
+      freezerItemId: "",
+      note: "Bruk extra ost",
+      recipeId: "recipe-taco",
+      recipeImageUrl: "https://img.example/taco.jpg",
+      recipeTitle: "Taco",
+    });
+    expect(result.entriesByDate["2026-05-12"]).toMatchObject({
+      recipeId: "",
+      recipeTitle: "",
+    });
+  });
+
   it("shows an already-approved proposal without editing", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(getMealPlanPlanningData).mockResolvedValue(
