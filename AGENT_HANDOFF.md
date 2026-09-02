@@ -2,14 +2,14 @@
 
 ## Current Objective
 
-Ship the proposal picker fix so stored dinners show when opening a proposal URL from email (follow-up to [#244](https://github.com/sndrem/mealplanner/pull/244)).
+Proposal picker fix is in PR [#245](https://github.com/sndrem/mealplanner/pull/245): stored dinners show when opening a proposal URL from email (follow-up to [#244](https://github.com/sndrem/mealplanner/pull/244)).
 
 ## Completed
 
 - `MealPlanRecipePicker` labels the trigger with the selected recipe or freezer item instead of always “Velg middag”
 - Proposal loader maps `recipeTitle` / `recipeImageUrl` / `freezerLabel` onto each day; the day card shows the stored meal
 - Tests for `getMealSelectionTriggerLabel` and proposal loader mapping
-- Local validation passed; ready to push and open PR
+- Pushed `fix/proposal-picker-shows-selected-meal` and opened PR #245
 
 ## Files To Read First
 
@@ -27,9 +27,9 @@ Ship the proposal picker fix so stored dinners show when opening a proposal URL 
 
 ## Open Items
 
-- Confirm in the app: open a proposal URL and see recipe names (not “Velg middag”) on each day
-- No dedicated GitHub issue; this is a follow-up to #244 / #243
+- Confirm in the app after merge: open a proposal URL and see recipe names (not “Velg middag”) on each day
+- No dedicated GitHub issue; this is a follow-up to #244 / #243 (already closed)
 
 ## Next Step
 
-Push the branch and open a pull request.
+Merge PR #245 after CI.
