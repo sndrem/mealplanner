@@ -111,6 +111,45 @@ export function parseMealSelection(value: string) {
   };
 }
 
+export function getMealSelectionTriggerLabel({
+  emptyLabel = "Velg middag",
+  fallbackLabel,
+  freezerItems,
+  recipes,
+  value,
+}: {
+  emptyLabel?: string;
+  fallbackLabel?: string;
+  freezerItems: Array<{ id: string; label: string }>;
+  recipes: Array<{ id: string; title: string }>;
+  value: string;
+}) {
+  if (!value) {
+    return emptyLabel;
+  }
+
+  const parsed = parseMealSelection(value);
+  const recipe = recipes.find((item) => item.id === parsed.recipeId);
+
+  if (recipe) {
+    return recipe.title;
+  }
+
+  const freezerItem = freezerItems.find(
+    (item) => item.id === parsed.freezerItemId,
+  );
+
+  if (freezerItem) {
+    return freezerItem.label;
+  }
+
+  if (fallbackLabel) {
+    return fallbackLabel;
+  }
+
+  return emptyLabel;
+}
+
 /** Swap or move encoded meal selections between two fixed dates (dates stay put). */
 export function swapOrMoveMealSelection(
   selections: Record<string, string>,

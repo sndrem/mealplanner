@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatMealPlanRecipeSelectLabel,
   getDinnerMenuLabel,
+  getMealSelectionTriggerLabel,
   swapOrMoveMealSelection,
 } from "./meal-plan-display";
 
@@ -71,6 +72,52 @@ describe("getDinnerMenuLabel", () => {
 
   it("returns default label when entry is empty", () => {
     expect(getDinnerMenuLabel(null)).toBe("Ikke planlagt");
+  });
+});
+
+describe("getMealSelectionTriggerLabel", () => {
+  const recipes = [{ id: "recipe-taco", title: "Taco" }];
+  const freezerItems = [{ id: "freezer-1", label: "Lasagne" }];
+
+  it("returns the empty label when nothing is selected", () => {
+    expect(
+      getMealSelectionTriggerLabel({
+        freezerItems,
+        recipes,
+        value: "",
+      }),
+    ).toBe("Velg middag");
+  });
+
+  it("returns the selected recipe title", () => {
+    expect(
+      getMealSelectionTriggerLabel({
+        freezerItems,
+        recipes,
+        value: "recipe:recipe-taco",
+      }),
+    ).toBe("Taco");
+  });
+
+  it("returns the selected freezer label", () => {
+    expect(
+      getMealSelectionTriggerLabel({
+        freezerItems,
+        recipes,
+        value: "freezer:freezer-1",
+      }),
+    ).toBe("Lasagne");
+  });
+
+  it("falls back to the stored label when the recipe is missing from the picker list", () => {
+    expect(
+      getMealSelectionTriggerLabel({
+        fallbackLabel: "Gammel gryte",
+        freezerItems,
+        recipes,
+        value: "recipe:deleted-recipe",
+      }),
+    ).toBe("Gammel gryte");
   });
 });
 

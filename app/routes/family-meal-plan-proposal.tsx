@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Form, Link, useNavigation, type MetaFunction } from "react-router";
 
 import { MealPlanRecipePicker } from "../components/meal-plan-recipe-picker";
+import { RecipePickerMedia } from "../components/recipe-picker-card";
 import { requireUser } from "../lib/auth.server";
 import { formatDateOnly } from "../lib/meal-plan-dates";
 import {
@@ -74,8 +75,11 @@ export async function loader({
         date,
         {
           freezerItemId: entry?.freezerItemId ?? "",
+          freezerLabel: entry?.freezerItem?.label ?? "",
           note: entry?.note ?? "",
           recipeId: entry?.recipeId ?? "",
+          recipeImageUrl: entry?.recipe?.imageUrl ?? null,
+          recipeTitle: entry?.recipe?.title ?? "",
           updatedAt: entry?.updatedAt.toISOString() ?? "",
         },
       ];
@@ -350,6 +354,23 @@ export default function FamilyMealPlanProposalRoute({
             const weekday = formatWeekdayLabel(date);
             const capitalizedWeekday =
               weekday.charAt(0).toUpperCase() + weekday.slice(1);
+            const entry = loaderData.entriesByDate[date];
+            const selection = displaySelections[date] ?? "";
+            const parsedSelection = parseMealSelection(selection);
+            const selectedRecipe = loaderData.recipes.find(
+              (recipe) => recipe.id === parsedSelection.recipeId,
+            );
+            const selectedFreezerItem = loaderData.freezerItems.find(
+              (item) => item.id === parsedSelection.freezerItemId,
+            );
+            const selectedLabel =
+              selectedRecipe?.title ||
+              selectedFreezerItem?.label ||
+              entry?.recipeTitle ||
+              entry?.freezerLabel ||
+              "";
+            const selectedImageUrl =
+              selectedRecipe?.imageUrl ?? entry?.recipeImageUrl ?? null;
 
             return (
               <section
@@ -364,6 +385,17 @@ export default function FamilyMealPlanProposalRoute({
                     {formatShortDateLabel(date)}
                   </p>
                 </div>
+                {selectedLabel ? (
+                  <div className="mt-3 flex min-w-0 items-center gap-3">
+                    <RecipePickerMedia
+                      imageUrl={selectedImageUrl}
+                      title={selectedLabel}
+                    />
+                    <p className="min-w-0 truncate text-base font-semibold text-slate-950">
+                      {selectedLabel}
+                    </p>
+                  </div>
+                ) : null}
                 <div className="mt-3">
                   <MealPlanRecipePicker
                     freezerItems={loaderData.freezerItems}
@@ -377,8 +409,9 @@ export default function FamilyMealPlanProposalRoute({
                     }}
                     recentlyUsedRecipeIds={recentlyUsedRecipeIds}
                     recipes={loaderData.recipes}
+                    selectedLabel={selectedLabel || undefined}
                     triggerLabel="Velg middag"
-                    value={displaySelections[date] ?? ""}
+                    value={selection}
                   />
                 </div>
                 <label className="mt-3 block text-sm font-medium text-slate-700">
