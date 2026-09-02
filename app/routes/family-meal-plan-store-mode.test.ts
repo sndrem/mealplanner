@@ -128,6 +128,7 @@ describe("family store mode route", () => {
         displayName: "Meieri",
         familyId: null,
         id: "category-dairy",
+        key: "dairy",
       },
     ]);
     vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([
@@ -275,6 +276,7 @@ describe("family store mode route", () => {
         displayName: "Meieri",
         familyId: null,
         id: "category-dairy",
+        key: "dairy",
       },
     ]);
     expect(result.shoppingHistory).toEqual([]);

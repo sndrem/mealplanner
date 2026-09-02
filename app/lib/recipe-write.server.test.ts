@@ -111,6 +111,7 @@ describe("recipe-write.server", () => {
         displayName: "Kjott og fisk",
         familyId: null,
         id: "category-meat",
+        key: "meat-fish",
       },
     ]);
     dbMock.store.findMany.mockResolvedValue([
@@ -179,6 +180,65 @@ describe("recipe-write.server", () => {
               displayName: "Kyllingfilet",
               sortOrder: 1,
             }),
+          ],
+        },
+      }),
+      select: {
+        id: true,
+        title: true,
+      },
+    });
+  });
+
+  it("creates a family recipe with ordered reminder suggestions", async () => {
+    dbMock.recipe.create.mockResolvedValue({
+      id: "recipe-1",
+      title: "Kyllingwok",
+    });
+
+    const result = await createFamilyRecipe({
+      familyId: "family-1",
+      userId: "user-1",
+      values: {
+        ...baseValues,
+        reminderSuggestions: [
+          {
+            note: "Ta ut kvelden før",
+            timingKind: "HOURS_BEFORE_16",
+            title: "Ta deigen ut av kjøleskapet",
+          },
+          {
+            note: "",
+            timingKind: "MORNING_OF",
+            title: "Sett ovnen på",
+          },
+        ],
+      },
+    });
+
+    expect(result).toEqual({
+      recipe: {
+        id: "recipe-1",
+        title: "Kyllingwok",
+      },
+      status: "CREATED",
+    });
+    expect(dbMock.recipe.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        reminderSuggestions: {
+          create: [
+            {
+              note: "Ta ut kvelden før",
+              sortOrder: 1,
+              timingKind: "HOURS_BEFORE_16",
+              title: "Ta deigen ut av kjøleskapet",
+            },
+            {
+              note: null,
+              sortOrder: 2,
+              timingKind: "MORNING_OF",
+              title: "Sett ovnen på",
+            },
           ],
         },
       }),

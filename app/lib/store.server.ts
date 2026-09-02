@@ -8,6 +8,7 @@ export const storeCategorySelect =
     displayName: true,
     familyId: true,
     id: true,
+    key: true,
   });
 
 export const managedStoreSectionSelect =

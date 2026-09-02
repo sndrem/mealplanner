@@ -62,7 +62,7 @@ describe("family recipes route", () => {
   it("loads family and global recipe lists", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
     vi.mocked(getRecipeManagementData).mockResolvedValue({
-      categories: [{ displayName: "Meieri", familyId: null, id: "category-dairy" }],
+      categories: [{ displayName: "Meieri", familyId: null, id: "category-dairy", key: "dairy" }],
       family: { id: "family-1", name: "Solberg" },
       familyRecipes: [
         {

@@ -237,6 +237,19 @@ export async function createFamilyRecipe({
         })),
       },
       prepMinutes: validation.parsed.prepMinutes,
+      reminderSuggestions:
+        validation.parsed.reminderSuggestions.length > 0
+          ? {
+              create: validation.parsed.reminderSuggestions.map(
+                (suggestion, index) => ({
+                  note: suggestion.note,
+                  sortOrder: index + 1,
+                  timingKind: suggestion.timingKind,
+                  title: suggestion.title,
+                }),
+              ),
+            }
+          : undefined,
       scope: RecipeScope.FAMILY,
       tags: validation.parsed.tags,
       title: validation.parsed.title,

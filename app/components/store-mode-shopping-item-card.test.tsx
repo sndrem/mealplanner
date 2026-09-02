@@ -50,7 +50,7 @@ describe("StoreModeShoppingItemCard", () => {
   it("shows quick-add when not read-only", () => {
     renderWithRouter(
       <StoreModeShoppingItemCard
-        categories={[{ displayName: "Meieri", familyId: null, id: "cat-dairy" }]}
+        categories={[{ displayName: "Meieri", familyId: null, id: "cat-dairy", key: "dairy" }]}
         item={familyItem}
         layout="grid"
         onToggle={vi.fn()}

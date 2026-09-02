@@ -5,6 +5,7 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
+import { upsertRecipeInputSchema } from "./mcp-recipe-schema";
 import {
   createMealPlanProposalForMcp,
   getCurrentWeekMealPlanForMcp,
@@ -12,8 +13,10 @@ import {
   getRecipeForMcp,
   getShoppingListForMcp,
   listFreezerItemsForMcp,
+  listIngredientCategoriesForMcp,
   listMealPlansForMcp,
   listRecipesForMcp,
+  upsertRecipeForMcp,
 } from "./mcp-tools.server";
 
 function requireMcpActor(authInfo: AuthInfo | undefined) {
@@ -75,7 +78,7 @@ export const mcpHttpHandler = createMcpHandler(
       "get_recipe",
       {
         description:
-          "Get one accessible recipe (family or global) including ingredients.",
+          "Get one accessible recipe (family or global) including ingredients, category keys, preferred stores, and reminder suggestions.",
         inputSchema: z.object({
           recipeId: z.string().min(1).describe("Recipe id"),
         }),
@@ -172,6 +175,22 @@ export const mcpHttpHandler = createMcpHandler(
     );
 
     server.registerTool(
+      "list_ingredient_categories",
+      {
+        description:
+          "List global ingredient categories (id, key, display name) for recipe ingredients.",
+        inputSchema: z.object({}),
+      },
+      async () => {
+        const data = await listIngredientCategoriesForMcp();
+        return jsonResult(
+          data,
+          `${data.categories.length} ingredient categories.`,
+        );
+      },
+    );
+
+    server.registerTool(
       "create_meal_plan_proposal",
       {
         description:
@@ -219,6 +238,37 @@ export const mcpHttpHandler = createMcpHandler(
         return jsonResult(
           data,
           `Proposal ${data.proposalId} ready for ${data.weekStart}–${data.weekEnd}.`,
+        );
+      },
+    );
+
+    server.registerTool(
+      "upsert_recipe",
+      {
+        description:
+          "Create a family recipe, or update one by recipeId. Omitted fields stay unchanged on update. tags, ingredients, and reminderSuggestions replace the stored list when sent. FAMILY recipes only; cover images stay in the web UI. Omit servings/prep on create to use the same defaults as the web form (2 servings, 45 minutes).",
+        inputSchema: upsertRecipeInputSchema,
+      },
+      async (input) => {
+        const origin = requireMcpOrigin(authInfo);
+        const data = await upsertRecipeForMcp({
+          ...actor,
+          ...input,
+          origin,
+        });
+
+        if (data.status === "VALIDATION_ERROR" || data.status === "NOT_FOUND") {
+          return {
+            content: [{ text: data.formError, type: "text" as const }],
+            isError: true,
+          };
+        }
+
+        return jsonResult(
+          data,
+          data.status === "CREATED"
+            ? `Created recipe ${data.recipe.title}.`
+            : `Updated recipe ${data.recipe.title}.`,
         );
       },
     );

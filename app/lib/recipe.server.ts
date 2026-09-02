@@ -12,6 +12,7 @@ export const recipeIngredientSelect =
       select: {
         displayName: true,
         id: true,
+        key: true,
       },
     },
     categoryId: true,
