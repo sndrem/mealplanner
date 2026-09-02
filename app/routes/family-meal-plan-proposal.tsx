@@ -58,7 +58,10 @@ export async function loader({
 
   if (data.mealPlan.status === "DRAFT") {
     throw Response.redirect(
-      new URL(`/families/${familyId}/meal-plans/${mealPlanId}`, request.url).toString(),
+      new URL(
+        `/families/${familyId}/meal-plans/${mealPlanId}`,
+        request.url,
+      ).toString(),
       302,
     );
   }
@@ -219,10 +222,12 @@ export default function FamilyMealPlanProposalRoute({
     Object.fromEntries(
       loaderData.visibleDates.map((date) => [
         date,
-        encodeMealSelection(loaderData.entriesByDate[date] ?? {
-          freezerItemId: "",
-          recipeId: "",
-        }),
+        encodeMealSelection(
+          loaderData.entriesByDate[date] ?? {
+            freezerItemId: "",
+            recipeId: "",
+          },
+        ),
       ]),
     ),
   );
@@ -249,7 +254,12 @@ export default function FamilyMealPlanProposalRoute({
         }),
       ),
     };
-  }, [isPending, loaderData.visibleDates, mealSelectionsByDate, navigation.formData]);
+  }, [
+    isPending,
+    loaderData.visibleDates,
+    mealSelectionsByDate,
+    navigation.formData,
+  ]);
   const displayNotes = useMemo(() => {
     if (!isPending) {
       return notesByDate;
@@ -328,7 +338,12 @@ export default function FamilyMealPlanProposalRoute({
 
         <Form className="flex flex-col gap-4" method="post">
           {loaderData.visibleDates.map((date) => (
-            <input key={`entryDate:${date}`} name="entryDate" type="hidden" value={date} />
+            <input
+              key={`entryDate:${date}`}
+              name="entryDate"
+              type="hidden"
+              value={date}
+            />
           ))}
           {loaderData.visibleDates.map((date) => (
             <input
