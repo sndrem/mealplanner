@@ -2,34 +2,34 @@
 
 ## Current Objective
 
-Ship MCP family recipe upsert for [#246](https://github.com/sndrem/mealplanner/issues/246) on `issue/246-mcp-upsert-recipe`.
+Ship unused dinner statistics removal for [#250](https://github.com/sndrem/mealplanner/issues/250) on `issue/250-remove-dinner-statistics`.
 
 ## Completed
 
-- `upsert_recipe` MCP tool creates or partially updates family recipes with Zod validation
-- `list_ingredient_categories` plus richer `get_recipe` (category key/id, store, reminders)
-- `createFamilyRecipe` persists reminder suggestions
-- Docs in `docs/mcp.md`
+- Unregistered `families/:familyId/meal-plans/overview` and deleted the overview route plus its loader tests
+- Removed **Middagstats** from desktop nav and **Stats** from mobile bottom nav; top-nav tests assert the stats link is gone
+- Deleted dinner analytics types, helpers, constants, and matching `meal-plan.server` tests; `getRecentlyUsedRecipeIds` remains
 
 ## Files To Read First
 
-- `app/lib/mcp-recipe-schema.ts` — Zod input contract
-- `app/lib/mcp-tools.server.ts` — resolve, merge, upsert
-- `app/lib/mcp-handler.server.ts` — tool registration
+- `app/routes.ts` — overview route no longer registered
+- `app/components/app-top-nav.tsx` — family desktop nav without stats
+- `app/components/app-mobile-bottom-nav.tsx` — mobile nav is Familie / Ukeplaner / Handleliste
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 649 tests passed
+- `npm run test:run` — 645 tests passed
 - `npm run typecheck` — passed
-- MCP Inspector / live `/mcp` — not run
+- Unauthenticated curl of `/families/family-1/meal-plans/overview` — 302 to login; not the old Middagstatistikk page
+- Logged-in browser pass (desktop/mobile nav + 404) — not run; no browser tools in this session
 
 ## Open Items
 
-- After merge: smoke-test `upsert_recipe` against local or production `/mcp`
-- Cover images remain web-only
+- `/families/:familyId/meal-plans/overview` may match `:mealPlanId` as `"overview"` and 404 from the meal-plan loader rather than as an unmatched route; still not a stats page
+- After merge: GitHub will close #250 via `Closes #250` on the PR
 
 ## Next Step
 
-Merge the PR for #246 after CI.
+Merge the PR after CI is green.

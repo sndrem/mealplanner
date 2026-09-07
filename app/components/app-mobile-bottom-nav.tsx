@@ -15,11 +15,6 @@ function buildFamilyBottomNavItems(familyId: string): MobileBottomNavItem[] {
       to: `/families/${familyId}/meal-plans`,
     },
     {
-      end: true,
-      label: "Stats",
-      to: `/families/${familyId}/meal-plans/overview`,
-    },
-    {
       label: "Handleliste",
       to: `/families/${familyId}/store-mode`,
     },

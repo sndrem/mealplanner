@@ -20,6 +20,9 @@ describe("AppTopNav", () => {
       "href",
       "/families/family-1/meal-plans",
     );
+    expect(
+      screen.queryByRole("link", { name: "Middagstats" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Gjennomgang" })).toHaveAttribute(
       "href",
       "/families/family-1/meal-plans/reviews",

@@ -19,7 +19,6 @@ import {
   validateFreezerStockDelta,
 } from "./freezer-stock.server";
 import { listActiveFreezerItemsForPlanning } from "./freezer.server";
-import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import { formatDateOnly, MEAL_PLAN_MAX_SPAN_DAYS, getMealPlanMaxSpanMessage } from "./meal-plan-dates";
 import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
 import {
@@ -212,7 +211,6 @@ type MealPlanPlanningInput = GetMealPlanInput;
 type AutoFillMealPlanEntriesInput = DeleteMealPlanInput;
 
 type MealPlanApprovalAction = "APPROVE" | "REOPEN";
-export type DinnerAnalyticsTimeframe = "30d" | "90d" | "all";
 
 export type MealPlanProposalDinnerInput = {
   date: string;
@@ -229,23 +227,6 @@ export type MealPlanProposalDinner = {
   recipeId: string | null;
   title: string | null;
 };
-
-export interface DinnerIngredientUsageStat {
-  count: number;
-  ingredientName: string;
-}
-
-export interface DinnerRecipeUsageStat {
-  count: number;
-  recipeId: string;
-  recipeTitle: string;
-}
-
-export interface DinnerLatestRecipeUsageStat {
-  date: Date;
-  recipeId: string;
-  recipeTitle: string;
-}
 
 const AUTO_FILL_NOT_DRAFT_MESSAGE =
   "Godkjente ukeplaner kan ikke fylles automatisk.";
@@ -265,9 +246,6 @@ const AUTO_FILL_NO_ELIGIBLE_RECIPES_MESSAGE =
   `Ingen tilgjengelige oppskrifter etter a ha utelatt middager fra de siste ${MEAL_PLAN_MAX_SPAN_DAYS} dagene.`;
 const AUTO_FILL_REPEAT_WARNING_MESSAGE =
   "Noen middager ble valgt flere ganger fordi det var for fa oppskrifter igjen.";
-const ANALYTICS_TOP_INGREDIENT_LIMIT = 20;
-const ANALYTICS_TOP_RECIPE_LIMIT = 20;
-const ANALYTICS_LATEST_RECIPE_LIMIT = 15;
 
 export function getMealPlanDateRange(startDate: Date, endDate: Date) {
   let currentDate = new Date(startDate.getTime());
@@ -1385,129 +1363,6 @@ export async function deleteMealPlan({
   };
 }
 
-export async function getDinnerAnalyticsForFamily({
-  familyId,
-  timeframe,
-  userId,
-}: {
-  familyId: string;
-  timeframe: DinnerAnalyticsTimeframe;
-  userId: string;
-}) {
-  const membership = await requireFamilyMembership({
-    familyId,
-    userId,
-  });
-  const startDate = getDinnerAnalyticsStartDate(timeframe, new Date());
-  const dinnerEntries = await db.mealPlanEntry.findMany({
-    orderBy: [{ date: "desc" }, { id: "desc" }],
-    select: {
-      date: true,
-      id: true,
-      recipe: {
-        select: {
-          id: true,
-          ingredients: {
-            orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-            select: {
-              displayName: true,
-            },
-          },
-          title: true,
-        },
-      },
-      recipeId: true,
-    },
-    where: {
-      ...(startDate ? { date: { gte: startDate } } : {}),
-      mealPlan: {
-        familyId,
-      },
-      mealType: PLANNING_MEAL_TYPE,
-      recipeId: {
-        not: null,
-      },
-    },
-  });
-  const recipeUsageById = new Map<string, DinnerRecipeUsageStat>();
-  const ingredientUsageByCanonicalName = new Map<
-    string,
-    DinnerIngredientUsageStat
-  >();
-
-  for (const entry of dinnerEntries) {
-    if (!entry.recipe) {
-      continue;
-    }
-
-    const existingRecipeUsage = recipeUsageById.get(entry.recipe.id);
-    recipeUsageById.set(entry.recipe.id, {
-      count: (existingRecipeUsage?.count ?? 0) + 1,
-      recipeId: entry.recipe.id,
-      recipeTitle: entry.recipe.title,
-    });
-
-    for (const ingredient of entry.recipe.ingredients) {
-      const ingredientName = ingredient.displayName.trim();
-
-      if (!ingredientName) {
-        continue;
-      }
-
-      const canonicalName = normalizeIngredientCanonicalName(ingredientName);
-      const existingIngredientUsage =
-        ingredientUsageByCanonicalName.get(canonicalName);
-
-      ingredientUsageByCanonicalName.set(canonicalName, {
-        count: (existingIngredientUsage?.count ?? 0) + 1,
-        ingredientName: existingIngredientUsage?.ingredientName ?? ingredientName,
-      });
-    }
-  }
-
-  return {
-    family: {
-      id: membership.family.id,
-      name: membership.family.name,
-    },
-    latestRecipesUsed: dinnerEntries
-      .flatMap((entry) => {
-        if (!entry.recipe) {
-          return [];
-        }
-
-        return [
-          {
-            date: entry.date,
-            recipeId: entry.recipe.id,
-            recipeTitle: entry.recipe.title,
-          },
-        ];
-      })
-      .slice(0, ANALYTICS_LATEST_RECIPE_LIMIT),
-    mostUsedIngredients: [...ingredientUsageByCanonicalName.values()]
-      .sort((left, right) => {
-        if (right.count !== left.count) {
-          return right.count - left.count;
-        }
-
-        return left.ingredientName.localeCompare(right.ingredientName, "nb");
-      })
-      .slice(0, ANALYTICS_TOP_INGREDIENT_LIMIT),
-    mostUsedRecipes: [...recipeUsageById.values()]
-      .sort((left, right) => {
-        if (right.count !== left.count) {
-          return right.count - left.count;
-        }
-
-        return left.recipeTitle.localeCompare(right.recipeTitle, "nb");
-      })
-      .slice(0, ANALYTICS_TOP_RECIPE_LIMIT),
-    timeframe,
-    timeframeStartDate: startDate,
-  };
-}
-
 export async function getRecentlyUsedRecipeIds({
   beforeDate,
   currentMealPlanId,
@@ -2424,20 +2279,6 @@ function validateMealPlanEntries(
   }
 
   return null;
-}
-
-function getDinnerAnalyticsStartDate(
-  timeframe: DinnerAnalyticsTimeframe,
-  now: Date,
-) {
-  switch (timeframe) {
-    case "30d":
-      return addUtcDays(now, -30);
-    case "90d":
-      return addUtcDays(now, -90);
-    case "all":
-      return null;
-  }
 }
 
 export function parseDateOnly(value: string) {
