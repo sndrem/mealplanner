@@ -25,6 +25,7 @@ vi.mock("./family.server", () => {
 
 import {
   createCalendarFile,
+  createMealPlanCalendarEvent,
   getMealPlanCalendarExport,
   getMealPlanDayCalendarExport,
 } from "./calendar.server";
@@ -115,6 +116,62 @@ describe("calendar.server", () => {
     expectIcsLinesHaveNoBareCarriageReturns(content);
   });
 
+  it("builds a description with ingredients above the original recipe text", () => {
+    const event = createMealPlanCalendarEvent({
+      date: "2026-05-15",
+      description: "Steg 1\nSteg 2",
+      ingredients: [
+        { amount: "400", displayName: "kyllingfilet", unit: "g" },
+        { amount: "2", displayName: "løk", unit: "stk" },
+        { amount: null, displayName: "salt", unit: null },
+      ],
+      mealPlanId: "meal-plan-1",
+      mealPlanTitle: "Langhelg",
+      title: "Taco fredag",
+    });
+
+    expect(event.description).toBe(
+      [
+        "Planlagt for fredag 15. mai 2026 i Langhelg.",
+        "",
+        "Ingredienser:",
+        "- 400 g kyllingfilet",
+        "- 2 stk løk",
+        "- salt",
+        "",
+        "Beskrivelse:",
+        "Steg 1",
+        "Steg 2",
+      ].join("\n"),
+    );
+    expect(event.title).toBe("Middag: Taco fredag");
+    expect(event.uid).toBe("meal-plan-1-2026-05-15@mealplanner");
+  });
+
+  it("omits the ingredients section when none are present and keeps empty-description fallback", () => {
+    const withoutIngredients = createMealPlanCalendarEvent({
+      date: "2026-05-15",
+      description: "Rask middag.",
+      mealPlanId: "meal-plan-1",
+      mealPlanTitle: "Langhelg",
+      title: "Taco",
+    });
+    const emptyDescription = createMealPlanCalendarEvent({
+      date: "2026-05-15",
+      description: "  ",
+      ingredients: [{ amount: "1", displayName: "løk", unit: "stk" }],
+      mealPlanId: "meal-plan-1",
+      mealPlanTitle: "Langhelg",
+      title: "Taco",
+    });
+
+    expect(withoutIngredients.description).toBe(
+      "Planlagt for fredag 15. mai 2026 i Langhelg.\n\nRask middag.",
+    );
+    expect(withoutIngredients.description).not.toContain("Ingredienser:");
+    expect(emptyDescription.description).toContain("Beskrivelse:\nIngen beskrivelse.");
+  });
+
   it("escapes CRLF and CR recipe descriptions without breaking ICS line endings", () => {
     const content = createCalendarFile("Mealplanner - Uke 35", [
       {
@@ -152,6 +209,11 @@ describe("calendar.server", () => {
           freezerItemId: null,
           recipe: {
             description: "Steg 1\r\nSteg 2",
+            ingredients: [
+              { amount: "400", displayName: "kyllingfilet", unit: "g" },
+              { amount: "2", displayName: "løk", unit: "stk" },
+              { amount: null, displayName: "salt", unit: null },
+            ],
             title: "Taco fredag",
           },
           recipeId: "recipe-1",
@@ -197,6 +259,10 @@ describe("calendar.server", () => {
     expect(result.content).toContain("SUMMARY:Middag: Taco fredag");
     expect(result.content).toContain("SUMMARY:Middag: Chili fra fryseren");
     expect(result.content).toContain("Tina i micro");
+    expect(result.content).not.toContain("Ingredienser:\\n- 400 g kyllingfilet\\n- 2 stk løk\\n- salt\\n\\nBeskrivelse:\\nTina i micro");
+    expect(result.content).toContain(
+      "DESCRIPTION:Planlagt for fredag 15. mai 2026 i Langhelg.\\n\\nIngredienser:\\n- 400 g kyllingfilet\\n- 2 stk løk\\n- salt\\n\\nBeskrivelse:\\nSteg 1\\nSteg 2",
+    );
     expect(result.content).toContain("Steg 1\\nSteg 2");
     expectIcsLinesHaveNoBareCarriageReturns(result.content);
   });
@@ -211,6 +277,7 @@ describe("calendar.server", () => {
           freezerItemId: null,
           recipe: {
             description: "Rask middagsfavoritt.",
+            ingredients: [],
             title: "Kyllingtaco",
           },
           recipeId: "recipe-1",
