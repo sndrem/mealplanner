@@ -7,6 +7,7 @@ import {
   useFetcher,
   useNavigation,
   useRevalidator,
+  redirect,
   type MetaFunction,
 } from "react-router";
 
@@ -2075,20 +2076,17 @@ function buildShoppingRedirect({
   familyId,
   mealPlanId,
   notice,
-  request,
 }: {
   familyId: string;
   mealPlanId: string;
   notice: ShoppingNotice;
   request: Request;
 }) {
-  const url = new URL(
-    `/families/${familyId}/meal-plans/${mealPlanId}/shopping`,
-    request.url,
-  );
-  url.searchParams.set("notice", notice);
+  const params = new URLSearchParams({ notice });
 
-  return Response.redirect(url, 302);
+  return redirect(
+    `/families/${familyId}/meal-plans/${mealPlanId}/shopping?${params}`,
+  );
 }
 
 function getShoppingNoticeContent(notice: ShoppingNotice) {

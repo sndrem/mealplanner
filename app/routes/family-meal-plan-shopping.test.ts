@@ -763,7 +763,7 @@ describe("family meal plan shopping route", () => {
     const response = result as Response;
     expect(response.status).toBe(302);
     expect(response.headers.get("Location")).toBe(
-      "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping?notice=shopping-item-check-state-updated",
+      "/families/family-1/meal-plans/meal-plan-1/shopping?notice=shopping-item-check-state-updated",
     );
   });
 
@@ -844,7 +844,7 @@ describe("family meal plan shopping route", () => {
     });
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).headers.get("Location")).toBe(
-      "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping?notice=shopping-grocery-grouping-updated",
+      "/families/family-1/meal-plans/meal-plan-1/shopping?notice=shopping-grocery-grouping-updated",
     );
   });
 

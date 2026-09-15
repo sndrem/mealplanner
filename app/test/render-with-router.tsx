@@ -1,6 +1,6 @@
 import { render, type RenderOptions } from "@testing-library/react";
-import type { ReactElement, ReactNode } from "react";
-import { MemoryRouter } from "react-router";
+import type { ReactElement } from "react";
+import { createMemoryRouter, RouterProvider } from "react-router";
 
 interface RenderWithRouterOptions extends Omit<RenderOptions, "wrapper"> {
   initialEntries?: string[];
@@ -10,12 +10,15 @@ export function renderWithRouter(
   ui: ReactElement,
   { initialEntries = ["/"], ...options }: RenderWithRouterOptions = {},
 ) {
-  function Wrapper({ children }: { children: ReactNode }) {
-    return <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>;
-  }
+  const router = createMemoryRouter(
+    [
+      {
+        path: "*",
+        element: ui,
+      },
+    ],
+    { initialEntries },
+  );
 
-  return render(ui, {
-    wrapper: Wrapper,
-    ...options,
-  });
+  return render(<RouterProvider router={router} />, options);
 }

@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Form, Link } from "react-router";
 
 import { AuthScreen, authInputClassName, authSubmitButtonClassName } from "./auth-screen";
 
@@ -40,7 +40,7 @@ export function AuthForm({ actionData, description, isSubmitting, mode, redirect
       description={description}
       heading={heading}
     >
-      <form className="mt-8 space-y-5" method="post">
+      <Form className="mt-8 space-y-5" method="post">
         <input name="redirectTo" type="hidden" value={redirectTo} />
 
         {isRegisterMode ? (
@@ -105,7 +105,7 @@ export function AuthForm({ actionData, description, isSubmitting, mode, redirect
         <button className={authSubmitButtonClassName} disabled={isSubmitting} type="submit">
           {isSubmitting ? "Jobber..." : submitLabel}
         </button>
-      </form>
+      </Form>
     </AuthScreen>
   );
 }

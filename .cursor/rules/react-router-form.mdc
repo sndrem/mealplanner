@@ -1,0 +1,42 @@
+---
+description: Use React Router Form for POST mutations; keep action redirects relative
+alwaysApply: true
+---
+
+# React Router Form and HTTPS redirects
+
+Fly terminates TLS at the proxy. Node still sees `request.url` as `http://`. A native `<form method="post">` does a full document POST; if the action then 302s to that `http://` URL, Chrome shows **“The information you’re about to submit is not secure.”**
+
+## Forms
+
+Use React Router `<Form>` (or `useFetcher` / `useSubmit`) for every POST/PATCH/DELETE mutation. Never use a native `<form method="post">`.
+
+```tsx
+// ❌ BAD — document POST; Chrome warns on HTTPS behind Fly
+<form method="post">
+  <button type="submit">Samme vare</button>
+</form>
+
+// ✅ GOOD — client navigation stays on the HTTPS origin
+import { Form } from "react-router";
+
+<Form method="post">
+  <button type="submit">Samme vare</button>
+</Form>
+```
+
+GET search forms may use native `<form method="get">`.
+
+## Redirects after actions
+
+Return a **relative** `Location` with `redirect()` from `react-router`. Do not build an absolute URL from `request.url`.
+
+```ts
+// ❌ BAD — Location: http://… behind Fly TLS
+return Response.redirect(new URL(`/families/${familyId}/store-mode`, request.url), 302);
+
+// ✅ GOOD — browser resolves against the HTTPS page
+import { redirect } from "react-router";
+
+return redirect(`/families/${familyId}/store-mode?${new URLSearchParams({ notice })}`);
+```

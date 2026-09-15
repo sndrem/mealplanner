@@ -16,6 +16,7 @@ alwaysApply: true
 - Reuse existing primitives and patterns before introducing new wrappers, variants, or utilities.
 - In Tailwind, prefer readable utility composition and shared patterns over long repeated class strings.
 - Match existing project conventions and keep changes minimal.
+- POST mutations must use React Router `<Form>` (or `useFetcher` / `useSubmit`), never a native `<form method="post">`. Action redirects must be relative via `redirect()` — never `new URL(path, request.url)`. See `.cursor/rules/react-router-form.mdc`.
 - Client form submissions must update visible data immediately (optimistic). Pending-only `"Lagrer..."` is not enough; follow `.cursor/rules/optimistic-form-updates.mdc`.
 - Text inputs (`input`, `textarea`, searchable fields) must use `text-base` (16px) or larger — never `text-sm`/`text-xs` — to prevent iOS Safari focus zoom. See `.cursor/rules/ios-input-font-size.mdc`.
 

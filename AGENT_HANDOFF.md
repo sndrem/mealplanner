@@ -2,22 +2,22 @@
 
 ## Current Objective
 
-Ship grocery grouping toggle for [#256](https://github.com/sndrem/mealplanner/issues/256) on `issue/256-grocery-grouping-toggle`. Branch is ready to push and open a PR with `Closes #256`.
+Stop Chrome’s HTTPS mixed-form warning on grocery grouping (and other POSTs) by using React Router `Form` plus relative action redirects. Branch `fix/react-router-form-https` was cut from current `origin/main` after `git pull --ff-only` (PR #257 already merged).
 
 ## Completed
 
-- Per-user `groceryGrouping` (`GROUPED` | `SPLIT`, default **GROUPED** / Samme vare) on `UserFamilyShoppingPreference`
-- Display-layer grouping within a meal plan by category + normalized name; stored `sourceKey`s unchanged
-- Grouped store-mode / shopping-list cards show recipe measurement lines; one tap checks every member
-- Trip-focus ALL still shows the same grocery once per week
-- Share snapshots use grouped due items when GROUPED is on
-- Toggle order: Samme vare first, Hver mengde second
+- Grocery grouping toggle uses React Router `Form` instead of a native document POST
+- Store-mode and meal-plan shopping notice redirects use relative `Location` via `redirect()`
+- Auth login/register/forgot/reset POSTs also use `Form`
+- Always-on Cursor rule `.cursor/rules/react-router-form.mdc` (plus pointer in `frontend-standards.mdc`)
+- `renderWithRouter` now uses a data router so `<Form>` tests work
 
 ## Files To Read First
 
-- `app/lib/shopping-grocery-grouping.ts` — group key, fold, `isGroupedShoppingItem`
-- `app/lib/shopping.server.ts` — applies grouping after projection; progress counts grouped cards
-- `app/lib/use-store-mode-toggle-sync.ts` — grouped tap enqueues one op per member
+- `.cursor/rules/react-router-form.mdc` — Form + relative redirect convention
+- `app/components/shopping-grocery-grouping-toggle.tsx` — grouping POST
+- `app/routes/family-meal-plan-store-mode.tsx` — `buildFamilyStoreModeRedirect`
+- `app/test/render-with-router.tsx` — test helper for `<Form>`
 
 ## Validation
 
@@ -25,14 +25,13 @@ Ship grocery grouping toggle for [#256](https://github.com/sndrem/mealplanner/is
 - `npm run lint` — passed
 - `npm run test:run` — 674 tests passed
 - `npm run typecheck` — passed
-- Browser / in-store tap of garlic from three recipes — not run
+- Live HTTPS toggle — not re-checked on a deploy
 
 ## Open Items
 
-- Apply Prisma migration `20260915140000_add_shopping_grocery_grouping` on local/prod DBs
-- Confirm on a real shopping trip: mixed-unit garlic in one week is one card; two weeks stay two cards
-- Quantity edit is hidden on grouped cards (overrides stay on split member rows)
+- Other routes still build absolute redirects from `request.url` (`family-shopping.tsx`, `app.tsx`, etc.); they are safe if they already use RR `Form`, but should be converted if touched
+- Confirm the grouping toggle on the deployed HTTPS URL after merge
 
 ## Next Step
 
-Push the branch, open a PR with `Closes #256`, and merge after CI is green.
+Merge the PR after CI is green, then confirm the grouping toggle on the deployed HTTPS URL.

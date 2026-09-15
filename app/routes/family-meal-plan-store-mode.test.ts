@@ -1231,7 +1231,7 @@ describe("family store mode route", () => {
     });
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).headers.get("Location")).toBe(
-      "http://localhost/families/family-1/store-mode?notice=selected-store-updated",
+      "/families/family-1/store-mode?notice=selected-store-updated",
     );
     expect(toggleShoppingItemChecked).not.toHaveBeenCalled();
   });
@@ -1265,7 +1265,7 @@ describe("family store mode route", () => {
     });
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).headers.get("Location")).toBe(
-      "http://localhost/families/family-1/store-mode?notice=store-mode-trip-focus-updated",
+      "/families/family-1/store-mode?notice=store-mode-trip-focus-updated",
     );
   });
 
@@ -1298,7 +1298,7 @@ describe("family store mode route", () => {
     });
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).headers.get("Location")).toBe(
-      "http://localhost/families/family-1/store-mode?notice=shopping-grocery-grouping-updated",
+      "/families/family-1/store-mode?notice=shopping-grocery-grouping-updated",
     );
   });
 });
