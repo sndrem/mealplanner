@@ -35,6 +35,8 @@ const STORE_MODE_QUEUE_KEY_PREFIX = "mealplanner:store-mode-queue:v1";
 const STORE_MODE_VIEW_KEY_PREFIX = "mealplanner:store-mode-view:v1";
 const STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX =
   "mealplanner:store-mode-deprioritize-bought:v1";
+const STORE_MODE_STOCK_REMINDER_DISMISSED_KEY_PREFIX =
+  "mealplanner:store-mode-stock-reminder-dismissed:v1";
 
 export function buildStoreModeViewStorageKey({
   familyId,
@@ -119,6 +121,43 @@ export function writeStoreModeDeprioritizeBought(
 
   try {
     window.localStorage.setItem(storageKey, enabled ? "true" : "false");
+  } catch {
+    // Private mode or quota exceeded — in-session state still works.
+  }
+}
+
+export function buildStoreModeStockReminderDismissedStorageKey({
+  familyId,
+  mealPlanId,
+}: {
+  familyId: string;
+  mealPlanId: string;
+}) {
+  return `${STORE_MODE_STOCK_REMINDER_DISMISSED_KEY_PREFIX}:${familyId}:${mealPlanId}`;
+}
+
+export function readStoreModeStockReminderDismissed(storageKey: string): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    return window.localStorage.getItem(storageKey) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function writeStoreModeStockReminderDismissed(
+  storageKey: string,
+  dismissed: boolean,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(storageKey, dismissed ? "true" : "false");
   } catch {
     // Private mode or quota exceeded — in-session state still works.
   }

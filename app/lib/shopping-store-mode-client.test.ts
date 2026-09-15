@@ -8,12 +8,14 @@ import {
   areToggleQueuesEqual,
   buildStoreModeDeprioritizeBoughtStorageKey,
   buildStoreModeQueueStorageKey,
+  buildStoreModeStockReminderDismissedStorageKey,
   buildStoreModeViewStorageKey,
   computeStoreModeProgress,
   getToggleExpectedVersion,
   partitionStoreModeSections,
   readStoreModeDeprioritizeBought,
   readStoreModeShoppingView,
+  readStoreModeStockReminderDismissed,
   readStoreModeToggleQueue,
   reconcileToggleQueue,
   removeToggleOp,
@@ -21,6 +23,7 @@ import {
   upsertToggleOp,
   writeStoreModeDeprioritizeBought,
   writeStoreModeShoppingView,
+  writeStoreModeStockReminderDismissed,
   writeStoreModeToggleQueue,
 } from "./shopping-store-mode-client";
 
@@ -431,6 +434,71 @@ describe("shopping-store-mode-client", () => {
     window.localStorage.setItem(storageKey, "yes");
 
     expect(readStoreModeDeprioritizeBought(storageKey)).toBe(true);
+  });
+
+  it("builds isolated stock-reminder dismiss keys per family and meal plan", () => {
+    expect(
+      buildStoreModeStockReminderDismissedStorageKey({
+        familyId: "family-1",
+        mealPlanId: "plan-1",
+      }),
+    ).not.toBe(
+      buildStoreModeStockReminderDismissedStorageKey({
+        familyId: "family-2",
+        mealPlanId: "plan-1",
+      }),
+    );
+    expect(
+      buildStoreModeStockReminderDismissedStorageKey({
+        familyId: "family-1",
+        mealPlanId: "plan-1",
+      }),
+    ).not.toBe(
+      buildStoreModeStockReminderDismissedStorageKey({
+        familyId: "family-1",
+        mealPlanId: "plan-2",
+      }),
+    );
+  });
+
+  it("defaults stock-reminder dismiss to false", () => {
+    const reminderStorageKey = buildStoreModeStockReminderDismissedStorageKey({
+      familyId: "family-1",
+      mealPlanId: "plan-1",
+    });
+
+    expect(readStoreModeStockReminderDismissed(reminderStorageKey)).toBe(false);
+  });
+
+  it("persists and reads stock-reminder dismiss per meal plan", () => {
+    const planOneKey = buildStoreModeStockReminderDismissedStorageKey({
+      familyId: "family-1",
+      mealPlanId: "plan-1",
+    });
+    const planTwoKey = buildStoreModeStockReminderDismissedStorageKey({
+      familyId: "family-1",
+      mealPlanId: "plan-2",
+    });
+
+    writeStoreModeStockReminderDismissed(planOneKey, true);
+
+    expect(readStoreModeStockReminderDismissed(planOneKey)).toBe(true);
+    expect(readStoreModeStockReminderDismissed(planTwoKey)).toBe(false);
+
+    writeStoreModeStockReminderDismissed(planOneKey, false);
+
+    expect(readStoreModeStockReminderDismissed(planOneKey)).toBe(false);
+  });
+
+  it("falls back to false for invalid stored stock-reminder dismiss values", () => {
+    const reminderStorageKey = buildStoreModeStockReminderDismissedStorageKey({
+      familyId: "family-1",
+      mealPlanId: "plan-1",
+    });
+
+    window.localStorage.setItem(reminderStorageKey, "yes");
+
+    expect(readStoreModeStockReminderDismissed(reminderStorageKey)).toBe(false);
   });
 
   it("sorts store-mode items alphabetically by name", () => {
