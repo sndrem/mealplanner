@@ -705,7 +705,7 @@ export default function FamilyMealPlanRoute({
   };
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-slate-100 px-4 py-6 text-slate-900 md:py-12">
+    <main className="min-h-screen overflow-x-hidden bg-page px-4 py-6 text-ink md:py-12">
       <iframe
         aria-hidden="true"
         className="hidden"
@@ -835,21 +835,21 @@ export default function FamilyMealPlanRoute({
         ) : null}
 
         <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <article className="min-w-0 w-full rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
+          <article className="min-w-0 w-full rounded-[28px] bg-surface p-4 shadow-sm ring-1 ring-line sm:p-6">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Ukeoversikt
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Trykk på en dag for å velge oppskrift eller legge til notat.
               </p>
             </div>
 
             <details className="group mt-2 min-w-0">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-2xl border border-line bg-page px-4 py-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-950">Fryser</p>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm font-medium text-ink">Fryser</p>
+                  <p className="text-sm text-muted">
                     {formatFreezerStockCount(loaderData.freezerItems)}
                   </p>
                 </div>
@@ -863,21 +863,21 @@ export default function FamilyMealPlanRoute({
                 </div>
               </summary>
 
-              <div className="mt-3 min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="mt-3 min-w-0 rounded-2xl border border-line bg-page p-4">
                 {loaderData.freezerItems.length > 0 ? (
                   <ul className="grid gap-2">
                     {loaderData.freezerItems.map((item) => (
                       <li
                         key={item.id}
-                        className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200"
+                        className="rounded-2xl bg-surface px-4 py-3 ring-1 ring-line"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="font-medium text-slate-950">
+                            <p className="font-medium text-ink">
                               {item.label}
                             </p>
                             {item.note ? (
-                              <p className="mt-1 text-sm leading-6 text-slate-600">
+                              <p className="mt-1 text-sm leading-6 text-muted">
                                 {item.note}
                               </p>
                             ) : null}
@@ -890,12 +890,12 @@ export default function FamilyMealPlanRoute({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm leading-6 text-slate-600">
+                  <p className="text-sm leading-6 text-muted">
                     Ingen fryserretter er registrert ennå.
                   </p>
                 )}
                 <Link
-                  className="mt-4 inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+                  className="mt-4 inline-flex rounded-2xl bg-surface px-4 py-2 text-sm font-medium text-muted ring-1 ring-line transition hover:bg-page"
                   to={`/families/${loaderData.family.id}/freezer`}
                 >
                   Administrer fryser
@@ -941,7 +941,7 @@ export default function FamilyMealPlanRoute({
                 type="hidden"
                 value="auto-fill-meal-plan-entries"
               />
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Fyll tomme dager med tilfeldige oppskrifter. Oppskrifter fra de
                 to forrige ukeplanene utelates.
               </p>
@@ -954,7 +954,7 @@ export default function FamilyMealPlanRoute({
               ) : null}
 
               <button
-                className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                className="inline-flex w-full items-center justify-center rounded-2xl border border-line bg-surface px-5 py-3 text-sm font-medium text-ink transition hover:bg-page disabled:cursor-not-allowed disabled:bg-page disabled:text-muted"
                 disabled={
                   !canAutoFillEntries ||
                   isAutoFillingEntries ||
@@ -972,7 +972,7 @@ export default function FamilyMealPlanRoute({
 
             {canManageRecipes ? (
               <Link
-                className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-50"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-line bg-surface px-5 py-3 text-sm font-medium text-ink transition hover:bg-page"
                 to={buildCreateRecipeHref(
                   loaderData.family.id,
                   loaderData.mealPlan.id,
@@ -983,14 +983,14 @@ export default function FamilyMealPlanRoute({
             ) : null}
           </article>
 
-          <article className="min-w-0 w-full rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
+          <article className="min-w-0 w-full rounded-[28px] bg-surface p-4 shadow-sm ring-1 ring-line sm:p-6">
             <details className="group min-w-0 lg:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-lg font-semibold text-slate-950">
+                  <h2 className="text-lg font-semibold text-ink">
                     Oppskriftsbank
                   </h2>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-muted">
                     {formatRecipeCount(loaderData.recipes.length)}
                   </p>
                 </div>
@@ -1004,7 +1004,7 @@ export default function FamilyMealPlanRoute({
                 </div>
               </summary>
 
-              <div className="mt-4 min-w-0 border-t border-slate-200 pt-4">
+              <div className="mt-4 min-w-0 border-t border-line pt-4">
                 <RecipeBankContent
                   activeAssignDate={activeAssignDate}
                   familyId={loaderData.family.id}
@@ -1017,7 +1017,7 @@ export default function FamilyMealPlanRoute({
             </details>
 
             <div className="hidden min-w-0 lg:block">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Oppskriftsbank
               </h2>
               <RecipeBankContent
@@ -1033,12 +1033,12 @@ export default function FamilyMealPlanRoute({
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Oppdater ukeplan
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Du kan fortsatt endre navn og datointervall her. Datointervallet
                 kan være maks {MEAL_PLAN_MAX_SPAN_DAYS} dager. Middager og
                 handledatoer utenfor det nye intervallet fjernes eller justeres
@@ -1054,10 +1054,10 @@ export default function FamilyMealPlanRoute({
                 value={loaderData.mealPlan.updatedAt}
               />
 
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-muted">
                 Navn
                 <input
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                   defaultValue={titleValue}
                   name="title"
                   type="text"
@@ -1072,20 +1072,20 @@ export default function FamilyMealPlanRoute({
               ) : null}
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-muted">
                   Startdato
                   <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                     defaultValue={startDateValue}
                     name="startDate"
                     type="date"
                   />
                 </label>
 
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-muted">
                   Sluttdato
                   <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                     defaultValue={endDateValue}
                     name="endDate"
                     type="date"
@@ -1141,10 +1141,10 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
-      <div className="mx-auto max-w-3xl rounded-[28px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
+      <div className="mx-auto max-w-3xl rounded-[28px] bg-surface p-8 shadow-sm ring-1 ring-line">
+        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
         <Link
           className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
           to="/app"
@@ -1417,19 +1417,19 @@ function MealPlanShareSection({
       : (activeOpenShare?.message ?? "");
 
     return (
-      <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <h2 className="text-lg font-semibold text-slate-950">
+      <article className="rounded-[28px] bg-surface p-5 shadow-sm ring-1 ring-line">
+        <h2 className="text-lg font-semibold text-ink">
           Delt for gjennomgang
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+        <p className="mt-2 text-sm leading-6 text-muted">
           Ukeplanen venter allerede på tilbakemelding fra{" "}
           {wholeFamily ? "familien" : recipientNames || "mottakerne"}.
           {message ? ` «${message}»` : ""}
         </p>
         {pendingShare ? (
-          <p className="mt-3 text-sm text-slate-500">Sender deling...</p>
+          <p className="mt-3 text-sm text-muted">Sender deling...</p>
         ) : (
-          <p className="mt-3 text-sm text-slate-500">
+          <p className="mt-3 text-sm text-muted">
             Du kan ikke sende en ny gjennomgang før denne er avsluttet (for
             eksempel når planen godkjennes).
           </p>
@@ -1445,11 +1445,11 @@ function MealPlanShareSection({
   }
 
   return (
-    <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-      <h2 className="text-lg font-semibold text-slate-950">
+    <article className="rounded-[28px] bg-surface p-5 shadow-sm ring-1 ring-line">
+      <h2 className="text-lg font-semibold text-ink">
         Del for gjennomgang
       </h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
+      <p className="mt-2 text-sm leading-6 text-muted">
         Send ukeplanen til familien for enkel tilbakemelding på mobil. Du kan
         bare ha én aktiv deling om gangen.
       </p>
@@ -1464,32 +1464,32 @@ function MealPlanShareSection({
         <input name="intent" type="hidden" value="share-meal-plan" />
 
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-muted">
             Valgfri melding
           </span>
           <input
-            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+            className="w-full rounded-2xl border border-line px-4 py-3 text-sm"
             name="message"
             placeholder="F.eks. Sjekk middagene denne uken"
             type="text"
           />
         </label>
 
-        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <label className="flex items-center gap-3 rounded-2xl border border-line bg-page px-4 py-3">
           <input className="h-4 w-4" name="wholeFamily" type="checkbox" />
-          <span className="text-sm text-slate-700">Del med hele familien</span>
+          <span className="text-sm text-muted">Del med hele familien</span>
         </label>
 
         {members.length > 0 ? (
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-slate-700">
+            <legend className="text-sm font-medium text-muted">
               Eller velg medlemmer
             </legend>
             <div className="grid gap-2">
               {members.map((member) => (
                 <label
                   key={member.id}
-                  className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3"
+                  className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3"
                 >
                   <input
                     className="h-4 w-4"
@@ -1497,7 +1497,7 @@ function MealPlanShareSection({
                     type="checkbox"
                     value={member.id}
                   />
-                  <span className="text-sm text-slate-800">
+                  <span className="text-sm text-ink">
                     {member.displayName}
                   </span>
                 </label>
@@ -1505,7 +1505,7 @@ function MealPlanShareSection({
             </div>
           </fieldset>
         ) : (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted">
             Ingen andre familiemedlemmer å dele med enn deg.
           </p>
         )}
@@ -1544,9 +1544,9 @@ function MealPlanFeedbackSection({
 }) {
   if (shares.length === 0) {
     return (
-      <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <h2 className="text-lg font-semibold text-slate-950">Tilbakemelding</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+      <article className="rounded-[28px] bg-surface p-5 shadow-sm ring-1 ring-line">
+        <h2 className="text-lg font-semibold text-ink">Tilbakemelding</h2>
+        <p className="mt-2 text-sm leading-6 text-muted">
           Ingen aktiv deling ennå. Når noen svarer, vises tilbakemeldingene her
           gruppert per dag.
         </p>
@@ -1569,9 +1569,9 @@ function MealPlanFeedbackSection({
   }
 
   return (
-    <article className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <article className="rounded-[28px] bg-surface p-5 shadow-sm ring-1 ring-line">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold text-slate-950">Tilbakemelding</h2>
+        <h2 className="text-lg font-semibold text-ink">Tilbakemelding</h2>
         {unresolvedCount > 0 ? (
           <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">
             {unresolvedCount} ubehandlet
@@ -1580,7 +1580,7 @@ function MealPlanFeedbackSection({
       </div>
 
       {shares.map((share) => (
-        <p key={share.id} className="mt-2 text-sm text-slate-600">
+        <p key={share.id} className="mt-2 text-sm text-muted">
           Delt av {share.sharedByDisplayName}
           {share.wholeFamily ? " (hele familien)" : ""}
           {share.message ? ` — «${share.message}»` : ""}
@@ -1598,21 +1598,21 @@ function MealPlanFeedbackSection({
           return (
             <div
               key={date}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              className="rounded-2xl border border-line bg-page p-4"
             >
-              <h3 className="text-sm font-semibold text-slate-900">
+              <h3 className="text-sm font-semibold text-ink">
                 {formatWeekdayLabel(date)}
               </h3>
               <ul className="mt-2 space-y-2">
                 {comments.map((comment) => (
                   <li
                     key={comment.id}
-                    className="rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200"
+                    className="rounded-2xl bg-surface px-3 py-3 ring-1 ring-line"
                   >
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-sm font-medium text-ink">
                       {comment.authorDisplayName}
                     </p>
-                    <p className="mt-1 text-sm text-slate-700">
+                    <p className="mt-1 text-sm text-muted">
                       {comment.feedbackLabel}
                     </p>
                     {comment.addressedAt || comment.id === pendingCommentId ? (
@@ -1680,7 +1680,7 @@ function MealPlanApprovalSection({
       className={
         isHero
           ? "rounded-2xl border border-white/15 bg-white/10 p-4 sm:p-5"
-          : "rounded-2xl border border-slate-200 bg-slate-50 p-4"
+          : "rounded-2xl border border-line bg-page p-4"
       }
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -1692,7 +1692,7 @@ function MealPlanApprovalSection({
                 : "rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/15"
               : mealPlanStatus === "APPROVED"
                 ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800"
-                : "rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700"
+                : "rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-muted"
           }
         >
           {statusLabel}
@@ -1700,7 +1700,7 @@ function MealPlanApprovalSection({
         {approvedAt ? (
           <span
             className={
-              isHero ? "text-xs text-slate-300" : "text-xs text-slate-600"
+              isHero ? "text-xs text-slate-300" : "text-xs text-muted"
             }
           >
             {formatApprovalTimestamp(approvedAt)}
@@ -1729,7 +1729,7 @@ function MealPlanApprovalSection({
           className={
             isHero
               ? "text-sm leading-6 text-slate-300"
-              : "text-sm leading-6 text-slate-600"
+              : "text-sm leading-6 text-muted"
           }
         >
           Alle i familien kan godkjenne ukeplanen når middagene er klare. Det
@@ -1837,7 +1837,7 @@ function RecipeBankContent({
 
   return (
     <>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
+      <p className="mt-2 text-sm leading-6 text-muted">
         Standard- og familieoppskrifter du kan velge til middagene i planen.
         Åpne en dag i ukeoversikten, eller velg dag nedenfor, og trykk Legg til.
       </p>
@@ -1849,11 +1849,11 @@ function RecipeBankContent({
       </Link>
 
       <div className="mt-4 space-y-3">
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           Søk oppskrifter
           <input
             autoComplete="off"
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="For eksempel tomatsuppe"
             type="search"
@@ -1863,7 +1863,7 @@ function RecipeBankContent({
 
         {tagOptions.length > 0 ? (
           <div>
-            <p className="text-sm font-medium text-slate-700">Filtrer på tag</p>
+            <p className="text-sm font-medium text-muted">Filtrer på tag</p>
             <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
               {tagOptions.map(({ count, tag }) => {
                 const isSelected = selectedTags.includes(tag);
@@ -1874,7 +1874,7 @@ function RecipeBankContent({
                     className={
                       isSelected
                         ? "shrink-0 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white"
-                        : "shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
+                        : "shrink-0 rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted transition hover:bg-line"
                     }
                     onClick={() => {
                       setSelectedTags((current) =>
@@ -1895,7 +1895,7 @@ function RecipeBankContent({
 
         {isSearchActive ? (
           <button
-            className="text-sm font-medium text-slate-600 underline-offset-2 hover:underline"
+            className="text-sm font-medium text-muted underline-offset-2 hover:underline"
             onClick={() => {
               setSearchQuery("");
               setSelectedTags([]);
@@ -1907,10 +1907,10 @@ function RecipeBankContent({
         ) : null}
 
         {!activeAssignDate && visibleDates.length > 0 ? (
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-muted">
             Legg til på dag
             <select
-              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               onChange={(event) => setFallbackAssignDate(event.target.value)}
               value={fallbackAssignDate}
             >
@@ -1930,7 +1930,7 @@ function RecipeBankContent({
 
       <div className="mt-4 grid h-[calc(100vh-20rem)] gap-2 overflow-y-auto lg:mt-6 lg:gap-3">
         {filteredRecipes.length === 0 ? (
-          <p className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
+          <p className="rounded-[24px] border border-line bg-page p-5 text-sm text-muted">
             Ingen oppskrifter matcher søket.
           </p>
         ) : (
@@ -1940,7 +1940,7 @@ function RecipeBankContent({
               className={
                 selectedRecipeIds.has(recipe.id)
                   ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-5"
-                  : "rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                  : "rounded-[24px] border border-line bg-page p-5"
               }
             >
               <div className="flex items-start gap-3">
@@ -1951,10 +1951,10 @@ function RecipeBankContent({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="text-base font-semibold text-slate-950">
+                      <h3 className="text-base font-semibold text-ink">
                         {recipe.title}
                       </h3>
-                      <p className="mt-2 whitespace-break-spaces text-sm leading-6 text-slate-600">
+                      <p className="mt-2 whitespace-break-spaces text-sm leading-6 text-muted">
                         {recipe.description}
                       </p>
                     </div>
@@ -1966,16 +1966,16 @@ function RecipeBankContent({
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                    <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-muted ring-1 ring-line">
                       {recipe.prepMinutes ?? "?"} min
                     </span>
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                    <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-muted ring-1 ring-line">
                       {recipe.defaultServings ?? "?"} personer
                     </span>
                     {recipe.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                        className="rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-muted ring-1 ring-line"
                       >
                         {tag}
                       </span>

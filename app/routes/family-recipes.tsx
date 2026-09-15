@@ -211,7 +211,7 @@ export default function FamilyRecipesRoute({
         };
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -254,16 +254,16 @@ export default function FamilyRecipesRoute({
         </section>
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
+          <section className="rounded-[28px] border border-notice-success-line bg-notice-success px-6 py-5 text-notice-success-ink shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">
+            <p className="mt-2 text-sm leading-6 text-notice-success-muted">
               {noticeContent.description}
             </p>
           </section>
         ) : null}
 
         {actionData?.formError ? (
-          <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
+          <section className="rounded-[28px] border border-notice-danger-line bg-notice-danger px-6 py-5 text-notice-danger-ink shadow-sm">
             <h2 className="text-base font-semibold">
               Kunne ikke oppdatere oppskriftene
             </h2>
@@ -273,17 +273,17 @@ export default function FamilyRecipesRoute({
 
         {canManageRecipes ? (
           <section
-            className="rounded-[28px] border-2 border-emerald-200 bg-white p-6 shadow-sm ring-1 ring-emerald-100"
+            className="rounded-[28px] border border-line bg-surface p-6 shadow-sm"
             id="create-recipe"
           >
             <div className="flex flex-col gap-2">
-              <span className="inline-flex w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
+              <span className="inline-flex w-fit rounded-full bg-notice-success px-3 py-1 text-xs font-medium text-notice-success-ink">
                 Familie — ny oppskrift
               </span>
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Opprett familieoppskrift
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Legg inn oppskriftstittel og minst én ingrediens. Flere
                 ingredienser og detaljer kan legges til etter opprettelsen.
               </p>
@@ -303,10 +303,10 @@ export default function FamilyRecipesRoute({
                   value={loaderData.returnTo}
                 />
               ) : null}
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-muted">
                 Oppskriftstittel
                 <input
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
+                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base"
                   defaultValue={createValues.title}
                   name="title"
                   placeholder="For eksempel Kyllingwok"
@@ -318,8 +318,8 @@ export default function FamilyRecipesRoute({
                   {actionData.createFieldErrors.title}
                 </p>
               ) : null}
-              <fieldset className="space-y-3 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                <legend className="px-1 text-sm font-semibold text-slate-950">
+              <fieldset className="space-y-3 rounded-[24px] border border-line bg-page p-4">
+                <legend className="px-1 text-sm font-semibold text-ink">
                   Coverbilde (valgfritt)
                 </legend>
                 {!loaderData.r2Configured ? (
@@ -327,7 +327,7 @@ export default function FamilyRecipesRoute({
                     Bildeopplasting er ikke konfigurert (Cloudflare R2).
                   </p>
                 ) : (
-                  <p className="text-sm leading-6 text-slate-600">
+                  <p className="text-sm leading-6 text-muted">
                     JPEG, PNG eller WebP. Bildet komprimeres automatisk (maks 2
                     MB).
                   </p>
@@ -337,11 +337,11 @@ export default function FamilyRecipesRoute({
                     imageUrl={createCoverPreviewUrl}
                     title={createValues.title || "Ny oppskrift"}
                   />
-                  <label className="block min-w-0 flex-1 text-sm font-medium text-slate-700">
+                  <label className="block min-w-0 flex-1 text-sm font-medium text-muted">
                     Velg bilde
                     <input
                       accept="image/jpeg,image/png,image/webp"
-                      className="mt-2 block w-full text-base text-slate-700 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+                      className="mt-2 block w-full text-base text-muted file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
                       disabled={
                         !loaderData.r2Configured || isCompressingCreateCover
                       }
@@ -373,7 +373,7 @@ export default function FamilyRecipesRoute({
                   </label>
                 </div>
                 {isCompressingCreateCover ? (
-                  <p className="text-sm text-slate-500">Komprimerer bilde...</p>
+                  <p className="text-sm text-muted">Komprimerer bilde...</p>
                 ) : null}
                 {actionData?.createFieldErrors?.coverImage ? (
                   <p className="text-sm text-rose-600">
@@ -381,19 +381,19 @@ export default function FamilyRecipesRoute({
                   </p>
                 ) : null}
               </fieldset>
-              <fieldset className="space-y-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                <legend className="px-1 text-sm font-semibold text-slate-950">
+              <fieldset className="space-y-4 rounded-[24px] border border-line bg-page p-4">
+                <legend className="px-1 text-sm font-semibold text-ink">
                   Første ingrediens
                 </legend>
-                <p className="text-sm leading-6 text-slate-600">
+                <p className="text-sm leading-6 text-muted">
                   Handlekategori gjelder denne ingrediensraden — ikke hele
                   oppskriften. Den brukes når handlelisten grupperes (for
                   eksempel «Kjøtt og fisk»).
                 </p>
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-muted">
                   Ingrediensnavn
                   <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base"
                     defaultValue={
                       createValues.ingredients[0]?.displayName ?? ""
                     }
@@ -407,10 +407,10 @@ export default function FamilyRecipesRoute({
                     {actionData.createFieldErrors.ingredientDisplayNames[0]}
                   </p>
                 ) : null}
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-muted">
                   Handlekategori for ingrediensen
                   <select
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base"
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base"
                     defaultValue={createValues.ingredients[0]?.categoryId ?? ""}
                     name="ingredientCategoryId:0"
                   >
@@ -451,16 +451,16 @@ export default function FamilyRecipesRoute({
           </section>
         ) : null}
 
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[28px] border border-line bg-surface p-6 shadow-sm">
           <label
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-medium text-muted"
             htmlFor="recipe-search"
           >
             Søk oppskrifter
             <div className="mt-2 flex gap-2">
               <input
                 autoComplete="off"
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20"
                 id="recipe-search"
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="For eksempel tomatsuppe"
@@ -469,7 +469,7 @@ export default function FamilyRecipesRoute({
               />
               {isSearchActive ? (
                 <button
-                  className="shrink-0 rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  className="shrink-0 rounded-2xl border border-line px-4 py-3 text-sm font-medium text-muted transition hover:bg-page"
                   onClick={() => setSearchQuery("")}
                   type="button"
                 >
@@ -480,24 +480,24 @@ export default function FamilyRecipesRoute({
           </label>
         </section>
 
-        <section className="rounded-[28px] border-2 border-emerald-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[28px] border border-line bg-surface p-6 shadow-sm">
           <div className="flex flex-col gap-2">
-            <span className="inline-flex w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
+            <span className="inline-flex w-fit rounded-full bg-notice-success px-3 py-1 text-xs font-medium text-notice-success-ink">
               Familie
             </span>
-            <h2 className="text-xl font-semibold text-slate-950">
+            <h2 className="text-xl font-semibold text-ink">
               Familieoppskrifter
             </h2>
           </div>
 
           {loaderData.familyRecipes.length === 0 && !pendingCreateTitle ? (
-            <p className="mt-6 rounded-[24px] border border-dashed border-emerald-200 bg-emerald-50/50 px-5 py-8 text-center text-sm leading-6 text-slate-600">
+            <p className="mt-6 rounded-[24px] border border-dashed border-line bg-page px-5 py-8 text-center text-sm leading-6 text-muted">
               {canManageRecipes
                 ? "Ingen familieoppskrifter ennå. Opprett den første oppskriften over."
                 : "Familien har ingen egne oppskrifter ennå."}
             </p>
           ) : displayFamilyRecipes.length === 0 && isSearchActive ? (
-            <p className="mt-6 rounded-[24px] border border-dashed border-emerald-200 bg-emerald-50/50 px-5 py-8 text-center text-sm leading-6 text-slate-600">
+            <p className="mt-6 rounded-[24px] border border-dashed border-line bg-page px-5 py-8 text-center text-sm leading-6 text-muted">
               Ingen familieoppskrifter matcher søket.
             </p>
           ) : (
@@ -519,15 +519,15 @@ export default function FamilyRecipesRoute({
           )}
         </section>
 
-        <section className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+        <section className="rounded-[28px] border border-line bg-page p-6 shadow-sm">
           <div className="flex flex-col gap-2">
-            <span className="inline-flex w-fit rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">
+            <span className="inline-flex w-fit rounded-full bg-page px-3 py-1 text-xs font-medium text-muted ring-1 ring-line">
               Standard (global)
             </span>
-            <h2 className="text-xl font-semibold text-slate-950">
+            <h2 className="text-xl font-semibold text-ink">
               Standardoppskrifter
             </h2>
-            <p className="text-sm leading-6 text-slate-600">
+            <p className="text-sm leading-6 text-muted">
               Felles oppskrifter fra seed-data. De kan brukes i ukeplaner, men
               kan ikke redigeres eller slettes her.
             </p>
@@ -535,7 +535,7 @@ export default function FamilyRecipesRoute({
 
           {loaderData.globalRecipes.length ===
           0 ? null : filteredGlobalRecipes.length === 0 && isSearchActive ? (
-            <p className="mt-6 rounded-[24px] border border-dashed border-slate-200 bg-white px-5 py-8 text-center text-sm leading-6 text-slate-600">
+            <p className="mt-6 rounded-[24px] border border-dashed border-line bg-surface px-5 py-8 text-center text-sm leading-6 text-muted">
               Ingen standardoppskrifter matcher søket.
             </p>
           ) : (
@@ -584,14 +584,14 @@ function RecipeListCard({
 }) {
   const scopeClasses =
     scopeTone === "family"
-      ? "bg-emerald-100 text-emerald-800"
-      : "bg-slate-200 text-slate-700";
+      ? "bg-notice-success text-notice-success-ink"
+      : "bg-page text-muted";
   const content = (
     <article
       className={
         readOnly
-          ? "rounded-[24px] border border-slate-200 bg-white p-5"
-          : "rounded-[24px] border border-emerald-200 bg-emerald-50/40 p-5 transition hover:border-emerald-300 hover:bg-emerald-50"
+          ? "rounded-[24px] border border-line bg-surface p-5"
+          : "rounded-[24px] border border-line bg-surface p-5 transition hover:border-notice-success-line hover:bg-page"
       }
     >
       <div className="flex items-start justify-between gap-3">
@@ -609,16 +609,16 @@ function RecipeListCard({
                 {scopeLabel}
               </span>
               {readOnly ? (
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                <span className="rounded-full bg-page px-3 py-1 text-xs font-medium text-muted">
                   Kun lesing
                 </span>
               ) : null}
             </div>
-            <h3 className="mt-3 text-base font-semibold text-slate-950">
+            <h3 className="mt-3 text-base font-semibold text-ink">
               {recipe.title}
             </h3>
             {recipe.description ? (
-              <p className="mt-2 text-sm leading-6 text-slate-600 whitespace-break-spaces">
+              <p className="mt-2 text-sm leading-6 text-muted whitespace-break-spaces">
                 {recipe.description}
               </p>
             ) : null}
@@ -627,13 +627,13 @@ function RecipeListCard({
         {!readOnly && to ? (
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Link
-              className="rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200"
+              className="rounded-full bg-page px-3 py-1 text-xs font-medium text-notice-success-ink ring-1 ring-notice-success-line"
               to={to}
             >
               Åpne
             </Link>
             <Link
-              className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-medium text-white"
+              className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white"
               to={`${to}?edit=1`}
             >
               Rediger
@@ -641,20 +641,20 @@ function RecipeListCard({
           </div>
         ) : null}
       </div>
-      <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-slate-700">
-        <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">
+      <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-muted">
+        <span className="rounded-full bg-page px-2.5 py-1 ring-1 ring-line">
           {recipe._count.ingredients} ingredienser
         </span>
-        <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">
+        <span className="rounded-full bg-page px-2.5 py-1 ring-1 ring-line">
           {recipe.prepMinutes ?? "?"} min
         </span>
-        <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">
+        <span className="rounded-full bg-page px-2.5 py-1 ring-1 ring-line">
           {recipe.defaultServings ?? "?"} personer
         </span>
         {recipe.tags.map((tag) => (
           <span
             key={tag}
-            className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200"
+            className="rounded-full bg-page px-2.5 py-1 ring-1 ring-line"
           >
             {tag}
           </span>
@@ -681,10 +681,10 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-16 text-slate-900">
-      <div className="mx-auto max-w-2xl rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{message}</p>
+    <main className="min-h-screen bg-page px-4 py-16 text-ink">
+      <div className="mx-auto max-w-2xl rounded-[32px] bg-surface p-8 shadow-sm ring-1 ring-line">
+        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
         <Link
           className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
           to="/app"

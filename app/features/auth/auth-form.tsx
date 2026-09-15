@@ -44,7 +44,7 @@ export function AuthForm({ actionData, description, isSubmitting, mode, redirect
         <input name="redirectTo" type="hidden" value={redirectTo} />
 
         {isRegisterMode ? (
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-muted">
             Navn
             <input
               className={authInputClassName}
@@ -59,7 +59,7 @@ export function AuthForm({ actionData, description, isSubmitting, mode, redirect
           </label>
         ) : null}
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           E-post
           <input
             autoComplete="email"
@@ -74,7 +74,7 @@ export function AuthForm({ actionData, description, isSubmitting, mode, redirect
           ) : null}
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           Passord
           <input
             autoComplete={isRegisterMode ? "new-password" : "current-password"}

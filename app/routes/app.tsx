@@ -167,7 +167,7 @@ export default function AppRoute({
     : null;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -212,17 +212,17 @@ export default function AppRoute({
                 (membership: (typeof loaderData.memberships)[number]) => (
                   <article
                     key={membership.id}
-                    className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
+                    className="rounded-[28px] bg-surface p-5 shadow-sm ring-1 ring-line"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <h2 className="text-lg font-semibold text-slate-950">
+                      <h2 className="text-lg font-semibold text-ink">
                         Familie: {membership.family.name}
                       </h2>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                      <span className="rounded-full bg-page px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted">
                         {membership.role === "ADMIN" ? "Admin" : "Medlem"}
                       </span>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                    <p className="mt-3 text-sm leading-6 text-muted">
                       {membership.role === "ADMIN"
                         ? "Du er administrator for denne familien og kan administrere medlemmer fra familieoversikten."
                         : "Du har tilgang til denne familien og kan åpne familieoversikten for videre arbeid."}
@@ -240,21 +240,21 @@ export default function AppRoute({
           </>
         ) : (
           <section className="grid gap-4 lg:grid-cols-2">
-            <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-lg font-semibold text-slate-950">
+            <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+              <h2 className="text-lg font-semibold text-ink">
                 Opprett familie
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+              <p className="mt-2 text-sm leading-6 text-muted">
                 Lag en ny familie og bli automatisk administrator.
               </p>
 
               <Form className="mt-6 space-y-4" method="post">
                 <input name="intent" type="hidden" value="create-family" />
 
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-muted">
                   Familienavn
                   <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                     defaultValue={
                       actionData?.intent === "create-family"
                         ? (actionData.values?.familyName ?? "")
@@ -283,21 +283,21 @@ export default function AppRoute({
               </Form>
             </article>
 
-            <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-lg font-semibold text-slate-950">
+            <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+              <h2 className="text-lg font-semibold text-ink">
                 Bli med i familie
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+              <p className="mt-2 text-sm leading-6 text-muted">
                 Har du allerede en familiekode? Skriv den inn her.
               </p>
 
               <Form className="mt-6 space-y-4" method="post">
                 <input name="intent" type="hidden" value="join-family" />
 
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-muted">
                   Familiekode
                   <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm uppercase tracking-[0.24em] text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm uppercase tracking-[0.24em] text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                     defaultValue={
                       actionData?.intent === "join-family"
                         ? (actionData.values?.joinCode ?? "")

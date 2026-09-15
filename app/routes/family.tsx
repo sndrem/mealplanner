@@ -162,7 +162,7 @@ function MealPlanStatusBadge({
 }) {
   if (muted) {
     return (
-      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-400 ring-1 ring-slate-100">
+      <span className="rounded-full bg-page px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-400 ring-1 ring-slate-100">
         {status === "APPROVED" ? "Godkjent" : "Utkast"}
       </span>
     );
@@ -173,7 +173,7 @@ function MealPlanStatusBadge({
       className={
         status === "APPROVED"
           ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200"
-          : "rounded-full bg-white px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600 ring-1 ring-slate-200"
+          : "rounded-full bg-surface px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted ring-1 ring-line"
       }
     >
       {status === "APPROVED" ? "Godkjent" : "Utkast"}
@@ -194,8 +194,8 @@ function MealPlanLinkCard({
     <Link
       className={
         isPast
-          ? "block rounded-[24px] border border-slate-100 bg-slate-50/70 p-5 opacity-80 transition hover:border-slate-200 hover:bg-slate-50"
-          : "block rounded-[24px] border border-slate-200 bg-slate-50 p-5 transition hover:border-slate-300 hover:bg-white"
+          ? "block rounded-[24px] border border-line bg-page/70 p-5 opacity-80 transition hover:border-line hover:bg-page"
+          : "block rounded-[24px] border border-line bg-page p-5 transition hover:border-line hover:bg-surface"
       }
       to={`/families/${familyId}/meal-plans/${mealPlan.id}`}
     >
@@ -203,8 +203,8 @@ function MealPlanLinkCard({
         <h3
           className={
             isPast
-              ? "text-base font-semibold text-slate-500"
-              : "text-base font-semibold text-slate-950"
+              ? "text-base font-semibold text-muted"
+              : "text-base font-semibold text-ink"
           }
         >
           {mealPlan.title}
@@ -215,7 +215,7 @@ function MealPlanLinkCard({
         className={
           isPast
             ? "mt-2 text-sm leading-6 text-slate-400"
-            : "mt-2 text-sm leading-6 text-slate-600"
+            : "mt-2 text-sm leading-6 text-muted"
         }
       >
         {formatMealPlanWindow(mealPlan.startDate, mealPlan.endDate)}
@@ -233,10 +233,10 @@ function WeekDayMenuCard({
 }) {
   const content = (
     <>
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">
         {day.weekdayLabel}
       </p>
-      <p className="mt-1 text-sm text-slate-500">{day.dateLabel}</p>
+      <p className="mt-1 text-sm text-muted">{day.dateLabel}</p>
       {day.imageUrl ? (
         <img
           alt=""
@@ -245,7 +245,7 @@ function WeekDayMenuCard({
           src={day.imageUrl}
         />
       ) : null}
-      <p className="mt-3 text-base font-semibold leading-snug text-slate-950">
+      <p className="mt-3 text-base font-semibold leading-snug text-ink">
         {day.menuLabel}
       </p>
       {day.responsibleDisplayName ? (
@@ -254,19 +254,19 @@ function WeekDayMenuCard({
         </span>
       ) : null}
       {day.mealPlanTitle ? (
-        <p className="mt-2 text-xs text-slate-500">{day.mealPlanTitle}</p>
+        <p className="mt-2 text-xs text-muted">{day.mealPlanTitle}</p>
       ) : null}
     </>
   );
 
   const cardClassName = day.isToday
     ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-4 ring-1 ring-emerald-100"
-    : "rounded-[24px] border border-slate-200 bg-slate-50 p-4";
+    : "rounded-[24px] border border-line bg-page p-4";
 
   if (day.mealPlanId) {
     return (
       <Link
-        className={`${cardClassName} block transition hover:border-slate-300 hover:bg-white`}
+        className={`${cardClassName} block transition hover:border-line hover:bg-surface`}
         to={`/families/${familyId}/meal-plans/${day.mealPlanId}`}
       >
         {content}
@@ -569,7 +569,7 @@ export default function FamilyRoute({
     : loaderData.members;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -603,16 +603,16 @@ export default function FamilyRoute({
           familiePanel={
             <>
               <section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
-                <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
                   <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-semibold text-slate-950">
+                    <h2 className="text-lg font-semibold text-ink">
                       Din tilgang
                     </h2>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                    <span className="rounded-full bg-page px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted">
                       {isAdmin ? "Admin" : "Medlem"}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">
+                  <p className="mt-3 text-sm leading-6 text-muted">
                     {isAdmin
                       ? "Administratorer kan se familiekoden og fjerne vanlige medlemmer ved behov."
                       : "Bare administratorer kan se familiekoden og administrere medlemmer."}
@@ -620,23 +620,23 @@ export default function FamilyRoute({
                 </article>
 
                 {isAdmin ? (
-                  <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                    <h2 className="text-lg font-semibold text-slate-950">
+                  <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+                    <h2 className="text-lg font-semibold text-ink">
                       Familiekode
                     </h2>
-                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                    <p className="mt-3 text-sm leading-6 text-muted">
                       Del denne koden med personer som skal bli med i familien.
                     </p>
-                    <p className="mt-4 text-2xl font-semibold tracking-[0.28em] text-slate-950">
+                    <p className="mt-4 text-2xl font-semibold tracking-[0.28em] text-ink">
                       {loaderData.family.joinCode}
                     </p>
                   </article>
                 ) : (
-                  <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                    <h2 className="text-lg font-semibold text-slate-950">
+                  <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+                    <h2 className="text-lg font-semibold text-ink">
                       Familieinnstillinger
                     </h2>
-                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                    <p className="mt-3 text-sm leading-6 text-muted">
                       Familiekode og medlemsadministrasjon er bare tilgjengelig
                       for administratorer.
                     </p>
@@ -645,12 +645,12 @@ export default function FamilyRoute({
               </section>
 
               {isAdmin ? (
-                <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
                   <div className="flex flex-col gap-2">
-                    <h2 className="text-lg font-semibold text-slate-950">
+                    <h2 className="text-lg font-semibold text-ink">
                       Helgevarsling
                     </h2>
-                    <p className="text-sm leading-6 text-slate-600">
+                    <p className="text-sm leading-6 text-muted">
                       Få en e-post torsdag kl. 12 hvis lørdag eller søndag
                       mangler middag. La feltet stå tomt for å slå av
                       varslingen.
@@ -663,11 +663,11 @@ export default function FamilyRoute({
                       type="hidden"
                       value="save-reminder-email"
                     />
-                    <label className="block text-sm font-medium text-slate-700">
+                    <label className="block text-sm font-medium text-muted">
                       Familie-e-post
                       <input
                         autoComplete="email"
-                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-950 outline-none transition focus:border-slate-400"
+                        className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-slate-400"
                         defaultValue={reminderEmailValue}
                         key={reminderEmailValue}
                         name="reminderEmail"
@@ -720,12 +720,12 @@ export default function FamilyRoute({
               ) : null}
 
               {isAdmin ? (
-                <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
                   <div className="flex flex-col gap-2">
-                    <h2 className="text-lg font-semibold text-slate-950">
+                    <h2 className="text-lg font-semibold text-ink">
                       Medlemmer
                     </h2>
-                    <p className="text-sm leading-6 text-slate-600">
+                    <p className="text-sm leading-6 text-muted">
                       Du kan fjerne vanlige medlemmer fra familien. Andre
                       administratorer kan ikke fjernes her.
                     </p>
@@ -746,21 +746,21 @@ export default function FamilyRoute({
                         return (
                           <article
                             key={member.id}
-                            className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                            className="rounded-[24px] border border-line bg-page p-5"
                           >
                             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                               <div>
                                 <div className="flex flex-wrap items-center gap-3">
-                                  <h3 className="text-base font-semibold text-slate-950">
+                                  <h3 className="text-base font-semibold text-ink">
                                     {member.user.displayName}
                                   </h3>
-                                  <span className="rounded-full bg-white px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600 ring-1 ring-slate-200">
+                                  <span className="rounded-full bg-surface px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted ring-1 ring-line">
                                     {member.role === "ADMIN"
                                       ? "Admin"
                                       : "Medlem"}
                                   </span>
                                 </div>
-                                <p className="mt-2 text-sm leading-6 text-slate-600">
+                                <p className="mt-2 text-sm leading-6 text-muted">
                                   {member.user.email}
                                 </p>
                               </div>
@@ -806,11 +806,11 @@ export default function FamilyRoute({
           }
           oversiktPanel={
             <>
-              <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                <h2 className="text-lg font-semibold text-slate-950">
+              <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+                <h2 className="text-lg font-semibold text-ink">
                   Denne uken
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+                <p className="mt-2 text-sm leading-6 text-muted">
                   Viser bare inneværende kalenderuke (man–søn), også når
                   ukeplanen strekker seg over flere uker.
                 </p>
@@ -826,10 +826,10 @@ export default function FamilyRoute({
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-6 rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-600">
+                  <p className="mt-6 rounded-[24px] border border-dashed border-line bg-page px-5 py-4 text-sm leading-6 text-muted">
                     Ingen ukeplaner denne uken.{" "}
                     <Link
-                      className="font-medium text-slate-950 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
+                      className="font-medium text-ink underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
                       to={`/families/${familyId}/meal-plans`}
                     >
                       Opprett eller velg en plan
@@ -839,11 +839,11 @@ export default function FamilyRoute({
                 )}
               </section>
 
-              <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                <h2 className="text-lg font-semibold text-slate-950">
+              <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+                <h2 className="text-lg font-semibold text-ink">
                   Siste ukeplaner
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+                <p className="mt-2 text-sm leading-6 text-muted">
                   De tre nyeste ukeplanene i familien.
                 </p>
 
@@ -859,20 +859,20 @@ export default function FamilyRoute({
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-6 rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-600">
+                  <p className="mt-6 rounded-[24px] border border-dashed border-line bg-page px-5 py-4 text-sm leading-6 text-muted">
                     Ingen ukeplaner ennå. Opprett den første planen for å komme
                     i gang.
                   </p>
                 )}
               </section>
 
-              <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+              <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-950">
+                    <h2 className="text-lg font-semibold text-ink">
                       Handleliste
                     </h2>
-                    <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
                       Gå rett til handlelisten for dagens eller siste aktive
                       ukeplan.
                     </p>
@@ -886,10 +886,10 @@ export default function FamilyRoute({
                   </Link>
                 </div>
 
-                <p className="mt-4 text-sm leading-6 text-slate-600">
+                <p className="mt-4 text-sm leading-6 text-muted">
                   Trenger du varer uten ukeplan?{" "}
                   <Link
-                    className="font-medium text-slate-950 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
+                    className="font-medium text-ink underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
                     to={`/families/${familyId}/shopping`}
                   >
                     Åpne Alltid på listen
@@ -898,9 +898,9 @@ export default function FamilyRoute({
                 </p>
               </section>
 
-              <p className="text-center text-sm text-slate-600">
+              <p className="text-center text-sm text-muted">
                 <Link
-                  className="font-medium text-slate-950 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
+                  className="font-medium text-ink underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
                   to={`/families/${familyId}/meal-plans`}
                 >
                   Administrer ukeplaner
@@ -929,10 +929,10 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
-      <div className="mx-auto max-w-3xl rounded-[28px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
+      <div className="mx-auto max-w-3xl rounded-[28px] bg-surface p-8 shadow-sm ring-1 ring-line">
+        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
         <Link
           className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
           to="/app"

@@ -217,7 +217,7 @@ export default function FamilyStockIngredientsRoute({
   })();
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -270,22 +270,22 @@ export default function FamilyStockIngredientsRoute({
         ) : null}
 
         {canManageStock ? (
-          <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Legg til basisvare
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Søk etter en kanonisk ingrediens, eller skriv inn et navn som
                 skal matches mot oppskriftslinjer uten kobling.
               </p>
             </div>
 
             <Form className="mt-6 space-y-4" method="get">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-muted">
                 Søk i ingrediensregister
                 <input
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                   defaultValue={loaderData.searchQuery}
                   name="q"
                   placeholder="For eksempel salt"
@@ -293,7 +293,7 @@ export default function FamilyStockIngredientsRoute({
                 />
               </label>
               <button
-                className="inline-flex rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex rounded-2xl border border-line px-4 py-2 text-sm font-medium text-muted transition hover:bg-page"
                 type="submit"
               >
                 Søk
@@ -304,12 +304,12 @@ export default function FamilyStockIngredientsRoute({
               <ul className="mt-4 grid gap-2">
                 {loaderData.searchResults.map((ingredient) => (
                   <li key={ingredient.id}>
-                    <Form className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" method="post">
+                    <Form className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-page px-4 py-3" method="post">
                       <input name="intent" type="hidden" value="add-stock-ingredient" />
                       <input name="ingredientId" type="hidden" value={ingredient.id} />
                       <input name="displayName" type="hidden" value="" />
                       <input name="note" type="hidden" value="" />
-                      <span className="text-sm font-medium text-slate-900">
+                      <span className="text-sm font-medium text-ink">
                         {ingredient.canonicalName}
                       </span>
                       <button
@@ -324,13 +324,13 @@ export default function FamilyStockIngredientsRoute({
               </ul>
             ) : null}
 
-            <Form className="mt-6 space-y-4 border-t border-slate-200 pt-6" method="post">
+            <Form className="mt-6 space-y-4 border-t border-line pt-6" method="post">
               <input name="intent" type="hidden" value="add-stock-ingredient" />
               <input name="ingredientId" type="hidden" value="" />
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-muted">
                 Eller fritekstnavn
                 <input
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                   defaultValue={addValues.displayName}
                   name="displayName"
                   placeholder="For eksempel Olivenolje"
@@ -347,10 +347,10 @@ export default function FamilyStockIngredientsRoute({
                   {actionData.addFieldErrors.ingredientId}
                 </p>
               ) : null}
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-muted">
                 Notat (valgfritt)
                 <input
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                   defaultValue={addValues.note}
                   name="note"
                   type="text"
@@ -372,18 +372,18 @@ export default function FamilyStockIngredientsRoute({
             </Form>
           </section>
         ) : (
-          <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-5 text-sm leading-6 text-slate-600 shadow-sm">
+          <section className="rounded-[28px] border border-line bg-surface px-6 py-5 text-sm leading-6 text-muted shadow-sm">
             Bare administratorer kan endre basisvarene. Du kan fortsatt se
             listen og legge dem til i handlelisten fra ukeplanen.
           </section>
         )}
 
-        <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold text-slate-950">
+            <h2 className="text-lg font-semibold text-ink">
               Familiens basisvarer
             </h2>
-            <p className="text-sm leading-6 text-slate-600">
+            <p className="text-sm leading-6 text-muted">
               {displayStockIngredients.length === 0
                 ? "Ingen basisvarer er konfigurert ennå."
                 : `${displayStockIngredients.length} basisvarer er registrert.`}
@@ -395,14 +395,14 @@ export default function FamilyStockIngredientsRoute({
               {displayStockIngredients.map((ingredient) => (
                 <li
                   key={ingredient.id}
-                  className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-slate-50 p-5 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-[24px] border border-line bg-page p-5 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="text-base font-semibold text-slate-950">
+                    <p className="text-base font-semibold text-ink">
                       {ingredient.displayLabel}
                     </p>
                     {ingredient.note ? (
-                      <p className="mt-1 text-sm leading-6 text-slate-600">
+                      <p className="mt-1 text-sm leading-6 text-muted">
                         {ingredient.note}
                       </p>
                     ) : null}
@@ -446,12 +446,12 @@ export default function FamilyStockIngredientsRoute({
 export function ErrorBoundary({ error }: { error: unknown }) {
   if (isRouteErrorResponse(error)) {
     return (
-      <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
-        <div className="mx-auto max-w-3xl rounded-[28px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-          <h1 className="text-2xl font-semibold text-slate-950">
+      <main className="min-h-screen bg-page px-4 py-12 text-ink">
+        <div className="mx-auto max-w-3xl rounded-[28px] bg-surface p-8 shadow-sm ring-1 ring-line">
+          <h1 className="text-2xl font-semibold text-ink">
             {error.status} {error.statusText}
           </h1>
-          <p className="mt-4 text-sm leading-6 text-slate-600">{error.data}</p>
+          <p className="mt-4 text-sm leading-6 text-muted">{error.data}</p>
         </div>
       </main>
     );

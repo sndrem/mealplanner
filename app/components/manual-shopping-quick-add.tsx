@@ -69,54 +69,54 @@ const quickAddStyles = {
   default: {
     createOption:
       "flex w-full px-4 py-3 text-left text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60",
-    description: "text-sm leading-6 text-slate-600",
+    description: "text-sm leading-6 text-muted",
     dropdown:
-      "absolute z-10 w-full rounded-2xl border border-slate-200 bg-white shadow-lg",
+      "absolute z-10 w-full rounded-2xl border border-line bg-surface shadow-lg",
     dropdownScroll:
       "max-h-64 overflow-y-auto overscroll-y-contain touch-pan-y py-2",
     dropdownUp:
-      "absolute bottom-full z-10 mb-2 w-full rounded-2xl border border-slate-200 bg-white shadow-lg",
+      "absolute bottom-full z-10 mb-2 w-full rounded-2xl border border-line bg-surface shadow-lg",
     error: "text-sm text-rose-600",
     input:
-      "min-w-0 w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
-    label: "block text-sm font-medium text-slate-700",
+      "min-w-0 w-0 flex-1 rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
+    label: "block text-sm font-medium text-muted",
     option:
-      "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60",
-    optionMeta: "text-xs text-slate-500",
+      "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-ink transition hover:bg-page disabled:cursor-not-allowed disabled:opacity-60",
+    optionMeta: "text-xs text-muted",
     recentButton:
-      "rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60",
-    recentLabel: "text-sm font-medium text-slate-700",
-    searchPending: "px-4 py-2 text-sm text-slate-500",
+      "rounded-full border border-line bg-page px-4 py-2 text-sm font-medium text-ink transition hover:border-line hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60",
+    recentLabel: "text-sm font-medium text-muted",
+    searchPending: "px-4 py-2 text-sm text-muted",
     submit:
       "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400",
     quantityInput:
-      "w-24 shrink-0 rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
+      "w-24 shrink-0 rounded-2xl border border-line bg-surface px-3 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
   },
   "store-mode": {
     createOption:
       "flex w-full px-4 py-3 text-left text-sm font-medium text-store-accent-text transition hover:bg-store-accent-light disabled:cursor-not-allowed disabled:opacity-60",
-    description: "text-sm leading-6 text-stone-600",
+    description: "text-sm leading-6 text-store-muted",
     dropdown:
-      "absolute z-10 w-full rounded-2xl border border-stone-200 bg-white shadow-lg",
+      "absolute z-10 w-full rounded-2xl border border-store-line bg-surface shadow-lg",
     dropdownScroll:
       "max-h-64 overflow-y-auto overscroll-y-contain touch-pan-y py-2",
     dropdownUp:
-      "absolute bottom-full z-10 mb-2 w-full rounded-2xl border border-stone-200 bg-white shadow-lg",
+      "absolute bottom-full z-10 mb-2 w-full rounded-2xl border border-store-line bg-surface shadow-lg",
     error: "text-sm text-rose-600",
     input:
-      "min-w-0 w-0 flex-1 rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 text-base text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
-    label: "block text-sm font-medium text-stone-700",
+      "min-w-0 w-0 flex-1 rounded-2xl border border-store-line bg-store-bg px-4 py-3 text-base text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
+    label: "block text-sm font-medium text-store-muted",
     option:
-      "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-stone-900 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60",
-    optionMeta: "text-xs text-stone-500",
+      "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-store-ink transition hover:bg-store-bg disabled:cursor-not-allowed disabled:opacity-60",
+    optionMeta: "text-xs text-store-muted",
     recentButton:
-      "rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-800 transition hover:border-store-accent hover:bg-white disabled:cursor-not-allowed disabled:opacity-60",
-    recentLabel: "text-sm font-medium text-stone-700",
-    searchPending: "px-4 py-2 text-sm text-stone-500",
+      "rounded-full border border-store-line bg-store-bg px-4 py-2 text-sm font-medium text-store-ink transition hover:border-store-accent hover:bg-store-surface disabled:cursor-not-allowed disabled:opacity-60",
+    recentLabel: "text-sm font-medium text-store-muted",
+    searchPending: "px-4 py-2 text-sm text-store-muted",
     submit:
-      "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400",
+      "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-store-ink px-5 py-3 text-sm font-medium text-store-bg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60",
     quantityInput:
-      "w-24 shrink-0 rounded-2xl border border-stone-300 bg-stone-50 px-3 py-3 text-base text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
+      "w-24 shrink-0 rounded-2xl border border-store-line bg-store-bg px-3 py-3 text-base text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60",
   },
 } as const satisfies Record<
   ManualShoppingQuickAddAppearance,

@@ -263,16 +263,16 @@ export function StoreModeShoppingItemCard({
     ? "border-emerald-300 bg-emerald-100"
     : item.checked
       ? "border-red-200 bg-red-50"
-      : "border-stone-200 bg-stone-50";
+      : "border-store-line bg-store-bg";
   const cardShellClass = `relative flex h-full min-h-[44px] flex-col rounded-2xl border p-2.5 transition-colors duration-250 ${cardStateClass}`;
 
   const toggleOverlayClass = item.checked
     ? "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-red-100 active:bg-red-200"
-    : "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-stone-100 active:bg-stone-200";
+    : "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-store-bg active:bg-store-line";
 
   const nameClass = item.checked
-    ? "text-sm font-semibold leading-5 text-stone-500 line-through decoration-stone-400"
-    : "text-sm font-semibold leading-5 text-stone-950";
+    ? "text-sm font-semibold leading-5 text-store-muted line-through decoration-stone-400"
+    : "text-sm font-semibold leading-5 text-store-ink";
   const showQuantityEdit =
     !readOnly &&
     (item.sourceType === "FAMILY" || item.sourceType === "GENERATED") &&
@@ -312,7 +312,7 @@ export function StoreModeShoppingItemCard({
             <span className="min-w-0">
               <span className={nameClass}>{item.name}</span>
               {item.sourceType !== "FAMILY" && item.mealPlanTitle ? (
-                <span className="mt-0.5 block text-xs font-normal text-stone-500">
+                <span className="mt-0.5 block text-xs font-normal text-store-muted">
                   {item.mealPlanTitle}
                 </span>
               ) : null}
@@ -334,7 +334,7 @@ export function StoreModeShoppingItemCard({
                 </span>
               </button>
             ) : quantityBadge ? (
-              <span className={`${badgeClass} bg-white text-stone-700 ring-1 ring-stone-200`}>
+              <span className={`${badgeClass} bg-surface text-store-muted ring-1 ring-store-line`}>
                 {quantityBadge}
               </span>
             ) : null}
@@ -380,7 +380,7 @@ export function StoreModeShoppingItemCard({
             ) : null}
           </span>
           {readOnly && item.note ? (
-            <p className="mt-1 break-words text-xs leading-4 text-stone-600">
+            <p className="mt-1 break-words text-xs leading-4 text-store-muted">
               {item.note}
             </p>
           ) : null}
@@ -396,21 +396,21 @@ export function StoreModeShoppingItemCard({
         >
           <summary
             aria-label={`Vis informasjon om ${item.name}`}
-            className="mt-1 flex h-7 w-7 shrink-0 cursor-pointer list-none items-center justify-center self-start rounded-full border border-stone-200 bg-white text-stone-600 transition hover:bg-stone-100 hover:text-stone-950 group-open:border-store-accent group-open:bg-store-accent-light group-open:text-store-accent-text marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent [&::-webkit-details-marker]:hidden"
+            className="mt-1 flex h-7 w-7 shrink-0 cursor-pointer list-none items-center justify-center self-start rounded-full border border-store-line bg-surface text-store-muted transition hover:bg-store-bg hover:text-store-ink group-open:border-store-accent group-open:bg-store-accent-light group-open:text-store-accent-text marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent [&::-webkit-details-marker]:hidden"
           >
             <StoreModeInfoIcon className="h-3.5 w-3.5" />
             <span className="sr-only">Vis informasjon</span>
           </summary>
           <div
-            className="mb-1 w-full min-w-0 space-y-1.5 border-b border-stone-200 pb-1.5 pointer-events-auto"
+            className="mb-1 w-full min-w-0 space-y-1.5 border-b border-store-line pb-1.5 pointer-events-auto"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
           >
-              <p className="break-words text-xs leading-4 text-stone-600">
+              <p className="break-words text-xs leading-4 text-store-muted">
                 {formatStoreModeItemSourceLine(item)}
               </p>
               {showGroupedMeasurements ? (
-                <ul className="space-y-1 text-xs leading-4 text-stone-700">
+                <ul className="space-y-1 text-xs leading-4 text-store-muted">
                   {item.occurrences.map((occurrence, index) => (
                     <li
                       key={`${occurrence.date}:${occurrence.recipeTitle}:${occurrence.quantityLabel ?? ""}:${index}`}
@@ -421,17 +421,17 @@ export function StoreModeShoppingItemCard({
                 </ul>
               ) : null}
             {!showCategoryEdit && item.note ? (
-              <p className="break-words text-xs leading-4 text-stone-700">
+              <p className="break-words text-xs leading-4 text-store-muted">
                 Notat: {item.note}
               </p>
             ) : null}
             {showCategoryEdit ? (
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-stone-700">
+                <label className="block text-xs font-medium text-store-muted">
                   Endre seksjon
                   <select
                     aria-busy={isSavingCategory}
-                    className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:opacity-70"
+                    className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-sm text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:opacity-70"
                     disabled={isSavingCategory}
                     onChange={(event) =>
                       handleCategoryChange(event.currentTarget.value)
@@ -445,11 +445,11 @@ export function StoreModeShoppingItemCard({
                     ))}
                   </select>
                 </label>
-                <label className="block text-xs font-medium text-stone-700">
+                <label className="block text-xs font-medium text-store-muted">
                   Notat
                   <input
                     aria-busy={isSavingCategory}
-                    className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
+                    className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-sm text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
                     onChange={(event) => setNoteDraft(event.currentTarget.value)}
                     placeholder="F.eks. Tine lettmelk"
                     type="text"
@@ -460,7 +460,7 @@ export function StoreModeShoppingItemCard({
                   <p className="text-xs text-rose-600">{categoryError}</p>
                 ) : null}
                 {isSavingCategory ? (
-                  <p className="text-xs text-stone-500">Lagrer...</p>
+                  <p className="text-xs text-store-muted">Lagrer...</p>
                 ) : null}
               </div>
             ) : null}

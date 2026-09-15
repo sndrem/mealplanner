@@ -234,7 +234,7 @@ export default function FamilyMealPlansRoute({
     partitionedMealPlans.past.length - PAST_MEAL_PLANS_VISIBLE_COUNT;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -291,12 +291,12 @@ export default function FamilyMealPlansRoute({
         ) : null}
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Opprett ukeplan
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Velg datointervall (maks {MEAL_PLAN_MAX_SPAN_DAYS} dager). Navnet
                 foreslås som Uke-nummer fra startdatoen. Du kan starte tomt eller
                 gjenbruke middager og notater fra en tidligere plan.
@@ -312,12 +312,12 @@ export default function FamilyMealPlansRoute({
             />
           </article>
 
-          <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Lagrede ukeplaner
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Kommende planer vises før den aktive, deretter tidligere planer.
                 Åpne eller slett det familien ikke trenger lenger.
               </p>
@@ -327,7 +327,7 @@ export default function FamilyMealPlansRoute({
               <div className="mt-6 grid gap-6">
                 {partitionedMealPlans.upcoming.length > 0 ? (
                   <div className="grid gap-3">
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                       Kommende
                     </h3>
                     <div className="grid gap-4">
@@ -409,7 +409,7 @@ export default function FamilyMealPlansRoute({
                     {hiddenPastMealPlanCount > 0 ? (
                       <button
                         aria-expanded={showAllPastMealPlans}
-                        className="justify-self-start text-sm font-medium text-slate-600 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-950"
+                        className="justify-self-start text-sm font-medium text-muted underline decoration-slate-300 underline-offset-4 transition hover:text-ink"
                         onClick={() =>
                           setShowAllPastMealPlans((current) => !current)
                         }
@@ -424,11 +424,11 @@ export default function FamilyMealPlansRoute({
                 ) : null}
               </div>
             ) : (
-              <div className="mt-6 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-5 py-6">
-                <h3 className="text-base font-semibold text-slate-950">
+              <div className="mt-6 rounded-[24px] border border-dashed border-line bg-page px-5 py-6">
+                <h3 className="text-base font-semibold text-ink">
                   Ingen ukeplaner ennå
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+                <p className="mt-2 text-sm leading-6 text-muted">
                   Opprett familiens første ukeplan for å komme i gang med
                   serverlagret planlegging.
                 </p>
@@ -535,10 +535,10 @@ function CreateMealPlanForm({
       <input name="intent" type="hidden" value="create-meal-plan" />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           Startdato
           <input
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             name="startDate"
             onChange={(event) => handleStartDateChange(event.target.value)}
             type="date"
@@ -546,10 +546,10 @@ function CreateMealPlanForm({
           />
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           Sluttdato
           <input
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             name="endDate"
             onChange={(event) =>
               setFormState((current) => ({
@@ -570,10 +570,10 @@ function CreateMealPlanForm({
         <p className="text-sm text-rose-600">{actionData.fieldErrors.endDate}</p>
       ) : null}
 
-      <label className="block text-sm font-medium text-slate-700">
+      <label className="block text-sm font-medium text-muted">
         Navn
         <input
-          className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
           name="title"
           onChange={(event) =>
             setFormState((current) => ({
@@ -591,10 +591,10 @@ function CreateMealPlanForm({
         <p className="text-sm text-rose-600">{actionData.fieldErrors.title}</p>
       ) : null}
 
-      <label className="block text-sm font-medium text-slate-700">
+      <label className="block text-sm font-medium text-muted">
         Start med eksisterende ukeplan
         <select
-          className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
           name="sourceMealPlanId"
           onChange={(event) =>
             setFormState((current) => ({
@@ -614,7 +614,7 @@ function CreateMealPlanForm({
         </select>
       </label>
 
-      <p className="text-sm leading-6 text-slate-500">
+      <p className="text-sm leading-6 text-muted">
         Velg en tidligere ukeplan for å kopiere middager og notater til samme
         relative dager i den nye perioden. Dager som faller utenfor det nye
         intervallet blir ikke kopiert.
@@ -656,16 +656,16 @@ function MealPlanListCard({
     timeStatus === "active"
       ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-5 shadow-sm"
       : timeStatus === "upcoming"
-        ? "rounded-[24px] border border-slate-200 bg-slate-50 p-5"
-        : "rounded-[24px] border border-slate-200 bg-slate-50/70 p-5 opacity-90";
+        ? "rounded-[24px] border border-line bg-page p-5"
+        : "rounded-[24px] border border-line bg-page/70 p-5 opacity-90";
   const titleClassName =
     timeStatus === "past"
-      ? "text-base font-semibold text-slate-700"
-      : "text-base font-semibold text-slate-950";
+      ? "text-base font-semibold text-muted"
+      : "text-base font-semibold text-ink";
   const windowClassName =
     timeStatus === "past"
-      ? "mt-2 text-sm leading-6 text-slate-500"
-      : "mt-2 text-sm leading-6 text-slate-600";
+      ? "mt-2 text-sm leading-6 text-muted"
+      : "mt-2 text-sm leading-6 text-muted";
   const openLinkClassName =
     timeStatus === "active"
       ? "inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-emerald-950"
@@ -683,7 +683,7 @@ function MealPlanListCard({
       : timeStatus === "upcoming"
         ? {
             className:
-              "rounded-full bg-white px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-700 ring-1 ring-slate-200",
+              "rounded-full bg-surface px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted ring-1 ring-line",
             label: "Kommende",
           }
         : null;
@@ -703,7 +703,7 @@ function MealPlanListCard({
               className={
                 mealPlan.status === "APPROVED"
                   ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200"
-                  : "rounded-full bg-white px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600 ring-1 ring-slate-200"
+                  : "rounded-full bg-surface px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted ring-1 ring-line"
               }
             >
               {mealPlan.status === "APPROVED" ? "Godkjent" : "Utkast"}
@@ -716,7 +716,7 @@ function MealPlanListCard({
 
         <div className="flex flex-wrap gap-3">
           {isPlaceholder ? (
-            <span className="inline-flex items-center justify-center rounded-2xl bg-slate-200 px-4 py-3 text-sm font-medium text-slate-600">
+            <span className="inline-flex items-center justify-center rounded-2xl bg-slate-200 px-4 py-3 text-sm font-medium text-muted">
               Oppretter...
             </span>
           ) : (

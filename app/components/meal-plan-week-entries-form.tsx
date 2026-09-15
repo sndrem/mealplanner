@@ -299,7 +299,7 @@ export function MealPlanWeekEntriesForm({
           className={
             isReorderMode
               ? "inline-flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 sm:w-auto"
-              : "inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 transition hover:bg-slate-50 sm:w-auto"
+              : "inline-flex w-full items-center justify-center rounded-2xl border border-line bg-surface px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-page sm:w-auto"
           }
           onClick={() => setIsReorderMode((current) => !current)}
           type="button"
@@ -326,7 +326,7 @@ export function MealPlanWeekEntriesForm({
           {entryFormError}
         </p>
       ) : isAutosaving ? (
-        <p className="text-sm text-slate-500">Lagrer…</p>
+        <p className="text-sm text-muted">Lagrer…</p>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -340,7 +340,7 @@ export function MealPlanWeekEntriesForm({
           {isSavingEntries ? "Lagrer middager..." : "Lagre middager"}
         </button>
         <button
-          className="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+          className="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-line disabled:bg-page disabled:text-muted"
           disabled={isEntryMutationPending}
           name="intent"
           type="submit"
@@ -529,7 +529,7 @@ function MealPlanDayRow({
       className={
         isToday
           ? "min-w-0 max-w-full overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 ring-1 ring-emerald-100"
-          : "min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+          : "min-w-0 max-w-full overflow-hidden rounded-2xl border border-line bg-page"
       }
     >
       <div className="flex items-start justify-between gap-2 p-3">
@@ -538,13 +538,13 @@ function MealPlanDayRow({
           onClick={toggleDayOpen}
           type="button"
         >
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">
             {formatWeekdayLabel(date)}
           </p>
-          <p className="truncate text-base font-semibold text-slate-950">
+          <p className="truncate text-base font-semibold text-ink">
             {isFillingEmptyDay ? "Fyller tom dag..." : mealLabel}
           </p>
-          <p className="text-xs text-slate-500">{formatDateLabel(date)}</p>
+          <p className="text-xs text-muted">{formatDateLabel(date)}</p>
         </button>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {isToday ? (
@@ -587,7 +587,7 @@ function MealPlanDayRow({
       </div>
 
       {isDayOpen ? (
-        <div className="min-w-0 space-y-3 border-t border-slate-200 px-3 pb-3 pt-3">
+        <div className="min-w-0 space-y-3 border-t border-line px-3 pb-3 pt-3">
           <input name="entryDate" type="hidden" value={date} />
           <input
             name={`entryUpdatedAt:${date}`}
@@ -597,7 +597,7 @@ function MealPlanDayRow({
 
           {canExportDay ? (
             <a
-              className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-surface px-4 py-2 text-sm font-medium text-muted ring-1 ring-line transition hover:bg-page"
               href={`/families/${familyId}/meal-plans/${mealPlanId}/days/${date}/calendar.ics`}
               target={calendarDownloadTarget}
             >
@@ -606,7 +606,7 @@ function MealPlanDayRow({
           ) : null}
 
           <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-700">Middag</p>
+            <p className="text-sm font-medium text-muted">Middag</p>
             <MealPlanRecipePicker
               freezerItems={selectableFreezerItems}
               inPlanRecipeIds={inPlanRecipeIds}
@@ -619,7 +619,7 @@ function MealPlanDayRow({
             />
             {parsedSelection.recipeId ? (
               <Link
-                className="mt-2 inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+                className="mt-2 inline-flex w-full items-center justify-center rounded-2xl bg-surface px-4 py-2 text-sm font-medium text-muted ring-1 ring-line transition hover:bg-page"
                 to={`/families/${familyId}/recipes/${parsedSelection.recipeId}`}
               >
                 Se oppskrift
@@ -627,10 +627,10 @@ function MealPlanDayRow({
             ) : null}
           </div>
 
-          <label className="block min-w-0 text-sm font-medium text-slate-700">
+          <label className="block min-w-0 text-sm font-medium text-muted">
             Ansvarlig
             <select
-              className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 box-border w-full max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               name={`responsibleUserId:${date}`}
               onChange={(event) =>
                 setSelectedResponsibleUserId(event.target.value)
@@ -646,18 +646,18 @@ function MealPlanDayRow({
             </select>
           </label>
 
-          <label className="block min-w-0 text-sm font-medium text-slate-700">
+          <label className="block min-w-0 text-sm font-medium text-muted">
             Notat
             <textarea
-              className="mt-2 box-border min-h-24 w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 box-border min-h-24 w-full max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               defaultValue={entry.note}
               name={`note:${date}`}
               placeholder="F.eks. bytt ut ris med pasta eller husk rester til dagen etter"
             />
           </label>
 
-          <div className="min-w-0 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-            <p className="wrap-break-word text-sm leading-6 text-slate-600 whitespace-break-spaces">
+          <div className="min-w-0 rounded-2xl bg-surface p-3 ring-1 ring-line">
+            <p className="wrap-break-word text-sm leading-6 text-muted whitespace-break-spaces">
               {selectedRecipe
                 ? `${selectedRecipe.description ?? "Ingen beskrivelse."} · ${selectedRecipe.prepMinutes ?? "?"} min · ${selectedRecipe.defaultServings ?? "?"} personer`
                 : selectedFreezerItem
@@ -674,7 +674,7 @@ function MealPlanDayRow({
                 {selectedRecipe.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
+                    className="rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted"
                   >
                     {tag}
                   </span>
@@ -804,7 +804,7 @@ function MealPlanReorderDayRow({
     "min-w-0 max-w-full overflow-hidden rounded-2xl border p-3",
     isToday
       ? "border-emerald-200 bg-emerald-50 ring-1 ring-emerald-100"
-      : "border-slate-200 bg-slate-50",
+      : "border-line bg-page",
     isDragging ? "opacity-50" : "",
     dropHighlight ? "ring-2 ring-emerald-400" : "",
     hasMealSelection ? "active:cursor-grabbing" : "",
@@ -820,8 +820,8 @@ function MealPlanReorderDayRow({
           <span
             className={
               hasMealSelection
-                ? "mt-1 shrink-0 cursor-grab touch-none rounded-xl border border-dashed border-slate-300 bg-white px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 active:cursor-grabbing"
-                : "mt-1 shrink-0 rounded-xl border border-dashed border-slate-200 bg-slate-100 px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-300"
+                ? "mt-1 shrink-0 cursor-grab touch-none rounded-xl border border-dashed border-line bg-surface px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-muted active:cursor-grabbing"
+                : "mt-1 shrink-0 rounded-xl border border-dashed border-line bg-page px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-300"
             }
             onMouseDown={(event) => {
               if (!hasMealSelection) {
@@ -842,13 +842,13 @@ function MealPlanReorderDayRow({
             Dra
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">
               {formatWeekdayLabel(date)}
             </p>
-            <p className="truncate text-base font-semibold text-slate-950">
+            <p className="truncate text-base font-semibold text-ink">
               {mealLabel}
             </p>
-            <p className="text-xs text-slate-500">{formatDateLabel(date)}</p>
+            <p className="text-xs text-muted">{formatDateLabel(date)}</p>
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -890,11 +890,11 @@ function MealPlanReorderDayRow({
 
       {hasMealSelection ? (
         <div className="mt-3">
-          <label className="block min-w-0 text-sm font-medium text-slate-700">
+          <label className="block min-w-0 text-sm font-medium text-muted">
             Bytt med
             <select
               aria-label="Bytt middag med annen dag"
-              className="mt-2 box-border w-full max-w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 box-border w-full max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               onChange={(event) => {
                 const targetDate = event.target.value;
                 setByttMedValue("");

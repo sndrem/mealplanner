@@ -1026,7 +1026,7 @@ export default function FamilyMealPlanShoppingRoute({
       : loaderData.excludedGeneratedItems;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -1131,18 +1131,18 @@ export default function FamilyMealPlanShoppingRoute({
                   {displayStockIngredients.map((ingredient) => (
                     <li
                       key={ingredient.sourceKey}
-                      className="rounded-[20px] border border-amber-200 bg-white px-4 py-4"
+                      className="rounded-[20px] border border-amber-200 bg-surface px-4 py-4"
                     >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <p className="text-sm font-semibold text-slate-950">
+                          <p className="text-sm font-semibold text-ink">
                             {ingredient.name}
                             {ingredient.quantityLabel
                               ? ` · ${ingredient.quantityLabel}`
                               : ""}
                           </p>
                           {ingredient.occurrenceCount > 1 ? (
-                            <ul className="mt-1 space-y-1 text-xs leading-5 text-slate-600">
+                            <ul className="mt-1 space-y-1 text-xs leading-5 text-muted">
                               {ingredient.occurrences.map((occurrence) => (
                                 <li
                                   key={`${occurrence.mealPlanEntryId}:${occurrence.recipeIngredientId}`}
@@ -1155,7 +1155,7 @@ export default function FamilyMealPlanShoppingRoute({
                               ))}
                             </ul>
                           ) : (
-                            <p className="mt-1 text-xs leading-5 text-slate-600">
+                            <p className="mt-1 text-xs leading-5 text-muted">
                               {`Brukt i ${ingredient.occurrences[0]?.recipeTitle ?? "oppskrift"}`}
                               {ingredient.occurrences[0]?.date
                                 ? ` · ${formatDateLabel(ingredient.occurrences[0].date)}`
@@ -1200,14 +1200,14 @@ export default function FamilyMealPlanShoppingRoute({
         ) : null}
 
         {displayExcludedGeneratedItems.length > 0 ? (
-          <section className="rounded-[28px] border border-slate-200 bg-slate-50 px-6 py-5 text-slate-950 shadow-sm">
+          <section className="rounded-[28px] border border-line bg-page px-6 py-5 text-ink shadow-sm">
             <details open>
               <summary className="cursor-pointer text-base font-semibold">
                 {displayExcludedGeneratedItems.length} varelinjer fjernet fra
                 listen
               </summary>
               <div className="mt-4 space-y-4">
-                <p className="text-sm leading-6 text-slate-600">
+                <p className="text-sm leading-6 text-muted">
                   Disse varene er skjult fra handlelisten, men ligger fortsatt i
                   ukeplanen. Du kan legge dem tilbake når du trenger dem.
                 </p>
@@ -1221,18 +1221,18 @@ export default function FamilyMealPlanShoppingRoute({
                     return (
                       <li
                         key={item.sourceKey}
-                        className="rounded-[20px] border border-slate-200 bg-white px-4 py-4"
+                        className="rounded-[20px] border border-line bg-surface px-4 py-4"
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-slate-950">
+                            <p className="text-sm font-semibold text-ink">
                               {item.name}
                               {item.quantityLabel
                                 ? ` · ${item.quantityLabel}`
                                 : ""}
                             </p>
                             {item.sourceType === "GENERATED" ? (
-                              <p className="mt-1 text-xs leading-5 text-slate-600">
+                              <p className="mt-1 text-xs leading-5 text-muted">
                                 {item.occurrenceCount === 1
                                   ? `Fra ${item.occurrences[0]?.recipeTitle}`
                                   : `Fra ${item.occurrenceCount} planlagte middager`}
@@ -1276,10 +1276,10 @@ export default function FamilyMealPlanShoppingRoute({
         ) : null}
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">Oversikt</h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <h2 className="text-lg font-semibold text-ink">Oversikt</h2>
+              <p className="text-sm leading-6 text-muted">
                 Listen dekker perioden{" "}
                 {formatMealPlanWindow(
                   loaderData.mealPlan.startDate,
@@ -1290,44 +1290,44 @@ export default function FamilyMealPlanShoppingRoute({
             </div>
 
             <dl className="mt-6 grid gap-4">
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+              <div className="rounded-[24px] border border-line bg-page p-5">
+                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
                   Status
                 </dt>
-                <dd className="mt-2 text-base font-semibold text-slate-950">
+                <dd className="mt-2 text-base font-semibold text-ink">
                   {loaderData.mealPlan.status === "APPROVED"
                     ? "Godkjent"
                     : "Utkast"}
                 </dd>
               </div>
 
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+              <div className="rounded-[24px] border border-line bg-page p-5">
+                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
                   Varelinjer
                 </dt>
-                <dd className="mt-2 text-sm leading-6 text-slate-700">
+                <dd className="mt-2 text-sm leading-6 text-muted">
                   {loaderData.itemCounts.generated} genererte og{" "}
                   {loaderData.itemCounts.manual} manuelle linjer.
                 </dd>
               </div>
 
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+              <div className="rounded-[24px] border border-line bg-page p-5">
+                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
                   Synlige datoer
                 </dt>
-                <dd className="mt-2 text-sm leading-6 text-slate-700">
+                <dd className="mt-2 text-sm leading-6 text-muted">
                   {loaderData.visibleDates.map(formatDateLabel).join(", ")}
                 </dd>
               </div>
             </dl>
           </article>
 
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Legg til manuell varelinje
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Bruk dette for varer som ikke kommer direkte fra oppskriftene,
                 men som skal med i samme handleliste og sortering.
               </p>
@@ -1350,8 +1350,8 @@ export default function FamilyMealPlanShoppingRoute({
               />
             </div>
 
-            <details className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <summary className="cursor-pointer text-sm font-medium text-slate-800">
+            <details className="mt-6 rounded-2xl border border-line bg-page px-4 py-4">
+              <summary className="cursor-pointer text-sm font-medium text-ink">
                 Avansert: legg til med alle felt
               </summary>
 
@@ -1363,20 +1363,20 @@ export default function FamilyMealPlanShoppingRoute({
                 />
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-sm font-medium text-slate-700">
+                  <label className="block text-sm font-medium text-muted">
                     Varenavn
                     <input
-                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                       defaultValue={addManualValues.name}
                       name="name"
                       type="text"
                     />
                   </label>
 
-                  <label className="block text-sm font-medium text-slate-700">
+                  <label className="block text-sm font-medium text-muted">
                     Mengde
                     <input
-                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                       defaultValue={addManualValues.quantity}
                       name="quantity"
                       placeholder="F.eks. 2 poser"
@@ -1393,10 +1393,10 @@ export default function FamilyMealPlanShoppingRoute({
                 ) : null}
 
                 <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-3">
-                  <label className="block min-w-0 text-sm font-medium text-slate-700">
+                  <label className="block min-w-0 text-sm font-medium text-muted">
                     Kategori
                     <select
-                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                       defaultValue={addManualValues.categoryId}
                       name="categoryId"
                     >
@@ -1409,10 +1409,10 @@ export default function FamilyMealPlanShoppingRoute({
                     </select>
                   </label>
 
-                  <label className="block min-w-0 text-sm font-medium text-slate-700">
+                  <label className="block min-w-0 text-sm font-medium text-muted">
                     Foretrukket butikk
                     <select
-                      className="mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      className="mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                       defaultValue={addManualValues.preferredStoreId}
                       name="preferredStoreId"
                     >
@@ -1425,7 +1425,7 @@ export default function FamilyMealPlanShoppingRoute({
                     </select>
                   </label>
 
-                  <label className="block min-w-0 text-sm font-medium text-slate-700">
+                  <label className="block min-w-0 text-sm font-medium text-muted">
                     Handledato
                     <ShoppingDateSelect
                       defaultValue={addManualValues.buyOnDate}
@@ -1455,10 +1455,10 @@ export default function FamilyMealPlanShoppingRoute({
                   </p>
                 ) : null}
 
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-muted">
                   Notat
                   <textarea
-                    className="mt-2 min-h-28 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    className="mt-2 min-h-28 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                     defaultValue={addManualValues.note}
                     name="note"
                     placeholder="F.eks. husk kampanjepris eller at varen skal kjøpes senere i uken"
@@ -1484,12 +1484,12 @@ export default function FamilyMealPlanShoppingRoute({
         </section>
 
         {loaderData.familyStoreGroups.length ? (
-          <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-violet-200">
+          <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-violet-200">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Alltid på listen
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Faste varer som følger familien på tvers av ukeplaner. Rediger
                 listen på{" "}
                 <Link
@@ -1504,7 +1504,7 @@ export default function FamilyMealPlanShoppingRoute({
             <div className="mt-6 grid gap-5">
               {loaderData.familyStoreGroups.map((group) => (
                 <div key={`family:${group.store?.id ?? "no-store"}`}>
-                  <h3 className="text-sm font-semibold text-slate-800">
+                  <h3 className="text-sm font-semibold text-ink">
                     {group.store?.name ?? "Ingen valgt butikk"}
                   </h3>
                   <div className="mt-3 grid gap-2">
@@ -1531,8 +1531,8 @@ export default function FamilyMealPlanShoppingRoute({
                                 <p
                                   className={`text-sm font-semibold ${
                                     displayChecked
-                                      ? "text-slate-500 line-through"
-                                      : "text-slate-950"
+                                      ? "text-muted line-through"
+                                      : "text-ink"
                                   }`}
                                 >
                                   {item.name}
@@ -1596,13 +1596,13 @@ export default function FamilyMealPlanShoppingRoute({
             {displayStoreGroups.map((group) => (
               <article
                 key={group.store?.id ?? "no-store"}
-                className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200"
+                className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line"
               >
                 <div className="flex flex-col gap-2">
-                  <h2 className="text-lg font-semibold text-slate-950">
+                  <h2 className="text-lg font-semibold text-ink">
                     {group.store?.name ?? "Ingen valgt butikk"}
                   </h2>
-                  <p className="text-sm leading-6 text-slate-600">
+                  <p className="text-sm leading-6 text-muted">
                     {group.store
                       ? "Varene er sortert etter butikkens seksjoner der de finnes."
                       : "Disse varene har ingen foretrukket butikk ennå."}
@@ -1614,7 +1614,7 @@ export default function FamilyMealPlanShoppingRoute({
                     <section
                       key={`${group.store?.id ?? "no-store"}:${section.category.id}`}
                     >
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted">
                         {section.displayName}
                       </h3>
 
@@ -1722,14 +1722,14 @@ export default function FamilyMealPlanShoppingRoute({
                           return (
                             <article
                               key={item.sourceKey}
-                              className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50 p-3 xl:p-5"
+                              className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-line bg-page p-3 xl:p-5"
                             >
                               <div className="flex flex-wrap items-center gap-2">
                                 <h4
                                   className={`text-base font-semibold ${
                                     displayChecked
-                                      ? "text-slate-500 line-through"
-                                      : "text-slate-950"
+                                      ? "text-muted line-through"
+                                      : "text-ink"
                                   }`}
                                 >
                                   {item.name}
@@ -1742,7 +1742,7 @@ export default function FamilyMealPlanShoppingRoute({
                                       !item.quantityLabel &&
                                       item.occurrenceCount > 1
                                         ? "rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 transition hover:bg-amber-200"
-                                        : "rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+                                        : "rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted ring-1 ring-line transition hover:bg-page"
                                     }
                                     onClick={() => {
                                       setQuantityDraft(
@@ -1767,7 +1767,7 @@ export default function FamilyMealPlanShoppingRoute({
                                   </button>
                                 ) : quantityBadge ? (
                                   <span
-                                    className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                                    className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted ring-1 ring-line"
                                   >
                                     {quantityBadge}
                                   </span>
@@ -1808,14 +1808,14 @@ export default function FamilyMealPlanShoppingRoute({
                                   </span>
                                 ) : null}
                                 {item.note ? (
-                                  <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">
+                                  <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-muted">
                                     Har notat
                                   </span>
                                 ) : null}
                               </div>
 
                               {compactSourceLine ? (
-                                <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-600 xl:hidden">
+                                <p className="mt-1 line-clamp-2 text-sm leading-5 text-muted xl:hidden">
                                   {compactSourceLine}
                                 </p>
                               ) : null}
@@ -1824,7 +1824,7 @@ export default function FamilyMealPlanShoppingRoute({
                                 className="group mt-2 min-w-0 xl:hidden"
                                 open={shouldAutoOpenDetails}
                               >
-                                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
+                                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium text-muted marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
                                   <span>Detaljer</span>
                                   <span className="text-xs text-slate-400 group-open:hidden">
                                     Åpne
@@ -1833,8 +1833,8 @@ export default function FamilyMealPlanShoppingRoute({
                                     Lukk
                                   </span>
                                 </summary>
-                                <div className="mt-3 min-w-0 space-y-3 border-t border-slate-200 pt-3">
-                                  <p className="text-sm leading-6 text-slate-600">
+                                <div className="mt-3 min-w-0 space-y-3 border-t border-line pt-3">
+                                  <p className="text-sm leading-6 text-muted">
                                     {item.sourceType === "GENERATED"
                                       ? formatGeneratedItemSummary(item)
                                       : item.sourceType === "MANUAL" && item.buyOnDate
@@ -1842,7 +1842,7 @@ export default function FamilyMealPlanShoppingRoute({
                                         : "Lagt til manuelt uten spesifikk handledato."}
                                   </p>
                                   {item.note ? (
-                                    <p className="text-sm leading-6 text-slate-700">
+                                    <p className="text-sm leading-6 text-muted">
                                       Notat: {item.note}
                                     </p>
                                   ) : null}
@@ -1851,7 +1851,7 @@ export default function FamilyMealPlanShoppingRoute({
                               </details>
 
                               <div className="mt-4 hidden xl:block">
-                                <p className="text-sm leading-6 text-slate-600">
+                                <p className="text-sm leading-6 text-muted">
                                   {item.sourceType === "GENERATED"
                                     ? formatGeneratedItemSummary(item)
                                     : item.sourceType === "MANUAL" && item.buyOnDate
@@ -1859,7 +1859,7 @@ export default function FamilyMealPlanShoppingRoute({
                                       : "Lagt til manuelt uten spesifikk handledato."}
                                 </p>
                                 {item.note ? (
-                                  <p className="mt-2 text-sm leading-6 text-slate-700">
+                                  <p className="mt-2 text-sm leading-6 text-muted">
                                     Notat: {item.note}
                                   </p>
                                 ) : null}
@@ -1878,11 +1878,11 @@ export default function FamilyMealPlanShoppingRoute({
             ))}
           </section>
         ) : (
-          <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+            <h2 className="text-lg font-semibold text-ink">
               Ingen varer ennå
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
               Legg til middager i ukeplanen eller opprett en manuell varelinje
               for å starte handlelisten.
             </p>
@@ -1925,10 +1925,10 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
-      <div className="mx-auto max-w-3xl rounded-[28px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
+      <div className="mx-auto max-w-3xl rounded-[28px] bg-surface p-8 shadow-sm ring-1 ring-line">
+        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
         <Link
           className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
           to="/app"

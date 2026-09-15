@@ -47,11 +47,11 @@ export function StoreModeStockIngredientsReminder({
   if (dismissed) {
     return (
       <button
-        className={`${storeModeStockReminderClass} flex w-full items-center gap-3 text-left transition hover:bg-amber-100`}
+        className={`${storeModeStockReminderClass} flex w-full items-center gap-3 text-left transition hover:brightness-110`}
         onClick={onRestore}
         type="button"
       >
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-amber-950">
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-notice-warning-ink">
           Vis basisvarer
         </span>
         <span className={storeModeStockReminderChipClass}>
@@ -64,14 +64,14 @@ export function StoreModeStockIngredientsReminder({
   return (
     <details className={storeModeStockReminderClass}>
       <summary className="flex cursor-pointer list-none items-center gap-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent [&::-webkit-details-marker]:hidden">
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-amber-950">
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-notice-warning-ink">
           Basisvarer
         </span>
         <span className={storeModeStockReminderChipClass}>
           {ingredients.length} varer
         </span>
         <button
-          className="shrink-0 rounded-lg px-2 py-1 text-sm text-amber-800/80 transition hover:bg-amber-100 hover:text-amber-950"
+          className="shrink-0 rounded-lg px-2 py-1 text-sm text-notice-warning-muted transition hover:bg-notice-warning-line/20 hover:text-notice-warning-ink"
           onClick={handleDismiss}
           onPointerDown={(event) => {
             event.preventDefault();
@@ -83,8 +83,8 @@ export function StoreModeStockIngredientsReminder({
         </button>
       </summary>
 
-      <div className="mt-3 space-y-3 border-t border-amber-200/80 pt-3">
-        <p className="text-sm leading-6 text-amber-900/80">
+      <div className="mt-3 space-y-3 border-t border-notice-warning-line/60 pt-3">
+        <p className="text-sm leading-6 text-notice-warning-muted">
           Disse varene er vanligvis på lager og vises ikke i handlelisten med
           mindre du legger dem til for denne turen.
         </p>
@@ -114,18 +114,18 @@ export function StoreModeStockIngredientsReminder({
           {ingredients.map((ingredient) => (
             <li
               key={ingredient.sourceKey}
-              className="rounded-2xl border border-amber-200 bg-white px-4 py-3"
+              className="rounded-2xl border border-notice-warning-line bg-store-surface px-4 py-3"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-stone-950">
+                  <p className="text-sm font-semibold text-store-ink">
                     {ingredient.name}
                     {ingredient.quantityLabel
                       ? ` · ${ingredient.quantityLabel}`
                       : ""}
                   </p>
                   {ingredient.occurrenceCount > 1 ? (
-                    <ul className="mt-1 space-y-1 text-xs leading-5 text-stone-600">
+                    <ul className="mt-1 space-y-1 text-xs leading-5 text-store-muted">
                       {ingredient.occurrences.map((occurrence) => (
                         <li
                           key={`${occurrence.mealPlanEntryId}:${occurrence.recipeIngredientId}`}
@@ -138,7 +138,7 @@ export function StoreModeStockIngredientsReminder({
                       ))}
                     </ul>
                   ) : (
-                    <p className="mt-1 text-xs leading-5 text-stone-600">
+                    <p className="mt-1 text-xs leading-5 text-store-muted">
                       {`Brukt i ${ingredient.occurrences[0]?.recipeTitle ?? "oppskrift"}`}
                       {ingredient.occurrences[0]?.date
                         ? ` · ${formatStockOccurrenceDate(ingredient.occurrences[0].date)}`

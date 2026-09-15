@@ -12,7 +12,7 @@ export const meta: MetaFunction = () => {
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
@@ -61,12 +61,12 @@ export default function Home() {
           ].map((item) => (
             <article
               key={item.title}
-              className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200"
+              className="rounded-[28px] bg-surface p-5 shadow-sm ring-1 ring-line"
             >
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 {item.title}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+              <p className="mt-2 text-sm leading-6 text-muted">
                 {item.description}
               </p>
             </article>

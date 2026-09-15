@@ -100,4 +100,19 @@ describe("AppTopNav", () => {
 
     expect(screen.getByRole("link", { name: "Butikker" })).toHaveClass("bg-emerald-500");
   });
+
+  it("shows the theme toggle in desktop nav and the mobile menu", () => {
+    renderWithRouter(<AppTopNav familyId="family-1" />, {
+      initialEntries: ["/families/family-1"],
+    });
+
+    expect(screen.getByRole("radiogroup", { name: "Utseende" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Åpne meny" }));
+
+    expect(screen.getAllByRole("radiogroup", { name: "Utseende" })).toHaveLength(2);
+    expect(screen.getByText("System")).toBeInTheDocument();
+    expect(screen.getByText("Lyst")).toBeInTheDocument();
+    expect(screen.getByText("Mørkt")).toBeInTheDocument();
+  });
 });

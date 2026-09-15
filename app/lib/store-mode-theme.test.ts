@@ -7,10 +7,12 @@ import {
   storeModeMetaDateSelectClass,
   storeModeMetaStoreSelectClass,
   storeModeMetaTripFocusSelectClass,
+  storeModePageClass,
   storeModeSelectClass,
   storeModeSyncOverlayShellClass,
   storeModeUndoBarActionClass,
   storeModeUndoBarClass,
+  storeModeCelebrationHighlightClass,
 } from "./store-mode-theme";
 
 describe("store-mode-theme", () => {
@@ -19,9 +21,9 @@ describe("store-mode-theme", () => {
     const sync = getStoreModeBannerClass("sync");
     const error = getStoreModeBannerClass("error");
 
-    expect(success).toContain("emerald");
-    expect(sync).toContain("amber");
-    expect(error).toContain("rose");
+    expect(success).toContain("notice-success");
+    expect(sync).toContain("notice-warning");
+    expect(error).toContain("notice-danger");
     expect(success).not.toBe(sync);
   });
 
@@ -31,8 +33,8 @@ describe("store-mode-theme", () => {
 
     expect(storeModeSyncOverlayShellClass).toContain("fixed");
     expect(storeModeSyncOverlayShellClass).toContain("pointer-events-none");
-    expect(sync).toContain("amber");
-    expect(error).toContain("rose");
+    expect(sync).toContain("notice-warning");
+    expect(error).toContain("notice-danger");
     expect(sync).not.toBe(error);
     expect(sync).not.toContain("py-5");
   });
@@ -50,5 +52,15 @@ describe("store-mode-theme", () => {
     expect(storeModeBottomChromeShellClass).toContain("bottom-0");
     expect(storeModeUndoBarClass).toContain("min-h-11");
     expect(storeModeUndoBarActionClass).toContain("min-h-11");
+  });
+
+  it("uses store tokens for page and surface chrome", () => {
+    expect(storeModePageClass).toContain("bg-store-bg");
+    expect(storeModePageClass).toContain("text-store-ink");
+    expect(storeModeUndoBarClass).toContain("bg-store-surface");
+  });
+
+  it("uses notice tokens for the celebration highlight", () => {
+    expect(storeModeCelebrationHighlightClass).toContain("notice-success");
   });
 });

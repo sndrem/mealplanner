@@ -620,7 +620,7 @@ export default function FamilyShoppingRoute({
       : displayStoreGroups;
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 pb-44 pt-8 text-slate-900 lg:pb-12 lg:py-12">
+    <main className="min-h-screen bg-page px-4 pb-44 pt-8 text-ink lg:pb-12 lg:py-12">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8 lg:py-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -697,7 +697,7 @@ export default function FamilyShoppingRoute({
                     className={`rounded-2xl px-5 py-3 text-sm font-medium transition ${
                       displayListMode === "GLOBAL"
                         ? "bg-slate-950 text-white"
-                        : "bg-white text-slate-900 ring-1 ring-sky-200 hover:bg-sky-100"
+                        : "bg-surface text-ink ring-1 ring-sky-200 hover:bg-sky-100"
                     }`}
                     disabled={
                       navigation.state !== "idle" &&
@@ -719,7 +719,7 @@ export default function FamilyShoppingRoute({
                     className={`rounded-2xl px-5 py-3 text-sm font-medium transition ${
                       displayListMode === "COMBINED"
                         ? "bg-emerald-600 text-white"
-                        : "bg-white text-slate-900 ring-1 ring-sky-200 hover:bg-sky-100"
+                        : "bg-surface text-ink ring-1 ring-sky-200 hover:bg-sky-100"
                     }`}
                     disabled={
                       navigation.state !== "idle" &&
@@ -736,32 +736,32 @@ export default function FamilyShoppingRoute({
         ) : null}
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">Oversikt</h2>
+          <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+            <h2 className="text-lg font-semibold text-ink">Oversikt</h2>
             <dl className="mt-6 grid gap-4">
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+              <div className="rounded-[24px] border border-line bg-page p-5">
+                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
                   Totalt
                 </dt>
-                <dd className="mt-2 text-base font-semibold text-slate-950">
+                <dd className="mt-2 text-base font-semibold text-ink">
                   {loaderData.itemCounts.total} varelinjer
                 </dd>
               </div>
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+              <div className="rounded-[24px] border border-line bg-page p-5">
+                <dt className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
                   Gjenstår
                 </dt>
-                <dd className="mt-2 text-sm leading-6 text-slate-700">
+                <dd className="mt-2 text-sm leading-6 text-muted">
                   {loaderData.itemCounts.unchecked} å handle,{" "}
                   {loaderData.itemCounts.checked} kjøpt.
                 </dd>
               </div>
               {loaderData.activeListMode === "COMBINED" ? (
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                  <dt className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+                <div className="rounded-[24px] border border-line bg-page p-5">
+                  <dt className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
                     Visning
                   </dt>
-                  <dd className="mt-2 text-sm leading-6 text-slate-700">
+                  <dd className="mt-2 text-sm leading-6 text-muted">
                     {loaderData.itemCounts.family} faste varer og{" "}
                     {loaderData.itemCounts.mealPlan} fra dagens ukeplan.
                   </dd>
@@ -770,11 +770,11 @@ export default function FamilyShoppingRoute({
             </dl>
           </article>
 
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+            <h2 className="text-lg font-semibold text-ink">
               Legg til vare
             </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
+            <p className="mt-3 text-sm leading-6 text-muted">
               {isLg
                 ? "Bruk hurtigvalg eller det avanserte skjemaet for å legge til varer som skal med uansett ukeplan."
                 : "Bruk feltet nederst for hurtig innlegging, eller det avanserte skjemaet under."}
@@ -787,9 +787,9 @@ export default function FamilyShoppingRoute({
             ) : null}
 
             <details
-              className={`rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 ${isLg ? "mt-6" : "mt-4"}`}
+              className={`rounded-2xl border border-line bg-page px-4 py-4 ${isLg ? "mt-6" : "mt-4"}`}
             >
-              <summary className="cursor-pointer text-sm font-medium text-slate-800">
+              <summary className="cursor-pointer text-sm font-medium text-ink">
                 Avansert: legg til med alle felt
               </summary>
               <Form className="mt-4 space-y-4" method="post">
@@ -798,28 +798,28 @@ export default function FamilyShoppingRoute({
                   type="hidden"
                   value="add-family-shopping-item"
                 />
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-muted">
                   Varenavn
                   <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm"
                     defaultValue={addFamilyValues.name}
                     name="name"
                     type="text"
                   />
                 </label>
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-muted">
                   Mengde
                   <input
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm"
                     defaultValue={addFamilyValues.quantity}
                     name="quantity"
                     type="text"
                   />
                 </label>
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-muted">
                   Kategori
                   <select
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm"
                     defaultValue={addFamilyValues.categoryId}
                     name="categoryId"
                   >
@@ -847,9 +847,9 @@ export default function FamilyShoppingRoute({
             {visibleStoreGroups.map((group) => (
               <article
                 key={group.store?.id ?? "no-store"}
-                className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200"
+                className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line"
               >
-                <h2 className="text-lg font-semibold text-slate-950">
+                <h2 className="text-lg font-semibold text-ink">
                   {group.store?.name ?? "Ingen valgt butikk"}
                 </h2>
                 <div className="mt-6 grid gap-5">
@@ -857,7 +857,7 @@ export default function FamilyShoppingRoute({
                     <section
                       key={`${group.store?.id ?? "no-store"}:${section.category.id}`}
                     >
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted">
                         {section.displayName}
                       </h3>
                       <div className="mt-3 grid gap-2">
@@ -884,11 +884,11 @@ export default function FamilyShoppingRoute({
             ))}
           </section>
         ) : (
-          <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+            <h2 className="text-lg font-semibold text-ink">
               {getFamilyShoppingEmptyStateTitle(loaderData)}
             </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
+            <p className="mt-3 text-sm leading-6 text-muted">
               {getFamilyShoppingEmptyStateDescription(loaderData, isLg)}
             </p>
           </section>
@@ -898,7 +898,7 @@ export default function FamilyShoppingRoute({
       {!isLg ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-4 pt-3">
           <div className="pointer-events-auto mx-auto max-w-5xl min-w-0">
-            <div className="rounded-[28px] bg-white p-4 shadow-2xl ring-1 ring-slate-200">
+            <div className="rounded-[28px] bg-surface p-4 shadow-2xl ring-1 ring-line">
               <ManualShoppingQuickAdd
                 {...quickAddProps}
                 autoFocus
@@ -927,10 +927,10 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-16 text-slate-900">
-      <div className="mx-auto max-w-2xl rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{message}</p>
+    <main className="min-h-screen bg-page px-4 py-16 text-ink">
+      <div className="mx-auto max-w-2xl rounded-[32px] bg-surface p-8 shadow-sm ring-1 ring-line">
+        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
         <Link
           className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
           to="/app"
@@ -1163,8 +1163,8 @@ function renderFamilyShoppingListItem({
     recentlyAddedSourceKey === item.sourceKey
       ? "border-emerald-300 bg-emerald-100"
       : displayChecked
-        ? "border-slate-200 bg-slate-100 opacity-80"
-        : "border-slate-200 bg-slate-50";
+        ? "border-line bg-page opacity-80"
+        : "border-line bg-page";
 
   return (
     <article
@@ -1175,25 +1175,25 @@ function renderFamilyShoppingListItem({
       <div className="flex flex-wrap items-center gap-2">
         <h4
           className={`text-base font-semibold ${
-            displayChecked ? "text-slate-500 line-through" : "text-slate-950"
+            displayChecked ? "text-muted line-through" : "text-ink"
           }`}
         >
           {item.name}
         </h4>
         {formatGeneratedQuantityBadge(item) ? (
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted ring-1 ring-line">
             {formatGeneratedQuantityBadge(item)}
           </span>
         ) : null}
         <span className={sourceBadge.className}>{sourceBadge.label}</span>
       </div>
       {formatCompactShoppingSourceLineForItem(item) ? (
-        <p className="mt-2 text-xs text-slate-600">
+        <p className="mt-2 text-xs text-muted">
           {formatCompactShoppingSourceLineForItem(item)}
         </p>
       ) : null}
       {item.sourceType === "GENERATED" ? (
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+        <p className="mt-2 text-sm leading-6 text-muted">
           {formatGeneratedItemSummary({
             firstDate:
               typeof item.firstDate === "string"
@@ -1217,7 +1217,7 @@ function renderFamilyShoppingListItem({
       ) : null}
       {item.sourceType === "FAMILY" ? (
         <details className="mt-4">
-          <summary className="cursor-pointer text-sm font-medium text-slate-800">
+          <summary className="cursor-pointer text-sm font-medium text-ink">
             Detaljer
           </summary>
           <div className="mt-4">
@@ -1274,7 +1274,7 @@ function renderFamilyShoppingListItem({
                 ? "Fjern avkryssing"
                 : "Marker som kjøpt"}
           </button>
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-muted">
             <Link
               className="font-medium text-emerald-700 underline"
               to={`/families/${familyId}/meal-plans/${todayMealPlanId}/shopping`}

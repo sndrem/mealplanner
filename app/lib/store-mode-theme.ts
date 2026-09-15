@@ -1,9 +1,9 @@
 /** Nordic Playful palette for store mode — see docs/design/store-mode-concepts/nordic-playful.html */
 
-export const storeModePageClass = "min-h-screen bg-stone-50 px-4 pb-36 pt-8 text-stone-900";
+export const storeModePageClass = "min-h-screen bg-store-bg px-4 pb-36 pt-8 text-store-ink";
 
 export const storeModeMetaStripClass =
-  "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-stone-200";
+  "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-store-surface px-4 py-3 text-sm shadow-sm ring-1 ring-store-line";
 
 export const storeModeProgressPillClass =
   "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-store-accent-light px-2 py-0.5 text-sm font-semibold text-store-accent-text";
@@ -12,20 +12,20 @@ export const storeModeProgressDotClass =
   "size-1.5 shrink-0 rounded-full bg-store-accent-deep";
 
 export const storeModeSurfaceCardClass =
-  "rounded-[28px] bg-white shadow-sm ring-1 ring-stone-200";
+  "rounded-[28px] bg-store-surface shadow-sm ring-1 ring-store-line";
 
 export const storeModeSectionCardClass = `${storeModeSurfaceCardClass} p-5`;
 
-export const storeModeMutedPanelClass = `${storeModeSurfaceCardClass} bg-stone-50/80 p-5`;
+export const storeModeMutedPanelClass = `${storeModeSurfaceCardClass} bg-store-bg/80 p-5`;
 
 export const storeModeAccentBarClass =
   "mb-3 h-0.5 w-10 rounded-full bg-gradient-to-r from-store-accent-light to-store-accent";
 
 export const storeModeSelectClass =
-  "w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:bg-stone-50";
+  "w-full rounded-2xl border border-store-line bg-store-surface px-4 py-3 text-base text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:bg-store-bg";
 
 const storeModeMetaSelectBase =
-  "min-w-0 w-auto truncate rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-900 outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:bg-stone-50";
+  "min-w-0 w-auto truncate rounded-xl border border-store-line bg-store-surface px-3 py-1.5 text-base text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:bg-store-bg";
 
 export const storeModeMetaStoreSelectClass = `${storeModeMetaSelectBase} max-w-[11rem]`;
 
@@ -34,38 +34,41 @@ export const storeModeMetaDateSelectClass = `${storeModeMetaSelectBase} max-w-[9
 export const storeModeMetaTripFocusSelectClass = `${storeModeMetaSelectBase} max-w-[10rem]`;
 
 export const storeModeCountChipClass =
-  "rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600";
+  "rounded-full bg-store-bg px-3 py-1 text-xs font-medium text-store-muted";
 
 export const storeModeLaterChipClass =
-  "rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-700";
+  "rounded-full bg-store-bg px-3 py-1.5 text-xs font-medium text-store-ink";
 
 export const storeModeQuickAddDockClass =
-  "min-w-0 max-w-full rounded-[28px] bg-white p-4 shadow-2xl ring-2 ring-store-accent";
+  "min-w-0 max-w-full rounded-[28px] bg-store-surface p-4 shadow-2xl ring-2 ring-store-accent";
 
 /** Fixed bottom stack (undo + quick-add) — out of document flow. */
 export const storeModeBottomChromeShellClass =
   "pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-3";
 
 export const storeModeUndoBarClass =
-  "flex min-h-11 items-center gap-3 rounded-2xl border border-stone-200 bg-white/95 px-3 py-2 text-sm text-stone-900 shadow-lg backdrop-blur-sm";
+  "flex min-h-11 items-center gap-3 rounded-2xl border border-store-line bg-store-surface/95 px-3 py-2 text-sm text-store-ink shadow-lg backdrop-blur-sm";
 
 export const storeModeUndoBarActionClass =
   "inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-store-accent-light px-3 text-sm font-semibold text-store-accent-text ring-1 ring-store-accent/40 transition hover:bg-store-accent-light/80";
 
 export const storeModeUndoBarDismissClass =
-  "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-stone-500 transition hover:bg-stone-100 hover:text-stone-950";
+  "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-store-muted transition hover:bg-store-bg hover:text-store-ink";
 
 export const storeModeCompleteCelebrationChromeClass =
-  "flex min-h-11 items-start gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/95 px-3 py-2.5 text-sm text-emerald-950 shadow-lg backdrop-blur-sm";
+  "flex min-h-11 items-start gap-3 rounded-2xl border border-notice-success-line bg-notice-success/95 px-3 py-2.5 text-sm text-notice-success-ink shadow-lg backdrop-blur-sm";
+
+export const storeModeCelebrationHighlightClass =
+  "border border-notice-success-line bg-notice-success/40 motion-safe:animate-pulse motion-reduce:animate-none";
 
 export const storeModeHandletFoldClass =
-  "rounded-2xl border border-stone-200/80 bg-stone-50/90 p-3";
+  "rounded-2xl border border-store-line/80 bg-store-bg/90 p-3";
 
 export const storeModeStockReminderClass =
-  "rounded-2xl bg-amber-50 px-3 py-2 shadow-sm ring-1 ring-amber-200";
+  "rounded-2xl bg-notice-warning px-3 py-2 shadow-sm ring-1 ring-notice-warning-line";
 
 export const storeModeStockReminderChipClass =
-  "rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900";
+  "rounded-full bg-notice-warning-line/30 px-3 py-1 text-xs font-medium text-notice-warning-ink";
 
 export type StoreModeBannerTone = "success" | "sync" | "error";
 
@@ -78,11 +81,11 @@ export const storeModeSyncOverlayShellClass =
 export function getStoreModeBannerClass(tone: StoreModeBannerTone) {
   switch (tone) {
     case "success":
-      return "rounded-[28px] border border-emerald-200/80 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm";
+      return "rounded-[28px] border border-notice-success-line bg-notice-success px-6 py-5 text-notice-success-ink shadow-sm";
     case "sync":
-      return "rounded-[28px] border border-amber-200/80 bg-amber-50 px-6 py-5 text-amber-950 shadow-sm";
+      return "rounded-[28px] border border-notice-warning-line bg-notice-warning px-6 py-5 text-notice-warning-ink shadow-sm";
     case "error":
-      return "rounded-[28px] border border-rose-200/80 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm";
+      return "rounded-[28px] border border-notice-danger-line bg-notice-danger px-6 py-5 text-notice-danger-ink shadow-sm";
   }
 }
 
@@ -92,8 +95,8 @@ export function getStoreModeSyncOverlayClass(tone: StoreModeSyncOverlayTone) {
 
   switch (tone) {
     case "sync":
-      return `${base} border-amber-200/80 bg-amber-50/95 text-amber-950`;
+      return `${base} border-notice-warning-line bg-notice-warning/95 text-notice-warning-ink`;
     case "error":
-      return `${base} border-rose-200/80 bg-rose-50/95 text-rose-900`;
+      return `${base} border-notice-danger-line bg-notice-danger/95 text-notice-danger-ink`;
   }
 }

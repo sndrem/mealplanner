@@ -325,7 +325,7 @@ export default function FamilyStoresRoute({
   })();
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -378,12 +378,12 @@ export default function FamilyStoresRoute({
         ) : null}
 
         {canManageStores ? (
-          <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Opprett familiebutikk
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Nye butikker starter med alle kategorier og kan tilpasses videre
                 under.
               </p>
@@ -391,10 +391,10 @@ export default function FamilyStoresRoute({
 
             <Form className="mt-6 space-y-4" method="post">
               <input name="intent" type="hidden" value="create-store" />
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-muted">
                 Butikknavn
                 <input
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                   defaultValue={createValues.name}
                   name="name"
                   placeholder="For eksempel Helgebutikk"
@@ -423,12 +423,12 @@ export default function FamilyStoresRoute({
         ) : null}
 
         {canManageStores ? (
-          <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Kategorier
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Standardkategorier brukes av alle familier. Egne kategorier kan
                 legges til som seksjoner i butikkene.
               </p>
@@ -437,7 +437,7 @@ export default function FamilyStoresRoute({
             <div className="mt-4 flex flex-wrap gap-2">
               {loaderData.categories.map((category) => (
                 <span
-                  className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700"
+                  className="inline-flex items-center gap-2 rounded-full bg-page px-3 py-1.5 text-sm text-muted"
                   key={category.id}
                 >
                   {category.displayName}
@@ -469,7 +469,7 @@ export default function FamilyStoresRoute({
             <Form className="mt-4 flex gap-3" method="post">
               <input name="intent" type="hidden" value="create-category" />
               <input
-                className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="min-w-0 flex-1 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                 name="categoryDisplayName"
                 placeholder="Ny kategori, f.eks. Helsekost"
                 type="text"
@@ -485,12 +485,12 @@ export default function FamilyStoresRoute({
         ) : null}
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Familiebutikker
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Gi butikkene egne navn og tilpass seksjonsrekkefølgen for
                 akkurat denne familien.
               </p>
@@ -522,18 +522,18 @@ export default function FamilyStoresRoute({
                 </div>
               </DndProvider>
             ) : (
-              <p className="mt-6 text-sm leading-6 text-slate-600">
+              <p className="mt-6 text-sm leading-6 text-muted">
                 Familien har ingen egne butikker ennå. Opprett en butikk for å
                 få en egen seksjonsrekkefølge.
               </p>
             )}
           </article>
-          <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="text-lg font-semibold text-ink">
                 Standardbutikker
               </h2>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-muted">
                 Disse butikkene er tilgjengelige for familien som faste
                 utgangspunkt og kan ikke redigeres.
               </p>
@@ -543,12 +543,12 @@ export default function FamilyStoresRoute({
               {loaderData.globalStores.map((store) => (
                 <article
                   key={store.id}
-                  className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                  className="rounded-[24px] border border-line bg-page p-5"
                 >
-                  <h3 className="text-base font-semibold text-slate-950">
+                  <h3 className="text-base font-semibold text-ink">
                     {store.name}
                   </h3>
-                  <ol className="mt-4 grid gap-2 text-sm leading-6 text-slate-700">
+                  <ol className="mt-4 grid gap-2 text-sm leading-6 text-muted">
                     {store.sections.map((section, index) => (
                       <li key={section.id}>
                         {index + 1}. {section.displayName}
@@ -580,10 +580,10 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-16 text-slate-900">
-      <div className="mx-auto max-w-2xl rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{message}</p>
+    <main className="min-h-screen bg-page px-4 py-16 text-ink">
+      <div className="mx-auto max-w-2xl rounded-[32px] bg-surface p-8 shadow-sm ring-1 ring-line">
+        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
         <Link
           className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
           to="/app"

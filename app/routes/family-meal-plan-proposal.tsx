@@ -296,7 +296,7 @@ export default function FamilyMealPlanProposalRoute({
 
   if (isApprovedView) {
     return (
-      <main className="min-h-screen overflow-x-hidden bg-slate-100 px-4 py-6 text-slate-900">
+      <main className="min-h-screen overflow-x-hidden bg-page px-4 py-6 text-ink">
         <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
           <section className="rounded-[24px] border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-950">
             <h1 className="text-xl font-semibold">Forslaget er godkjent</h1>
@@ -316,7 +316,7 @@ export default function FamilyMealPlanProposalRoute({
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-slate-100 px-4 py-6 text-slate-900">
+    <main className="min-h-screen overflow-x-hidden bg-page px-4 py-6 text-ink">
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
         <section className="sticky top-14 z-40 rounded-[24px] bg-slate-950 px-4 py-4 text-white shadow-lg">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-200">
@@ -389,14 +389,14 @@ export default function FamilyMealPlanProposalRoute({
 
             return (
               <section
-                className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm"
+                className="rounded-[24px] border border-line bg-surface p-4 shadow-sm"
                 key={date}
               >
                 <div className="flex items-baseline justify-between gap-3">
-                  <h2 className="text-base font-semibold text-slate-950">
+                  <h2 className="text-base font-semibold text-ink">
                     {capitalizedWeekday}
                   </h2>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted">
                     {formatShortDateLabel(date)}
                   </p>
                 </div>
@@ -406,7 +406,7 @@ export default function FamilyMealPlanProposalRoute({
                       imageUrl={selectedImageUrl}
                       title={selectedLabel}
                     />
-                    <p className="min-w-0 truncate text-base font-semibold text-slate-950">
+                    <p className="min-w-0 truncate text-base font-semibold text-ink">
                       {selectedLabel}
                     </p>
                   </div>
@@ -429,10 +429,10 @@ export default function FamilyMealPlanProposalRoute({
                     value={selection}
                   />
                 </div>
-                <label className="mt-3 block text-sm font-medium text-slate-700">
+                <label className="mt-3 block text-sm font-medium text-muted">
                   Notat
                   <textarea
-                    className="mt-2 min-h-20 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-950 outline-none transition focus:border-slate-400"
+                    className="mt-2 min-h-20 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-slate-400"
                     name={`note:${date}`}
                     onChange={(event) => {
                       setNotesByDate((current) => ({
@@ -449,7 +449,7 @@ export default function FamilyMealPlanProposalRoute({
 
           <div className="sticky bottom-4 z-40 flex flex-col gap-3 mt-6">
             <button
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-medium text-slate-800 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-surface px-5 py-3 text-sm font-medium text-ink ring-1 ring-line transition hover:bg-page disabled:cursor-not-allowed disabled:text-muted"
               disabled={isPending}
               name="intent"
               type="submit"

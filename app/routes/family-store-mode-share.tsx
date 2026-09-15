@@ -94,9 +94,9 @@ export default function FamilyStoreModeShareRoute({
     <main className={storeModePageClass}>
       <div className="mx-auto flex max-w-2xl flex-col gap-5">
         <section className={`${storeModeSurfaceCardClass} p-6`}>
-          <p className="text-sm text-stone-500">
+          <p className="text-sm text-store-muted">
             <Link
-              className="underline-offset-2 hover:text-stone-950 hover:underline"
+              className="underline-offset-2 hover:text-store-ink hover:underline"
               to={`/families/${loaderData.family.id}/store-mode`}
             >
               Butikkmodus
@@ -104,10 +104,10 @@ export default function FamilyStoreModeShareRoute({
             {" · "}
             Del liste
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-stone-950">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-store-ink">
             Del handleliste
           </h1>
-          <p className="mt-2 text-sm leading-6 text-stone-600">
+          <p className="mt-2 text-sm leading-6 text-store-muted">
             Fjern varer du ikke vil ha med. Allerede kryssede varer er utelatt
             som standard. Når du oppretter lenken, fryses listen slik den er nå.
           </p>
@@ -132,13 +132,13 @@ export default function FamilyStoreModeShareRoute({
           />
           {loaderData.alreadyCheckedItems.length > 0 ? (
             <details className={storeModeSectionCardClass}>
-              <summary className="cursor-pointer list-none text-lg font-semibold tracking-tight text-stone-950 marker:content-none [&::-webkit-details-marker]:hidden">
+              <summary className="cursor-pointer list-none text-lg font-semibold tracking-tight text-store-ink marker:content-none [&::-webkit-details-marker]:hidden">
                 Allerede krysset av
-                <span className="ml-2 text-sm font-medium text-stone-500">
+                <span className="ml-2 text-sm font-medium text-store-muted">
                   {loaderData.alreadyCheckedItems.length} varer
                 </span>
               </summary>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
+              <p className="mt-2 text-sm leading-6 text-store-muted">
                 Disse er ikke med på lenken med mindre du huker dem av.
               </p>
               <ul className="mt-4 grid gap-2">
@@ -185,8 +185,8 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   return (
     <main className={`${storeModePageClass} py-16`}>
       <div className={`mx-auto max-w-2xl ${storeModeSurfaceCardClass} p-8`}>
-        <h1 className="text-2xl font-semibold text-stone-950">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-stone-600">{message}</p>
+        <h1 className="text-2xl font-semibold text-store-ink">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-store-muted">{message}</p>
         <Link
           className="mt-6 inline-flex rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white"
           to="/app"
@@ -211,11 +211,11 @@ function CurationSection({
 }) {
   return (
     <section className={storeModeSectionCardClass}>
-      <h2 className="text-lg font-semibold tracking-tight text-stone-950">
+      <h2 className="text-lg font-semibold tracking-tight text-store-ink">
         {title}
       </h2>
       {items.length === 0 ? (
-        <p className="mt-3 text-sm leading-6 text-stone-600">{emptyText}</p>
+        <p className="mt-3 text-sm leading-6 text-store-muted">{emptyText}</p>
       ) : (
         <ul className="mt-4 grid gap-2">
           {items.map((item) => (
@@ -248,7 +248,7 @@ function CurationItemRow({
 
   return (
     <li>
-      <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2.5">
+      <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border border-store-line bg-store-bg px-3 py-2.5">
         <input
           className="mt-1 size-4 shrink-0 accent-stone-900"
           defaultChecked={defaultSelected}
@@ -257,14 +257,14 @@ function CurationItemRow({
           value={selectionKey}
         />
         <span className="min-w-0">
-          <span className="block text-sm font-semibold text-stone-950">
+          <span className="block text-sm font-semibold text-store-ink">
             {item.name}
           </span>
-          <span className="mt-0.5 block text-xs text-stone-500">
+          <span className="mt-0.5 block text-xs text-store-muted">
             {[item.quantityLabel, item.category.name].filter(Boolean).join(" · ")}
           </span>
           {item.note ? (
-            <span className="mt-1 block text-xs text-stone-600">{item.note}</span>
+            <span className="mt-1 block text-xs text-store-muted">{item.note}</span>
           ) : null}
         </span>
       </label>
@@ -284,17 +284,17 @@ function ShareUrlResult({ shareUrl }: { shareUrl: string }) {
 
   return (
     <section className={`${storeModeSurfaceCardClass} p-6`}>
-      <h2 className="text-lg font-semibold tracking-tight text-stone-950">
+      <h2 className="text-lg font-semibold tracking-tight text-store-ink">
         Lenken er klar
       </h2>
-      <p className="mt-2 text-sm leading-6 text-stone-600">
+      <p className="mt-2 text-sm leading-6 text-store-muted">
         Send denne til den som skal handle. Listen oppdateres ikke hvis du
         endrer handlelisten senere.
       </p>
-      <label className="mt-4 block text-sm font-medium text-stone-700">
+      <label className="mt-4 block text-sm font-medium text-store-muted">
         Delt lenke
         <input
-          className="mt-1 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-base text-stone-900 outline-none focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
+          className="mt-1 w-full rounded-2xl border border-store-line bg-surface px-4 py-3 text-base text-store-ink outline-none focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
           readOnly
           value={shareUrl}
         />
@@ -316,7 +316,7 @@ function ShareUrlResult({ shareUrl }: { shareUrl: string }) {
         </button>
         {canShare ? (
           <button
-            className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900"
+            className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-store-line bg-surface px-4 py-2 text-sm font-medium text-store-ink"
             onClick={() => {
               void navigator.share({
                 text: "Handleliste",
@@ -330,7 +330,7 @@ function ShareUrlResult({ shareUrl }: { shareUrl: string }) {
           </button>
         ) : null}
         <Link
-          className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900"
+          className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-store-line bg-surface px-4 py-2 text-sm font-medium text-store-ink"
           rel="noreferrer"
           target="_blank"
           to={new URL(shareUrl).pathname}

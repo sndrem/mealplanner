@@ -196,7 +196,7 @@ export default function FamilyRecipeRoute({
   const canManageRecipes = loaderData.userRole === "ADMIN";
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -231,16 +231,16 @@ export default function FamilyRecipeRoute({
         </section>
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
+          <section className="rounded-[28px] border border-notice-success-line bg-notice-success px-6 py-5 text-notice-success-ink shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">
+            <p className="mt-2 text-sm leading-6 text-notice-success-muted">
               {noticeContent.description}
             </p>
           </section>
         ) : null}
 
         {actionData?.formError ? (
-          <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
+          <section className="rounded-[28px] border border-notice-danger-line bg-notice-danger px-6 py-5 text-notice-danger-ink shadow-sm">
             <h2 className="text-base font-semibold">Handlingen feilet</h2>
             <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
           </section>
@@ -284,10 +284,10 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-16 text-slate-900">
-      <div className="mx-auto max-w-2xl rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{message}</p>
+    <main className="min-h-screen bg-page px-4 py-16 text-ink">
+      <div className="mx-auto max-w-2xl rounded-[32px] bg-surface p-8 shadow-sm ring-1 ring-line">
+        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
         <Link
           className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
           to="/app"

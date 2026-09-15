@@ -82,12 +82,19 @@ enum ShoppingCheckEventTarget {
   MEAL_PLAN_ITEM
 }
 
+enum ThemePreference {
+  SYSTEM
+  LIGHT
+  DARK
+}
+
 model User {
   id                              String                         @id @default(cuid())
   email                           String                         @unique
   passwordHash                    String?
   displayName                     String
   isGlobalAdmin                   Boolean                        @default(false)
+  themePreference                 ThemePreference                @default(SYSTEM)
   createdAt                       DateTime                       @default(now())
   updatedAt                       DateTime                       @updatedAt
   createdFamilies                 Family[]                       @relation("FamilyCreatedBy")

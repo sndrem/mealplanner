@@ -12,15 +12,15 @@ export function StoreModeShoppingViewToggle({
   return (
     <div
       aria-label="Visning av handleliste"
-      className="inline-flex rounded-2xl bg-stone-100 p-1 ring-1 ring-stone-200"
+      className="inline-flex rounded-2xl bg-store-bg p-1 ring-1 ring-store-line"
       role="radiogroup"
     >
       <button
         aria-checked={view === "grid"}
         className={
           view === "grid"
-            ? "rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-stone-950 shadow-sm ring-1 ring-stone-200"
-            : "rounded-xl px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:text-stone-950"
+            ? "rounded-xl bg-store-surface px-4 py-2.5 text-sm font-medium text-store-ink shadow-sm ring-1 ring-store-line"
+            : "rounded-xl px-4 py-2.5 text-sm font-medium text-store-muted transition hover:text-store-ink"
         }
         onClick={() => onChange("grid")}
         role="radio"
@@ -32,8 +32,8 @@ export function StoreModeShoppingViewToggle({
         aria-checked={view === "list"}
         className={
           view === "list"
-            ? "rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-stone-950 shadow-sm ring-1 ring-stone-200"
-            : "rounded-xl px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:text-stone-950"
+            ? "rounded-xl bg-store-surface px-4 py-2.5 text-sm font-medium text-store-ink shadow-sm ring-1 ring-store-line"
+            : "rounded-xl px-4 py-2.5 text-sm font-medium text-store-muted transition hover:text-store-ink"
         }
         onClick={() => onChange("list")}
         role="radio"
