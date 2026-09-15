@@ -22,6 +22,7 @@ import {
   type StoreModeCategoryUpdateRequest,
 } from "../components/store-mode-shopping-item-card";
 import { StoreModeShoppingViewToggle } from "../components/store-mode-shopping-view-toggle";
+import { StoreModeStockIngredientsReminder } from "../components/store-mode-stock-ingredients-reminder";
 import { ShoppingGroceryGroupingToggle } from "../components/shopping-grocery-grouping-toggle";
 import { requireUser } from "../lib/auth.server";
 import {
@@ -35,15 +36,18 @@ import {
 import { useShoppingListCompletionCelebration } from "../lib/use-shopping-list-completion-celebration";
 import {
   buildStoreModeDeprioritizeBoughtStorageKey,
+  buildStoreModeStockReminderDismissedStorageKey,
   buildStoreModeViewStorageKey,
   computeStoreModeProgress,
   partitionStoreModeSections,
   readStoreModeDeprioritizeBought,
   readStoreModeShoppingView,
+  readStoreModeStockReminderDismissed,
   sortStoreModeItemsByName,
   type StoreModeShoppingView,
   writeStoreModeDeprioritizeBought,
   writeStoreModeShoppingView,
+  writeStoreModeStockReminderDismissed,
 } from "../lib/shopping-store-mode-client";
 import {
   buildOptimisticManualShoppingItem,
@@ -1063,11 +1067,22 @@ export default function FamilyMealPlanStoreModeRoute({
       }),
     [loaderData.family.id],
   );
+  const stockReminderDismissedStorageKey = useMemo(
+    () =>
+      buildStoreModeStockReminderDismissedStorageKey({
+        familyId: loaderData.family.id,
+        mealPlanId: loaderData.mealPlan.id,
+      }),
+    [loaderData.family.id, loaderData.mealPlan.id],
+  );
   const [shoppingView, setShoppingView] = useState<StoreModeShoppingView>(() =>
     readStoreModeShoppingView(viewStorageKey),
   );
   const [deprioritizeBought, setDeprioritizeBought] = useState(() =>
     readStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey),
+  );
+  const [stockReminderDismissed, setStockReminderDismissed] = useState(() =>
+    readStoreModeStockReminderDismissed(stockReminderDismissedStorageKey),
   );
   const handleShoppingViewChange = useCallback(
     (nextView: StoreModeShoppingView) => {
@@ -1083,6 +1098,20 @@ export default function FamilyMealPlanStoreModeRoute({
     },
     [deprioritizeBoughtStorageKey],
   );
+  const handleDismissStockReminder = useCallback(() => {
+    setStockReminderDismissed(true);
+    writeStoreModeStockReminderDismissed(
+      stockReminderDismissedStorageKey,
+      true,
+    );
+  }, [stockReminderDismissedStorageKey]);
+  const handleRestoreStockReminder = useCallback(() => {
+    setStockReminderDismissed(false);
+    writeStoreModeStockReminderDismissed(
+      stockReminderDismissedStorageKey,
+      false,
+    );
+  }, [stockReminderDismissedStorageKey]);
   useEffect(() => {
     setShoppingView(readStoreModeShoppingView(viewStorageKey));
   }, [viewStorageKey]);
@@ -1091,6 +1120,11 @@ export default function FamilyMealPlanStoreModeRoute({
       readStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey),
     );
   }, [deprioritizeBoughtStorageKey]);
+  useEffect(() => {
+    setStockReminderDismissed(
+      readStoreModeStockReminderDismissed(stockReminderDismissedStorageKey),
+    );
+  }, [stockReminderDismissedStorageKey]);
   type StoreModeDisplayItem = (typeof displayDueItems)[number];
   const { activeSections } = useMemo(
     () => partitionStoreModeSections(displaySectionGroups, deprioritizeBought),
@@ -1100,6 +1134,16 @@ export default function FamilyMealPlanStoreModeRoute({
     () => activeSections.some((section) => section.items.length > 0),
     [activeSections],
   );
+  const hasUnusedStockIngredients =
+    loaderData.stockIngredientsForStoreMode.length > 0;
+  const isOptingInAllStockItems =
+    navigation.state !== "idle" &&
+    pendingIntent === "opt-in-stock-shopping-items";
+  const optingInStockSourceKey =
+    navigation.state !== "idle" &&
+    pendingIntent === "opt-in-stock-shopping-item"
+      ? String(navigation.formData?.get("sourceKey") ?? "")
+      : null;
   const [lastCheckedAction, setLastCheckedAction] =
     useState<StoreModeDisplayItem | null>(null);
 
@@ -1339,26 +1383,38 @@ export default function FamilyMealPlanStoreModeRoute({
           </section>
         ) : null}
 
-        {displaySectionGroups.length > 0 ? (
+        {displaySectionGroups.length > 0 ||
+        (hasUnusedStockIngredients && !stockReminderDismissed) ? (
           <section className="grid gap-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-semibold tracking-tight text-stone-950">
                 Varer å handle
               </h2>
-              <div className="flex flex-wrap items-center gap-2">
-                <ShoppingGroceryGroupingToggle
-                  grouping={loaderData.groceryGrouping}
-                />
-                <StoreModeDeprioritizeBoughtToggle
-                  enabled={deprioritizeBought}
-                  onChange={handleDeprioritizeBoughtChange}
-                />
-                <StoreModeShoppingViewToggle
-                  onChange={handleShoppingViewChange}
-                  view={shoppingView}
-                />
-              </div>
+              {displaySectionGroups.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <ShoppingGroceryGroupingToggle
+                    grouping={loaderData.groceryGrouping}
+                  />
+                  <StoreModeDeprioritizeBoughtToggle
+                    enabled={deprioritizeBought}
+                    onChange={handleDeprioritizeBoughtChange}
+                  />
+                  <StoreModeShoppingViewToggle
+                    onChange={handleShoppingViewChange}
+                    view={shoppingView}
+                  />
+                </div>
+              ) : null}
             </div>
+            {hasUnusedStockIngredients && !stockReminderDismissed ? (
+              <StoreModeStockIngredientsReminder
+                ingredients={loaderData.stockIngredientsForStoreMode}
+                isSubmittingAll={isOptingInAllStockItems}
+                onDismiss={handleDismissStockReminder}
+                onRestore={handleRestoreStockReminder}
+                submittingSourceKey={optingInStockSourceKey}
+              />
+            ) : null}
             {activeSections.length > 0 ? (
               activeSections.map((section) => (
                 <details
@@ -1448,6 +1504,17 @@ export default function FamilyMealPlanStoreModeRoute({
                 </p>
               </article>
             ) : null}
+            {displaySectionGroups.length === 0 ? (
+              <article className={`${storeModeSurfaceCardClass} p-6`}>
+                <h3 className="text-base font-semibold text-stone-950">
+                  Ingen varer må handles nå
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-stone-600">
+                  Alt er enten ferdig handlet, utenfor denne handleturen, eller
+                  allerede passert.
+                </p>
+              </article>
+            ) : null}
           </section>
         ) : (
           <section className={`${storeModeSurfaceCardClass} p-6`}>
@@ -1461,116 +1528,15 @@ export default function FamilyMealPlanStoreModeRoute({
           </section>
         )}
 
-        {loaderData.stockIngredientsForStoreMode.length > 0 ? (
-          <details className={storeModeMutedPanelClass} style={{ borderColor: "rgb(217 119 6)", backgroundColor: "rgb(255 251 235)" }}>
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
-              <span className="text-lg font-semibold tracking-tight text-amber-950">
-                Basisvarer
-              </span>
-              <span className={storeModeCountChipClass} style={{ backgroundColor: "rgb(217 119 6 / 0.15)", color: "rgb(120 53 15)" }}>
-                {loaderData.stockIngredientsForStoreMode.length} varer
-              </span>
-            </summary>
-
-            <div className="mt-4 space-y-3">
-              <p className="text-sm leading-6 text-amber-900">
-                Disse varene er vanligvis på lager og vises ikke i handlelisten
-                med mindre du legger dem til for denne turen.
-              </p>
-              <Form className="flex flex-wrap gap-3" method="post">
-                <input
-                  name="intent"
-                  type="hidden"
-                  value="opt-in-stock-shopping-items"
-                />
-                {loaderData.stockIngredientsForStoreMode.map((ingredient) => (
-                  <input
-                    key={ingredient.sourceKey}
-                    name="sourceKey"
-                    type="hidden"
-                    value={ingredient.sourceKey}
-                  />
-                ))}
-                <button
-                  className="rounded-2xl bg-amber-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-950 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={
-                    navigation.state !== "idle" &&
-                    pendingIntent === "opt-in-stock-shopping-items"
-                  }
-                  type="submit"
-                >
-                  Legg til alle i handlelisten
-                </button>
-              </Form>
-              <ul className="grid gap-3">
-                {loaderData.stockIngredientsForStoreMode.map((ingredient) => (
-                  <li
-                    key={ingredient.sourceKey}
-                    className="rounded-[20px] border border-amber-200 bg-white px-4 py-4"
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-950">
-                          {ingredient.name}
-                          {ingredient.quantityLabel
-                            ? ` · ${ingredient.quantityLabel}`
-                            : ""}
-                        </p>
-                        {ingredient.occurrenceCount > 1 ? (
-                          <ul className="mt-1 space-y-1 text-xs leading-5 text-slate-600">
-                            {ingredient.occurrences.map((occurrence) => (
-                              <li
-                                key={`${occurrence.mealPlanEntryId}:${occurrence.recipeIngredientId}`}
-                              >
-                                {occurrence.recipeTitle}
-                                {occurrence.quantityLabel
-                                  ? ` · ${occurrence.quantityLabel}`
-                                  : ""}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="mt-1 text-xs leading-5 text-slate-600">
-                            {`Brukt i ${ingredient.occurrences[0]?.recipeTitle ?? "oppskrift"}`}
-                            {ingredient.occurrences[0]?.date
-                              ? ` · ${formatDateLabel(formatDateOnly(ingredient.occurrences[0].date))}`
-                              : ""}
-                            {ingredient.occurrences[0]?.quantityLabel
-                              ? ` · ${ingredient.occurrences[0].quantityLabel}`
-                              : ""}
-                          </p>
-                        )}
-                      </div>
-                      <Form method="post">
-                        <input
-                          name="intent"
-                          type="hidden"
-                          value="opt-in-stock-shopping-item"
-                        />
-                        <input
-                          name="sourceKey"
-                          type="hidden"
-                          value={ingredient.sourceKey}
-                        />
-                        <button
-                          className="rounded-xl bg-amber-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-amber-950 disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={
-                            navigation.state !== "idle" &&
-                            pendingIntent === "opt-in-stock-shopping-item" &&
-                            navigation.formData?.get("sourceKey") ===
-                              ingredient.sourceKey
-                          }
-                          type="submit"
-                        >
-                          Legg til i handlelisten
-                        </button>
-                      </Form>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </details>
+        {hasUnusedStockIngredients && stockReminderDismissed ? (
+          <StoreModeStockIngredientsReminder
+            dismissed
+            ingredients={loaderData.stockIngredientsForStoreMode}
+            isSubmittingAll={isOptingInAllStockItems}
+            onDismiss={handleDismissStockReminder}
+            onRestore={handleRestoreStockReminder}
+            submittingSourceKey={optingInStockSourceKey}
+          />
         ) : null}
 
         <section className={`${storeModeSurfaceCardClass} p-6`}>
