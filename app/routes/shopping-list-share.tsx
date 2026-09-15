@@ -24,6 +24,7 @@ import {
 import { useShoppingListCompletionCelebration } from "../lib/use-shopping-list-completion-celebration";
 import {
   storeModeAccentBarClass,
+  storeModeCelebrationHighlightClass,
   storeModeCountChipClass,
   storeModeHandletFoldClass,
   storeModeMetaStoreSelectClass,
@@ -130,14 +131,14 @@ export default function ShoppingListShareRoute({
       <div className="mx-auto flex max-w-4xl flex-col gap-5">
         <section className={storeModeMetaStripClass}>
           <div className="min-w-0">
-            <h1 className="truncate font-semibold text-stone-950">
+            <h1 className="truncate font-semibold text-store-ink">
               Handleliste
             </h1>
-            <p className="truncate text-xs text-stone-500">Delt liste</p>
+            <p className="truncate text-xs text-store-muted">Delt liste</p>
           </div>
           {snapshot.stores.length > 0 ? (
             <>
-              <span className="hidden text-stone-300 sm:inline" aria-hidden="true">
+              <span className="hidden text-store-muted sm:inline" aria-hidden="true">
                 ·
               </span>
               <label className="inline-flex min-w-0 flex-col gap-1">
@@ -177,7 +178,7 @@ export default function ShoppingListShareRoute({
 
         {activeSections.length > 0 ? (
           <section className="grid gap-4">
-            <h2 className="text-lg font-semibold tracking-tight text-stone-950">
+            <h2 className="text-lg font-semibold tracking-tight text-store-ink">
               Varer å handle
             </h2>
             {activeSections.map((section) => (
@@ -188,7 +189,7 @@ export default function ShoppingListShareRoute({
               >
                 <div aria-hidden="true" className={storeModeAccentBarClass} />
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent [&::-webkit-details-marker]:hidden">
-                  <span className="text-lg font-semibold tracking-tight text-stone-950">
+                  <span className="text-lg font-semibold tracking-tight text-store-ink">
                     {section.displayName}
                   </span>
                   <span className={storeModeCountChipClass}>
@@ -209,7 +210,7 @@ export default function ShoppingListShareRoute({
                     className={`${storeModeHandletFoldClass}${section.items.length > 0 ? " mt-4" : " mt-3"}`}
                   >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
-                      <span className="text-sm font-semibold text-stone-700">
+                      <span className="text-sm font-semibold text-store-muted">
                         Handlet
                       </span>
                       <span className={storeModeCountChipClass}>
@@ -229,14 +230,14 @@ export default function ShoppingListShareRoute({
               <article
                 className={`${storeModeSurfaceCardClass} p-6${
                   isCelebrating
-                    ? " border border-emerald-200/80 bg-emerald-50/40 motion-safe:animate-pulse motion-reduce:animate-none"
+                    ? ` ${storeModeCelebrationHighlightClass}`
                     : ""
                 }`}
               >
-                <h3 className="text-base font-semibold text-stone-950">
+                <h3 className="text-base font-semibold text-store-ink">
                   Alt er krysset av
                 </h3>
-                <p className="mt-3 text-sm leading-6 text-stone-600">
+                <p className="mt-3 text-sm leading-6 text-store-muted">
                   Du har handlet alle varene på listen. Åpne Handlet i hver
                   seksjon hvis du vil se eller endre dem.
                 </p>
@@ -245,16 +246,16 @@ export default function ShoppingListShareRoute({
           </section>
         ) : allItemsChecked ? (
           <section className={`${storeModeSurfaceCardClass} p-6`}>
-            <h2 className="text-lg font-semibold tracking-tight text-stone-950">
+            <h2 className="text-lg font-semibold tracking-tight text-store-ink">
               Alt er krysset av
             </h2>
-            <p className="mt-3 text-sm leading-6 text-stone-600">
+            <p className="mt-3 text-sm leading-6 text-store-muted">
               Du har handlet alle varene på listen.
             </p>
           </section>
         ) : (
           <section className={`${storeModeSurfaceCardClass} p-6`}>
-            <p className="text-sm leading-6 text-stone-600">
+            <p className="text-sm leading-6 text-store-muted">
               Denne listen er tom.
             </p>
           </section>
@@ -281,8 +282,8 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   return (
     <main className={`${storeModePageClass.replace("pb-36", "pb-8")} py-16`}>
       <div className={`mx-auto max-w-2xl ${storeModeSurfaceCardClass} p-8`}>
-        <h1 className="text-2xl font-semibold text-stone-950">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-stone-600">{message}</p>
+        <h1 className="text-2xl font-semibold text-store-ink">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-store-muted">{message}</p>
       </div>
     </main>
   );

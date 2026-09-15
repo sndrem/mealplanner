@@ -2,33 +2,35 @@
 
 ## Current Objective
 
-Ship store-mode Basisvarer under **Varer å handle** (issue #259) on branch `issue/259-store-mode-basisvarer`, cut from current `origin/main` after `git pull --ff-only`.
+Ship persisted System / Light / Dark appearance (#261) on branch `issue/261-theme-toggle`. Validation passed; next step is merge of the PR.
 
 ## Completed
 
-- Compact orange Basisvarer reminder sits under **Varer å handle**, above aisle sections
-- **Skjul** hides it for this meal plan; **Vis basisvarer** appears below the aisle list, before **Før handledato**
-- Dismiss/restore persist in localStorage keyed by family + meal plan
-- Empty grocery list with unused staples still shows the reminder at the top until dismissed
+- User-scoped `ThemePreference` (`SYSTEM` default, `LIGHT`, `DARK`) with migration `20260915150000_add_user_theme_preference`
+- Root `<html>` class is `system` | `light` | `dark`; CSS tokens and a class+media `dark:` variant restyle app chrome and store mode
+- Authenticated toggle in `AppTopNav` saves via `POST /theme` and applies the html class immediately
+- Dark `notice-*` tokens keep store-mode success banners, Basisvarer, and family recipe cards readable
 
 ## Files To Read First
 
-- `app/components/store-mode-stock-ingredients-reminder.tsx` — reminder and restore row
-- `app/routes/family-meal-plan-store-mode.tsx` — placement under heading vs after sections
-- `app/lib/shopping-store-mode-client.ts` — dismiss storage helpers
+- `app/app.css` — page/store/notice tokens for light, dark, and system+dark
+- `app/lib/theme-preference.ts` — parse/resolve/html class helpers
+- `app/routes/theme.ts` — POST save preference
+- `app/components/theme-toggle.tsx` — nav control
+- `app/lib/store-mode-theme.ts` — store-mode banners and Basisvarer
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 681 tests passed
+- `npm run test:run` — 700 tests passed
 - `npm run typecheck` — passed
 
 ## Open Items
 
-- Dismiss is device-local; shared store-mode links do not sync hide state
-- Trip focus `ALL` shares dismiss with the shopping-date owner meal plan
+- Other app notices (meal plans, shopping, family settings) still use raw `bg-emerald-50` / `bg-rose-50` and can look washed in dark mode
+- Phone-width nav density with the desktop icon control still needs a real device check
 
 ## Next Step
 
-Merge the PR after CI is green, then confirm on a phone-width store-mode list.
+Review and merge the PR for #261 after a logged-in Dark check of the theme toggle, store mode, and recipe list.

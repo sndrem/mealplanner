@@ -264,7 +264,7 @@ export function FamilyRecipeEditorCard({
   }
 
   return (
-    <article className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+    <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
       {isDeletingRecipe ? (
         <p className="text-sm font-medium text-rose-700">
           Sletter oppskrift...
@@ -280,14 +280,14 @@ export function FamilyRecipeEditorCard({
             title={isUpdatingRecipe ? draftValues.title : recipe.title}
           />
           <div className="min-w-0">
-            <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
+            <span className="inline-flex rounded-full bg-notice-success px-3 py-1 text-xs font-medium text-notice-success-ink">
               Familieoppskrift
             </span>
-            <h2 className="mt-3 text-2xl font-semibold text-slate-950">
+            <h2 className="mt-3 text-2xl font-semibold text-ink">
               {isUpdatingRecipe ? draftValues.title : recipe.title}
             </h2>
             {mealPlanEntryCount > 0 ? (
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-muted">
                 Brukt i {mealPlanEntryCount}{" "}
                 {mealPlanEntryCount === 1 ? "ukeplan" : "ukeplaner"}
               </p>
@@ -297,7 +297,7 @@ export function FamilyRecipeEditorCard({
         {!isEditing ? (
           <div className="flex shrink-0 flex-col gap-2 sm:items-end">
             <button
-              className="inline-flex items-center justify-center rounded-2xl bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
+              className="inline-flex items-center justify-center rounded-2xl bg-notice-success px-5 py-3 text-sm font-medium text-notice-success-ink ring-1 ring-notice-success-line transition hover:brightness-110"
               onClick={() => {
                 setReminderPrefillId(undefined);
                 setIsReminderModalOpen(true);
@@ -379,7 +379,7 @@ export function FamilyRecipeEditorCard({
               {isUpdatingRecipe ? "Lagrer..." : "Lagre oppskrift"}
             </button>
             <button
-              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-medium text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50"
+              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-surface px-5 py-3 text-sm font-medium text-muted ring-1 ring-slate-300 transition hover:bg-page"
               onClick={handleCancelEditing}
               type="button"
             >
@@ -465,8 +465,8 @@ function RecipeCoverField({
   title: string;
 }) {
   return (
-    <fieldset className="space-y-3 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-      <legend className="px-1 text-sm font-semibold text-slate-950">
+    <fieldset className="space-y-3 rounded-[24px] border border-line bg-page p-4">
+      <legend className="px-1 text-sm font-semibold text-ink">
         Coverbilde
       </legend>
       <div className="flex items-start gap-4">
@@ -478,16 +478,16 @@ function RecipeCoverField({
               fortsatt lagre oppskriften uten bilde.
             </p>
           ) : (
-            <p className="text-sm leading-6 text-slate-600">
+            <p className="text-sm leading-6 text-muted">
               JPEG, PNG eller WebP. Bildet komprimeres automatisk før opplasting
               (maks 2 MB).
             </p>
           )}
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-muted">
             Velg bilde
             <input
               accept="image/jpeg,image/png,image/webp"
-              className="mt-2 block w-full text-base text-slate-700 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+              className="mt-2 block w-full text-base text-muted file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
               disabled={disabled}
               name="coverImage"
               onChange={onFileChange}
@@ -496,7 +496,7 @@ function RecipeCoverField({
             />
           </label>
           {isCompressing ? (
-            <p className="text-sm text-slate-500">Komprimerer bilde...</p>
+            <p className="text-sm text-muted">Komprimerer bilde...</p>
           ) : null}
           {hasExistingImage || previewUrl ? (
             <button
@@ -557,10 +557,10 @@ function RecipeFields({
 }) {
   return (
     <>
-      <label className="block text-sm font-medium text-slate-700">
+      <label className="block text-sm font-medium text-muted">
         Tittel
         <input
-          className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
           name="title"
           onChange={(event) =>
             setDraftValues((current) => ({
@@ -576,10 +576,10 @@ function RecipeFields({
         <p className="text-sm text-rose-600">{fieldErrors.title}</p>
       ) : null}
 
-      <label className="block text-sm font-medium text-slate-700">
+      <label className="block text-sm font-medium text-muted">
         Beskrivelse
         <textarea
-          className="mt-2 min-h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="mt-2 min-h-24 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
           name="description"
           onChange={(event) =>
             setDraftValues((current) => ({
@@ -640,10 +640,10 @@ function RecipeFields({
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           Porsjoner
           <input
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             inputMode="numeric"
             name="defaultServings"
             onChange={(event) =>
@@ -663,10 +663,10 @@ function RecipeFields({
           ) : null}
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           Tilberedning (min)
           <input
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             inputMode="numeric"
             name="prepMinutes"
             onChange={(event) =>
@@ -687,10 +687,10 @@ function RecipeFields({
         </label>
       </div>
 
-      <label className="block text-sm font-medium text-slate-700">
+      <label className="block text-sm font-medium text-muted">
         Stikkord (kommaseparert)
         <input
-          className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
           name="tags"
           onChange={(event) =>
             setDraftValues((current) => ({
@@ -712,10 +712,10 @@ function RecipeFields({
 
       <div className="space-y-4">
         <div>
-          <h3 className="text-base font-semibold text-slate-950">
+          <h3 className="text-base font-semibold text-ink">
             Ingredienser
           </h3>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
+          <p className="mt-1 text-sm leading-6 text-muted">
             Hver rad er én ingrediens med egen handlekategori (brukes i
             handlelisten, ikke som oppskriftstype).
           </p>
@@ -744,7 +744,7 @@ function RecipeFields({
         ))}
 
         <button
-          className="w-full rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100 sm:w-auto"
+          className="w-full rounded-2xl bg-notice-success px-4 py-2 text-sm font-medium text-notice-success-ink ring-1 ring-notice-success-line transition hover:brightness-110 sm:w-auto"
           onClick={onAddIngredient}
           type="button"
         >
@@ -854,8 +854,8 @@ function ReminderSuggestionEditor({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-base font-semibold text-slate-950">Påminnelser</h3>
-        <p className="mt-1 text-sm leading-6 text-slate-600">
+        <h3 className="text-base font-semibold text-ink">Påminnelser</h3>
+        <p className="mt-1 text-sm leading-6 text-muted">
           Valgfrie forslag som vises på ukeplanen. De oppretter ikke
           automatisk noe i Apple Påminnelser.
         </p>
@@ -866,23 +866,23 @@ function ReminderSuggestionEditor({
 
       {rows.map((row, index) => (
         <div
-          className="rounded-[24px] border border-slate-200 bg-slate-50 p-4"
+          className="rounded-[24px] border border-line bg-page p-4"
           key={row.key}
         >
           <input name="reminderIndex" type="hidden" value={String(index)} />
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+            <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-muted ring-1 ring-line">
               Påminnelse {index + 1}
             </span>
             <button
-              className="rounded-xl bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+              className="rounded-xl bg-surface px-3 py-1 text-xs font-medium text-muted ring-1 ring-line"
               onClick={() => moveRow(row.key, "up")}
               type="button"
             >
               Opp
             </button>
             <button
-              className="rounded-xl bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+              className="rounded-xl bg-surface px-3 py-1 text-xs font-medium text-muted ring-1 ring-line"
               onClick={() => moveRow(row.key, "down")}
               type="button"
             >
@@ -897,10 +897,10 @@ function ReminderSuggestionEditor({
             </button>
           </div>
 
-          <label className="mt-4 block text-sm font-medium text-slate-700">
+          <label className="mt-4 block text-sm font-medium text-muted">
             Tittel
             <input
-              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               name={`reminderTitle:${index}`}
               onChange={(event) => updateRow(row.key, { title: event.target.value })}
               placeholder="Ta deigen ut av kjøleskapet"
@@ -914,10 +914,10 @@ function ReminderSuggestionEditor({
             </p>
           ) : null}
 
-          <label className="mt-3 block text-sm font-medium text-slate-700">
+          <label className="mt-3 block text-sm font-medium text-muted">
             Notat (valgfritt)
             <textarea
-              className="mt-2 min-h-20 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 min-h-20 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               name={`reminderNote:${index}`}
               onChange={(event) => updateRow(row.key, { note: event.target.value })}
               placeholder="F.eks. ta ut dagen før"
@@ -930,10 +930,10 @@ function ReminderSuggestionEditor({
             </p>
           ) : null}
 
-          <label className="mt-3 block text-sm font-medium text-slate-700">
+          <label className="mt-3 block text-sm font-medium text-muted">
             Når (valgfritt)
             <select
-              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               name={`reminderTimingKind:${index}`}
               onChange={(event) =>
                 updateRow(row.key, { timingKind: event.target.value })
@@ -957,7 +957,7 @@ function ReminderSuggestionEditor({
       ))}
 
       <button
-        className="w-full rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100 sm:w-auto"
+        className="w-full rounded-2xl bg-notice-success px-4 py-2 text-sm font-medium text-notice-success-ink ring-1 ring-notice-success-line transition hover:brightness-110 sm:w-auto"
         onClick={addRow}
         type="button"
       >
@@ -1002,21 +1002,21 @@ function IngredientRowEditor({
   }, [focusDisplayName, onDisplayNameFocused]);
 
   return (
-    <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-[24px] border border-line bg-page p-4">
       <input name="ingredientIndex" type="hidden" value={String(index)} />
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+        <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-muted ring-1 ring-line">
           Ingrediens {index + 1}
         </span>
         <button
-          className="rounded-xl bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+          className="rounded-xl bg-surface px-3 py-1 text-xs font-medium text-muted ring-1 ring-line"
           onClick={() => onMove(row.key, "up")}
           type="button"
         >
           Opp
         </button>
         <button
-          className="rounded-xl bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+          className="rounded-xl bg-surface px-3 py-1 text-xs font-medium text-muted ring-1 ring-line"
           onClick={() => onMove(row.key, "down")}
           type="button"
         >
@@ -1032,11 +1032,11 @@ function IngredientRowEditor({
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
+        <label className="block text-sm font-medium text-muted sm:col-span-2">
           Navn
           <input
             ref={displayNameInputRef}
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm"
             name={`ingredientDisplayName:${index}`}
             onChange={(event) =>
               onUpdate(row.key, { displayName: event.target.value })
@@ -1045,10 +1045,10 @@ function IngredientRowEditor({
             value={row.displayName}
           />
         </label>
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           Mengde
           <input
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm"
             name={`ingredientAmount:${index}`}
             onChange={(event) =>
               onUpdate(row.key, { amount: event.target.value })
@@ -1057,10 +1057,10 @@ function IngredientRowEditor({
             value={row.amount}
           />
         </label>
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           Enhet
           <input
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm"
             name={`ingredientUnit:${index}`}
             onChange={(event) =>
               onUpdate(row.key, { unit: event.target.value })
@@ -1069,13 +1069,13 @@ function IngredientRowEditor({
             value={row.unit}
           />
         </label>
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           Handlekategori
-          <span className="mt-1 block text-xs font-normal text-slate-500">
+          <span className="mt-1 block text-xs font-normal text-muted">
             Hvor varen havner i handlelisten
           </span>
           <select
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm"
             name={`ingredientCategoryId:${index}`}
             onChange={(event) =>
               onUpdate(row.key, { categoryId: event.target.value })
@@ -1090,10 +1090,10 @@ function IngredientRowEditor({
             ))}
           </select>
         </label>
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-muted">
           Foretrukket butikk
           <select
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm"
             name={`ingredientPreferredStoreId:${index}`}
             onChange={(event) =>
               onUpdate(row.key, { preferredStoreId: event.target.value })
@@ -1139,18 +1139,18 @@ function RecipeReadOnlySummary({
   return (
     <div className="mt-6 space-y-6">
       {draftValues.description ? (
-        <p className="text-sm leading-7 text-slate-600 whitespace-break-spaces">
+        <p className="text-sm leading-7 text-muted whitespace-break-spaces">
           {draftValues.description}
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
         {draftValues.defaultServings ? (
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+          <span className="rounded-full bg-page px-3 py-1 text-xs font-medium text-muted">
             {draftValues.defaultServings} porsjoner
           </span>
         ) : null}
         {draftValues.prepMinutes ? (
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+          <span className="rounded-full bg-page px-3 py-1 text-xs font-medium text-muted">
             {draftValues.prepMinutes} min
           </span>
         ) : null}
@@ -1161,7 +1161,7 @@ function RecipeReadOnlySummary({
           .map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+              className="rounded-full bg-page px-3 py-1 text-xs font-medium text-muted"
             >
               {tag}
             </span>
@@ -1169,7 +1169,7 @@ function RecipeReadOnlySummary({
       </div>
       {reminderSuggestions.length > 0 ? (
         <div>
-          <h3 className="text-base font-semibold text-slate-950">Påminnelser</h3>
+          <h3 className="text-base font-semibold text-ink">Påminnelser</h3>
           <ul className="mt-3 space-y-2">
             {reminderSuggestions.map((suggestion) => {
               const timingLabel = getRecipeReminderTimingLabel(
@@ -1204,13 +1204,13 @@ function RecipeReadOnlySummary({
       <ol className="space-y-3">
         {draftIngredients.map((row, index) => (
           <li
-            className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-3"
+            className="rounded-[20px] border border-line bg-page px-4 py-3"
             key={row.key}
           >
-            <p className="font-medium text-slate-950">
+            <p className="font-medium text-ink">
               {index + 1}. {row.displayName}
             </p>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-muted">
               {[row.amount, row.unit].filter(Boolean).join(" ") ||
                 "Uten mengde"}
               {" · Handlekategori: "}

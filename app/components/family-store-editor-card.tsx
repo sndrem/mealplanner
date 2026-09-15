@@ -167,13 +167,13 @@ export function FamilyStoreEditorCard({
   }
 
   return (
-    <article className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+    <article className="rounded-[24px] border border-line bg-page p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-slate-950">
+          <h3 className="text-base font-semibold text-ink">
             {isUpdatingStore ? draftName : store.name}
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
+          <p className="mt-2 text-sm leading-6 text-muted">
             {isEditing
               ? "Dra og slipp seksjonene i den rekkefølgen dere faktisk går gjennom butikken, og lagre når alt ser riktig ut."
               : "Åpne redigering for å endre navn, seksjonsnavn og rekkefølge i en samlet lagring."}
@@ -196,10 +196,10 @@ export function FamilyStoreEditorCard({
           <input name="intent" type="hidden" value="update-store" />
           <input name="storeId" type="hidden" value={store.id} />
 
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-muted">
             Butikknavn
             <input
-              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               name="name"
               onChange={(event) => setDraftName(event.target.value)}
               type="text"
@@ -228,7 +228,7 @@ export function FamilyStoreEditorCard({
             {unusedCategories.length > 0 ? (
               <div className="flex items-center gap-3">
                 <select
-                  className="min-w-0 flex-1 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="min-w-0 flex-1 rounded-2xl border border-dashed border-line bg-surface px-4 py-3 text-sm text-muted outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                   defaultValue=""
                   onChange={(e) => {
                     if (e.target.value) {
@@ -265,7 +265,7 @@ export function FamilyStoreEditorCard({
               {isUpdatingStore ? "Lagrer..." : "Lagre endringer"}
             </button>
             <button
-              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-medium text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50"
+              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-surface px-5 py-3 text-sm font-medium text-muted ring-1 ring-slate-300 transition hover:bg-page"
               onClick={handleCancelEditing}
               type="button"
             >
@@ -277,12 +277,12 @@ export function FamilyStoreEditorCard({
         <div className="mt-6 grid gap-3">
           {store.sections.map((section, index) => (
             <div
-              className="flex items-center justify-between rounded-[20px] border border-slate-200 bg-white px-4 py-3"
+              className="flex items-center justify-between rounded-[20px] border border-line bg-surface px-4 py-3"
               key={`${store.id}:${section.id}:summary`}
             >
               <div>
-                <p className="text-sm text-slate-500">Plass {index + 1}</p>
-                <p className="font-medium text-slate-900">
+                <p className="text-sm text-muted">Plass {index + 1}</p>
+                <p className="font-medium text-ink">
                   {section.displayName}
                 </p>
               </div>
@@ -390,7 +390,7 @@ function StoreSectionEditorRow({
       className={
         isDragging
           ? "rounded-[20px] border border-emerald-300 bg-emerald-50 p-4 opacity-60"
-          : "rounded-[20px] border border-slate-200 bg-white p-4"
+          : "rounded-[20px] border border-line bg-surface p-4"
       }
       ref={ref}
     >
@@ -400,15 +400,15 @@ function StoreSectionEditorRow({
         value={section.categoryId}
       />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <div className="flex items-center gap-3 text-slate-500">
-          <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium">
+        <div className="flex items-center gap-3 text-muted">
+          <div className="rounded-full bg-page px-3 py-1 text-xs font-medium">
             {index + 1}
           </div>
           <div
             className={
               isEditing
-                ? "cursor-grab rounded-xl border border-dashed border-slate-300 px-3 py-2 text-xs font-medium uppercase tracking-[0.2em]"
-                : "rounded-xl border border-dashed border-slate-200 px-3 py-2 text-xs font-medium uppercase tracking-[0.2em]"
+                ? "cursor-grab rounded-xl border border-dashed border-line px-3 py-2 text-xs font-medium uppercase tracking-[0.2em]"
+                : "rounded-xl border border-dashed border-line px-3 py-2 text-xs font-medium uppercase tracking-[0.2em]"
             }
           >
             Dra
@@ -417,7 +417,7 @@ function StoreSectionEditorRow({
 
         <div className="min-w-0 flex-1">
           <input
-            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             name={`sectionDisplayName:${section.categoryId}`}
             onChange={(event) =>
               onDisplayNameChange(section.categoryId, event.target.value)

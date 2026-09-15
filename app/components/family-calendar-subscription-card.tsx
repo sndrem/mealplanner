@@ -19,12 +19,12 @@ export function FamilyCalendarSubscriptionCard({
   const showUrls = Boolean(httpsUrl && webcalUrl);
 
   return (
-    <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+    <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
       <div className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-slate-950">
+        <h2 className="text-lg font-semibold text-ink">
           Abonner i kalenderen
         </h2>
-        <p className="text-sm leading-6 text-slate-600">
+        <p className="text-sm leading-6 text-muted">
           Legg til familiens middager i Apple Kalender eller Google Kalender.
           Lenken er hemmelig — ikke del den offentlig. Kalendere henter
           oppdateringer selv, ofte først etter noen timer.
@@ -117,8 +117,8 @@ function CalendarSubscriptionUrlResult({
 }) {
   return (
     <div className="mt-6 grid gap-4">
-      <p className="text-sm font-medium text-slate-950">Lenken er klar</p>
-      <p className="text-sm leading-6 text-slate-600">
+      <p className="text-sm font-medium text-ink">Lenken er klar</p>
+      <p className="text-sm leading-6 text-muted">
         Kopier HTTPS-lenken til Google Kalender, eller åpne webcal-lenken på
         iPhone. Bytt lenke senere hvis den kommer på avveie — da må enhetene
         abonnere på nytt.
@@ -144,10 +144,10 @@ function CopyableCalendarUrl({
   );
 
   return (
-    <label className="block text-sm font-medium text-slate-700">
+    <label className="block text-sm font-medium text-muted">
       {label}
       <input
-        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-950 outline-none transition focus:border-slate-400"
+        className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-slate-400"
         readOnly
         value={url}
       />

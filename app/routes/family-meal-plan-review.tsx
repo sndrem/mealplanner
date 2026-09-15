@@ -205,7 +205,7 @@ export default function FamilyMealPlanReviewRoute({
           : "Venter på deg";
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-slate-100 px-4 py-6 text-slate-900">
+    <main className="min-h-screen overflow-x-hidden bg-page px-4 py-6 text-ink">
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
         <section className="sticky top-14 z-40 rounded-[24px] bg-slate-950 px-4 py-4 text-white shadow-lg">
           <div className="flex items-start justify-between gap-3">
@@ -255,11 +255,11 @@ export default function FamilyMealPlanReviewRoute({
         ) : null}
 
         {loaderData.canApprove && !isApprovingMealPlan ? (
-          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm mt-15">
-            <h2 className="text-base font-semibold text-slate-950">
+          <section className="rounded-[24px] border border-line bg-surface p-4 shadow-sm mt-15">
+            <h2 className="text-base font-semibold text-ink">
               Godkjenn ukeplanen
             </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-sm leading-6 text-muted">
               Du trenger ikke legge inn tilbakemelding på hver dag. Godkjenn når
               planen ser bra ut.
             </p>
@@ -283,7 +283,7 @@ export default function FamilyMealPlanReviewRoute({
           </section>
         ) : null}
 
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Valgfri tilbakemelding per dag:
         </p>
 
@@ -305,13 +305,13 @@ export default function FamilyMealPlanReviewRoute({
             return (
               <article
                 key={day.date}
-                className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm"
+                className="rounded-[24px] border border-line bg-surface p-4 shadow-sm"
               >
                 <header className="mb-3">
-                  <h2 className="text-base font-semibold text-slate-950">
+                  <h2 className="text-base font-semibold text-ink">
                     {formatWeekdayLabel(day.date)}
                   </h2>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted">
                     {formatShortDate(day.date)}
                   </p>
                 </header>
@@ -326,21 +326,21 @@ export default function FamilyMealPlanReviewRoute({
                         Fryser
                       </span>
                     ) : null}
-                    <p className="mt-2 text-lg font-semibold leading-snug text-slate-950">
+                    <p className="mt-2 text-lg font-semibold leading-snug text-ink">
                       {day.dinner.recipeTitle ?? day.dinner.freezerItemLabel}
                     </p>
                     {day.dinner.note ? (
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                      <p className="mt-2 text-sm leading-6 text-muted">
                         {day.dinner.note}
                       </p>
                     ) : null}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <div className="rounded-2xl border border-dashed border-line bg-page px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
                       Middag
                     </p>
-                    <p className="mt-2 text-sm text-slate-500">
+                    <p className="mt-2 text-sm text-muted">
                       Ingen middag valgt
                     </p>
                   </div>
@@ -378,7 +378,7 @@ export default function FamilyMealPlanReviewRoute({
                               "inline-flex min-h-11 w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed",
                               isSelected
                                 ? "bg-emerald-600 text-white ring-2 ring-emerald-300"
-                                : "bg-slate-100 text-slate-900 hover:bg-slate-200",
+                                : "bg-page text-ink hover:bg-line",
                             ].join(" ")}
                             disabled={isSubmittingDay}
                             type="submit"
@@ -390,14 +390,14 @@ export default function FamilyMealPlanReviewRoute({
                     })}
                   </div>
                 ) : day.comment ? (
-                  <p className="mt-4 rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  <p className="mt-4 rounded-2xl bg-page px-3 py-2 text-sm text-muted">
                     {day.comment.feedbackLabel}
                   </p>
                 ) : null}
 
                 {loaderData.canApprove ? (
                   <details className="mt-3 group">
-                    <summary className="cursor-pointer list-none text-sm font-medium text-slate-600 marker:content-none [&::-webkit-details-marker]:hidden">
+                    <summary className="cursor-pointer list-none text-sm font-medium text-muted marker:content-none [&::-webkit-details-marker]:hidden">
                       Annet
                     </summary>
                     <Form className="mt-3 space-y-2" method="post">
@@ -413,7 +413,7 @@ export default function FamilyMealPlanReviewRoute({
                       />
                       <input name="date" type="hidden" value={day.date} />
                       <textarea
-                        className="min-h-20 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                        className="min-h-20 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink"
                         defaultValue={day.comment?.body ?? ""}
                         name="body"
                         placeholder="Skriv et kort notat..."
@@ -437,11 +437,11 @@ export default function FamilyMealPlanReviewRoute({
                 {day.comment &&
                 !day.comment.quickResponse &&
                 displayNoteBody ? (
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-muted">
                     Lagret: {pendingNoteBody || day.comment.feedbackLabel}
                   </p>
                 ) : pendingNoteBody ? (
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-muted">
                     Lagret: {pendingNoteBody}
                   </p>
                 ) : null}
@@ -457,7 +457,7 @@ export default function FamilyMealPlanReviewRoute({
         </div>
 
         <Link
-          className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-50"
+          className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-line bg-surface px-5 py-3 text-sm font-medium text-ink transition hover:bg-page"
           to={`/families/${loaderData.family.id}/meal-plans/reviews`}
         >
           Tilbake til gjennomgang

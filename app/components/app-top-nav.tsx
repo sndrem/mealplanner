@@ -1,6 +1,8 @@
 import { useEffect, useId, useState } from "react";
 import { Link, NavLink } from "react-router";
 
+import { ThemeToggle } from "./theme-toggle";
+
 interface NavItem {
   end?: boolean;
   label: string;
@@ -133,6 +135,7 @@ export function AppTopNav({
 
         <nav aria-label="Hovedmeny" className="hidden items-center gap-2 md:flex">
           <NavLinks items={navItems} />
+          <ThemeToggle variant="desktop" />
         </nav>
 
         <button
@@ -181,6 +184,9 @@ export function AppTopNav({
                 setMenuOpen(false);
               }}
             />
+            <div className="pt-2">
+              <ThemeToggle variant="mobile" />
+            </div>
           </div>
         </nav>
       ) : null}

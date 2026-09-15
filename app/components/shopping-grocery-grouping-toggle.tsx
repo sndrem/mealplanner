@@ -45,15 +45,15 @@ export function ShoppingGroceryGroupingToggle({
   return (
     <div
       aria-label="Gruppering av like varer"
-      className="inline-flex rounded-2xl bg-stone-100 p-1 ring-1 ring-stone-200"
+      className="inline-flex rounded-2xl bg-store-bg p-1 ring-1 ring-store-line"
       role="radiogroup"
     >
       <GroupingFormButton
         checked={grouping === "GROUPED"}
         className={
           grouping === "GROUPED"
-            ? "rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-stone-950 shadow-sm ring-1 ring-stone-200"
-            : "rounded-xl px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:text-stone-950"
+            ? "rounded-xl bg-store-surface px-4 py-2.5 text-sm font-medium text-store-ink shadow-sm ring-1 ring-store-line"
+            : "rounded-xl px-4 py-2.5 text-sm font-medium text-store-muted transition hover:text-store-ink"
         }
         grouping="GROUPED"
         label="Samme vare"
@@ -62,8 +62,8 @@ export function ShoppingGroceryGroupingToggle({
         checked={grouping === "SPLIT"}
         className={
           grouping === "SPLIT"
-            ? "rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-stone-950 shadow-sm ring-1 ring-stone-200"
-            : "rounded-xl px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:text-stone-950"
+            ? "rounded-xl bg-store-surface px-4 py-2.5 text-sm font-medium text-store-ink shadow-sm ring-1 ring-store-line"
+            : "rounded-xl px-4 py-2.5 text-sm font-medium text-store-muted transition hover:text-store-ink"
         }
         grouping="SPLIT"
         label="Hver mengde"

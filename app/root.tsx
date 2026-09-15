@@ -5,10 +5,13 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteLoaderData,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { getThemeHtmlClass } from "./lib/theme-preference";
+import { getRequestThemePreference } from "./lib/theme-preference-write.server";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -23,16 +26,25 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+export async function loader({ request }: Route.LoaderArgs) {
+  return {
+    themePreference: await getRequestThemePreference(request),
+  };
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useRouteLoaderData<typeof loader>("root");
+  const themeClass = getThemeHtmlClass(data?.themePreference);
+
   return (
-    <html lang="nb">
+    <html className={themeClass} lang="nb">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
       </head>
-      <body className="min-h-screen bg-slate-100 text-slate-900 antialiased">
+      <body className="min-h-screen bg-page text-ink antialiased">
         {children}
         <ScrollRestoration />
         <Scripts />

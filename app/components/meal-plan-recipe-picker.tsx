@@ -159,7 +159,7 @@ export function MealPlanRecipePicker({
         aria-controls={isOpen ? listboxId : undefined}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="mt-2 flex w-full max-w-full items-center justify-between gap-3 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-left text-sm text-slate-900 outline-none transition hover:bg-slate-50 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+        className="mt-2 flex w-full max-w-full items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3 text-left text-sm text-ink outline-none transition hover:bg-page focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
         onClick={() => setIsOpen((current) => !current)}
         type="button"
       >
@@ -171,15 +171,15 @@ export function MealPlanRecipePicker({
 
       {isOpen ? (
         <div
-          className="mt-2 min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+          className="mt-2 min-w-0 rounded-2xl border border-line bg-surface p-3 shadow-sm"
           id={listboxId}
           role="listbox"
         >
-          <label className="block text-xs font-medium text-slate-600">
+          <label className="block text-xs font-medium text-muted">
             Søk
             <input
               autoComplete="off"
-              className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-1.5 w-full rounded-xl border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="For eksempel tomatsuppe"
               ref={searchInputRef}
@@ -190,7 +190,7 @@ export function MealPlanRecipePicker({
 
           {tagOptions.length > 0 ? (
             <div className="mt-3">
-              <p className="text-xs font-medium text-slate-600">Filtrer på tag</p>
+              <p className="text-xs font-medium text-muted">Filtrer på tag</p>
               <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1">
                 {tagOptions.map(({ count, tag }) => {
                   const isSelected = selectedTags.includes(tag);
@@ -201,7 +201,7 @@ export function MealPlanRecipePicker({
                       className={
                         isSelected
                           ? "shrink-0 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white"
-                          : "shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
+                          : "shrink-0 rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted transition hover:bg-line"
                       }
                       onClick={() => toggleTag(tag)}
                       type="button"
@@ -216,7 +216,7 @@ export function MealPlanRecipePicker({
 
           {hasActiveFilters ? (
             <button
-              className="mt-2 text-xs font-medium text-slate-600 underline-offset-2 hover:underline"
+              className="mt-2 text-xs font-medium text-muted underline-offset-2 hover:underline"
               onClick={() => {
                 setSearchQuery("");
                 setSelectedTags([]);
@@ -232,7 +232,7 @@ export function MealPlanRecipePicker({
               className={
                 value === ""
                   ? "w-full rounded-2xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-left text-sm font-medium text-emerald-900"
-                  : "w-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-white"
+                  : "w-full rounded-2xl border border-dashed border-line bg-page px-3 py-2 text-left text-sm font-medium text-muted transition hover:bg-surface"
               }
               onClick={() => selectValue("")}
               type="button"
@@ -293,7 +293,7 @@ export function MealPlanRecipePicker({
             ) : null}
 
             {!hasAnyResults ? (
-              <p className="rounded-2xl bg-slate-50 px-3 py-4 text-sm text-slate-600">
+              <p className="rounded-2xl bg-page px-3 py-4 text-sm text-muted">
                 Ingen oppskrifter matcher søket.
               </p>
             ) : null}

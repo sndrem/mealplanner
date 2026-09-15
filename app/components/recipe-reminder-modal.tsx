@@ -152,14 +152,14 @@ export function RecipeReminderModal({
       <div
         aria-labelledby={titleId}
         aria-modal="true"
-        className="w-full max-h-[90vh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-xl sm:max-w-md sm:rounded-3xl"
+        className="w-full max-h-[90vh] overflow-y-auto rounded-t-3xl bg-surface p-5 shadow-xl sm:max-w-md sm:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <h3 className="text-lg font-semibold text-slate-950" id={titleId}>
+        <h3 className="text-lg font-semibold text-ink" id={titleId}>
           Påminn meg
         </h3>
-        <p className="mt-1 text-sm leading-6 text-slate-600">
+        <p className="mt-1 text-sm leading-6 text-muted">
           Opprett en påminnelse i Apple Påminnelser via snarveien «
           {RECIPE_REMINDER_SHORTCUT_NAME}».
         </p>
@@ -180,7 +180,7 @@ export function RecipeReminderModal({
 
         {suggestions.length > 0 ? (
           <div className="mt-4">
-            <p className="text-xs font-medium text-slate-700">Foreslåtte påminnelser</p>
+            <p className="text-xs font-medium text-muted">Foreslåtte påminnelser</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {suggestions.map((suggestion) => {
                 const selected =
@@ -193,7 +193,7 @@ export function RecipeReminderModal({
                     className={
                       selected
                         ? "rounded-full bg-emerald-100 px-3 py-2 text-sm font-medium text-emerald-900 ring-1 ring-emerald-300"
-                        : "rounded-full bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200"
+                        : "rounded-full bg-page px-3 py-2 text-sm font-medium text-muted ring-1 ring-line"
                     }
                     key={suggestion.id ?? suggestion.title}
                     onClick={() => handleSuggestionClick(suggestion)}
@@ -207,10 +207,10 @@ export function RecipeReminderModal({
           </div>
         ) : null}
 
-        <label className="mt-4 block text-sm font-medium text-slate-700">
+        <label className="mt-4 block text-sm font-medium text-muted">
           Tekst
           <input
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             onChange={(event) => {
               setTitle(event.target.value);
               setSelectedSuggestionId(undefined);
@@ -222,7 +222,7 @@ export function RecipeReminderModal({
         </label>
 
         <div className="mt-4">
-          <p className="text-sm font-medium text-slate-700">Når</p>
+          <p className="text-sm font-medium text-muted">Når</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {RECIPE_REMINDER_PRESETS.map((preset) => (
               <button
@@ -230,7 +230,7 @@ export function RecipeReminderModal({
                 className={
                   presetId === preset.id
                     ? "rounded-full bg-emerald-100 px-3 py-2 text-sm font-medium text-emerald-900 ring-1 ring-emerald-300"
-                    : "rounded-full bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200"
+                    : "rounded-full bg-page px-3 py-2 text-sm font-medium text-muted ring-1 ring-line"
                 }
                 key={preset.id}
                 onClick={() => handlePresetClick(preset.id)}
@@ -243,19 +243,19 @@ export function RecipeReminderModal({
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-muted">
             Dato
             <input
-              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-3 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               onChange={(event) => handleDateChange(event.target.value)}
               type="date"
               value={date}
             />
           </label>
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-muted">
             Klokkeslett
             <input
-              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-3 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               onChange={(event) => handleTimeChange(event.target.value)}
               type="time"
               value={time}
@@ -274,16 +274,16 @@ export function RecipeReminderModal({
         ) : null}
 
         <details
-          className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+          className="mt-4 rounded-2xl border border-line bg-page px-4 py-3"
           onToggle={(event) => setHelpOpen(event.currentTarget.open)}
           open={helpOpen}
         >
-          <summary className="cursor-pointer text-sm font-medium text-slate-800">
+          <summary className="cursor-pointer text-sm font-medium text-ink">
             {launchMayHaveFailed
               ? "Snarveien åpnet ikke"
               : "Hvordan installere snarveien"}
           </summary>
-          <div className="mt-2 space-y-2 text-sm leading-6 text-slate-600">
+          <div className="mt-2 space-y-2 text-sm leading-6 text-muted">
             <p>
               Webapper kan ikke opprette Apple-påminnelser direkte. Du trenger
               snarveien <strong>{RECIPE_REMINDER_SHORTCUT_NAME}</strong> i appen
@@ -302,7 +302,7 @@ export function RecipeReminderModal({
               </li>
             </ol>
             <button
-              className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200"
+              className="rounded-xl bg-surface px-3 py-2 text-sm font-medium text-muted ring-1 ring-line"
               onClick={() => void handleCopyShortcutName()}
               type="button"
             >
@@ -313,7 +313,7 @@ export function RecipeReminderModal({
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
-            className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+            className="rounded-2xl border border-line px-4 py-3 text-sm font-medium text-muted transition hover:bg-page"
             onClick={onClose}
             type="button"
           >

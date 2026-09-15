@@ -17,20 +17,20 @@ export function FamilyMcpTokenCard({
   mcpUrl: string;
 }) {
   return (
-    <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+    <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
       <div className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-slate-950">AI-tilgang (MCP)</h2>
-        <p className="text-sm leading-6 text-slate-600">
+        <h2 className="text-lg font-semibold text-ink">AI-tilgang (MCP)</h2>
+        <p className="text-sm leading-6 text-muted">
           Lag et hemmelig nøkkelord som en AI-agent kan bruke for å lese
           oppskrifter, ukeplan og handleliste, og for å foreslå en ukeplan.
           Del det ikke offentlig. Bytt nøkkel hvis det kommer på avveie.
         </p>
       </div>
 
-      <label className="mt-6 block text-sm font-medium text-slate-700">
+      <label className="mt-6 block text-sm font-medium text-muted">
         MCP-adresse
         <input
-          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-950 outline-none transition focus:border-slate-400"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-slate-400"
           readOnly
           value={mcpUrl}
         />
@@ -100,15 +100,15 @@ export function FamilyMcpTokenCard({
 function McpTokenResult({ token }: { token: string }) {
   return (
     <div className="mt-6 grid gap-2">
-      <p className="text-sm font-medium text-slate-950">Nøkkelen er klar</p>
-      <p className="text-sm leading-6 text-slate-600">
+      <p className="text-sm font-medium text-ink">Nøkkelen er klar</p>
+      <p className="text-sm leading-6 text-muted">
         Kopier nøkkelen nå — den vises ikke igjen. Bruk den som Bearer-token mot
         MCP-adressen.
       </p>
-      <label className="block text-sm font-medium text-slate-700">
+      <label className="block text-sm font-medium text-muted">
         Nøkkel
         <input
-          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-950 outline-none transition focus:border-slate-400"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-slate-400"
           readOnly
           value={token}
         />

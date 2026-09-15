@@ -22,7 +22,7 @@ function buildTabHref(pathname: string, search: string, tab: FamilyHomeTab) {
 function tabTriggerClassName(isActive: boolean) {
   return isActive
     ? "rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm"
-    : "rounded-2xl px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950";
+    : "rounded-2xl px-4 py-2.5 text-sm font-medium text-muted transition hover:bg-page hover:text-ink";
 }
 
 export function FamilyHomeTabs({
@@ -95,7 +95,7 @@ export function FamilyHomeTabs({
     <div className="flex flex-col gap-6">
       <div
         aria-label="Familieoversikt"
-        className="inline-flex w-fit max-w-full flex-wrap gap-2 rounded-[28px] bg-white p-2 shadow-sm ring-1 ring-slate-200"
+        className="inline-flex w-fit max-w-full flex-wrap gap-2 rounded-[28px] bg-surface p-2 shadow-sm ring-1 ring-line"
         role="tablist"
       >
         {tabs.map(({ href, id, label, panelId, tab }) => {

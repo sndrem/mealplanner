@@ -284,7 +284,7 @@ export default function FamilyShoppingCatalogRoute({
   })();
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -338,12 +338,12 @@ export default function FamilyShoppingCatalogRoute({
           </section>
         ) : null}
 
-        <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold text-slate-950">
+            <h2 className="text-lg font-semibold text-ink">
               Legg til handlevare
             </h2>
-            <p className="text-sm leading-6 text-slate-600">
+            <p className="text-sm leading-6 text-muted">
               Gi varen et navn, en standardmengde og en kategori. Den dukker opp
               når dere skriver i hurtigfeltet på handlelisten.
             </p>
@@ -351,10 +351,10 @@ export default function FamilyShoppingCatalogRoute({
 
           <Form className="mt-6 grid gap-4 sm:grid-cols-2" method="post">
             <input name="intent" type="hidden" value="add-catalog-item" />
-            <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
+            <label className="block text-sm font-medium text-muted sm:col-span-2">
               Navn
               <input
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                 defaultValue={addValues.name}
                 name="name"
                 placeholder="For eksempel tørkerull"
@@ -366,20 +366,20 @@ export default function FamilyShoppingCatalogRoute({
                 {actionData.addFieldErrors.name}
               </p>
             ) : null}
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-muted">
               Standardmengde
               <input
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                 defaultValue={addValues.quantity}
                 name="quantity"
                 placeholder="For eksempel 1 pk"
                 type="text"
               />
             </label>
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-muted">
               Kategori
               <select
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                 defaultValue={addValues.categoryId}
                 name="categoryId"
               >
@@ -412,12 +412,12 @@ export default function FamilyShoppingCatalogRoute({
           </Form>
         </section>
 
-        <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold text-slate-950">
+            <h2 className="text-lg font-semibold text-ink">
               Familiens handlevarer
             </h2>
-            <p className="text-sm leading-6 text-slate-600">
+            <p className="text-sm leading-6 text-muted">
               {displayCatalogItems.length === 0
                 ? "Ingen handlevarer er registrert ennå. De opprettes også automatisk når dere skriver inn et nytt navn i handlelisten."
                 : `${displayCatalogItems.length} handlevarer er registrert.`}
@@ -454,7 +454,7 @@ export default function FamilyShoppingCatalogRoute({
                 return (
                   <li
                     key={item.id}
-                    className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                    className="rounded-[24px] border border-line bg-page p-5"
                   >
                     <Form className="grid gap-4" method="post">
                       <input
@@ -467,10 +467,10 @@ export default function FamilyShoppingCatalogRoute({
                         type="hidden"
                         value={item.id}
                       />
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-muted">
                         Navn
                         <input
-                          className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                           defaultValue={updateValues.name}
                           name="name"
                           type="text"
@@ -482,19 +482,19 @@ export default function FamilyShoppingCatalogRoute({
                         </p>
                       ) : null}
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <label className="block text-sm font-medium text-slate-700">
+                        <label className="block text-sm font-medium text-muted">
                           Standardmengde
                           <input
-                            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                             defaultValue={updateValues.quantity}
                             name="quantity"
                             type="text"
                           />
                         </label>
-                        <label className="block text-sm font-medium text-slate-700">
+                        <label className="block text-sm font-medium text-muted">
                           Kategori
                           <select
-                            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                             defaultValue={updateValues.categoryId}
                             name="categoryId"
                           >
@@ -555,12 +555,12 @@ export default function FamilyShoppingCatalogRoute({
 export function ErrorBoundary({ error }: { error: unknown }) {
   if (isRouteErrorResponse(error)) {
     return (
-      <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
-        <div className="mx-auto max-w-3xl rounded-[28px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-          <h1 className="text-2xl font-semibold text-slate-950">
+      <main className="min-h-screen bg-page px-4 py-12 text-ink">
+        <div className="mx-auto max-w-3xl rounded-[28px] bg-surface p-8 shadow-sm ring-1 ring-line">
+          <h1 className="text-2xl font-semibold text-ink">
             {error.status} {error.statusText}
           </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
+          <p className="mt-3 text-sm leading-6 text-muted">
             {typeof error.data === "string"
               ? error.data
               : "Noe gikk galt under lasting av handlevarene."}
@@ -571,10 +571,10 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900">
-      <div className="mx-auto max-w-3xl rounded-[28px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-2xl font-semibold text-slate-950">Uventet feil</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">
+    <main className="min-h-screen bg-page px-4 py-12 text-ink">
+      <div className="mx-auto max-w-3xl rounded-[28px] bg-surface p-8 shadow-sm ring-1 ring-line">
+        <h1 className="text-2xl font-semibold text-ink">Uventet feil</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">
           Noe gikk galt under lasting av handlevarene.
         </p>
       </div>

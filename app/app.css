@@ -1,15 +1,123 @@
 @import "tailwindcss";
 
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+
+  &:where(.system, .system *) {
+    @media (prefers-color-scheme: dark) {
+      @slot;
+    }
+  }
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
+  --color-page: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-line: #e2e8f0;
+
   /* Store mode — Nordic Playful warm accent */
   --color-store-bg: #fafaf9;
+  --color-store-surface: #ffffff;
+  --color-store-ink: #1c1917;
+  --color-store-muted: #57534e;
+  --color-store-line: #e7e5e4;
   --color-store-accent-light: #ebe4dc;
   --color-store-accent: #c9bfb0;
   --color-store-accent-deep: #a89988;
   --color-store-accent-text: #57534e;
+
+  --color-notice-success: #ecfdf5;
+  --color-notice-success-ink: #064e3b;
+  --color-notice-success-muted: #047857;
+  --color-notice-success-line: #6ee7b7;
+  --color-notice-warning: #fffbeb;
+  --color-notice-warning-ink: #78350f;
+  --color-notice-warning-muted: #b45309;
+  --color-notice-warning-line: #fbbf24;
+  --color-notice-danger: #fff1f2;
+  --color-notice-danger-ink: #881337;
+  --color-notice-danger-muted: #be123c;
+  --color-notice-danger-line: #fda4af;
+}
+
+html.light {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+  --color-page: #020617;
+  --color-surface: #0f172a;
+  --color-ink: #f1f5f9;
+  --color-muted: #94a3b8;
+  --color-line: #334155;
+
+  --color-store-bg: #1c1917;
+  --color-store-surface: #292524;
+  --color-store-ink: #fafaf9;
+  --color-store-muted: #a8a29e;
+  --color-store-line: #44403c;
+  --color-store-accent-light: #3f3a34;
+  --color-store-accent: #a89988;
+  --color-store-accent-deep: #c9bfb0;
+  --color-store-accent-text: #e7e5e4;
+
+  --color-notice-success: #047857;
+  --color-notice-success-ink: #ecfdf5;
+  --color-notice-success-muted: #a7f3d0;
+  --color-notice-success-line: #34d399;
+  --color-notice-warning: #c2410c;
+  --color-notice-warning-ink: #fff7ed;
+  --color-notice-warning-muted: #fed7aa;
+  --color-notice-warning-line: #fb923c;
+  --color-notice-danger: #9f1239;
+  --color-notice-danger-ink: #fff1f2;
+  --color-notice-danger-muted: #fda4af;
+  --color-notice-danger-line: #fb7185;
+}
+
+html.system {
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  html.system {
+    --color-page: #020617;
+    --color-surface: #0f172a;
+    --color-ink: #f1f5f9;
+    --color-muted: #94a3b8;
+    --color-line: #334155;
+
+    --color-store-bg: #1c1917;
+    --color-store-surface: #292524;
+    --color-store-ink: #fafaf9;
+    --color-store-muted: #a8a29e;
+    --color-store-line: #44403c;
+    --color-store-accent-light: #3f3a34;
+    --color-store-accent: #a89988;
+    --color-store-accent-deep: #c9bfb0;
+    --color-store-accent-text: #e7e5e4;
+
+    --color-notice-success: #047857;
+    --color-notice-success-ink: #ecfdf5;
+    --color-notice-success-muted: #a7f3d0;
+    --color-notice-success-line: #34d399;
+    --color-notice-warning: #c2410c;
+    --color-notice-warning-ink: #fff7ed;
+    --color-notice-warning-muted: #fed7aa;
+    --color-notice-warning-line: #fb923c;
+    --color-notice-danger: #9f1239;
+    --color-notice-danger-ink: #fff1f2;
+    --color-notice-danger-muted: #fda4af;
+    --color-notice-danger-line: #fb7185;
+  }
 }
 
 @layer base {
@@ -18,16 +126,10 @@
   }
 
   html {
-    @apply bg-slate-100;
+    @apply bg-page;
   }
 
   body {
-    @apply min-h-screen bg-slate-100 text-slate-900;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: light;
-    }
+    @apply min-h-screen bg-page text-ink;
   }
 }

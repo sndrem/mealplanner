@@ -26,7 +26,7 @@ function bottomNavLinkClassName({ isActive }: { isActive: boolean }) {
     "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-xs font-medium transition",
     isActive
       ? "bg-emerald-500/15 text-emerald-700"
-      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+      : "text-muted hover:bg-page hover:text-ink",
   ].join(" ");
 }
 
@@ -46,7 +46,7 @@ export function AppMobileBottomNav({ familyId }: { familyId: string | null }) {
   return (
     <nav
       aria-label="Hovednavigasjon mobil"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden"
     >
       <div className="mx-auto flex max-w-6xl gap-1">
         {navItems.map((item) => (

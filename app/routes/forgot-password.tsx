@@ -72,7 +72,7 @@ export default function ForgotPasswordRoute({ actionData }: Route.ComponentProps
         </p>
       ) : (
         <Form className="mt-8 space-y-5" method="post">
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-muted">
             E-post
             <input
               autoComplete="email"

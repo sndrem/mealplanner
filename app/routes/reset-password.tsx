@@ -86,7 +86,7 @@ export default function ResetPasswordRoute({ actionData, loaderData }: Route.Com
         <Form className="mt-8 space-y-5" method="post">
           <input name="token" type="hidden" value={token} />
 
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-muted">
             Nytt passord
             <input
               autoComplete="new-password"

@@ -38,21 +38,21 @@ export function RecipePickerCard({
       className={
         selected
           ? "flex w-full min-w-0 items-start gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-left transition hover:bg-emerald-100"
-          : "flex w-full min-w-0 items-start gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50"
+          : "flex w-full min-w-0 items-start gap-3 rounded-2xl border border-line bg-surface px-3 py-2.5 text-left transition hover:bg-page"
       }
       onClick={onSelect}
       type="button"
     >
       <RecipePickerMedia imageUrl={imageUrl} title={title} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-slate-950">{title}</p>
+        <p className="truncate text-sm font-semibold text-ink">{title}</p>
         {recipe ? (
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-0.5 text-xs text-muted">
             {recipe.prepMinutes ?? "?"} min · {recipe.defaultServings ?? "?"}{" "}
             personer
           </p>
         ) : freezerItem ? (
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-0.5 text-xs text-muted">
             Fryser · {freezerItem.quantity} igjen
           </p>
         ) : null}
@@ -61,13 +61,13 @@ export function RecipePickerCard({
             {visibleTags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700"
+                className="rounded-full bg-page px-2 py-0.5 text-[10px] font-medium text-muted"
               >
                 {tag}
               </span>
             ))}
             {overflowTagCount > 0 ? (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+              <span className="rounded-full bg-page px-2 py-0.5 text-[10px] font-medium text-muted">
                 +{overflowTagCount}
               </span>
             ) : null}
@@ -105,7 +105,7 @@ export function RecipePickerMedia({
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex ${dimension} shrink-0 items-center justify-center rounded-xl bg-slate-100 font-semibold text-slate-500 ${textSize}`}
+      className={`inline-flex ${dimension} shrink-0 items-center justify-center rounded-xl bg-page font-semibold text-muted ${textSize}`}
     >
       {initial}
     </span>
