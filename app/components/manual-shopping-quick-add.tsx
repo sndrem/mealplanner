@@ -14,6 +14,7 @@ import type {
   QuickAddShoppingSuccess,
 } from "../lib/shopping-quick-add";
 import { isQuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import { SHOPPING_QUICK_ADD_ROOT_ATTRIBUTE } from "../lib/shopping-quick-add-feedback.client";
 import { createOptimisticSourceKey } from "../lib/shopping-list-client";
 import type { RecentManualShoppingItem } from "../lib/shopping.server";
 
@@ -168,6 +169,14 @@ export function ManualShoppingQuickAdd({
   const onQuickAddErrorRef = useRef(onQuickAddError);
   onQuickAddErrorRef.current = onQuickAddError;
   const pendingOptimisticSourceKeyRef = useRef<string | null>(null);
+  const lastSubmittedFieldsRef = useRef<{
+    name: string;
+    quantity: string;
+  } | null>(null);
+  const queryRef = useRef(query);
+  queryRef.current = query;
+  const quantityRef = useRef(quantity);
+  quantityRef.current = quantity;
   const isQuickAdding = quickAddFetcher.state !== "idle";
   const trimmedQuery = query.trim();
   const quickAddActionData =
@@ -225,18 +234,30 @@ export function ManualShoppingQuickAdd({
         (item) => item.nameNormalized === fields.recentNameNormalized,
       )?.displayName ||
       trimmedQuery;
+    const submittedQuantity = fields.quantity ?? quantity;
     const sourceKey = createOptimisticSourceKey();
     pendingOptimisticSourceKeyRef.current = sourceKey;
+    lastSubmittedFieldsRef.current = {
+      name: trimmedQuery || draftName,
+      quantity: submittedQuantity,
+    };
+
+    setIsListOpen(false);
+    setIsInputFocused(true);
+    setQuery("");
+    setQuantity("");
+    lastRequestedQueryRef.current = null;
 
     if (draftName) {
       onQuickAddSubmitRef.current?.({
         name: draftName,
-        quantity: fields.quantity ?? quantity,
+        quantity: submittedQuantity,
         sourceKey,
       });
     }
 
     quickAddFetcher.submit(formData, { method: "post" });
+    inputRef.current?.focus({ preventScroll: true });
   }
 
   useEffect(() => {
@@ -300,15 +321,26 @@ export function ManualShoppingQuickAdd({
       if (optimisticSourceKey) {
         onQuickAddErrorRef.current?.(optimisticSourceKey);
       }
+
+      const lastSubmitted = lastSubmittedFieldsRef.current;
+      if (
+        lastSubmitted &&
+        queryRef.current.trim() === "" &&
+        quantityRef.current.trim() === ""
+      ) {
+        setQuery(lastSubmitted.name);
+        setQuantity(lastSubmitted.quantity);
+      }
+
+      setIsInputFocused(true);
+      inputRef.current?.focus({ preventScroll: true });
       return;
     }
 
     setIsListOpen(false);
-    setIsInputFocused(false);
-    setQuery("");
-    setQuantity("");
-    lastRequestedQueryRef.current = null;
+    setIsInputFocused(true);
     onQuickAddSuccessRef.current?.(quickAddFetcher.data);
+    inputRef.current?.focus({ preventScroll: true });
   }, [quickAddFetcher.data]);
 
   useEffect(() => {
@@ -421,6 +453,7 @@ export function ManualShoppingQuickAdd({
   return (
     <div
       className="flex min-w-0 max-w-full flex-col gap-3"
+      {...{ [SHOPPING_QUICK_ADD_ROOT_ATTRIBUTE]: "" }}
       ref={containerRef}
     >
       <label
