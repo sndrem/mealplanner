@@ -249,14 +249,28 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
     (item: T) => {
       const displayItem = displayItemsBySourceKey.get(item.sourceKey) ?? item;
       const checked = !displayItem.checked;
-      const op: StoreModeToggleOp = {
-        checked,
-        expectedUpdatedAt: getToggleExpectedVersion(displayItem),
-        mealPlanId: item.mealPlanId ?? null,
-        sourceKey: item.sourceKey,
-        sourceType: item.sourceType,
-      };
-      const nextQueue = upsertToggleOp(queueRef.current, op);
+      const targets =
+        displayItem.groupingMembers && displayItem.groupingMembers.length > 1
+          ? displayItem.groupingMembers
+          : [
+              {
+                collaborationVersion: getToggleExpectedVersion(displayItem),
+                mealPlanId: item.mealPlanId ?? null,
+                sourceKey: item.sourceKey,
+              },
+            ];
+      let nextQueue = queueRef.current;
+
+      for (const target of targets) {
+        nextQueue = upsertToggleOp(nextQueue, {
+          checked,
+          expectedUpdatedAt: target.collaborationVersion,
+          mealPlanId: target.mealPlanId ?? item.mealPlanId ?? null,
+          sourceKey: target.sourceKey,
+          sourceType: item.sourceType,
+        });
+      }
+
       persistQueue(nextQueue);
       setSyncError(null);
       submitNextOp();

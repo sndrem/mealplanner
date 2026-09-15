@@ -104,6 +104,94 @@ describe("shopping-store-mode-client", () => {
     expect(merged[0]?.checked).toBe(true);
   });
 
+  it("applies member toggle ops onto a grouped grocery card", () => {
+    const groupedItem = {
+      checked: false,
+      collaborationVersion: "v-group",
+      groupingMembers: [
+        {
+          checked: false,
+          collaborationVersion: "v1",
+          mealPlanId: "meal-plan-1",
+          quantity: null,
+          quantityLabel: "1 fedd",
+          sourceKey: "entry-1:ingredient-1",
+        },
+        {
+          checked: false,
+          collaborationVersion: "v2",
+          mealPlanId: "meal-plan-1",
+          quantity: null,
+          quantityLabel: "2 stk",
+          sourceKey: "entry-2:ingredient-2",
+        },
+      ],
+      sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2",
+      sourceType: ShoppingItemSource.GENERATED,
+    };
+
+    const merged = applyToggleOpsToItems([groupedItem], [
+      {
+        checked: true,
+        expectedUpdatedAt: "v1",
+        sourceKey: "entry-1:ingredient-1",
+        sourceType: ShoppingItemSource.GENERATED,
+      },
+      {
+        checked: true,
+        expectedUpdatedAt: "v2",
+        sourceKey: "entry-2:ingredient-2",
+        sourceType: ShoppingItemSource.GENERATED,
+      },
+    ]);
+
+    expect(merged[0]?.checked).toBe(true);
+    expect(merged[0]?.groupingMembers?.every((member) => member.checked)).toBe(
+      true,
+    );
+  });
+
+  it("reconciles grouped member ops against flattened loader items", () => {
+    expect(
+      reconcileToggleQueue({
+        loaderItems: [
+          {
+            checked: true,
+            collaborationVersion: "v-group",
+            groupingMembers: [
+              {
+                checked: true,
+                collaborationVersion: "v1",
+                mealPlanId: "meal-plan-1",
+                quantity: null,
+                quantityLabel: "1 fedd",
+                sourceKey: "entry-1:ingredient-1",
+              },
+              {
+                checked: true,
+                collaborationVersion: "v2",
+                mealPlanId: "meal-plan-1",
+                quantity: null,
+                quantityLabel: "2 stk",
+                sourceKey: "entry-2:ingredient-2",
+              },
+            ],
+            sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2",
+            sourceType: ShoppingItemSource.GENERATED,
+          },
+        ],
+        queue: [
+          {
+            checked: true,
+            expectedUpdatedAt: "v1",
+            sourceKey: "entry-1:ingredient-1",
+            sourceType: ShoppingItemSource.GENERATED,
+          },
+        ],
+      }),
+    ).toEqual([]);
+  });
+
   it("computes progress from merged items", () => {
     expect(
       computeStoreModeProgress([

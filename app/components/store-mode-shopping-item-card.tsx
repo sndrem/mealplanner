@@ -3,7 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   formatGeneratedOccurrenceAttribution,
   formatGeneratedQuantityBadge,
+  formatOccurrenceSourceLine,
 } from "../lib/shopping-display";
+import { isGroupedShoppingItem } from "../lib/shopping-grocery-grouping";
 import type { StoreModeShoppingView } from "../lib/shopping-store-mode-client";
 import type { StoreCategory } from "../lib/store.server";
 import { ShoppingQuantityEditModal } from "./shopping-quantity-edit-modal";
@@ -29,10 +31,22 @@ interface StoreModeShoppingItemCardBase {
 }
 
 interface StoreModeShoppingItemCardGenerated extends StoreModeShoppingItemCardBase {
+  groupingMembers?: Array<{
+    checked: boolean;
+    collaborationVersion: string;
+    mealPlanId: string | null;
+    quantity: string | null;
+    quantityLabel: string | null;
+    sourceKey: string;
+  }>;
   isStockItem: boolean;
   lastDate: string;
   occurrenceCount: number;
-  occurrences: Array<{ date: string; recipeTitle: string }>;
+  occurrences: Array<{
+    date: string;
+    quantityLabel: string | null;
+    recipeTitle: string;
+  }>;
   recipeCount: number;
   postponedUntilDate: string | null;
   preferredStoreConflict: boolean;
@@ -261,7 +275,10 @@ export function StoreModeShoppingItemCard({
     : "text-sm font-semibold leading-5 text-stone-950";
   const showQuantityEdit =
     !readOnly &&
-    (item.sourceType === "FAMILY" || item.sourceType === "GENERATED");
+    (item.sourceType === "FAMILY" || item.sourceType === "GENERATED") &&
+    !isGroupedShoppingItem(item);
+  const showGroupedMeasurements =
+    item.sourceType === "GENERATED" && isGroupedShoppingItem(item);
 
   useEffect(() => {
     if (!isQuantityModalOpen) {
@@ -389,9 +406,20 @@ export function StoreModeShoppingItemCard({
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
           >
-            <p className="break-words text-xs leading-4 text-stone-600">
-              {formatStoreModeItemSourceLine(item)}
-            </p>
+              <p className="break-words text-xs leading-4 text-stone-600">
+                {formatStoreModeItemSourceLine(item)}
+              </p>
+              {showGroupedMeasurements ? (
+                <ul className="space-y-1 text-xs leading-4 text-stone-700">
+                  {item.occurrences.map((occurrence, index) => (
+                    <li
+                      key={`${occurrence.date}:${occurrence.recipeTitle}:${occurrence.quantityLabel ?? ""}:${index}`}
+                    >
+                      {formatOccurrenceSourceLine(occurrence)}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             {!showCategoryEdit && item.note ? (
               <p className="break-words text-xs leading-4 text-stone-700">
                 Notat: {item.note}
@@ -494,6 +522,10 @@ export function StoreModeShoppingItemCard({
 }
 
 function shouldAutoOpenStoreModeDetails(item: StoreModeShoppingItemCardItem) {
+  if (item.sourceType === "GENERATED" && isGroupedShoppingItem(item)) {
+    return true;
+  }
+
   if (item.sourceType === "GENERATED" && item.postponedUntilDate) {
     return true;
   }

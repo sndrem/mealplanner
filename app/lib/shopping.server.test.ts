@@ -3,11 +3,13 @@ import { afterEach, describe, expect, it, beforeEach, vi } from "vitest";
 const {
   dbMock,
   getFamilyShoppingListModeMock,
+  getShoppingGroceryGroupingMock,
   getFamilyStockMatchSetMock,
   requireFamilyMembershipMock,
 } = vi.hoisted(() => {
     return {
       getFamilyShoppingListModeMock: vi.fn(),
+      getShoppingGroceryGroupingMock: vi.fn(),
       dbMock: {
         familyShoppingItem: {
           findMany: vi.fn(),
@@ -60,6 +62,7 @@ vi.mock("./stock.server", async (importOriginal) => {
 
 vi.mock("./shopping-preference.server", () => ({
   getFamilyShoppingListMode: getFamilyShoppingListModeMock,
+  getShoppingGroceryGrouping: getShoppingGroceryGroupingMock,
 }));
 
 import {
@@ -86,6 +89,7 @@ describe("shopping.server", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requireFamilyMembershipMock.mockResolvedValue(mockMembership);
+    getShoppingGroceryGroupingMock.mockResolvedValue("GROUPED");
     getFamilyStockMatchSetMock.mockResolvedValue({
       displayNameNormalized: new Set(),
       ingredientIds: new Set(),
@@ -2366,6 +2370,120 @@ describe("shopping.server", () => {
         }),
       ]),
     );
+  });
+
+  it("keeps the same grocery on two meal plans as separate cards when grocery grouping is on", async () => {
+    getShoppingGroceryGroupingMock.mockResolvedValue("GROUPED");
+
+    const garlicIngredient = {
+      amount: "1",
+      category: { id: "category-produce", name: "Frukt og gront" },
+      categoryId: "category-produce",
+      displayName: "Hvitlok",
+      preferredStore: null,
+      preferredStoreId: null,
+      sortOrder: 1,
+    };
+    const anchorPlan = {
+      activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-17T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-1",
+            ingredients: [
+              {
+                ...garlicIngredient,
+                id: "ingredient-1",
+                ingredientId: "canonical-garlic",
+                unit: "fedd",
+              },
+            ],
+            title: "Pasta",
+          },
+          recipeId: "recipe-1",
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Helgehandel",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    };
+    const nextWeekPlan = {
+      activeShoppingDate: new Date("2026-05-19T00:00:00.000Z"),
+      endDate: new Date("2026-05-25T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-19T00:00:00.000Z"),
+          id: "entry-2",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-2",
+            ingredients: [
+              {
+                ...garlicIngredient,
+                amount: "2",
+                id: "ingredient-2",
+                ingredientId: "canonical-garlic",
+                unit: "stk",
+              },
+            ],
+            title: "Taco",
+          },
+          recipeId: "recipe-2",
+        },
+      ],
+      id: "meal-plan-2",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-19T00:00:00.000Z"),
+      status: "APPROVED",
+      title: "Neste uke",
+      updatedAt: new Date("2026-05-02T12:00:00.000Z"),
+    };
+
+    registerStoreModePlans(anchorPlan, [nextWeekPlan], {
+      coveringPlan: null,
+      nextPlan: nextWeekPlan,
+      tripFocus: "ALL",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: null,
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-produce",
+            displayName: "Frukt og gront",
+            id: "section-1",
+            sortOrder: 1,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+    const garlicItems = result.dueSectionGroups.flatMap((section) =>
+      section.items.filter((item) => item.name === "Hvitlok"),
+    );
+
+    expect(garlicItems).toHaveLength(2);
+    expect(garlicItems.map((item) => item.mealPlanId)).toEqual([
+      "meal-plan-1",
+      "meal-plan-2",
+    ]);
+    expect(result.progress.totalCount).toBe(2);
   });
 
   it("limits store mode to the covering meal plan for CURRENT trip focus", async () => {

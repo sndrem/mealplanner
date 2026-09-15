@@ -15,7 +15,11 @@ import {
   unionMealPlanDateRanges,
 } from "./meal-plan.server";
 import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
-import { getFamilyShoppingListMode } from "./shopping-preference.server";
+import { groupGeneratedShoppingItemsForDisplay } from "./shopping-grocery-grouping";
+import {
+  getFamilyShoppingListMode,
+  getShoppingGroceryGrouping,
+} from "./shopping-preference.server";
 import {
   getFamilyStockMatchSet,
   isStockIngredientMatch,
@@ -266,6 +270,14 @@ export interface ProjectedShoppingOccurrence {
 export interface ProjectedGeneratedShoppingItem extends ProjectedShoppingItemBase {
   amount: string | null;
   firstDate: Date;
+  groupingMembers?: Array<{
+    checked: boolean;
+    collaborationVersion: string;
+    mealPlanId: string | null;
+    quantity: string | null;
+    quantityLabel: string | null;
+    sourceKey: string;
+  }>;
   isStockItem: boolean;
   lastDate: Date;
   occurrenceCount: number;
@@ -356,7 +368,7 @@ export async function getMealPlanShoppingData({
     });
   }
 
-  const [stores, categories, stockMatchSet, familyMealPlanRanges] =
+  const [stores, categories, stockMatchSet, familyMealPlanRanges, groceryGrouping] =
     await Promise.all([
       db.store.findMany({
         orderBy: [{ name: "asc" }],
@@ -380,6 +392,10 @@ export async function getMealPlanShoppingData({
           familyId,
           status: LIVE_MEAL_PLAN_STATUS_FILTER,
         },
+      }),
+      getShoppingGroceryGrouping({
+        familyId,
+        userId,
       }),
     ]);
 
@@ -405,9 +421,13 @@ export async function getMealPlanShoppingData({
     mealPlan,
     stores,
   });
-  const projectedItems = [...generatedItems, ...manualItems].sort(
-    compareProjectedItems,
+  const projectedItems = groupGeneratedShoppingItemsForDisplay(
+    [...generatedItems, ...manualItems].sort(compareProjectedItems),
+    groceryGrouping,
   );
+  const groupedGeneratedCount = projectedItems.filter(
+    (item) => item.sourceType === ShoppingItemSource.GENERATED,
+  ).length;
   const uncheckedFamilyItems = await loadFamilyShoppingItems({
     checked: false,
     familyId,
@@ -426,9 +446,10 @@ export async function getMealPlanShoppingData({
       name: membership.family.name,
     },
     familyStoreGroups: buildProjectedStoreGroups(familyProjectedItems),
+    groceryGrouping,
     itemCounts: {
       family: familyProjectedItems.length,
-      generated: generatedItems.length,
+      generated: groupedGeneratedCount,
       manual: manualItems.length,
       total: projectedItems.length + familyProjectedItems.length,
     },
@@ -880,6 +901,7 @@ export async function getMealPlanStoreModeData({
     stockMatchSet,
     coveringMealPlan,
     nextMealPlan,
+    groceryGrouping,
   ] = await Promise.all([
     db.mealPlan.findFirst({
       select: shoppingMealPlanSelect,
@@ -926,6 +948,10 @@ export async function getMealPlanStoreModeData({
     resolveStoreModeNextMealPlan({
       familyId,
       referenceDate: todayAtUtcMidnight,
+    }),
+    getShoppingGroceryGrouping({
+      familyId,
+      userId,
     }),
   ]);
 
@@ -1009,14 +1035,20 @@ export async function getMealPlanStoreModeData({
   const dedupedMealPlanDueItems = dueItems.filter(
     (item) => !familyKeys.has(buildFamilyShoppingCrossSourceDedupKey(item)),
   );
-  const mergedDueItems = [...familyDueItems, ...dedupedMealPlanDueItems].sort(
-    (left, right) =>
+  const mergedDueItems = groupGeneratedShoppingItemsForDisplay(
+    [...familyDueItems, ...dedupedMealPlanDueItems].sort((left, right) =>
       compareProjectedItemsForStoreMode(
         left,
         right,
         selectedStore,
         storeSectionsByStoreId,
       ),
+    ),
+    groceryGrouping,
+  );
+  const groupedLaterItems = groupGeneratedShoppingItemsForDisplay(
+    laterItems,
+    groceryGrouping,
   );
   const focusedDateRanges = mealPlansForStoreMode.map((plan) => ({
     endDate: plan.endDate,
@@ -1064,7 +1096,8 @@ export async function getMealPlanStoreModeData({
       status: plan.status,
       title: plan.title,
     })),
-    laterItems,
+    groceryGrouping,
+    laterItems: groupedLaterItems,
     mealPlan: shoppingDateOwnerPlan,
     progress: buildStoreModeProgress(mergedDueItems),
     selectedStore,

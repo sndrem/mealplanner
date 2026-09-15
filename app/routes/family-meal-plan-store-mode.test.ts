@@ -68,6 +68,13 @@ vi.mock("../lib/store-mode-trip-focus-write.server", () => {
   };
 });
 
+vi.mock("../lib/shopping-preference-write.server", () => {
+  return {
+    parseShoppingGroceryGrouping: vi.fn(),
+    updateShoppingGroceryGrouping: vi.fn(),
+  };
+});
+
 import {
   createQuickFamilyShoppingItem,
   parseFamilyShoppingItemValues,
@@ -96,6 +103,10 @@ import {
   parseStoreModeTripFocus,
   updateStoreModeTripFocus,
 } from "../lib/store-mode-trip-focus-write.server";
+import {
+  parseShoppingGroceryGrouping,
+  updateShoppingGroceryGrouping,
+} from "../lib/shopping-preference-write.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
 import { action, loader } from "./family-meal-plan-store-mode";
 
@@ -202,6 +213,7 @@ describe("family store mode route", () => {
         id: "family-1",
         name: "Solberg",
       },
+      groceryGrouping: "GROUPED" as const,
       includedMealPlans: [
         {
           id: "meal-plan-1",
@@ -332,6 +344,7 @@ describe("family store mode route", () => {
         id: "family-1",
         name: "Solberg",
       },
+      groceryGrouping: "GROUPED" as const,
       includedMealPlans: [
         {
           id: "meal-plan-1",
@@ -1253,6 +1266,39 @@ describe("family store mode route", () => {
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).headers.get("Location")).toBe(
       "http://localhost/families/family-1/store-mode?notice=store-mode-trip-focus-updated",
+    );
+  });
+
+  it("redirects after updating grocery grouping", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
+    vi.mocked(parseShoppingGroceryGrouping).mockReturnValue("GROUPED");
+    vi.mocked(updateShoppingGroceryGrouping).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-shopping-grocery-grouping");
+    formData.set("groceryGrouping", "GROUPED");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(undefined, formData),
+    } as never);
+
+    expect(parseShoppingGroceryGrouping).toHaveBeenCalledWith("GROUPED");
+    expect(updateShoppingGroceryGrouping).toHaveBeenCalledWith({
+      familyId: "family-1",
+      groceryGrouping: "GROUPED",
+      userId: "user-1",
+    });
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).headers.get("Location")).toBe(
+      "http://localhost/families/family-1/store-mode?notice=shopping-grocery-grouping-updated",
     );
   });
 });
