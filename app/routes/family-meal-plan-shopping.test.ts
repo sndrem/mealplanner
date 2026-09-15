@@ -29,6 +29,13 @@ vi.mock("../lib/shopping-write.server", () => {
   };
 });
 
+vi.mock("../lib/shopping-preference-write.server", () => {
+  return {
+    parseShoppingGroceryGrouping: vi.fn(),
+    updateShoppingGroceryGrouping: vi.fn(),
+  };
+});
+
 import { requireUser } from "../lib/auth.server";
 import { getMealPlanShoppingData, listRecentManualShoppingItemsForFamily } from "../lib/shopping.server";
 import {
@@ -40,6 +47,10 @@ import {
   updateGeneratedShoppingItemQuantity,
 } from "../lib/shopping-write.server";
 import { action, loader } from "./family-meal-plan-shopping";
+import {
+  parseShoppingGroceryGrouping,
+  updateShoppingGroceryGrouping,
+} from "../lib/shopping-preference-write.server";
 
 const mockUser = {
   displayName: "Ola",
@@ -81,6 +92,7 @@ describe("family meal plan shopping route", () => {
         id: "family-1",
         name: "Solberg",
       },
+      groceryGrouping: "GROUPED" as const,
       excludedGeneratedCount: 0,
       excludedGeneratedItems: [],
       familyStoreGroups: [],
@@ -310,6 +322,7 @@ describe("family meal plan shopping route", () => {
         id: "family-1",
         name: "Solberg",
       },
+      groceryGrouping: "GROUPED" as const,
       familyStoreGroups: [],
       itemCounts: {
         family: 0,
@@ -466,6 +479,7 @@ describe("family meal plan shopping route", () => {
         id: "family-1",
         name: "Solberg",
       },
+      groceryGrouping: "GROUPED" as const,
       excludedGeneratedCount: 0,
       excludedGeneratedItems: [],
       familyStoreGroups: [],
@@ -750,6 +764,87 @@ describe("family meal plan shopping route", () => {
     expect(response.status).toBe(302);
     expect(response.headers.get("Location")).toBe(
       "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping?notice=shopping-item-check-state-updated",
+    );
+  });
+
+  it("toggles every grouped grocery member sourceKey", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(toggleShoppingItemChecked).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "toggle-shopping-item-checked");
+    formData.append("sourceKey", "entry-1:ingredient-1");
+    formData.append("sourceKey", "entry-2:ingredient-2");
+    formData.append("memberExpectedUpdatedAt", "v1");
+    formData.append("memberExpectedUpdatedAt", "v2");
+    formData.set("sourceType", "GENERATED");
+    formData.set("checked", "true");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(
+        "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping",
+        formData,
+      ),
+    });
+
+    expect(toggleShoppingItemChecked).toHaveBeenCalledTimes(2);
+    expect(toggleShoppingItemChecked).toHaveBeenNthCalledWith(1, {
+      checked: true,
+      expectedUpdatedAt: "v1",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      sourceKey: "entry-1:ingredient-1",
+      sourceType: "GENERATED",
+      userId: "user-1",
+    });
+    expect(toggleShoppingItemChecked).toHaveBeenNthCalledWith(2, {
+      checked: true,
+      expectedUpdatedAt: "v2",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      sourceKey: "entry-2:ingredient-2",
+      sourceType: "GENERATED",
+      userId: "user-1",
+    });
+    expect(result).toBeInstanceOf(Response);
+  });
+
+  it("redirects after updating grocery grouping", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseShoppingGroceryGrouping).mockReturnValue("GROUPED");
+    vi.mocked(updateShoppingGroceryGrouping).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-shopping-grocery-grouping");
+    formData.set("groceryGrouping", "GROUPED");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(
+        "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping",
+        formData,
+      ),
+    });
+
+    expect(updateShoppingGroceryGrouping).toHaveBeenCalledWith({
+      familyId: "family-1",
+      groceryGrouping: "GROUPED",
+      userId: "user-1",
+    });
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).headers.get("Location")).toBe(
+      "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping?notice=shopping-grocery-grouping-updated",
     );
   });
 

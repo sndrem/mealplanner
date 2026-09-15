@@ -2,6 +2,7 @@ import { Form } from "react-router";
 import type { ChangeEventHandler } from "react";
 
 import { formatOccurrenceSourceLine } from "../lib/shopping-display";
+import { isGroupedShoppingItem } from "../lib/shopping-grocery-grouping";
 import type {
   FamilyShoppingItemFieldErrors,
   FamilyShoppingItemValues,
@@ -116,6 +117,14 @@ type ShoppingListItemExpandedProps = {
       recipeIngredientId: string;
       recipeTitle: string;
     }>;
+    groupingMembers?: Array<{
+      checked: boolean;
+      collaborationVersion: string;
+      mealPlanId: string | null;
+      quantity: string | null;
+      quantityLabel: string | null;
+      sourceKey: string;
+    }>;
     sourceKey: string;
     sourceType: "FAMILY" | "GENERATED" | "MANUAL";
   };
@@ -146,6 +155,16 @@ export function ShoppingListItemExpanded({
   toggleExpectedVersion,
 }: ShoppingListItemExpandedProps) {
   const checked = displayChecked ?? item.checked;
+  const groupingMembers =
+    item.groupingMembers && item.groupingMembers.length > 1
+      ? item.groupingMembers
+      : null;
+  const checkTargets = groupingMembers ?? [
+    {
+      collaborationVersion: toggleExpectedVersion,
+      sourceKey: item.sourceKey,
+    },
+  ];
   return (
     <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
       <div className="min-w-0 rounded-[20px] bg-white p-4 ring-1 ring-slate-200">
@@ -198,7 +217,24 @@ export function ShoppingListItemExpanded({
                 : "toggle-shopping-item-checked"
             }
           />
-          <input name="sourceKey" type="hidden" value={item.sourceKey} />
+          {checkTargets.map((target) => (
+            <input
+              key={target.sourceKey}
+              name="sourceKey"
+              type="hidden"
+              value={target.sourceKey}
+            />
+          ))}
+          {groupingMembers
+            ? groupingMembers.map((member) => (
+                <input
+                  key={`${member.sourceKey}-version`}
+                  name="memberExpectedUpdatedAt"
+                  type="hidden"
+                  value={member.collaborationVersion}
+                />
+              ))
+            : null}
           {item.sourceType !== "FAMILY" ? (
             <input name="sourceType" type="hidden" value={item.sourceType} />
           ) : null}
@@ -227,7 +263,9 @@ export function ShoppingListItemExpanded({
           </button>
         </Form>
 
-        {item.sourceType === "GENERATED" && overrideValues ? (
+        {item.sourceType === "GENERATED" &&
+        overrideValues &&
+        !isGroupedShoppingItem(item) ? (
           <Form className="grid min-w-0 gap-3" method="post">
             <input
               name="intent"

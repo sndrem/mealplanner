@@ -22,6 +22,7 @@ import {
   type StoreModeCategoryUpdateRequest,
 } from "../components/store-mode-shopping-item-card";
 import { StoreModeShoppingViewToggle } from "../components/store-mode-shopping-view-toggle";
+import { ShoppingGroceryGroupingToggle } from "../components/shopping-grocery-grouping-toggle";
 import { requireUser } from "../lib/auth.server";
 import {
   createQuickFamilyShoppingItem,
@@ -77,11 +78,15 @@ import {
   updateManualShoppingItem,
 } from "../lib/shopping-write.server";
 import { listIngredientCategories } from "../lib/store.server";
+import { updateSelectedStorePreference } from "../lib/store-write.server";
+import {
+  parseShoppingGroceryGrouping,
+  updateShoppingGroceryGrouping,
+} from "../lib/shopping-preference-write.server";
 import {
   parseStoreModeTripFocus,
   updateStoreModeTripFocus,
 } from "../lib/store-mode-trip-focus-write.server";
-import { updateSelectedStorePreference } from "../lib/store-write.server";
 import {
   getStoreModeBannerClass,
   getStoreModeSyncOverlayClass,
@@ -119,7 +124,8 @@ type StoreModeNotice =
   | "selected-store-updated"
   | "shopping-item-check-state-updated"
   | "stock-shopping-items-opted-in"
-  | "store-mode-trip-focus-updated";
+  | "store-mode-trip-focus-updated"
+  | "shopping-grocery-grouping-updated";
 
 type StoreModeIntent =
   | "quick-add-family-shopping-item"
@@ -133,6 +139,7 @@ type StoreModeIntent =
   | "toggle-shopping-item-checked"
   | "update-active-shopping-date"
   | "update-selected-store"
+  | "update-shopping-grocery-grouping"
   | "update-store-mode-trip-focus";
 
 interface StoreModeActionData {
@@ -207,6 +214,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     })),
     effectiveTripFocus: result.effectiveTripFocus,
     family: result.family,
+    groceryGrouping: result.groceryGrouping,
     includedMealPlans: result.includedMealPlans,
     laterItems: result.laterItems.map(serializeProjectedShoppingItem),
     mealPlan: {
@@ -340,6 +348,38 @@ export async function action({ params, request }: Route.ActionArgs) {
     return buildFamilyStoreModeRedirect({
       familyId,
       notice: "store-mode-trip-focus-updated",
+      request,
+    });
+  }
+
+  if (intent === "update-shopping-grocery-grouping") {
+    const groceryGrouping = parseShoppingGroceryGrouping(
+      formData.get("groceryGrouping"),
+    );
+
+    if (!groceryGrouping) {
+      return {
+        formError: "Ugyldig gruppering for handlelisten.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    const result = await updateShoppingGroceryGrouping({
+      familyId,
+      groceryGrouping,
+      userId: user.id,
+    });
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    return buildFamilyStoreModeRedirect({
+      familyId,
+      notice: "shopping-grocery-grouping-updated",
       request,
     });
   }
@@ -1306,6 +1346,9 @@ export default function FamilyMealPlanStoreModeRoute({
                 Varer å handle
               </h2>
               <div className="flex flex-wrap items-center gap-2">
+                <ShoppingGroceryGroupingToggle
+                  grouping={loaderData.groceryGrouping}
+                />
                 <StoreModeDeprioritizeBoughtToggle
                   enabled={deprioritizeBought}
                   onChange={handleDeprioritizeBoughtChange}
@@ -1715,7 +1758,8 @@ function getStoreModeNotice(request: Request): StoreModeNotice | null {
     notice === "selected-store-updated" ||
     notice === "shopping-item-check-state-updated" ||
     notice === "stock-shopping-items-opted-in" ||
-    notice === "store-mode-trip-focus-updated"
+    notice === "store-mode-trip-focus-updated" ||
+    notice === "shopping-grocery-grouping-updated"
   ) {
     return notice;
   }
@@ -1734,6 +1778,11 @@ function getStoreModeNoticeContent(notice: StoreModeNotice) {
       return {
         description: "Fokuset for handleturen ble oppdatert.",
         title: "Fokus lagret",
+      };
+    case "shopping-grocery-grouping-updated":
+      return {
+        description: "Visningen av like varer ble oppdatert.",
+        title: "Gruppering lagret",
       };
     case "active-shopping-date-updated":
       return {

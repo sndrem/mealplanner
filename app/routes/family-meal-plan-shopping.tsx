@@ -17,6 +17,7 @@ import {
   formatGeneratedQuantityBadge,
 } from "../lib/shopping-display";
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
+import { ShoppingGroceryGroupingToggle } from "../components/shopping-grocery-grouping-toggle";
 import {
   ShoppingDateSelect,
   ShoppingListItemExpanded,
@@ -37,6 +38,7 @@ import type {
   OptimisticQuickAddDraft,
   QuickAddShoppingSuccess,
 } from "../lib/shopping-quick-add";
+import { isGroupedShoppingItem } from "../lib/shopping-grocery-grouping";
 import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
 import {
   getMealPlanShoppingData,
@@ -60,6 +62,10 @@ import {
   type ManualShoppingItemFieldErrors,
   type ManualShoppingItemValues,
 } from "../lib/shopping-write.server";
+import {
+  parseShoppingGroceryGrouping,
+  updateShoppingGroceryGrouping,
+} from "../lib/shopping-preference-write.server";
 import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
 
 type ShoppingNotice =
@@ -70,6 +76,7 @@ type ShoppingNotice =
   | "manual-shopping-item-deleted"
   | "manual-shopping-item-updated"
   | "shopping-item-check-state-updated"
+  | "shopping-grocery-grouping-updated"
   | "stock-shopping-items-opted-in";
 
 type ShoppingIntent =
@@ -82,6 +89,7 @@ type ShoppingIntent =
   | "opt-in-stock-shopping-items"
   | "toggle-family-shopping-item-checked"
   | "toggle-shopping-item-checked"
+  | "update-shopping-grocery-grouping"
   | "update-generated-shopping-item"
   | "update-generated-shopping-item-quantity"
   | "update-manual-shopping-item";
@@ -183,6 +191,7 @@ export async function loader({
       })),
       store: group.store,
     })),
+    groceryGrouping: result.groceryGrouping,
     storeGroups: result.storeGroups.map((group) => ({
       sections: group.sections.map((section) => ({
         ...section,
@@ -485,32 +494,74 @@ export async function action({
   }
 
   if (intent === "toggle-shopping-item-checked") {
-    const sourceKey = String(formData.get("sourceKey") ?? "").trim();
+    const sourceKeys = formData
+      .getAll("sourceKey")
+      .map((value) => String(value).trim())
+      .filter((value) => value.length > 0);
     const sourceType = parseShoppingItemSource(formData.get("sourceType"));
     const checked = String(formData.get("checked") ?? "") === "true";
+    const memberVersions = formData
+      .getAll("memberExpectedUpdatedAt")
+      .map((value) => String(value));
 
-    if (!sourceKey || !sourceType) {
+    if (sourceKeys.length === 0 || !sourceType) {
       return {
         formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
         intent,
       } satisfies ShoppingActionData;
     }
 
-    const result = await toggleShoppingItemChecked({
-      checked,
-      expectedUpdatedAt: parseExpectedUpdatedAt(formData),
+    for (const [index, sourceKey] of sourceKeys.entries()) {
+      const result = await toggleShoppingItemChecked({
+        checked,
+        expectedUpdatedAt:
+          memberVersions[index] ?? parseExpectedUpdatedAt(formData),
+        familyId,
+        mealPlanId,
+        sourceKey,
+        sourceType,
+        userId: user.id,
+      });
+
+      if (result.status === "NOT_FOUND") {
+        throw buildMealPlanNotFoundResponse();
+      }
+
+      if (result.status === "CONFLICT") {
+        return {
+          formError: result.formError,
+          intent,
+        } satisfies ShoppingActionData;
+      }
+    }
+
+    return buildShoppingRedirect({
       familyId,
       mealPlanId,
-      sourceKey,
-      sourceType,
+      notice: "shopping-item-check-state-updated",
+      request,
+    });
+  }
+
+  if (intent === "update-shopping-grocery-grouping") {
+    const groceryGrouping = parseShoppingGroceryGrouping(
+      formData.get("groceryGrouping"),
+    );
+
+    if (!groceryGrouping) {
+      return {
+        formError: "Ugyldig gruppering for handlelisten.",
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    const result = await updateShoppingGroceryGrouping({
+      familyId,
+      groceryGrouping,
       userId: user.id,
     });
 
-    if (result.status === "NOT_FOUND") {
-      throw buildMealPlanNotFoundResponse();
-    }
-
-    if (result.status === "CONFLICT") {
+    if (result.status === "VALIDATION_ERROR") {
       return {
         formError: result.formError,
         intent,
@@ -520,7 +571,7 @@ export async function action({
     return buildShoppingRedirect({
       familyId,
       mealPlanId,
-      notice: "shopping-item-check-state-updated",
+      notice: "shopping-grocery-grouping-updated",
       request,
     });
   }
@@ -992,7 +1043,12 @@ export default function FamilyMealPlanShoppingRoute({
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col items-stretch gap-3 sm:items-end">
+              <ShoppingGroceryGroupingToggle
+                grouping={loaderData.groceryGrouping}
+                variant="hero"
+              />
+              <div className="flex flex-wrap gap-3">
               <Link
                 className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
                 to={`/families/${loaderData.family.id}/store-mode`}
@@ -1011,6 +1067,7 @@ export default function FamilyMealPlanShoppingRoute({
               >
                 Alle ukeplaner
               </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -1565,7 +1622,15 @@ export default function FamilyMealPlanShoppingRoute({
                           const isPendingCheckToggle =
                             navigation.state !== "idle" &&
                             pendingIntent === "toggle-shopping-item-checked" &&
-                            pendingSourceKey === item.sourceKey;
+                            (pendingSourceKey === item.sourceKey ||
+                              (item.sourceType === "GENERATED" &&
+                                Boolean(
+                                  item.groupingMembers?.some(
+                                    (member) =>
+                                      member.sourceKey === pendingSourceKey,
+                                  ),
+                                )));
+                          const isGroupedGenerated = isGroupedShoppingItem(item);
                           const displayChecked = getOptimisticChecked({
                             checkedValue: navigation.formData?.get("checked"),
                             isPending: isPendingCheckToggle,
@@ -1614,7 +1679,8 @@ export default function FamilyMealPlanShoppingRoute({
                               item.sourceKey &&
                             actionData.overrideValues
                               ? actionData.overrideValues
-                              : item.sourceType === "GENERATED"
+                              : item.sourceType === "GENERATED" &&
+                                  !isGroupedGenerated
                                 ? {
                                     note: item.note ?? "",
                                     postponedUntilDate:
@@ -1667,7 +1733,8 @@ export default function FamilyMealPlanShoppingRoute({
                                 >
                                   {item.name}
                                 </h4>
-                                {item.sourceType === "GENERATED" ? (
+                                {item.sourceType === "GENERATED" &&
+                                !isGroupedGenerated ? (
                                   <button
                                     className={
                                       quantityBadge &&
@@ -1995,6 +2062,7 @@ function getShoppingNotice(request: Request): ShoppingNotice | null {
     notice === "manual-shopping-item-deleted" ||
     notice === "manual-shopping-item-updated" ||
     notice === "shopping-item-check-state-updated" ||
+    notice === "shopping-grocery-grouping-updated" ||
     notice === "stock-shopping-items-opted-in"
   ) {
     return notice;
@@ -2064,6 +2132,11 @@ function getShoppingNoticeContent(notice: ShoppingNotice) {
       return {
         description: "Avkryssingen for varelinjen ble oppdatert.",
         title: "Handleliste oppdatert",
+      };
+    case "shopping-grocery-grouping-updated":
+      return {
+        description: "Visningen av like varer ble oppdatert.",
+        title: "Gruppering lagret",
       };
     case "stock-shopping-items-opted-in":
       return {

@@ -62,4 +62,73 @@ describe("StoreModeShoppingItemCard", () => {
       screen.getByRole("button", { name: "Hurtiglegg til" }),
     ).toBeInTheDocument();
   });
+
+  it("shows grouped recipe measurements and hides quantity edit", () => {
+    renderWithRouter(
+      <StoreModeShoppingItemCard
+        item={{
+          category: { id: "cat-produce", name: "Frukt og gront" },
+          checked: false,
+          collaborationVersion: "v-group",
+          groupingMembers: [
+            {
+              checked: false,
+              collaborationVersion: "v1",
+              mealPlanId: "meal-plan-1",
+              quantity: null,
+              quantityLabel: "1 fedd",
+              sourceKey: "entry-1:ingredient-1",
+            },
+            {
+              checked: false,
+              collaborationVersion: "v2",
+              mealPlanId: "meal-plan-1",
+              quantity: null,
+              quantityLabel: "2 stk",
+              sourceKey: "entry-2:ingredient-2",
+            },
+          ],
+          isStockItem: false,
+          lastDate: "2026-05-16",
+          mealPlanId: "meal-plan-1",
+          mealPlanTitle: "Helgehandel",
+          name: "Hvitlok",
+          note: null,
+          occurrenceCount: 2,
+          occurrences: [
+            {
+              date: "2026-05-15",
+              quantityLabel: "1 fedd",
+              recipeTitle: "Pasta",
+            },
+            {
+              date: "2026-05-16",
+              quantityLabel: "2 stk",
+              recipeTitle: "Taco",
+            },
+          ],
+          postponedUntilDate: null,
+          preferredStore: null,
+          preferredStoreConflict: false,
+          quantity: null,
+          quantityLabel: null,
+          recipeCount: 2,
+          sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2",
+          sourceType: "GENERATED",
+        }}
+        layout="grid"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+      />,
+    );
+
+    expect(screen.queryByText("Sett mengde")).not.toBeInTheDocument();
+    expect(screen.getByText("Varierende mengder")).toBeInTheDocument();
+    expect(
+      screen.getByText("fredag 15. mai: Pasta · 1 fedd"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("lørdag 16. mai: Taco · 2 stk"),
+    ).toBeInTheDocument();
+  });
 });

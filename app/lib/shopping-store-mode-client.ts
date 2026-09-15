@@ -1,5 +1,7 @@
 import { ShoppingItemSource } from "@prisma/client";
 
+import type { ShoppingGroceryGroupingMember } from "./shopping-grocery-grouping";
+
 export type StoreModeItemSource = ShoppingItemSource | "FAMILY";
 
 export interface StoreModeToggleOp {
@@ -13,6 +15,7 @@ export interface StoreModeToggleOp {
 export interface StoreModeToggleItem {
   checked: boolean;
   collaborationVersion: string;
+  groupingMembers?: ShoppingGroceryGroupingMember[];
   mealPlanId?: string | null;
   overrideVersion?: string;
   sourceKey: string;
@@ -270,6 +273,27 @@ export function applyToggleOpsToItems<T extends StoreModeToggleItem>(
   const opBySourceKey = new Map(ops.map((op) => [op.sourceKey, op]));
 
   return items.map((item) => {
+    if (item.groupingMembers && item.groupingMembers.length > 1) {
+      const groupingMembers = item.groupingMembers.map((member) => {
+        const op = opBySourceKey.get(member.sourceKey);
+
+        if (!op) {
+          return member;
+        }
+
+        return {
+          ...member,
+          checked: op.checked,
+        };
+      });
+
+      return {
+        ...item,
+        checked: groupingMembers.every((member) => member.checked),
+        groupingMembers,
+      };
+    }
+
     const op = opBySourceKey.get(item.sourceKey);
 
     if (!op) {
@@ -325,7 +349,7 @@ export function reconcileToggleQueue({
   }
 
   const loaderBySourceKey = new Map(
-    loaderItems.map((item) => [item.sourceKey, item]),
+    flattenStoreModeToggleItems(loaderItems).map((item) => [item.sourceKey, item]),
   );
 
   return queue.filter((op) => {
@@ -338,6 +362,24 @@ export function reconcileToggleQueue({
     }
 
     return loaderItem.checked !== op.checked;
+  });
+}
+
+export function flattenStoreModeToggleItems(
+  items: StoreModeToggleItem[],
+): StoreModeToggleItem[] {
+  return items.flatMap((item) => {
+    if (!item.groupingMembers || item.groupingMembers.length < 2) {
+      return [item];
+    }
+
+    return item.groupingMembers.map((member) => ({
+      checked: member.checked,
+      collaborationVersion: member.collaborationVersion,
+      mealPlanId: member.mealPlanId,
+      sourceKey: member.sourceKey,
+      sourceType: item.sourceType,
+    }));
   });
 }
 
