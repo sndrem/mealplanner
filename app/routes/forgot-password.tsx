@@ -1,4 +1,4 @@
-import { useNavigation } from "react-router";
+import { Form, useNavigation } from "react-router";
 
 import type { Route } from "./+types/forgot-password";
 import { AuthScreen, authInputClassName, authSubmitButtonClassName } from "../features/auth/auth-screen";
@@ -71,7 +71,7 @@ export default function ForgotPasswordRoute({ actionData }: Route.ComponentProps
           Hvis det finnes en konto med denne e-postadressen, har vi sendt en lenke for å tilbakestille passordet.
         </p>
       ) : (
-        <form className="mt-8 space-y-5" method="post">
+        <Form className="mt-8 space-y-5" method="post">
           <label className="block text-sm font-medium text-slate-700">
             E-post
             <input
@@ -90,7 +90,7 @@ export default function ForgotPasswordRoute({ actionData }: Route.ComponentProps
           <button className={authSubmitButtonClassName} disabled={isSubmitting} type="submit">
             {isSubmitting ? "Jobber..." : "Send lenke"}
           </button>
-        </form>
+        </Form>
       )}
     </AuthScreen>
   );

@@ -1,4 +1,4 @@
-import { Link, useNavigation } from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 
 import type { Route } from "./+types/reset-password";
 import { AuthScreen, authInputClassName, authSubmitButtonClassName } from "../features/auth/auth-screen";
@@ -83,7 +83,7 @@ export default function ResetPasswordRoute({ actionData, loaderData }: Route.Com
       heading="Tilbakestill passord"
     >
       {showForm ? (
-        <form className="mt-8 space-y-5" method="post">
+        <Form className="mt-8 space-y-5" method="post">
           <input name="token" type="hidden" value={token} />
 
           <label className="block text-sm font-medium text-slate-700">
@@ -103,7 +103,7 @@ export default function ResetPasswordRoute({ actionData, loaderData }: Route.Com
           <button className={authSubmitButtonClassName} disabled={isSubmitting} type="submit">
             {isSubmitting ? "Jobber..." : "Lagre nytt passord"}
           </button>
-        </form>
+        </Form>
       ) : (
         <div className="mt-8 space-y-4">
           <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

@@ -1831,16 +1831,14 @@ function getStoreModeTripFocusSubtitle({
 function buildFamilyStoreModeRedirect({
   familyId,
   notice,
-  request,
 }: {
   familyId: string;
   notice: StoreModeNotice;
   request: Request;
 }) {
-  const url = new URL(`/families/${familyId}/store-mode`, request.url);
-  url.searchParams.set("notice", notice);
+  const params = new URLSearchParams({ notice });
 
-  return Response.redirect(url, 302);
+  return redirect(`/families/${familyId}/store-mode?${params}`);
 }
 
 async function resolveStoreModeAnchorMealPlanId({

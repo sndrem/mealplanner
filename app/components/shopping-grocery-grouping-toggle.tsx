@@ -1,3 +1,5 @@
+import { Form } from "react-router";
+
 import type { ShoppingGroceryGroupingValue } from "../lib/shopping-grocery-grouping";
 
 interface ShoppingGroceryGroupingToggleProps {
@@ -82,7 +84,7 @@ function GroupingFormButton({
   label: string;
 }) {
   return (
-    <form method="post">
+    <Form method="post">
       <input name="intent" type="hidden" value="update-shopping-grocery-grouping" />
       <input name="groceryGrouping" type="hidden" value={grouping} />
       <button
@@ -93,6 +95,6 @@ function GroupingFormButton({
       >
         {label}
       </button>
-    </form>
+    </Form>
   );
 }
