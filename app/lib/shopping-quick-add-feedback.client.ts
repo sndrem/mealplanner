@@ -1,4 +1,5 @@
 const QUICK_ADD_ITEM_SELECTOR_ATTRIBUTE = "data-shopping-source-key";
+export const SHOPPING_QUICK_ADD_ROOT_ATTRIBUTE = "data-shopping-quick-add";
 
 function escapeAttributeValue(value: string) {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
@@ -6,6 +7,17 @@ function escapeAttributeValue(value: string) {
 
 export function buildShoppingItemSourceSelector(sourceKey: string) {
   return `[${QUICK_ADD_ITEM_SELECTOR_ATTRIBUTE}="${escapeAttributeValue(sourceKey)}"]`;
+}
+
+export function isShoppingQuickAddFocused(
+  activeElement: EventTarget | null = document.activeElement,
+) {
+  return (
+    activeElement instanceof HTMLElement &&
+    Boolean(
+      activeElement.closest(`[${SHOPPING_QUICK_ADD_ROOT_ATTRIBUTE}]`),
+    )
+  );
 }
 
 export function shouldScrollItemIntoView(element: HTMLElement) {
@@ -23,7 +35,7 @@ export function scrollToShoppingItem(sourceKey: string) {
     return false;
   }
 
-  if (shouldScrollItemIntoView(item)) {
+  if (!isShoppingQuickAddFocused() && shouldScrollItemIntoView(item)) {
     item.scrollIntoView({
       behavior: "smooth",
       block: "center",

@@ -2,33 +2,34 @@
 
 ## Current Objective
 
-Ship unused dinner statistics removal for [#250](https://github.com/sndrem/mealplanner/issues/250) on `issue/250-remove-dinner-statistics`.
+Ship shopping quick-add focus retention for [#252](https://github.com/sndrem/mealplanner/issues/252) on `issue/252-keep-quick-add-focus`.
 
 ## Completed
 
-- Unregistered `families/:familyId/meal-plans/overview` and deleted the overview route plus its loader tests
-- Removed **Middagstats** from desktop nav and **Stats** from mobile bottom nav; top-nav tests assert the stats link is gone
-- Deleted dinner analytics types, helpers, constants, and matching `meal-plan.server` tests; `getRecentlyUsedRecipeIds` remains
+- `ManualShoppingQuickAdd` clears name/quantity on submit, keeps the dock expanded, and restores focus with `preventScroll: true` in the same click/Enter gesture
+- Failed adds restore the submitted name/quantity when the fields are still empty
+- `scrollToShoppingItem` skips `scrollIntoView` while focus is inside `[data-shopping-quick-add]`; recently-added highlight is unchanged
+- Added helper unit tests and component tests for submit-time focus, Enter, and `revealOnFocus` recents
+- Local validation passed; branch is ready to push and open a PR
 
 ## Files To Read First
 
-- `app/routes.ts` — overview route no longer registered
-- `app/components/app-top-nav.tsx` — family desktop nav without stats
-- `app/components/app-mobile-bottom-nav.tsx` — mobile nav is Familie / Ukeplaner / Handleliste
+- `app/components/manual-shopping-quick-add.tsx` — submit-time clear/focus and error restore
+- `app/lib/shopping-quick-add-feedback.client.ts` — skip scroll while quick-add is focused
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 645 tests passed
+- `npm run test:run` — 656 tests passed
 - `npm run typecheck` — passed
-- Unauthenticated curl of `/families/family-1/meal-plans/overview` — 302 to login; not the old Middagstatistikk page
-- Logged-in browser pass (desktop/mobile nav + 404) — not run; no browser tools in this session
+- Logged-in browser pass (store-mode, family shopping, meal-plan shopping) — not run; no browser tools in this session
 
 ## Open Items
 
-- `/families/:familyId/meal-plans/overview` may match `:mealPlanId` as `"overview"` and 404 from the meal-plan loader rather than as an unmatched route; still not a stats page
-- After merge: GitHub will close #250 via `Closes #250` on the PR
+- Unrelated card-file stash remains locally (`stash@{0}: unrelated formatting: store-mode-shopping-item-card`); do not pop it onto this branch unless wanted
+- Confirm on a real phone that the iOS keyboard stays open after Legg til
+- After merge: GitHub will close #252 via `Closes #252` on the PR
 
 ## Next Step
 
