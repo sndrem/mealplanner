@@ -2,35 +2,34 @@
 
 ## Current Objective
 
-Ship shopping quick-add focus retention for [#252](https://github.com/sndrem/mealplanner/issues/252) on `issue/252-keep-quick-add-focus`.
+Ship calendar event descriptions with recipe ingredients and measurements for [#254](https://github.com/sndrem/mealplanner/issues/254) on `issue/254-calendar-ingredient-descriptions`.
 
 ## Completed
 
-- `ManualShoppingQuickAdd` clears name/quantity on submit, keeps the dock expanded, and restores focus with `preventScroll: true` in the same click/Enter gesture
-- Failed adds restore the submitted name/quantity when the fields are still empty
-- `scrollToShoppingItem` skips `scrollIntoView` while focus is inside `[data-shopping-quick-add]`; recently-added highlight is unchanged
-- Added helper unit tests and component tests for submit-time focus, Enter, and `revealOnFocus` recents
-- Local validation passed; branch is ready to push and open a PR
+- Calendar recipe select now loads ingredients ordered by `sortOrder`/`id`; subscription feed reuses `calendarRecipeSelect`
+- Recipe dinner `DESCRIPTION` includes `Ingredienser` (amount, unit, name) above the original method; freezer notes stay note-only
+- Empty ingredient lists omit the ingredients section; empty method still falls back to `Ingen beskrivelse.`
+- Unit coverage for `createMealPlanCalendarEvent`, meal-plan ICS export, and the live subscription feed
+- Local validation passed; branch is ready to push and open a PR with `Closes #254`
 
 ## Files To Read First
 
-- `app/components/manual-shopping-quick-add.tsx` — submit-time clear/focus and error restore
-- `app/lib/shopping-quick-add-feedback.client.ts` — skip scroll while quick-add is focused
+- `app/lib/calendar.server.ts` — select, description layout, ingredient line formatting
+- `app/lib/calendar-subscription.server.ts` — live feed uses the same recipe select and description builder
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 656 tests passed
+- `npm run test:run` — 658 tests passed
 - `npm run typecheck` — passed
-- Logged-in browser pass (store-mode, family shopping, meal-plan shopping) — not run; no browser tools in this session
+- Phone calendar / subscribed `.ics` visual check — not run (no UI change)
 
 ## Open Items
 
-- Unrelated card-file stash remains locally (`stash@{0}: unrelated formatting: store-mode-shopping-item-card`); do not pop it onto this branch unless wanted
-- Confirm on a real phone that the iOS keyboard stays open after Legg til
-- After merge: GitHub will close #252 via `Closes #252` on the PR
+- Confirm on a real phone that a subscribed dinner event shows both sections without truncation
+- GitHub will close #254 via `Closes #254` when the PR merges
 
 ## Next Step
 
-Merge the PR after CI is green.
+Push the branch, open the PR, and merge after CI is green.

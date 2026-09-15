@@ -83,6 +83,9 @@ function dinnerEntry({
     freezerItemId: null,
     recipe: {
       description: `${recipeTitle} beskrivelse`,
+      ingredients: [
+        { amount: "1", displayName: `${recipeTitle} ingrediens`, unit: "stk" },
+      ],
       title: recipeTitle,
     },
     recipeId: `recipe-${recipeTitle}`,
@@ -305,6 +308,8 @@ describe("calendar-subscription.server", () => {
     expect(result?.content).toContain("SUMMARY:Middag: Pizza");
     expect(result?.content).not.toContain("SUMMARY:Middag: Taco");
     expect(result?.content).toContain("SUMMARY:Middag: Lapskaus");
+    expect(result?.content).toContain("Ingredienser:\\n- 1 stk Pizza ingrediens");
+    expect(result?.content).toContain("Beskrivelse:\\nPizza beskrivelse");
     expect(result?.content).toContain("UID:meal-plan-new-2026-05-15@mealplanner");
     expect(result?.content).toContain("UID:meal-plan-next-2026-05-20@mealplanner");
     expect(result?.content).toContain("LAST-MODIFIED:20260514T080000Z");

@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { MealType } from "@prisma/client";
 
 import {
+  calendarRecipeSelect,
   createCalendarFile,
   createMealPlanCalendarEvent,
   getCalendarMealDetails,
@@ -195,10 +196,7 @@ async function getFamilyCalendarEvents({
           },
           freezerItemId: true,
           recipe: {
-            select: {
-              description: true,
-              title: true,
-            },
+            select: calendarRecipeSelect,
           },
           recipeId: true,
           updatedAt: true,
@@ -245,6 +243,7 @@ async function getFamilyCalendarEvents({
       createMealPlanCalendarEvent({
         date,
         description: meal.description,
+        ingredients: meal.ingredients,
         lastModified: entry.updatedAt,
         mealPlanId: coveringPlan.id,
         mealPlanTitle: coveringPlan.title,

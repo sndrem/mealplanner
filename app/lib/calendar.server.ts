@@ -7,6 +7,19 @@ const CALENDAR_TIME_ZONE = "Europe/Oslo";
 const DINNER_END_HOUR = 17;
 const DINNER_START_HOUR = 16;
 
+export const calendarRecipeSelect = Prisma.validator<Prisma.RecipeSelect>()({
+  description: true,
+  ingredients: {
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    select: {
+      amount: true,
+      displayName: true,
+      unit: true,
+    },
+  },
+  title: true,
+});
+
 const mealPlanCalendarSelect = Prisma.validator<Prisma.MealPlanSelect>()({
   endDate: true,
   entries: {
@@ -21,10 +34,7 @@ const mealPlanCalendarSelect = Prisma.validator<Prisma.MealPlanSelect>()({
       },
       freezerItemId: true,
       recipe: {
-        select: {
-          description: true,
-          title: true,
-        },
+        select: calendarRecipeSelect,
       },
       recipeId: true,
       updatedAt: true,
@@ -51,6 +61,12 @@ export interface CreateCalendarFileOptions {
   useEventTimestamps?: boolean;
 }
 
+export interface CalendarRecipeIngredient {
+  amount: string | null;
+  displayName: string;
+  unit: string | null;
+}
+
 export interface CalendarMealEntry {
   freezerItem: {
     label: string;
@@ -59,6 +75,7 @@ export interface CalendarMealEntry {
   freezerItemId: string | null;
   recipe: {
     description: string | null;
+    ingredients: CalendarRecipeIngredient[];
     title: string;
   } | null;
   recipeId: string | null;
@@ -220,6 +237,7 @@ function buildMealPlanEvents(mealPlan: Awaited<ReturnType<typeof getMealPlanCale
       createMealPlanCalendarEvent({
         date,
         description: meal.description,
+        ingredients: meal.ingredients,
         lastModified: entry.updatedAt,
         mealPlanId: mealPlan.id,
         mealPlanTitle: mealPlan.title,
@@ -243,6 +261,7 @@ function buildMealPlanEventForDate(
   return createMealPlanCalendarEvent({
     date,
     description: meal.description,
+    ingredients: meal.ingredients,
     lastModified: entry.updatedAt,
     mealPlanId: mealPlan.id,
     mealPlanTitle: mealPlan.title,
@@ -254,6 +273,7 @@ export function getCalendarMealDetails(entry: CalendarMealEntry) {
   if (entry.recipeId && entry.recipe) {
     return {
       description: entry.recipe.description,
+      ingredients: entry.recipe.ingredients ?? [],
       title: entry.recipe.title,
     };
   }
@@ -261,6 +281,7 @@ export function getCalendarMealDetails(entry: CalendarMealEntry) {
   if (entry.freezerItemId && entry.freezerItem) {
     return {
       description: entry.freezerItem.note,
+      ingredients: [],
       title: entry.freezerItem.label,
     };
   }
@@ -271,6 +292,7 @@ export function getCalendarMealDetails(entry: CalendarMealEntry) {
 export function createMealPlanCalendarEvent({
   date,
   description,
+  ingredients = [],
   lastModified,
   mealPlanId,
   mealPlanTitle,
@@ -278,6 +300,7 @@ export function createMealPlanCalendarEvent({
 }: {
   date: string;
   description: string | null;
+  ingredients?: CalendarRecipeIngredient[];
   lastModified?: Date;
   mealPlanId: string;
   mealPlanTitle: string;
@@ -285,7 +308,7 @@ export function createMealPlanCalendarEvent({
 }): CalendarEventInput {
   return {
     date,
-    description: createMealPlanDescription(date, mealPlanTitle, description),
+    description: createMealPlanDescription(date, mealPlanTitle, description, ingredients),
     lastModified,
     title: `Middag: ${title}`,
     uid: `${mealPlanId}-${date}@mealplanner`,
@@ -320,7 +343,12 @@ function createCalendarEvent(
   return lines.join("\r\n");
 }
 
-function createMealPlanDescription(date: string, mealPlanTitle: string, recipeDescription: string | null) {
+function createMealPlanDescription(
+  date: string,
+  mealPlanTitle: string,
+  recipeDescription: string | null,
+  ingredients: CalendarRecipeIngredient[] = [],
+) {
   const formattedDate = new Intl.DateTimeFormat("nb-NO", {
     day: "numeric",
     month: "long",
@@ -329,8 +357,34 @@ function createMealPlanDescription(date: string, mealPlanTitle: string, recipeDe
     year: "numeric",
   }).format(parseDateOnly(date)!);
   const normalizedDescription = recipeDescription?.trim() || "Ingen beskrivelse.";
+  const preamble = `Planlagt for ${formattedDate} i ${mealPlanTitle}.`;
+  const ingredientLines = ingredients
+    .map((ingredient) => formatCalendarIngredientLine(ingredient))
+    .filter((line) => line.length > 0);
 
-  return `Planlagt for ${formattedDate} i ${mealPlanTitle}. ${normalizedDescription}`;
+  if (ingredientLines.length === 0) {
+    return `${preamble}\n\n${normalizedDescription}`;
+  }
+
+  return [
+    preamble,
+    "",
+    "Ingredienser:",
+    ...ingredientLines.map((line) => `- ${line}`),
+    "",
+    "Beskrivelse:",
+    normalizedDescription,
+  ].join("\n");
+}
+
+function formatCalendarIngredientLine(ingredient: CalendarRecipeIngredient) {
+  const quantity = [ingredient.amount, ingredient.unit]
+    .map((value) => value?.trim() ?? "")
+    .filter((value) => value.length > 0)
+    .join(" ");
+  const displayName = ingredient.displayName.trim();
+
+  return [quantity, displayName].filter((value) => value.length > 0).join(" ");
 }
 
 function getCalendarName(mealPlanTitle: string) {
