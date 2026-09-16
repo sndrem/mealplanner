@@ -2,38 +2,35 @@
 
 ## Current Objective
 
-Ship removal of the unused meal-plan share/review flow (#263) on `issue/263-remove-meal-plan-review`. Validation passed; next step is merge of the PR.
+Ship store-mode live list sync (#265) on `issue/265-store-mode-live-revalidate`. Validation passed; next step is merge of the PR.
 
 ## Completed
 
-- Deleted review inbox/detail routes, share server module, and quick-response presets
-- Removed **Gjennomgang** from top nav and pending-review counts from app layout
-- Removed planner share/feedback UI and the ukeplaner pending-review banner
-- Stopped closing share rows from `approveMealPlan`; ordinary approval is unchanged
-- Dropped Prisma share/comment models and enums via `20260916080000_drop_meal_plan_share_review`
+- Added `useVisibleIntervalRevalidate` so store mode reloads every 4s while the tab is visible
+- Paused polling during navigation, revalidation, and in-flight toggle/quantity/category fetchers
+- Revalidate immediately when the tab becomes visible again, and when the browser comes back online
+- Hook unit tests cover interval, pause, hidden, visibility, online, and unmount
 
 ## Files To Read First
 
-- `app/routes.ts` — review routes unregistered
-- `app/routes/family-meal-plan.tsx` — editor without share/feedback chrome
-- `app/components/app-top-nav.tsx` — family nav without Gjennomgang
-- `prisma/migrations/20260916080000_drop_meal_plan_share_review/migration.sql` — table/enum drop
+- `app/lib/use-visible-interval-revalidate.ts` — visible-tab polling hook
+- `app/routes/family-meal-plan-store-mode.tsx` — wiring and pause conditions
+- `app/lib/use-visible-interval-revalidate.test.ts` — hook coverage
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 682 tests passed (95 files)
+- `npm run test:run` — 692 tests passed (96 files)
 - `npm run typecheck` — passed
-- Curl against local Vite (`http://localhost:5175`): login 200; `/meal-plans/:id/review` 404
-- Logged-in browser pass of editor/nav/proposal/store-mode share was not run (no browser tools in this session)
+- Two-phone store-mode check was not run (no logged-in browser pair in this session)
 
 ## Open Items
 
-- Apply the Prisma drop migration on deploy (`prisma migrate deploy`)
-- After login, `/families/:id/meal-plans/reviews` is treated as a meal-plan id and 404s from the editor loader — acceptable per issue
-- Confirm on a real device that **Gjennomgang** is gone and proposal/store-mode share still work
+- Confirm on two real devices that a check on one phone appears on the other within a few seconds without refresh
+- Confirm locking a phone pauses polling and unlocking refreshes the list
+- Shared token lists (`/s/:token`) stay local snapshots by design
 
 ## Next Step
 
-Review and merge the PR for #263 after a logged-in check that nav and the meal-plan editor no longer show share/review chrome.
+Review and merge the PR for #265 after a two-device store-mode check in the aisle or with two browsers.
