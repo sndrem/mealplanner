@@ -2060,21 +2060,6 @@ async function updateMealPlanApprovalState(
         },
       });
 
-      if (nextStatus === MealPlanStatus.APPROVED) {
-        const closedAt = new Date();
-
-        await tx.mealPlanShare.updateMany({
-          data: {
-            closedAt,
-            status: "CLOSED",
-          },
-          where: {
-            mealPlanId: mealPlan.id,
-            status: "OPEN",
-          },
-        });
-      }
-
       return result;
     });
 

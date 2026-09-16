@@ -2,35 +2,38 @@
 
 ## Current Objective
 
-Ship persisted System / Light / Dark appearance (#261) on branch `issue/261-theme-toggle`. Validation passed; next step is merge of the PR.
+Ship removal of the unused meal-plan share/review flow (#263) on `issue/263-remove-meal-plan-review`. Validation passed; next step is merge of the PR.
 
 ## Completed
 
-- User-scoped `ThemePreference` (`SYSTEM` default, `LIGHT`, `DARK`) with migration `20260915150000_add_user_theme_preference`
-- Root `<html>` class is `system` | `light` | `dark`; CSS tokens and a class+media `dark:` variant restyle app chrome and store mode
-- Authenticated toggle in `AppTopNav` saves via `POST /theme` and applies the html class immediately
-- Dark `notice-*` tokens keep store-mode success banners, Basisvarer, and family recipe cards readable
+- Deleted review inbox/detail routes, share server module, and quick-response presets
+- Removed **Gjennomgang** from top nav and pending-review counts from app layout
+- Removed planner share/feedback UI and the ukeplaner pending-review banner
+- Stopped closing share rows from `approveMealPlan`; ordinary approval is unchanged
+- Dropped Prisma share/comment models and enums via `20260916080000_drop_meal_plan_share_review`
 
 ## Files To Read First
 
-- `app/app.css` — page/store/notice tokens for light, dark, and system+dark
-- `app/lib/theme-preference.ts` — parse/resolve/html class helpers
-- `app/routes/theme.ts` — POST save preference
-- `app/components/theme-toggle.tsx` — nav control
-- `app/lib/store-mode-theme.ts` — store-mode banners and Basisvarer
+- `app/routes.ts` — review routes unregistered
+- `app/routes/family-meal-plan.tsx` — editor without share/feedback chrome
+- `app/components/app-top-nav.tsx` — family nav without Gjennomgang
+- `prisma/migrations/20260916080000_drop_meal_plan_share_review/migration.sql` — table/enum drop
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 700 tests passed
+- `npm run test:run` — 682 tests passed (95 files)
 - `npm run typecheck` — passed
+- Curl against local Vite (`http://localhost:5175`): login 200; `/meal-plans/:id/review` 404
+- Logged-in browser pass of editor/nav/proposal/store-mode share was not run (no browser tools in this session)
 
 ## Open Items
 
-- Other app notices (meal plans, shopping, family settings) still use raw `bg-emerald-50` / `bg-rose-50` and can look washed in dark mode
-- Phone-width nav density with the desktop icon control still needs a real device check
+- Apply the Prisma drop migration on deploy (`prisma migrate deploy`)
+- After login, `/families/:id/meal-plans/reviews` is treated as a meal-plan id and 404s from the editor loader — acceptable per issue
+- Confirm on a real device that **Gjennomgang** is gone and proposal/store-mode share still work
 
 ## Next Step
 
-Review and merge the PR for #261 after a logged-in Dark check of the theme toggle, store mode, and recipe list.
+Review and merge the PR for #263 after a logged-in check that nav and the meal-plan editor no longer show share/review chrome.

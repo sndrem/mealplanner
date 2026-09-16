@@ -23,10 +23,9 @@ describe("AppTopNav", () => {
     expect(
       screen.queryByRole("link", { name: "Middagstats" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Gjennomgang" })).toHaveAttribute(
-      "href",
-      "/families/family-1/meal-plans/reviews",
-    );
+    expect(
+      screen.queryByRole("link", { name: "Gjennomgang" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Butikker" })).toHaveAttribute(
       "href",
       "/families/family-1/stores",
@@ -80,17 +79,6 @@ describe("AppTopNav", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.getByRole("button", { name: "Åpne meny" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Hovedmeny mobil" })).not.toBeInTheDocument();
-  });
-
-  it("shows pending review count in the gjennomgang link", () => {
-    renderWithRouter(<AppTopNav familyId="family-1" pendingReviewCount={3} />, {
-      initialEntries: ["/families/family-1"],
-    });
-
-    expect(screen.getByRole("link", { name: "Gjennomgang (3)" })).toHaveAttribute(
-      "href",
-      "/families/family-1/meal-plans/reviews",
-    );
   });
 
   it("marks the active route in the desktop navigation", () => {
