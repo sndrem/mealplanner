@@ -121,6 +121,7 @@ import {
   useStoreModeToggleSync,
 } from "../lib/use-store-mode-toggle-sync";
 import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
+import { useVisibleIntervalRevalidate } from "../lib/use-visible-interval-revalidate";
 import type { Route } from "./+types/family-meal-plan-store-mode";
 
 type StoreModeNotice =
@@ -728,6 +729,18 @@ export default function FamilyMealPlanStoreModeRoute({
   const toggleFetcher = useFetcher<StoreModeActionData>();
   const quantityFetcher = useFetcher<StoreModeActionData>();
   const categoryFetcher = useFetcher<StoreModeActionData>();
+  const isLiveRevalidatePaused =
+    navigation.state !== "idle" ||
+    revalidator.state !== "idle" ||
+    toggleFetcher.state !== "idle" ||
+    quantityFetcher.state !== "idle" ||
+    categoryFetcher.state !== "idle";
+
+  useVisibleIntervalRevalidate({
+    paused: isLiveRevalidatePaused,
+    revalidate: revalidator.revalidate,
+  });
+
   const pendingIntent = navigation.formData?.get("intent");
   const [dueSectionGroups, setDueSectionGroups] = useState(
     loaderData.dueSectionGroups,
