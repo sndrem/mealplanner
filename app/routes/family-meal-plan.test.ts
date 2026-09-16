@@ -20,13 +20,6 @@ vi.mock("../lib/meal-plan.server", () => {
   };
 });
 
-vi.mock("../lib/meal-plan-share.server", () => ({
-  createMealPlanShare: vi.fn(),
-  getMealPlanShareCreationData: vi.fn(),
-  listSharesForMealPlan: vi.fn(),
-  markReviewCommentAddressed: vi.fn(),
-}));
-
 vi.mock("../lib/family.server", () => ({
   listFamilyMembers: vi.fn(),
 }));
@@ -40,10 +33,6 @@ import {
   saveMealPlanEntries,
   updateMealPlan,
 } from "../lib/meal-plan.server";
-import {
-  getMealPlanShareCreationData,
-  listSharesForMealPlan,
-} from "../lib/meal-plan-share.server";
 import { action, loader } from "./family-meal-plan";
 
 const mockUser = {
@@ -119,13 +108,6 @@ describe("family meal plan route", () => {
       userRole: "ADMIN",
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
-    vi.mocked(getMealPlanShareCreationData).mockResolvedValue({
-      family: { id: "family-1", name: "Solberg" },
-      mealPlan: { id: "meal-plan-1", status: "DRAFT", title: "Langhelg" },
-      members: [{ displayName: "Kari", id: "user-2", role: "MEMBER" }],
-      openShares: [],
-    });
-    vi.mocked(listSharesForMealPlan).mockResolvedValue([]);
     vi.mocked(listFamilyMembers).mockResolvedValue([
       {
         id: "membership-1",
@@ -162,7 +144,6 @@ describe("family meal plan route", () => {
     });
     expect(listFamilyMembers).toHaveBeenCalledWith("family-1");
     expect(result).toEqual({
-      activeOpenShare: null,
       calendarExportDates: [],
       family: {
         id: "family-1",
@@ -188,7 +169,6 @@ describe("family meal plan route", () => {
         { displayName: "Ola", id: "user-1" },
         { displayName: "Kari", id: "user-2" },
       ],
-      feedbackShares: [],
       freezerItems: [],
       notice: "meal-plan-created",
       noticeMeta: null,
@@ -205,7 +185,6 @@ describe("family meal plan route", () => {
         },
       ],
       recentlyUsedRecipeIds: [],
-      shareMembers: [{ displayName: "Kari", id: "user-2", role: "MEMBER" }],
       userRole: "ADMIN",
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
       entriesByDate: {

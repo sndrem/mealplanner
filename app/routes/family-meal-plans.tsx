@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Form, Link, useNavigation, type MetaFunction } from "react-router";
 
 import { requireUser } from "../lib/auth.server";
-import { countPendingReviewsForUser } from "../lib/meal-plan-share.server";
 import {
   copyMealPlan,
   createMealPlan,
@@ -69,20 +68,13 @@ export async function loader({
 }) {
   const user = await requireUser(request);
   const familyId = requireFamilyId(params.familyId);
-  const [result, pendingReviewCount] = await Promise.all([
-    listMealPlansForFamily({
-      familyId,
-      userId: user.id,
-    }),
-    countPendingReviewsForUser({
-      familyId,
-      userId: user.id,
-    }),
-  ]);
+  const result = await listMealPlansForFamily({
+    familyId,
+    userId: user.id,
+  });
 
   return {
     family: result.family,
-    pendingReviewCount,
     mealPlans: result.mealPlans.map((mealPlan) => ({
       ...mealPlan,
       activeShoppingDate: mealPlan.activeShoppingDate
@@ -268,25 +260,6 @@ export default function FamilyMealPlansRoute({
             <p className="mt-2 text-sm leading-6 text-emerald-900">
               {noticeContent.description}
             </p>
-          </section>
-        ) : null}
-
-        {loaderData.pendingReviewCount > 0 ? (
-          <section className="rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-5 text-amber-950 shadow-sm">
-            <h2 className="text-base font-semibold">
-              {loaderData.pendingReviewCount === 1
-                ? "1 ukeplan venter på deg"
-                : `${loaderData.pendingReviewCount} ukeplaner venter på deg`}
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-amber-900">
-              Gi tilbakemelding på delte ukeplaner før de godkjennes.
-            </p>
-            <Link
-              className="mt-4 inline-flex rounded-2xl bg-amber-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-amber-950"
-              to={`/families/${loaderData.family.id}/meal-plans/reviews`}
-            >
-              Åpne gjennomgang
-            </Link>
           </section>
         ) : null}
 

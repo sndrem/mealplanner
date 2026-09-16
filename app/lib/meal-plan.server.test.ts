@@ -19,9 +19,6 @@ const {
         updateMany: vi.fn(),
         deleteMany: vi.fn(),
       },
-      mealPlanShare: {
-        updateMany: vi.fn(),
-      },
       mealPlanEntry: {
         createMany: vi.fn(),
         deleteMany: vi.fn(),
@@ -121,7 +118,6 @@ describe("meal-plan.server", () => {
     dbMock.familyFreezerItem.findMany.mockResolvedValue([]);
     dbMock.familyFreezerItem.updateMany.mockResolvedValue({ count: 1 });
     dbMock.mealPlan.updateMany.mockResolvedValue({ count: 1 });
-    dbMock.mealPlanShare.updateMany.mockResolvedValue({ count: 0 });
     dbMock.manualShoppingItem.updateMany.mockResolvedValue({ count: 0 });
     dbMock.shoppingItemOverride.updateMany.mockResolvedValue({ count: 0 });
     dbMock.mealPlanEntry.deleteMany.mockResolvedValue({ count: 0 });
@@ -900,15 +896,6 @@ describe("meal-plan.server", () => {
     expect(requireFamilyMembershipMock).toHaveBeenCalledWith({
       familyId: "family-1",
       userId: "user-1",
-    });
-    expect(dbMock.mealPlanShare.updateMany).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        status: "CLOSED",
-      }),
-      where: {
-        mealPlanId: "meal-plan-1",
-        status: "OPEN",
-      },
     });
     expect(dbMock.mealPlan.update).toHaveBeenCalledWith({
       data: expect.objectContaining({

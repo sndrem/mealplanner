@@ -4,19 +4,13 @@ import { AppMobileBottomNav } from "../components/app-mobile-bottom-nav";
 import { AppTopNav } from "../components/app-top-nav";
 import { requireUser } from "../lib/auth.server";
 import { getFamilyMembershipsForUser } from "../lib/family.server";
-import { countPendingReviewsForUser } from "../lib/meal-plan-share.server";
 import type { Route } from "./+types/app-layout";
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   const user = await requireUser(request);
 
   if (params.familyId) {
-    const pendingReviewCount = await countPendingReviewsForUser({
-      familyId: params.familyId,
-      userId: user.id,
-    });
-
-    return { familyId: params.familyId, pendingReviewCount };
+    return { familyId: params.familyId };
   }
 
   const url = new URL(request.url);
@@ -25,17 +19,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     const memberships = await getFamilyMembershipsForUser(user.id);
 
     if (memberships.length === 1) {
-      const familyId = memberships[0].family.id;
-      const pendingReviewCount = await countPendingReviewsForUser({
-        familyId,
-        userId: user.id,
-      });
-
-      return { familyId, pendingReviewCount };
+      return { familyId: memberships[0].family.id };
     }
   }
 
-  return { familyId: null, pendingReviewCount: 0 };
+  return { familyId: null };
 }
 
 export default function AppLayoutRoute({ loaderData }: Route.ComponentProps) {
@@ -43,10 +31,7 @@ export default function AppLayoutRoute({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <AppTopNav
-        familyId={loaderData.familyId}
-        pendingReviewCount={loaderData.pendingReviewCount}
-      />
+      <AppTopNav familyId={loaderData.familyId} />
       <div className={hasMobileBottomNav ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0" : undefined}>
         <Outlet />
       </div>
