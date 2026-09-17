@@ -33,6 +33,7 @@ const mealPlanCalendarSelect = Prisma.validator<Prisma.MealPlanSelect>()({
         },
       },
       freezerItemId: true,
+      note: true,
       recipe: {
         select: calendarRecipeSelect,
       },
@@ -73,6 +74,7 @@ export interface CalendarMealEntry {
     note: string | null;
   } | null;
   freezerItemId: string | null;
+  note: string | null;
   recipe: {
     description: string | null;
     ingredients: CalendarRecipeIngredient[];
@@ -283,6 +285,14 @@ export function getCalendarMealDetails(entry: CalendarMealEntry) {
       description: entry.freezerItem.note,
       ingredients: [],
       title: entry.freezerItem.label,
+    };
+  }
+
+  if (entry.note) {
+    return {
+      description: null,
+      ingredients: [],
+      title: entry.note,
     };
   }
 

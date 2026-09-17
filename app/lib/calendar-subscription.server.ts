@@ -195,6 +195,7 @@ async function getFamilyCalendarEvents({
             },
           },
           freezerItemId: true,
+          note: true,
           recipe: {
             select: calendarRecipeSelect,
           },
