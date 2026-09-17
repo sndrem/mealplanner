@@ -81,6 +81,7 @@ function dinnerEntry({
     date: new Date(`${date}T00:00:00.000Z`),
     freezerItem: null,
     freezerItemId: null,
+    note: null,
     recipe: {
       description: `${recipeTitle} beskrivelse`,
       ingredients: [
@@ -89,6 +90,26 @@ function dinnerEntry({
       title: recipeTitle,
     },
     recipeId: `recipe-${recipeTitle}`,
+    updatedAt,
+  };
+}
+
+function noteOnlyEntry({
+  date,
+  note,
+  updatedAt = new Date("2026-05-13T18:00:00.000Z"),
+}: {
+  date: string;
+  note: string;
+  updatedAt?: Date;
+}) {
+  return {
+    date: new Date(`${date}T00:00:00.000Z`),
+    freezerItem: null,
+    freezerItemId: null,
+    note,
+    recipe: null,
+    recipeId: null,
     updatedAt,
   };
 }
@@ -364,5 +385,84 @@ describe("calendar-subscription.server", () => {
     expect(second?.content).toContain("UID:meal-plan-1-2026-05-15@mealplanner");
     expect(second?.content).toContain("SUMMARY:Middag: Fiskekaker");
     expect(first?.content).toContain("SUMMARY:Middag: Taco");
+  });
+
+  it("emits calendar events for note-only days without recipes", async () => {
+    dbMock.calendarSubscription.findUnique.mockResolvedValue({
+      family: {
+        id: "family-1",
+        name: "Solberg",
+      },
+      familyId: "family-1",
+    });
+    dbMock.mealPlan.findMany.mockResolvedValue([
+      {
+        endDate: new Date("2026-05-17T00:00:00.000Z"),
+        entries: [
+          noteOnlyEntry({
+            date: "2026-05-12",
+            note: "Eating out at restaurant",
+          }),
+          dinnerEntry({
+            date: "2026-05-13",
+            recipeTitle: "Pizza",
+          }),
+          noteOnlyEntry({
+            date: "2026-05-14",
+            note: "Dinner at friend's house",
+          }),
+        ],
+        id: "meal-plan-1",
+        startDate: new Date("2026-05-11T00:00:00.000Z"),
+        title: "Uke 20",
+      },
+    ]);
+
+    const result = await getFamilyCalendarFeedByToken(RAW_TOKEN);
+
+    expect(result?.content).toContain("SUMMARY:Middag: Eating out at restaurant");
+    expect(result?.content).toContain("SUMMARY:Middag: Pizza");
+    expect(result?.content).toContain("SUMMARY:Middag: Dinner at friend's house");
+    expect(result?.content).toContain("UID:meal-plan-1-2026-05-12@mealplanner");
+    expect(result?.content).toContain("UID:meal-plan-1-2026-05-14@mealplanner");
+  });
+
+  it("does not emit events for days with neither recipe nor note", async () => {
+    dbMock.calendarSubscription.findUnique.mockResolvedValue({
+      family: {
+        id: "family-1",
+        name: "Solberg",
+      },
+      familyId: "family-1",
+    });
+    dbMock.mealPlan.findMany.mockResolvedValue([
+      {
+        endDate: new Date("2026-05-17T00:00:00.000Z"),
+        entries: [
+          dinnerEntry({
+            date: "2026-05-12",
+            recipeTitle: "Taco",
+          }),
+          {
+            date: new Date("2026-05-13T00:00:00.000Z"),
+            freezerItem: null,
+            freezerItemId: null,
+            note: null,
+            recipe: null,
+            recipeId: null,
+            updatedAt: new Date("2026-05-13T18:00:00.000Z"),
+          },
+        ],
+        id: "meal-plan-1",
+        startDate: new Date("2026-05-11T00:00:00.000Z"),
+        title: "Uke 20",
+      },
+    ]);
+
+    const result = await getFamilyCalendarFeedByToken(RAW_TOKEN);
+
+    expect(result?.content).toContain("SUMMARY:Middag: Taco");
+    expect(result?.content).toContain("UID:meal-plan-1-2026-05-12@mealplanner");
+    expect(result?.content).not.toContain("UID:meal-plan-1-2026-05-13@mealplanner");
   });
 });

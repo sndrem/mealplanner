@@ -207,6 +207,7 @@ describe("calendar.server", () => {
           date: new Date("2026-05-15T00:00:00.000Z"),
           freezerItem: null,
           freezerItemId: null,
+          note: null,
           recipe: {
             description: "Steg 1\r\nSteg 2",
             ingredients: [
@@ -226,6 +227,7 @@ describe("calendar.server", () => {
             note: "Tina i micro",
           },
           freezerItemId: "freezer-1",
+          note: null,
           recipe: null,
           recipeId: null,
           updatedAt: new Date("2026-05-14T08:00:00.000Z"),
@@ -234,6 +236,7 @@ describe("calendar.server", () => {
           date: new Date("2026-05-17T00:00:00.000Z"),
           freezerItem: null,
           freezerItemId: null,
+          note: null,
           recipe: null,
           recipeId: "",
           updatedAt: new Date("2026-05-14T08:00:00.000Z"),
@@ -275,6 +278,7 @@ describe("calendar.server", () => {
           date: new Date("2026-05-16T00:00:00.000Z"),
           freezerItem: null,
           freezerItemId: null,
+          note: null,
           recipe: {
             description: "Rask middagsfavoritt.",
             ingredients: [],
@@ -301,6 +305,61 @@ describe("calendar.server", () => {
     expect(result.content).toContain("DTSTART;TZID=Europe/Oslo:20260516T160000");
     expect(result.content).toContain("DTEND;TZID=Europe/Oslo:20260516T170000");
     expect(result.content).toContain("Rask middagsfavoritt.");
+  });
+
+  it("exports note-only days without recipes as calendar events", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          freezerItem: null,
+          freezerItemId: null,
+          note: "Eating out at restaurant",
+          recipe: null,
+          recipeId: null,
+          updatedAt: new Date("2026-05-14T08:00:00.000Z"),
+        },
+        {
+          date: new Date("2026-05-16T00:00:00.000Z"),
+          freezerItem: null,
+          freezerItemId: null,
+          note: null,
+          recipe: {
+            description: "Classic taco recipe",
+            ingredients: [],
+            title: "Taco",
+          },
+          recipeId: "recipe-1",
+          updatedAt: new Date("2026-05-14T09:00:00.000Z"),
+        },
+        {
+          date: new Date("2026-05-17T00:00:00.000Z"),
+          freezerItem: null,
+          freezerItemId: null,
+          note: "Dinner at friend's house",
+          recipe: null,
+          recipeId: null,
+          updatedAt: new Date("2026-05-14T10:00:00.000Z"),
+        },
+      ],
+      id: "meal-plan-1",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      title: "Langhelg",
+    });
+
+    const result = await getMealPlanCalendarExport({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result.content.match(/BEGIN:VEVENT/g)).toHaveLength(3);
+    expect(result.content).toContain("SUMMARY:Middag: Eating out at restaurant");
+    expect(result.content).toContain("SUMMARY:Middag: Taco");
+    expect(result.content).toContain("SUMMARY:Middag: Dinner at friend's house");
+    expect(result.content).toContain("UID:meal-plan-1-2026-05-15@mealplanner");
+    expect(result.content).toContain("UID:meal-plan-1-2026-05-17@mealplanner");
   });
 
   it("rejects an empty meal-plan export before creating a file", async () => {
