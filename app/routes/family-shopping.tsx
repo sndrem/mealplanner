@@ -1161,7 +1161,7 @@ function renderFamilyShoppingListItem({
         : null;
   const rowStateClass =
     recentlyAddedSourceKey === item.sourceKey
-      ? "border-emerald-300 bg-emerald-100"
+      ? "border-notice-success-line bg-notice-success"
       : displayChecked
         ? "border-line bg-page opacity-80"
         : "border-line bg-page";

@@ -260,7 +260,7 @@ function WeekDayMenuCard({
   );
 
   const cardClassName = day.isToday
-    ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-4 ring-1 ring-emerald-100"
+    ? "rounded-[24px] border border-notice-success-line bg-notice-success p-4 ring-1 ring-notice-success-line"
     : "rounded-[24px] border border-line bg-page p-4";
 
   if (day.mealPlanId) {
@@ -271,7 +271,7 @@ function WeekDayMenuCard({
       >
         {content}
         {day.isToday ? (
-          <span className="mb-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
+          <span className="mb-2 inline-flex rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-notice-success-ink ring-1 ring-notice-success-line">
             I dag
           </span>
         ) : null}
@@ -283,7 +283,7 @@ function WeekDayMenuCard({
     <article className={cardClassName}>
       {content}
       {day.isToday ? (
-        <span className="mb-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
+        <span className="mb-2 inline-flex rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-notice-success-ink ring-1 ring-notice-success-line">
           I dag
         </span>
       ) : null}

@@ -131,4 +131,20 @@ describe("StoreModeShoppingItemCard", () => {
       screen.getByText("lørdag 16. mai: Taco · 2 stk"),
     ).toBeInTheDocument();
   });
+
+  it("uses notice-success tokens for the recently added highlight", () => {
+    renderWithRouter(
+      <StoreModeShoppingItemCard
+        isRecentlyAdded
+        item={familyItem}
+        layout="grid"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+      />,
+    );
+
+    expect(
+      document.querySelector(`[data-shopping-source-key="${familyItem.sourceKey}"]`),
+    ).toHaveClass("border-notice-success-line", "bg-notice-success");
+  });
 });

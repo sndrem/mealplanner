@@ -627,7 +627,7 @@ function MealPlanListCard({
 }) {
   const articleClassName =
     timeStatus === "active"
-      ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-5 shadow-sm"
+      ? "rounded-[24px] border border-notice-success-line bg-notice-success p-5 shadow-sm"
       : timeStatus === "upcoming"
         ? "rounded-[24px] border border-line bg-page p-5"
         : "rounded-[24px] border border-line bg-page/70 p-5 opacity-90";
@@ -642,15 +642,13 @@ function MealPlanListCard({
   const openLinkClassName =
     timeStatus === "active"
       ? "inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-emerald-950"
-      : timeStatus === "past"
-        ? "inline-flex items-center justify-center rounded-2xl bg-slate-700 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
-        : "inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800";
+      : "inline-flex items-center justify-center rounded-2xl bg-slate-700 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800";
   const isPlaceholder = mealPlan.id.startsWith("optimistic:");
   const timeStatusBadge =
     timeStatus === "active"
       ? {
           className:
-            "rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-950 ring-1 ring-emerald-300",
+            "rounded-full bg-surface px-3 py-1 text-xs font-medium uppercase tracking-wide text-notice-success-ink ring-1 ring-notice-success-line",
           label: "Aktiv",
         }
       : timeStatus === "upcoming"

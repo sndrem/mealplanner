@@ -260,7 +260,7 @@ export function StoreModeShoppingItemCard({
   ]);
 
   const cardStateClass = isRecentlyAdded
-    ? "border-emerald-300 bg-emerald-100"
+    ? "border-notice-success-line bg-notice-success"
     : item.checked
       ? "border-red-200 bg-red-50"
       : "border-store-line bg-store-bg";

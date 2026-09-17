@@ -1391,7 +1391,7 @@ function RecipeBankContent({
 
   return (
     <>
-      <p className="mt-2 text-sm leading-6 text-muted">
+      <p className="mt-2 text-sm leading-6 text-ink">
         Standard- og familieoppskrifter du kan velge til middagene i planen.
         Åpne en dag i ukeoversikten, eller velg dag nedenfor, og trykk Legg til.
       </p>
@@ -1493,7 +1493,7 @@ function RecipeBankContent({
               key={recipe.id}
               className={
                 selectedRecipeIds.has(recipe.id)
-                  ? "rounded-[24px] border border-emerald-200 bg-emerald-50 p-5"
+                  ? "rounded-[24px] border border-notice-success-line bg-notice-success p-5"
                   : "rounded-[24px] border border-line bg-page p-5"
               }
             >
@@ -1508,12 +1508,12 @@ function RecipeBankContent({
                       <h3 className="text-base font-semibold text-ink">
                         {recipe.title}
                       </h3>
-                      <p className="mt-2 whitespace-break-spaces text-sm leading-6 text-muted">
+                      <p className="mt-2 whitespace-break-spaces text-sm leading-6 text-ink">
                         {recipe.description}
                       </p>
                     </div>
                     {selectedRecipeIds.has(recipe.id) ? (
-                      <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                      <span className="shrink-0 rounded-full bg-surface px-3 py-1 text-xs font-medium text-notice-success-ink ring-1 ring-notice-success-line">
                         I planen
                       </span>
                     ) : null}
