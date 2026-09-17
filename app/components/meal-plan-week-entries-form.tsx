@@ -528,7 +528,7 @@ function MealPlanDayRow({
     <div
       className={
         isToday
-          ? "min-w-0 max-w-full overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 ring-1 ring-emerald-100"
+          ? "min-w-0 max-w-full overflow-hidden rounded-2xl border border-notice-success-line bg-notice-success ring-1 ring-notice-success-line"
           : "min-w-0 max-w-full overflow-hidden rounded-2xl border border-line bg-page"
       }
     >
@@ -548,7 +548,7 @@ function MealPlanDayRow({
         </button>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {isToday ? (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
+            <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-notice-success-ink ring-1 ring-notice-success-line">
               I dag
             </span>
           ) : null}
@@ -803,7 +803,7 @@ function MealPlanReorderDayRow({
   const rowClassName = [
     "min-w-0 max-w-full overflow-hidden rounded-2xl border p-3",
     isToday
-      ? "border-emerald-200 bg-emerald-50 ring-1 ring-emerald-100"
+      ? "border-notice-success-line bg-notice-success ring-1 ring-notice-success-line"
       : "border-line bg-page",
     isDragging ? "opacity-50" : "",
     dropHighlight ? "ring-2 ring-emerald-400" : "",
@@ -853,7 +853,7 @@ function MealPlanReorderDayRow({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {isToday ? (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
+            <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-notice-success-ink ring-1 ring-notice-success-line">
               I dag
             </span>
           ) : null}
