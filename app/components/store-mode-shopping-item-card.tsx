@@ -9,6 +9,7 @@ import { isGroupedShoppingItem } from "../lib/shopping-grocery-grouping";
 import type { StoreModeShoppingView } from "../lib/shopping-store-mode-client";
 import type { StoreCategory } from "../lib/store.server";
 import { ShoppingQuantityEditModal } from "./shopping-quantity-edit-modal";
+import { MarkGeneratedItemAsStockForm } from "./mark-generated-item-as-stock-form";
 
 interface StoreModeShoppingItemCardBase {
   category: {
@@ -92,9 +93,11 @@ export type StoreModeCategoryUpdateRequest =
     };
 
 interface StoreModeShoppingItemCardProps {
+  canMarkAsStock?: boolean;
   categories?: StoreCategory[];
   categoryError?: string | null;
   isRecentlyAdded?: boolean;
+  isPendingMarkAsStock?: boolean;
   isSavingCategory?: boolean;
   item: StoreModeShoppingItemCardItem;
   layout: StoreModeShoppingView;
@@ -119,9 +122,11 @@ const badgeClass = "rounded-full px-2 py-0.5 text-[11px] font-medium leading-4";
 const NOTE_SAVE_DEBOUNCE_MS = 450;
 
 export function StoreModeShoppingItemCard({
+  canMarkAsStock = false,
   categories = [],
   categoryError = null,
   isRecentlyAdded = false,
+  isPendingMarkAsStock = false,
   isSavingCategory = false,
   item,
   layout: _layout,
@@ -264,7 +269,7 @@ export function StoreModeShoppingItemCard({
     : item.checked
       ? "border-red-200 bg-red-50"
       : "border-store-line bg-store-bg";
-  const cardShellClass = `relative flex h-full min-h-[44px] flex-col rounded-2xl border p-2.5 transition-colors duration-250 ${cardStateClass}`;
+  const cardShellClass = `relative flex min-h-[44px] flex-col rounded-2xl border p-2.5 transition-colors duration-250 ${cardStateClass}`;
 
   const toggleOverlayClass = item.checked
     ? "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-red-100 active:bg-red-200"
@@ -291,7 +296,7 @@ export function StoreModeShoppingItemCard({
 
   return (
     <div
-      className={`scroll-mb-44 block h-full min-w-0 ${cardShellClass}`}
+      className={`scroll-mb-44 block min-w-0 ${cardShellClass}`}
       data-shopping-source-key={item.sourceKey}
     >
       <button
@@ -306,7 +311,7 @@ export function StoreModeShoppingItemCard({
         type="button"
       />
 
-      <div className="relative z-10 flex h-full min-h-[36px] min-w-0 flex-col pointer-events-none">
+      <div className="relative z-10 flex min-h-[36px] min-w-0 flex-col pointer-events-none">
         <div className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="min-w-0">
@@ -476,6 +481,15 @@ export function StoreModeShoppingItemCard({
             >
               Hurtiglegg til
             </button>
+            {(item.sourceType === "GENERATED" || item.sourceType === "FAMILY") &&
+            canMarkAsStock ? (
+              <MarkGeneratedItemAsStockForm
+                displaySourceKey={item.sourceKey}
+                isPending={isPendingMarkAsStock}
+                item={item}
+                variant="store"
+              />
+            ) : null}
             {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
               <p className="break-words text-xs leading-4 text-amber-800">
                 Utsatt til {formatDateLabel(item.postponedUntilDate)}.

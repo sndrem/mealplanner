@@ -1,6 +1,7 @@
 import { Form } from "react-router";
 import type { ChangeEventHandler } from "react";
 
+import { MarkGeneratedItemAsStockForm } from "./mark-generated-item-as-stock-form";
 import { formatOccurrenceSourceLine } from "../lib/shopping-display";
 import { isGroupedShoppingItem } from "../lib/shopping-grocery-grouping";
 import type {
@@ -100,8 +101,10 @@ type ShoppingListItemExpandedProps = {
   isPendingCheckToggle: boolean;
   isPendingFamilyDelete?: boolean;
   isPendingFamilySave?: boolean;
+  canMarkAsStock?: boolean;
   isPendingGeneratedExclude: boolean;
   isPendingGeneratedSave: boolean;
+  isPendingMarkAsStock?: boolean;
   isPendingManualDelete: boolean;
   isPendingManualSave: boolean;
   item: {
@@ -125,6 +128,7 @@ type ShoppingListItemExpandedProps = {
       quantityLabel: string | null;
       sourceKey: string;
     }>;
+    mealPlanId?: string | null;
     sourceKey: string;
     sourceType: "FAMILY" | "GENERATED" | "MANUAL";
   };
@@ -140,8 +144,10 @@ export function ShoppingListItemExpanded({
   categories,
   displayChecked,
   isPendingCheckToggle,
+  canMarkAsStock = false,
   isPendingGeneratedExclude,
   isPendingGeneratedSave,
+  isPendingMarkAsStock = false,
   familyValues = null,
   isPendingFamilyDelete = false,
   isPendingFamilySave = false,
@@ -377,6 +383,15 @@ export function ShoppingListItemExpanded({
                 : "Fjern fra handlelisten"}
             </button>
           </Form>
+        ) : null}
+
+        {item.sourceType === "GENERATED" && canMarkAsStock ? (
+          <MarkGeneratedItemAsStockForm
+            displaySourceKey={item.sourceKey}
+            isPending={isPendingMarkAsStock}
+            item={item}
+            variant="list"
+          />
         ) : null}
 
         {item.sourceType === "MANUAL" && manualValues ? (

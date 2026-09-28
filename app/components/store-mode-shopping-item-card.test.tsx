@@ -132,6 +132,188 @@ describe("StoreModeShoppingItemCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("lets an admin mark a generated item as a basisvare", () => {
+    renderWithRouter(
+      <StoreModeShoppingItemCard
+        canMarkAsStock
+        item={{
+          category: { id: "cat-dry", name: "Tørrvarer" },
+          checked: false,
+          collaborationVersion: "v1",
+          isStockItem: false,
+          lastDate: "2026-05-15",
+          mealPlanId: "meal-plan-1",
+          name: "Salt",
+          note: null,
+          occurrenceCount: 1,
+          occurrences: [
+            {
+              date: "2026-05-15",
+              quantityLabel: "1 ts",
+              recipeTitle: "Taco",
+            },
+          ],
+          postponedUntilDate: null,
+          preferredStore: null,
+          preferredStoreConflict: false,
+          quantity: null,
+          quantityLabel: "1 ts",
+          recipeCount: 1,
+          sourceKey: "entry-1:line-1",
+          sourceType: "GENERATED",
+        }}
+        layout="grid"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+      />,
+    );
+
+    const markButton = screen.getByRole("button", {
+      hidden: true,
+      name: "Merk som basisvare",
+    });
+    expect(markButton.closest("details")).not.toHaveAttribute("open");
+
+    fireEvent.click(screen.getByLabelText("Vis informasjon om Salt"));
+    fireEvent.click(screen.getByRole("button", { name: "Merk som basisvare" }));
+
+    expect(
+      screen.getByText(/Salt blir en basisvare og holdes utenfor handlelisten/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Avbryt" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Fjern fra handlelisten" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows mark-as-stock on family items for admins", () => {
+    renderWithRouter(
+      <StoreModeShoppingItemCard
+        canMarkAsStock
+        item={familyItem}
+        layout="grid"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+      />,
+    );
+
+    const markButton = screen.getByRole("button", {
+      hidden: true,
+      name: "Merk som basisvare",
+    });
+    expect(markButton.closest("details")).not.toHaveAttribute("open");
+
+    fireEvent.click(screen.getByLabelText("Vis informasjon om Melk"));
+
+    expect(markButton.closest("details")).toHaveAttribute("open");
+  });
+
+  it("hides mark-as-stock for non-admins, manual items, and read-only cards", () => {
+    const { unmount } = renderWithRouter(
+      <StoreModeShoppingItemCard
+        item={{
+          category: { id: "cat-dry", name: "Tørrvarer" },
+          checked: false,
+          collaborationVersion: "v1",
+          isStockItem: false,
+          lastDate: "2026-05-15",
+          mealPlanId: "meal-plan-1",
+          name: "Salt",
+          note: null,
+          occurrenceCount: 1,
+          occurrences: [],
+          postponedUntilDate: null,
+          preferredStore: null,
+          preferredStoreConflict: false,
+          quantity: null,
+          quantityLabel: null,
+          recipeCount: 1,
+          sourceKey: "entry-1:line-1",
+          sourceType: "GENERATED",
+        }}
+        layout="grid"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", {
+        hidden: true,
+        name: "Merk som basisvare",
+      }),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    const manualRender = renderWithRouter(
+      <StoreModeShoppingItemCard
+        canMarkAsStock
+        item={{
+          buyOnDate: "2026-05-15",
+          category: { id: "cat-dry", name: "Tørrvarer" },
+          checked: false,
+          collaborationVersion: "v1",
+          mealPlanId: "meal-plan-1",
+          name: "Kaffe",
+          note: null,
+          preferredStore: null,
+          quantity: null,
+          quantityLabel: null,
+          sourceKey: "manual-1",
+          sourceType: "MANUAL",
+        }}
+        layout="grid"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", {
+        hidden: true,
+        name: "Merk som basisvare",
+      }),
+    ).not.toBeInTheDocument();
+    manualRender.unmount();
+
+    renderWithRouter(
+      <StoreModeShoppingItemCard
+        canMarkAsStock
+        item={{
+          category: { id: "cat-dry", name: "Tørrvarer" },
+          checked: false,
+          collaborationVersion: "v1",
+          isStockItem: false,
+          lastDate: "2026-05-15",
+          mealPlanId: "meal-plan-1",
+          name: "Salt",
+          note: null,
+          occurrenceCount: 1,
+          occurrences: [],
+          postponedUntilDate: null,
+          preferredStore: null,
+          preferredStoreConflict: false,
+          quantity: null,
+          quantityLabel: null,
+          recipeCount: 1,
+          sourceKey: "entry-1:line-1",
+          sourceType: "GENERATED",
+        }}
+        layout="grid"
+        onToggle={vi.fn()}
+        readOnly
+        selectedStoreId="store-1"
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", {
+        hidden: true,
+        name: "Merk som basisvare",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   it("uses notice-success tokens for the recently added highlight", () => {
     renderWithRouter(
       <StoreModeShoppingItemCard

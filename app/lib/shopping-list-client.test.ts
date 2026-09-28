@@ -442,6 +442,66 @@ describe("shopping-list-client", () => {
     expect(result).toEqual([]);
   });
 
+  it("removes a generated item marked as a basisvare from the in-flight overlay", () => {
+    const existingItem = createFamilyItem({
+      name: "Salt",
+      sourceKey: "entry-1:line-1",
+    });
+    const formData = new FormData();
+
+    const result = applyOptimisticShoppingListFormOverlay({
+      categories: [{ displayName: "Tørrvarer", id: "category-1" }],
+      formData,
+      groups: [
+        {
+          store: existingItem.preferredStore,
+          sections: [
+            {
+              category: existingItem.category,
+              displayName: existingItem.section.displayName,
+              items: [existingItem],
+            },
+          ],
+        },
+      ],
+      intent: "mark-generated-shopping-item-as-stock",
+      sourceKey: "entry-1:line-1",
+      stores: [],
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  it("removes a family item marked as a basisvare from the in-flight overlay", () => {
+    const existingItem = createFamilyItem({
+      name: "Melk",
+      sourceKey: "family-milk",
+    });
+    const formData = new FormData();
+
+    const result = applyOptimisticShoppingListFormOverlay({
+      categories: [{ displayName: "Annet", id: "category-1" }],
+      formData,
+      groups: [
+        {
+          store: existingItem.preferredStore,
+          sections: [
+            {
+              category: existingItem.category,
+              displayName: existingItem.section.displayName,
+              items: [existingItem],
+            },
+          ],
+        },
+      ],
+      intent: "mark-family-shopping-item-as-stock",
+      sourceKey: "family-milk",
+      stores: [],
+    });
+
+    expect(result).toEqual([]);
+  });
+
   it("patches and relocates an updated item from in-flight form data", () => {
     const existingItem = createFamilyItem({
       name: "Melk",

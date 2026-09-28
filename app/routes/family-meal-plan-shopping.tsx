@@ -47,6 +47,7 @@ import {
   createQuickManualShoppingItem,
   deleteManualShoppingItem,
   excludeGeneratedShoppingItem,
+  markGeneratedShoppingItemsAsStock,
   optInStockShoppingItems,
   restoreGeneratedShoppingItem,
   toggleShoppingItemChecked,
@@ -63,9 +64,11 @@ import {
   updateShoppingGroceryGrouping,
 } from "../lib/shopping-preference-write.server";
 import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
+import { parseGeneratedStockMarkTargets } from "../lib/shopping-stock-mark";
 
 type ShoppingNotice =
   | "generated-shopping-item-excluded"
+  | "generated-shopping-item-marked-as-stock"
   | "generated-shopping-item-restored"
   | "generated-shopping-item-updated"
   | "manual-shopping-item-added"
@@ -80,6 +83,7 @@ type ShoppingIntent =
   | "quick-add-manual-shopping-item"
   | "delete-manual-shopping-item"
   | "exclude-generated-shopping-item"
+  | "mark-generated-shopping-item-as-stock"
   | "opt-in-stock-shopping-item"
   | "restore-generated-shopping-item"
   | "opt-in-stock-shopping-items"
@@ -384,6 +388,41 @@ export async function action({
       familyId,
       mealPlanId,
       notice: "generated-shopping-item-excluded",
+      request,
+    });
+  }
+
+  if (intent === "mark-generated-shopping-item-as-stock") {
+    const targets = parseGeneratedStockMarkTargets(formData);
+
+    if (targets.length === 0) {
+      return {
+        formError: "Vi fant ikke varelinjen som skulle merkes som basisvare.",
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    const result = await markGeneratedShoppingItemsAsStock({
+      familyId,
+      targets,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies ShoppingActionData;
+    }
+
+    return buildShoppingRedirect({
+      familyId,
+      mealPlanId,
+      notice: "generated-shopping-item-marked-as-stock",
       request,
     });
   }
@@ -1634,6 +1673,11 @@ export default function FamilyMealPlanShoppingRoute({
                             pendingIntent ===
                               "exclude-generated-shopping-item" &&
                             pendingSourceKey === item.sourceKey;
+                          const isPendingMarkAsStock =
+                            navigation.state !== "idle" &&
+                            pendingIntent ===
+                              "mark-generated-shopping-item-as-stock" &&
+                            pendingSourceKey === item.sourceKey;
                           const manualValues =
                             actionData?.intent ===
                               "update-manual-shopping-item" &&
@@ -1681,11 +1725,13 @@ export default function FamilyMealPlanShoppingRoute({
                             );
                           const expandedProps = {
                             actionData,
+                            canMarkAsStock: loaderData.userRole === "ADMIN",
                             categories: loaderData.categories,
                             displayChecked,
                             isPendingCheckToggle,
                             isPendingGeneratedExclude,
                             isPendingGeneratedSave,
+                            isPendingMarkAsStock,
                             isPendingManualDelete,
                             isPendingManualSave,
                             item,
@@ -2035,6 +2081,7 @@ function getShoppingNotice(request: Request): ShoppingNotice | null {
 
   if (
     notice === "generated-shopping-item-excluded" ||
+    notice === "generated-shopping-item-marked-as-stock" ||
     notice === "generated-shopping-item-restored" ||
     notice === "generated-shopping-item-updated" ||
     notice === "manual-shopping-item-added" ||
@@ -2091,6 +2138,12 @@ function getShoppingNoticeContent(notice: ShoppingNotice) {
         description:
           "Varelinjen ble fjernet fra handlelisten. Du kan legge den tilbake i seksjonen for fjernede varer.",
         title: "Varelinje fjernet",
+      };
+    case "generated-shopping-item-marked-as-stock":
+      return {
+        description:
+          "Varen holdes utenfor handlelisten fremover. Du kan legge den til for denne uken, eller fjerne den fra Basisvarer.",
+        title: "Basisvare lagt til",
       };
     case "generated-shopping-item-restored":
       return {

@@ -1592,6 +1592,34 @@ function buildMergedGeneratedSourceKey(occurrenceKeys: string[]) {
   return occurrenceKeys.slice().sort().join("|");
 }
 
+export function resolveGeneratedStockIdentity({
+  mealPlan,
+  sourceKey,
+}: {
+  mealPlan: ShoppingMealPlan;
+  sourceKey: string;
+}) {
+  const normalizedSourceKey = sourceKey.trim();
+
+  if (!normalizedSourceKey) {
+    return null;
+  }
+
+  for (const bucket of buildGeneratedProjectionBuckets(mealPlan)) {
+    if (
+      buildMergedGeneratedSourceKey(bucket.occurrenceKeys) ===
+      normalizedSourceKey
+    ) {
+      return {
+        displayName: bucket.displayName,
+        ingredientId: bucket.ingredientId,
+      };
+    }
+  }
+
+  return null;
+}
+
 function buildGeneratedMergeKey({
   categoryId,
   displayName,

@@ -71,6 +71,8 @@ import {
   projectCreatedManualShoppingItem,
 } from "../lib/shopping.server";
 import {
+  markFamilyShoppingItemAsStock,
+  markGeneratedShoppingItemsAsStock,
   optInStockShoppingItems,
   parseManualShoppingItemValues,
   toggleShoppingItemChecked,
@@ -118,12 +120,14 @@ import {
   useStoreModeToggleSync,
 } from "../lib/use-store-mode-toggle-sync";
 import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
+import { parseGeneratedStockMarkTargets } from "../lib/shopping-stock-mark";
 import { useVisibleIntervalRevalidate } from "../lib/use-visible-interval-revalidate";
 import type { Route } from "./+types/family-meal-plan-store-mode";
 
 type StoreModeNotice =
   | "active-shopping-date-updated"
   | "family-shopping-item-added"
+  | "generated-shopping-item-marked-as-stock"
   | "selected-store-updated"
   | "shopping-item-check-state-updated"
   | "stock-shopping-items-opted-in"
@@ -132,6 +136,8 @@ type StoreModeNotice =
 
 type StoreModeIntent =
   | "quick-add-family-shopping-item"
+  | "mark-family-shopping-item-as-stock"
+  | "mark-generated-shopping-item-as-stock"
   | "opt-in-stock-shopping-item"
   | "opt-in-stock-shopping-items"
   | "update-family-shopping-item-category"
@@ -704,6 +710,69 @@ export async function action({ params, request }: Route.ActionArgs) {
     } satisfies StoreModeActionData;
   }
 
+  if (intent === "mark-generated-shopping-item-as-stock") {
+    const targets = parseGeneratedStockMarkTargets(formData);
+
+    if (targets.length === 0) {
+      return {
+        formError: "Vi fant ikke varelinjen som skulle merkes som basisvare.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    const result = await markGeneratedShoppingItemsAsStock({
+      familyId,
+      targets,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw buildMealPlanNotFoundResponse();
+    }
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    return buildFamilyStoreModeRedirect({
+      familyId,
+      notice: "generated-shopping-item-marked-as-stock",
+      request,
+    });
+  }
+
+  if (intent === "mark-family-shopping-item-as-stock") {
+    const result = await markFamilyShoppingItemAsStock({
+      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
+      familyId,
+      familyItemId: String(formData.get("familyItemId") ?? "").trim(),
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      return {
+        formError: "Vi fant ikke varelinjen som skulle merkes som basisvare.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    if (result.status === "VALIDATION_ERROR" || result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    return buildFamilyStoreModeRedirect({
+      familyId,
+      notice: "generated-shopping-item-marked-as-stock",
+      request,
+    });
+  }
+
   return {
     formError: "Ukjent handling.",
   } satisfies StoreModeActionData;
@@ -733,6 +802,12 @@ export default function FamilyMealPlanStoreModeRoute({
   });
 
   const pendingIntent = navigation.formData?.get("intent");
+  const pendingMarkAsStockSourceKey =
+    navigation.state !== "idle" &&
+    (pendingIntent === "mark-generated-shopping-item-as-stock" ||
+      pendingIntent === "mark-family-shopping-item-as-stock")
+      ? String(navigation.formData?.get("sourceKey") ?? "")
+      : "";
   const [dueSectionGroups, setDueSectionGroups] = useState(
     loaderData.dueSectionGroups,
   );
@@ -1029,10 +1104,14 @@ export default function FamilyMealPlanStoreModeRoute({
     });
   const displayDueItems = useMemo(
     () =>
-      loaderDueItems.map(
-        (item) => displayItemsBySourceKey.get(item.sourceKey) ?? item,
-      ),
-    [displayItemsBySourceKey, loaderDueItems],
+      loaderDueItems
+        .map((item) => displayItemsBySourceKey.get(item.sourceKey) ?? item)
+        .filter((item) =>
+          pendingMarkAsStockSourceKey
+            ? item.sourceKey !== pendingMarkAsStockSourceKey
+            : true,
+        ),
+    [displayItemsBySourceKey, loaderDueItems, pendingMarkAsStockSourceKey],
   );
   const displayProgress = useMemo(
     () => computeStoreModeProgress(displayDueItems),
@@ -1045,11 +1124,15 @@ export default function FamilyMealPlanStoreModeRoute({
     () =>
       dueSectionGroups.map((section) => ({
         ...section,
-        items: section.items.map(
-          (item) => displayItemsBySourceKey.get(item.sourceKey) ?? item,
-        ),
+        items: section.items
+          .map((item) => displayItemsBySourceKey.get(item.sourceKey) ?? item)
+          .filter((item) =>
+            pendingMarkAsStockSourceKey
+              ? item.sourceKey !== pendingMarkAsStockSourceKey
+              : true,
+          ),
       })),
-    [displayItemsBySourceKey, dueSectionGroups],
+    [displayItemsBySourceKey, dueSectionGroups, pendingMarkAsStockSourceKey],
   );
   const viewStorageKey = useMemo(
     () =>
@@ -1434,6 +1517,7 @@ export default function FamilyMealPlanStoreModeRoute({
 
                   {section.items.length > 0 ? (
                     <StoreModeItemGrid
+                      canMarkAsStock={loaderData.userRole === "ADMIN"}
                       categories={loaderData.categories}
                       categoryFetcherError={categoryFetcherError}
                       categoryInteractionSourceKey={categoryInteractionSourceKey}
@@ -1444,6 +1528,7 @@ export default function FamilyMealPlanStoreModeRoute({
                       onUpdateCategory={handleUpdateCategory}
                       onUpdateQuantity={handleUpdateQuantity}
                       onToggleItem={handleToggleWithUndoFeedback}
+                      pendingMarkAsStockSourceKey={pendingMarkAsStockSourceKey}
                       recentlyAddedSourceKey={recentlyAddedSourceKey}
                       selectedStoreId={loaderData.selectedStore?.id}
                     />
@@ -1463,6 +1548,7 @@ export default function FamilyMealPlanStoreModeRoute({
                       </summary>
 
                       <StoreModeItemGrid
+                        canMarkAsStock={loaderData.userRole === "ADMIN"}
                         categories={loaderData.categories}
                         categoryFetcherError={categoryFetcherError}
                         categoryInteractionSourceKey={
@@ -1475,6 +1561,7 @@ export default function FamilyMealPlanStoreModeRoute({
                         onUpdateCategory={handleUpdateCategory}
                         onUpdateQuantity={handleUpdateQuantity}
                         onToggleItem={handleToggleWithUndoFeedback}
+                        pendingMarkAsStockSourceKey={pendingMarkAsStockSourceKey}
                         recentlyAddedSourceKey={recentlyAddedSourceKey}
                         selectedStoreId={loaderData.selectedStore?.id}
                       />
@@ -1718,6 +1805,7 @@ function getStoreModeNotice(request: Request): StoreModeNotice | null {
   if (
     notice === "active-shopping-date-updated" ||
     notice === "family-shopping-item-added" ||
+    notice === "generated-shopping-item-marked-as-stock" ||
     notice === "selected-store-updated" ||
     notice === "shopping-item-check-state-updated" ||
     notice === "stock-shopping-items-opted-in" ||
@@ -1761,6 +1849,12 @@ function getStoreModeNoticeContent(notice: StoreModeNotice) {
       return {
         description: "Varen ble lagt til og vises i handlelisten.",
         title: "Vare lagt til",
+      };
+    case "generated-shopping-item-marked-as-stock":
+      return {
+        description:
+          "Varen holdes utenfor handlelisten fremover. Du kan legge den til for denne turen, eller fjerne den fra Basisvarer.",
+        title: "Basisvare lagt til",
       };
     case "stock-shopping-items-opted-in":
       return {
@@ -1831,6 +1925,7 @@ async function resolveStoreModeAnchorMealPlanId({
 function StoreModeItemGrid<
   TItem extends ComponentProps<typeof StoreModeShoppingItemCard>["item"],
 >({
+  canMarkAsStock = false,
   categories,
   categoryFetcherError,
   categoryInteractionSourceKey,
@@ -1841,9 +1936,11 @@ function StoreModeItemGrid<
   onUpdateCategory,
   onUpdateQuantity,
   onToggleItem,
+  pendingMarkAsStockSourceKey = "",
   recentlyAddedSourceKey,
   selectedStoreId,
 }: {
+  canMarkAsStock?: boolean;
   categories: ComponentProps<typeof StoreModeShoppingItemCard>["categories"];
   categoryFetcherError: string | null;
   categoryInteractionSourceKey: string;
@@ -1860,6 +1957,7 @@ function StoreModeItemGrid<
     sourceType: "FAMILY" | "GENERATED";
   }) => void;
   onToggleItem: (item: TItem) => void;
+  pendingMarkAsStockSourceKey?: string;
   recentlyAddedSourceKey: string | null;
   selectedStoreId?: string;
 }) {
@@ -1879,12 +1977,14 @@ function StoreModeItemGrid<
       {sortedItems.map((item) => (
         <StoreModeShoppingItemCard
           key={item.sourceKey}
+          canMarkAsStock={canMarkAsStock}
           categories={categories}
           categoryError={
             categoryInteractionSourceKey === item.sourceKey
               ? categoryFetcherError
               : null
           }
+          isPendingMarkAsStock={pendingMarkAsStockSourceKey === item.sourceKey}
           isRecentlyAdded={recentlyAddedSourceKey === item.sourceKey}
           isSavingCategory={isSavingCategorySourceKey === item.sourceKey}
           item={item}
