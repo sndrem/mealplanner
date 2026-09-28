@@ -14,7 +14,6 @@ import {
   resolveMealPlanShoppingItemName,
 } from "./shopping-check-history.server";
 import {
-  buildRecentManualItemFromProjectedItem,
   getStockIngredientsForMealPlan,
   loadShoppingMealPlan,
   projectCreatedManualShoppingItem,
@@ -48,7 +47,6 @@ export interface QuickAddManualShoppingItemInput {
   ingredientId?: string;
   name?: string;
   quantity?: string;
-  recentNameNormalized?: string;
 }
 
 export function parseManualShoppingItemValues(
@@ -139,7 +137,6 @@ export async function createQuickManualShoppingItem({
 
   return {
     item,
-    recentManualItem: buildRecentManualItemFromProjectedItem(item),
     status: "CREATED" as const,
   };
 }
@@ -1854,35 +1851,6 @@ export async function resolveOtherCategoryId() {
   return category?.id ?? null;
 }
 
-async function findLatestManualShoppingItemForFamilyByNormalizedName({
-  familyId,
-  nameNormalized,
-}: {
-  familyId: string;
-  nameNormalized: string;
-}) {
-  const rows = await db.manualShoppingItem.findMany({
-    orderBy: [{ updatedAt: "desc" }],
-    select: {
-      categoryId: true,
-      name: true,
-      quantity: true,
-    },
-    take: 50,
-    where: {
-      mealPlan: {
-        familyId,
-      },
-    },
-  });
-
-  return (
-    rows.find(
-      (row) => normalizeIngredientCanonicalName(row.name) === nameNormalized,
-    ) ?? null
-  );
-}
-
 export async function resolveQuickAddManualShoppingItemValues({
   familyId,
   input,
@@ -1947,26 +1915,6 @@ export async function resolveQuickAddManualShoppingItemValues({
             requestedQuantity ||
             catalogItem.defaultQuantity?.trim() ||
             QUICK_ADD_DEFAULT_QUANTITY,
-        }),
-      };
-    }
-  }
-
-  const recentNameNormalized = input.recentNameNormalized?.trim().toLowerCase();
-
-  if (recentNameNormalized) {
-    const recentItem = await findLatestManualShoppingItemForFamilyByNormalizedName({
-      familyId,
-      nameNormalized: recentNameNormalized,
-    });
-
-    if (recentItem) {
-      return {
-        ok: true as const,
-        values: buildQuickAddManualShoppingItemValues({
-          categoryId: recentItem.categoryId,
-          name: recentItem.name.trim(),
-          quantity: requestedQuantity || recentItem.quantity?.trim() || QUICK_ADD_DEFAULT_QUANTITY,
         }),
       };
     }

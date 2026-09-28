@@ -12,7 +12,6 @@ vi.mock("../lib/auth.server", async () => {
 vi.mock("../lib/shopping.server", () => {
   return {
     getMealPlanShoppingData: vi.fn(),
-    listRecentManualShoppingItemsForFamily: vi.fn(),
   };
 });
 
@@ -37,7 +36,7 @@ vi.mock("../lib/shopping-preference-write.server", () => {
 });
 
 import { requireUser } from "../lib/auth.server";
-import { getMealPlanShoppingData, listRecentManualShoppingItemsForFamily } from "../lib/shopping.server";
+import { getMealPlanShoppingData } from "../lib/shopping.server";
 import {
   createManualShoppingItem,
   createQuickManualShoppingItem,
@@ -73,14 +72,6 @@ describe("family meal plan shopping route", () => {
 
   it("loads and serializes generated and manual shopping data", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
-    vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([
-      {
-        categoryId: "category-dairy",
-        displayName: "Melk",
-        nameNormalized: "melk",
-        quantity: "1",
-      },
-    ]);
     vi.mocked(getMealPlanShoppingData).mockResolvedValue({
       categories: [
         {
@@ -312,9 +303,6 @@ describe("family meal plan shopping route", () => {
       mealPlanId: "meal-plan-1",
       userId: "user-1",
     });
-    expect(listRecentManualShoppingItemsForFamily).toHaveBeenCalledWith({
-      familyId: "family-1",
-    });
     expect(result).toEqual({
       excludedGeneratedCount: 0,
       excludedGeneratedItems: [],
@@ -343,14 +331,6 @@ describe("family meal plan shopping route", () => {
         updatedAt: "2026-05-01T12:00:00.000Z",
       },
       notice: null,
-      recentManualItems: [
-        {
-          categoryId: "category-dairy",
-          displayName: "Melk",
-          nameNormalized: "melk",
-          quantity: "1",
-        },
-      ],
       categories: [
         {
           displayName: "Frukt og gront",
@@ -472,7 +452,6 @@ describe("family meal plan shopping route", () => {
 
   it("serializes stock ingredients for the active meal plan", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
-    vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([]);
     vi.mocked(getMealPlanShoppingData).mockResolvedValue({
       categories: [],
       family: {
@@ -601,12 +580,6 @@ describe("family meal plan shopping route", () => {
         sourceKey: "manual-item-1",
         sourceType: "MANUAL",
       },
-      recentManualItem: {
-        categoryId: "category-other",
-        displayName: "Tannkrem",
-        nameNormalized: "tannkrem",
-        quantity: "1",
-      },
       status: "CREATED",
     });
 
@@ -632,7 +605,6 @@ describe("family meal plan shopping route", () => {
         ingredientId: "",
         name: "Tannkrem",
         quantity: "",
-        recentNameNormalized: "",
       },
       mealPlanId: "meal-plan-1",
       userId: "user-1",
@@ -657,12 +629,6 @@ describe("family meal plan shopping route", () => {
         sourceType: "MANUAL",
       },
       ok: true,
-      recentManualItem: {
-        categoryId: "category-other",
-        displayName: "Tannkrem",
-        nameNormalized: "tannkrem",
-        quantity: "1",
-      },
     });
   });
 

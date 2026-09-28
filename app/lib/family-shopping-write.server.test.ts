@@ -274,12 +274,6 @@ describe("family-shopping-write.server", () => {
         sourceKey: "family-item-1",
         sourceType: "FAMILY",
       },
-      recentManualItem: {
-        categoryId: "category-other",
-        displayName: "Batterier",
-        nameNormalized: "batterier",
-        quantity: "1",
-      },
       status: "CREATED",
     });
     const { upsertFamilyShoppingCatalogItemFromQuickAdd } = await import(
@@ -304,7 +298,6 @@ describe("family-shopping-write.server", () => {
       ingredientId: "",
       name: "Melk",
       quantity: "4 flasker",
-      recentNameNormalized: "",
     });
   });
 

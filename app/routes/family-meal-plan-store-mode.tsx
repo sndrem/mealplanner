@@ -54,7 +54,6 @@ import {
   dropResolvedOptimisticItemsFromSectionGroups,
   insertProjectedItemIntoSectionGroups,
   patchProjectedItemInSectionGroups,
-  prependRecentManualItem,
   relocateProjectedItemInSectionGroups,
   removeProjectedItemFromSectionGroups,
 } from "../lib/shopping-list-client";
@@ -68,10 +67,8 @@ import { resolveStoreModeAnchorMealPlan } from "../lib/meal-plan-for-date.server
 import { listShoppingCheckHistoryForStoreMode } from "../lib/shopping-check-history.server";
 import {
   getFamilyStoreModeData,
-  listRecentManualShoppingItemsForFamily,
   projectCreatedFamilyShoppingItem,
   projectCreatedManualShoppingItem,
-  type RecentManualShoppingItem,
 } from "../lib/shopping.server";
 import {
   optInStockShoppingItems,
@@ -160,7 +157,6 @@ interface StoreModeActionData {
   intent?: StoreModeIntent;
   item?: QuickAddShoppingSuccess["item"];
   ok?: boolean;
-  recentManualItem?: RecentManualShoppingItem;
   selectedStoreFieldErrors?: {
     selectedStoreId?: string;
   };
@@ -193,11 +189,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     familyId,
     userId: user.id,
   });
-  const [result, recentManualItems, categories] = await Promise.all([
+  const [result, categories] = await Promise.all([
     storeModeDataPromise,
-    listRecentManualShoppingItemsForFamily({
-      familyId,
-    }),
     listIngredientCategories(),
   ]);
 
@@ -237,7 +230,6 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     },
     notice: getStoreModeNotice(request),
     progress: result.progress,
-    recentManualItems,
     selectedStore: result.selectedStore,
     selectableShoppingDates: result.selectableShoppingDates,
     shoppingHistory,
@@ -408,7 +400,6 @@ export async function action({ params, request }: Route.ActionArgs) {
       intent,
       item: serializeProjectedShoppingItem(result.item),
       ok: true,
-      recentManualItem: result.recentManualItem,
     } satisfies StoreModeActionData;
   }
 
@@ -745,9 +736,6 @@ export default function FamilyMealPlanStoreModeRoute({
   const [dueSectionGroups, setDueSectionGroups] = useState(
     loaderData.dueSectionGroups,
   );
-  const [recentManualItems, setRecentManualItems] = useState(
-    loaderData.recentManualItems,
-  );
   const [quickAddPrefillRequest, setQuickAddPrefillRequest] = useState<{
     id: string;
     name: string;
@@ -775,8 +763,7 @@ export default function FamilyMealPlanStoreModeRoute({
         loaderData.dueSectionGroups.flatMap((section) => section.items),
       ),
     );
-    setRecentManualItems(loaderData.recentManualItems);
-  }, [loaderData.dueSectionGroups, loaderData.recentManualItems]);
+  }, [loaderData.dueSectionGroups]);
 
   const fallbackCategory = loaderData.categories[0] ?? {
     displayName: "Annet",
@@ -814,9 +801,6 @@ export default function FamilyMealPlanStoreModeRoute({
           ]),
           payload.item,
         ),
-      );
-      setRecentManualItems((currentRecents) =>
-        prependRecentManualItem(currentRecents, payload.recentManualItem),
       );
       setRecentlyAddedSourceKey(payload.item.sourceKey);
       setQuickAddPrefillRequest(null);
@@ -1689,7 +1673,6 @@ export default function FamilyMealPlanStoreModeRoute({
               onQuickAddSuccess={handleQuickAddSuccess}
               prefillRequest={quickAddPrefillRequest}
               quickAddIntent="quick-add-family-shopping-item"
-              recentManualItems={recentManualItems}
               revealOnFocus
             />
           </div>

@@ -1,5 +1,4 @@
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
-import type { RecentManualShoppingItem } from "./shopping.server";
 import type { SerializedProjectedShoppingItem } from "./shopping-serialize";
 
 export interface SerializedProjectedShoppingSectionGroup {
@@ -158,19 +157,6 @@ export function insertProjectedItemIntoSectionGroups(
   return sections.map((section, index) =>
     index === existingSectionIndex ? appendItemToSection(section, item) : section,
   );
-}
-
-export function prependRecentManualItem(
-  recents: RecentManualShoppingItem[],
-  recentManualItem: RecentManualShoppingItem,
-  limit = 10,
-): RecentManualShoppingItem[] {
-  return [
-    recentManualItem,
-    ...recents.filter(
-      (item) => item.nameNormalized !== recentManualItem.nameNormalized,
-    ),
-  ].slice(0, limit);
 }
 
 export function mergeQuickAddedItemsIntoList<T extends { sourceKey: string }>(

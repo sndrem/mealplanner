@@ -32,7 +32,6 @@ import {
   getOptimisticChecked,
   insertProjectedItemIntoStoreGroups,
   patchProjectedItemInStoreGroups,
-  prependRecentManualItem,
   removeProjectedItemFromStoreGroups,
 } from "../lib/shopping-list-client";
 import type {
@@ -41,11 +40,7 @@ import type {
 } from "../lib/shopping-quick-add";
 import { isGroupedShoppingItem } from "../lib/shopping-grocery-grouping";
 import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
-import {
-  getMealPlanShoppingData,
-  listRecentManualShoppingItemsForFamily,
-  type RecentManualShoppingItem,
-} from "../lib/shopping.server";
+import { getMealPlanShoppingData } from "../lib/shopping.server";
 import { toggleFamilyShoppingItemChecked } from "../lib/family-shopping-write.server";
 import {
   createManualShoppingItem,
@@ -108,7 +103,6 @@ interface ShoppingActionData {
   manualValues?: ManualShoppingItemValues;
   ok?: true;
   overrideValues?: GeneratedShoppingItemOverrideValues;
-  recentManualItem?: RecentManualShoppingItem;
 }
 
 interface FamilyMealPlanShoppingRouteProps {
@@ -152,16 +146,11 @@ export async function loader({
     params.mealPlanId,
     "Fant ikke ukeplanen.",
   );
-  const [result, recentManualItems] = await Promise.all([
-    getMealPlanShoppingData({
-      familyId,
-      mealPlanId,
-      userId: user.id,
-    }),
-    listRecentManualShoppingItemsForFamily({
-      familyId,
-    }),
-  ]);
+  const result = await getMealPlanShoppingData({
+    familyId,
+    mealPlanId,
+    userId: user.id,
+  });
 
   return {
     categories: result.categories,
@@ -184,7 +173,6 @@ export async function loader({
       serializeProjectedShoppingItem,
     ),
     notice: getShoppingNotice(request),
-    recentManualItems,
     familyStoreGroups: result.familyStoreGroups.map((group) => ({
       sections: group.sections.map((section) => ({
         ...section,
@@ -289,7 +277,6 @@ export async function action({
       intent,
       item: serializeProjectedShoppingItem(result.item),
       ok: true,
-      recentManualItem: result.recentManualItem,
     } satisfies ShoppingActionData;
   }
 
@@ -714,9 +701,6 @@ export default function FamilyMealPlanShoppingRoute({
   const pendingIntent = navigation.formData?.get("intent");
   const pendingSourceKey = getPendingSourceKey(navigation.formData);
   const [storeGroups, setStoreGroups] = useState(loaderData.storeGroups);
-  const [recentManualItems, setRecentManualItems] = useState(
-    loaderData.recentManualItems,
-  );
   const [quantityEditItem, setQuantityEditItem] = useState<{
     collaborationVersion: string;
     name: string;
@@ -749,8 +733,7 @@ export default function FamilyMealPlanShoppingRoute({
         ),
       ),
     );
-    setRecentManualItems(loaderData.recentManualItems);
-  }, [loaderData.recentManualItems, loaderData.storeGroups]);
+  }, [loaderData.storeGroups]);
 
   const fallbackCategory = useMemo(
     () =>
@@ -800,9 +783,6 @@ export default function FamilyMealPlanShoppingRoute({
           ]),
           payload.item,
         ),
-      );
-      setRecentManualItems((currentRecents) =>
-        prependRecentManualItem(currentRecents, payload.recentManualItem),
       );
       scheduleRevalidate();
     },
@@ -1346,7 +1326,6 @@ export default function FamilyMealPlanShoppingRoute({
                 onQuickAddError={handleQuickAddError}
                 onQuickAddSubmit={handleQuickAddSubmit}
                 onQuickAddSuccess={handleQuickAddSuccess}
-                recentManualItems={recentManualItems}
               />
             </div>
 
@@ -1993,7 +1972,6 @@ function parseQuickAddManualShoppingItemInput(formData: FormData) {
     ingredientId: String(formData.get("ingredientId") ?? ""),
     name: String(formData.get("name") ?? ""),
     quantity: String(formData.get("quantity") ?? ""),
-    recentNameNormalized: String(formData.get("recentNameNormalized") ?? ""),
   };
 }
 

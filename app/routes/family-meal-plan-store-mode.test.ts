@@ -16,7 +16,6 @@ vi.mock("../lib/meal-plan-for-date.server", () => ({
 vi.mock("../lib/shopping.server", () => {
   return {
     getFamilyStoreModeData: vi.fn(),
-    listRecentManualShoppingItemsForFamily: vi.fn(),
     projectCreatedFamilyShoppingItem: vi.fn(),
     projectCreatedManualShoppingItem: vi.fn(),
   };
@@ -87,7 +86,6 @@ import { resolveStoreModeAnchorMealPlan } from "../lib/meal-plan-for-date.server
 import { listShoppingCheckHistoryForStoreMode } from "../lib/shopping-check-history.server";
 import {
   getFamilyStoreModeData,
-  listRecentManualShoppingItemsForFamily,
   projectCreatedFamilyShoppingItem,
   projectCreatedManualShoppingItem,
 } from "../lib/shopping.server";
@@ -140,14 +138,6 @@ describe("family store mode route", () => {
         familyId: null,
         id: "category-dairy",
         key: "dairy",
-      },
-    ]);
-    vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([
-      {
-        categoryId: "",
-        displayName: "Melk",
-        nameNormalized: "melk",
-        quantity: "",
       },
     ]);
     vi.mocked(getFamilyStoreModeData).mockResolvedValue({
@@ -279,9 +269,6 @@ describe("family store mode route", () => {
       familyId: "family-1",
       mealPlanIds: ["meal-plan-1"],
     });
-    expect(listRecentManualShoppingItemsForFamily).toHaveBeenCalledWith({
-      familyId: "family-1",
-    });
     expect(listIngredientCategories).toHaveBeenCalled();
     expect(result.categories).toEqual([
       {
@@ -292,14 +279,6 @@ describe("family store mode route", () => {
       },
     ]);
     expect(result.shoppingHistory).toEqual([]);
-    expect(result.recentManualItems).toEqual([
-      {
-        categoryId: "",
-        displayName: "Melk",
-        nameNormalized: "melk",
-        quantity: "",
-      },
-    ]);
     expect(result.activeShoppingDate).toBe("2026-05-16");
     expect(result.selectableShoppingDates).toEqual([
       "2026-05-15",
@@ -333,7 +312,6 @@ describe("family store mode route", () => {
 
   it("passes shopping history through the store-mode loader", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
-    vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([]);
     vi.mocked(listIngredientCategories).mockResolvedValue([]);
     vi.mocked(getFamilyStoreModeData).mockResolvedValue({
       activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
@@ -491,7 +469,6 @@ describe("family store mode route", () => {
       ingredientId: "ingredient-1",
       name: "Melk",
       quantity: "",
-      recentNameNormalized: "",
     });
     vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({
       item: {
@@ -508,12 +485,6 @@ describe("family store mode route", () => {
         section: { displayName: "Meieri", sortOrder: 1 },
         sourceKey: "family-item-1",
         sourceType: "FAMILY",
-      },
-      recentManualItem: {
-        categoryId: "category-dairy",
-        displayName: "Melk",
-        nameNormalized: "melk",
-        quantity: "1",
       },
       status: "CREATED",
     });
@@ -536,7 +507,6 @@ describe("family store mode route", () => {
         ingredientId: "ingredient-1",
         name: "Melk",
         quantity: "",
-        recentNameNormalized: "",
       },
       userId: "user-1",
     });
@@ -558,12 +528,6 @@ describe("family store mode route", () => {
         sourceType: "FAMILY",
       },
       ok: true,
-      recentManualItem: {
-        categoryId: "category-dairy",
-        displayName: "Melk",
-        nameNormalized: "melk",
-        quantity: "1",
-      },
     });
   });
 
@@ -577,7 +541,6 @@ describe("family store mode route", () => {
       ingredientId: "",
       name: "",
       quantity: "",
-      recentNameNormalized: "",
     });
     vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({
       fieldErrors: {

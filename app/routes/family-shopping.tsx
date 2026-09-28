@@ -42,7 +42,6 @@ import {
   filterStoreGroupsBySourceType,
   getOptimisticChecked,
   insertProjectedItemIntoStoreGroups,
-  prependRecentManualItem,
   removeProjectedItemFromStoreGroups,
 } from "../lib/shopping-list-client";
 import type {
@@ -54,11 +53,7 @@ import {
   serializeProjectedShoppingItem,
   type SerializedProjectedShoppingItem,
 } from "../lib/shopping-serialize";
-import {
-  getFamilyShoppingData,
-  listRecentManualShoppingItemsForFamily,
-  type RecentManualShoppingItem,
-} from "../lib/shopping.server";
+import { getFamilyShoppingData } from "../lib/shopping.server";
 import { toggleShoppingItemChecked } from "../lib/shopping-write.server";
 import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
 
@@ -88,7 +83,6 @@ interface FamilyShoppingActionData {
     sourceKey: string;
   };
   ok?: true;
-  recentManualItem?: RecentManualShoppingItem;
 }
 
 const defaultFamilyShoppingItemValues: FamilyShoppingItemValues = {
@@ -121,15 +115,10 @@ export async function loader({
 }) {
   const user = await requireUser(request);
   const familyId = requireRouteParam(params.familyId, "Fant ikke familien.");
-  const [result, recentManualItems] = await Promise.all([
-    getFamilyShoppingData({
-      familyId,
-      userId: user.id,
-    }),
-    listRecentManualShoppingItemsForFamily({
-      familyId,
-    }),
-  ]);
+  const result = await getFamilyShoppingData({
+    familyId,
+    userId: user.id,
+  });
 
   return {
     activeListMode: result.activeListMode,
@@ -139,7 +128,6 @@ export async function loader({
     itemCounts: result.itemCounts,
     mealPlanItemCount: result.mealPlanItemCount,
     notice: getFamilyShoppingNotice(request),
-    recentManualItems,
     savedListMode: result.savedListMode,
     storeGroups: result.storeGroups.map((group) => ({
       sections: group.sections.map((section) => ({
@@ -287,7 +275,6 @@ export async function action({
       intent,
       item: serializeProjectedShoppingItem(result.item),
       ok: true,
-      recentManualItem: result.recentManualItem,
     } satisfies FamilyShoppingActionData;
   }
 
@@ -440,9 +427,6 @@ export default function FamilyShoppingRoute({
   const scheduleRevalidate = useDebouncedRevalidate(revalidator.revalidate);
   const isLg = useIsLgViewport();
   const [storeGroups, setStoreGroups] = useState(loaderData.storeGroups);
-  const [recentManualItems, setRecentManualItems] = useState(
-    loaderData.recentManualItems,
-  );
   const [recentlyAddedSourceKey, setRecentlyAddedSourceKey] = useState<
     string | null
   >(null);
@@ -475,8 +459,7 @@ export default function FamilyShoppingRoute({
         ),
       ),
     );
-    setRecentManualItems(loaderData.recentManualItems);
-  }, [loaderData.recentManualItems, loaderData.storeGroups]);
+  }, [loaderData.storeGroups]);
 
   const fallbackCategory = useMemo(
     () =>
@@ -517,9 +500,6 @@ export default function FamilyShoppingRoute({
           payload.item,
         ),
       );
-      setRecentManualItems((currentRecents) =>
-        prependRecentManualItem(currentRecents, payload.recentManualItem),
-      );
       setRecentlyAddedSourceKey(payload.item.sourceKey);
       scheduleRevalidate();
     },
@@ -556,7 +536,6 @@ export default function FamilyShoppingRoute({
     onQuickAddSubmit: handleQuickAddSubmit,
     onQuickAddSuccess: handleQuickAddSuccess,
     quickAddIntent: "quick-add-family-shopping-item" as const,
-    recentManualItems,
   };
   const addFamilyValues =
     actionData?.intent === "add-family-shopping-item" && actionData.familyValues
@@ -776,7 +755,7 @@ export default function FamilyShoppingRoute({
             </h2>
             <p className="mt-3 text-sm leading-6 text-muted">
               {isLg
-                ? "Bruk hurtigvalg eller det avanserte skjemaet for å legge til varer som skal med uansett ukeplan."
+                ? "Søk og legg til varer som skal med uansett ukeplan."
                 : "Bruk feltet nederst for hurtig innlegging, eller det avanserte skjemaet under."}
             </p>
 

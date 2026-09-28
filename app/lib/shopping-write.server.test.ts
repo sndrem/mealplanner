@@ -99,16 +99,6 @@ vi.mock("./write-observability.server", () => {
 
 vi.mock("./shopping.server", () => {
   return {
-    buildRecentManualItemFromProjectedItem: (item: {
-      category: { id: string };
-      name: string;
-      quantity: string | null;
-    }) => ({
-      categoryId: item.category.id,
-      displayName: item.name.trim(),
-      nameNormalized: item.name.trim().toLowerCase(),
-      quantity: item.quantity?.trim() || "1",
-    }),
     getStockIngredientsForMealPlan: getStockIngredientsForMealPlanMock,
     loadShoppingMealPlan: loadShoppingMealPlanMock,
     projectCreatedManualShoppingItem: projectCreatedManualShoppingItemMock,
@@ -347,38 +337,6 @@ describe("shopping-write.server", () => {
     });
   });
 
-  it("resolves quick-add values from a recent manual item with quantity and category", async () => {
-    dbMock.ingredientCategory.findUnique.mockResolvedValue({
-      id: "category-other",
-    });
-    dbMock.manualShoppingItem.findMany.mockResolvedValue([
-      {
-        categoryId: "category-bakery",
-        name: "Brød",
-        quantity: "2 stk",
-      },
-    ]);
-
-    const result = await resolveQuickAddManualShoppingItemValues({
-      familyId: "family-1",
-      input: {
-        recentNameNormalized: "brød",
-      },
-    });
-
-    expect(result).toEqual({
-      ok: true,
-      values: {
-        buyOnDate: "",
-        categoryId: "category-bakery",
-        name: "Brød",
-        note: "",
-        preferredStoreId: "",
-        quantity: "2 stk",
-      },
-    });
-  });
-
   it("uses an explicit quick-add quantity for ingredient matches", async () => {
     dbMock.ingredientCategory.findUnique.mockResolvedValue({
       id: "category-other",
@@ -405,39 +363,6 @@ describe("shopping-write.server", () => {
         note: "",
         preferredStoreId: "",
         quantity: "4 flasker",
-      },
-    });
-  });
-
-  it("prefers explicit quick-add quantity over recent item quantity", async () => {
-    dbMock.ingredientCategory.findUnique.mockResolvedValue({
-      id: "category-other",
-    });
-    dbMock.manualShoppingItem.findMany.mockResolvedValue([
-      {
-        categoryId: "category-bakery",
-        name: "Brød",
-        quantity: "2 stk",
-      },
-    ]);
-
-    const result = await resolveQuickAddManualShoppingItemValues({
-      familyId: "family-1",
-      input: {
-        quantity: "4 stk",
-        recentNameNormalized: "brød",
-      },
-    });
-
-    expect(result).toEqual({
-      ok: true,
-      values: {
-        buyOnDate: "",
-        categoryId: "category-bakery",
-        name: "Brød",
-        note: "",
-        preferredStoreId: "",
-        quantity: "4 stk",
       },
     });
   });
@@ -583,12 +508,6 @@ describe("shopping-write.server", () => {
         section: { displayName: "Annet", sortOrder: 99 },
         sourceKey: "manual-item-3",
         sourceType: "MANUAL",
-      },
-      recentManualItem: {
-        categoryId: "category-other",
-        displayName: "Tannkrem",
-        nameNormalized: "tannkrem",
-        quantity: "1",
       },
       status: "CREATED",
     });

@@ -5,12 +5,8 @@ import {
 } from "./collaboration.server";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
-import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import { recordShoppingCheckEvent } from "./shopping-check-history.server";
-import {
-  buildRecentManualItemFromProjectedItem,
-  projectCreatedFamilyShoppingItem,
-} from "./shopping.server";
+import { projectCreatedFamilyShoppingItem } from "./shopping.server";
 import { upsertFamilyShoppingCatalogItemFromQuickAdd } from "./shopping-catalog-write.server";
 import {
   resolveQuickAddManualShoppingItemValues,
@@ -32,8 +28,6 @@ export interface FamilyShoppingItemFieldErrors {
   preferredStoreId?: string;
 }
 
-const QUICK_ADD_DEFAULT_QUANTITY = "1";
-
 export function parseFamilyShoppingItemValues(
   formData: FormData,
 ): FamilyShoppingItemValues {
@@ -52,7 +46,6 @@ export function parseQuickAddFamilyShoppingItemInput(formData: FormData) {
     ingredientId: String(formData.get("ingredientId") ?? ""),
     name: String(formData.get("name") ?? ""),
     quantity: String(formData.get("quantity") ?? ""),
-    recentNameNormalized: String(formData.get("recentNameNormalized") ?? ""),
   } satisfies QuickAddManualShoppingItemInput;
 }
 
@@ -106,7 +99,6 @@ export async function createQuickFamilyShoppingItem({
 
   return {
     item,
-    recentManualItem: buildRecentManualItemFromProjectedItem(item),
     status: "CREATED" as const,
   };
 }
@@ -579,59 +571,12 @@ async function resolveQuickAddFamilyShoppingItemValues({
     };
   }
 
-  const recentNameNormalized = input.recentNameNormalized?.trim().toLowerCase();
-
-  if (recentNameNormalized) {
-    const recentItem = await findLatestFamilyShoppingItemForFamilyByNormalizedName({
-      familyId,
-      nameNormalized: recentNameNormalized,
-    });
-
-    if (recentItem) {
-      return {
-        ok: true as const,
-        values: buildQuickAddFamilyShoppingItemValues({
-          categoryId: recentItem.categoryId,
-          name: recentItem.name.trim(),
-          quantity: recentItem.quantity?.trim() || QUICK_ADD_DEFAULT_QUANTITY,
-        }),
-      };
-    }
-  }
-
   return {
     fieldErrors: manualResolved.fieldErrors,
     formError: manualResolved.formError,
     ok: false as const,
     values: toFamilyShoppingItemValues(manualResolved.values),
   };
-}
-
-async function findLatestFamilyShoppingItemForFamilyByNormalizedName({
-  familyId,
-  nameNormalized,
-}: {
-  familyId: string;
-  nameNormalized: string;
-}) {
-  const rows = await db.familyShoppingItem.findMany({
-    orderBy: [{ updatedAt: "desc" }],
-    select: {
-      categoryId: true,
-      name: true,
-      quantity: true,
-    },
-    take: 50,
-    where: {
-      familyId,
-    },
-  });
-
-  return (
-    rows.find(
-      (row) => normalizeIngredientCanonicalName(row.name) === nameNormalized,
-    ) ?? null
-  );
 }
 
 function toFamilyShoppingItemValues(values: {
@@ -648,24 +593,6 @@ function toFamilyShoppingItemValues(values: {
     note: values.note,
     preferredStoreId: values.preferredStoreId,
     quantity: values.quantity,
-  };
-}
-
-function buildQuickAddFamilyShoppingItemValues({
-  categoryId,
-  name,
-  quantity = QUICK_ADD_DEFAULT_QUANTITY,
-}: {
-  categoryId: string;
-  name: string;
-  quantity?: string;
-}): FamilyShoppingItemValues {
-  return {
-    categoryId,
-    name,
-    note: "",
-    preferredStoreId: "",
-    quantity,
   };
 }
 
