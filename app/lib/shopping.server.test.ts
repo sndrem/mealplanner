@@ -70,6 +70,7 @@ import {
   getMealPlanShoppingData,
   getMealPlanStoreModeData,
   mergeFamilyAndMealPlanShoppingItems,
+  resolveGeneratedStockIdentity,
 } from "./shopping.server";
 
 const mockMembership = {
@@ -3294,5 +3295,110 @@ describe("shopping.server", () => {
       "Batterier",
       "Lime",
     ]);
+  });
+});
+
+function generatedLine({
+  displayName,
+  id,
+  ingredientId,
+}: {
+  displayName: string;
+  id: string;
+  ingredientId: string | null;
+}) {
+  return {
+    amount: "1",
+    category: {
+      displayName: "Tørrvarer",
+      id: "category-dry",
+    },
+    categoryId: "category-dry",
+    displayName,
+    id,
+    ingredientId,
+    preferredStore: null,
+    preferredStoreId: null,
+    sortOrder: 1,
+    unit: "ts",
+  };
+}
+
+describe("resolveGeneratedStockIdentity", () => {
+  it("resolves a linked generated line by its merged source key", () => {
+    const identity = resolveGeneratedStockIdentity({
+      mealPlan: {
+        entries: [
+          {
+            date: new Date("2026-05-15T00:00:00.000Z"),
+            id: "entry-1",
+            mealType: "DINNER",
+            recipe: {
+              id: "recipe-1",
+              ingredients: [
+                generatedLine({
+                  displayName: "Salt",
+                  id: "line-1",
+                  ingredientId: "ingredient-salt",
+                }),
+              ],
+              title: "Taco",
+            },
+            recipeId: "recipe-1",
+          },
+        ],
+      } as Parameters<typeof resolveGeneratedStockIdentity>[0]["mealPlan"],
+      sourceKey: "entry-1:line-1",
+    });
+
+    expect(identity).toEqual({
+      displayName: "Salt",
+      ingredientId: "ingredient-salt",
+    });
+  });
+
+  it("resolves an unlinked generated line by display name", () => {
+    const identity = resolveGeneratedStockIdentity({
+      mealPlan: {
+        entries: [
+          {
+            date: new Date("2026-05-15T00:00:00.000Z"),
+            id: "entry-1",
+            mealType: "DINNER",
+            recipe: {
+              id: "recipe-1",
+              ingredients: [
+                generatedLine({
+                  displayName: "Olivenolje",
+                  id: "line-2",
+                  ingredientId: null,
+                }),
+              ],
+              title: "Taco",
+            },
+            recipeId: "recipe-1",
+          },
+        ],
+      } as Parameters<typeof resolveGeneratedStockIdentity>[0]["mealPlan"],
+      sourceKey: "entry-1:line-2",
+    });
+
+    expect(identity).toEqual({
+      displayName: "Olivenolje",
+      ingredientId: null,
+    });
+  });
+
+  it("returns null when the source key is not on the plan", () => {
+    const identity = resolveGeneratedStockIdentity({
+      mealPlan: {
+        entries: [],
+      } as unknown as Parameters<
+        typeof resolveGeneratedStockIdentity
+      >[0]["mealPlan"],
+      sourceKey: "missing",
+    });
+
+    expect(identity).toBeNull();
   });
 });

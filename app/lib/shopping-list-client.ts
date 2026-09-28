@@ -483,7 +483,9 @@ export function applyOptimisticShoppingListFormOverlay({
   if (
     intent === "delete-family-shopping-item" ||
     intent === "delete-manual-shopping-item" ||
-    intent === "exclude-generated-shopping-item"
+    intent === "exclude-generated-shopping-item" ||
+    intent === "mark-family-shopping-item-as-stock" ||
+    intent === "mark-generated-shopping-item-as-stock"
   ) {
     if (!sourceKey) {
       return groups;

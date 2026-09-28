@@ -4,12 +4,14 @@ import {
   Form,
   Link,
   isRouteErrorResponse,
+  redirect,
   useNavigation,
   useRevalidator,
   type MetaFunction,
 } from "react-router";
 
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
+import { MarkGeneratedItemAsStockForm } from "../components/mark-generated-item-as-stock-form";
 import { ShoppingListItemExpanded } from "../components/shopping-list-item-expanded";
 import { requireUser } from "../lib/auth.server";
 import { formatDateOnly } from "../lib/meal-plan-dates";
@@ -54,7 +56,12 @@ import {
   type SerializedProjectedShoppingItem,
 } from "../lib/shopping-serialize";
 import { getFamilyShoppingData } from "../lib/shopping.server";
-import { toggleShoppingItemChecked } from "../lib/shopping-write.server";
+import {
+  markFamilyShoppingItemAsStock,
+  markGeneratedShoppingItemsAsStock,
+  toggleShoppingItemChecked,
+} from "../lib/shopping-write.server";
+import { parseGeneratedStockMarkTargets } from "../lib/shopping-stock-mark";
 import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
 
 type FamilyShoppingNotice =
@@ -62,12 +69,15 @@ type FamilyShoppingNotice =
   | "family-shopping-item-deleted"
   | "family-shopping-item-updated"
   | "family-shopping-item-check-state-updated"
-  | "family-shopping-list-mode-updated";
+  | "family-shopping-list-mode-updated"
+  | "generated-shopping-item-marked-as-stock";
 
 type FamilyShoppingIntent =
   | "add-family-shopping-item"
   | "quick-add-family-shopping-item"
   | "delete-family-shopping-item"
+  | "mark-family-shopping-item-as-stock"
+  | "mark-generated-shopping-item-as-stock"
   | "set-family-shopping-list-mode"
   | "toggle-family-shopping-item-checked"
   | "toggle-meal-plan-shopping-item-checked"
@@ -408,6 +418,72 @@ export async function action({
       notice: "family-shopping-item-check-state-updated",
       request,
     });
+  }
+
+  if (intent === "mark-generated-shopping-item-as-stock") {
+    const targets = parseGeneratedStockMarkTargets(formData);
+
+    if (targets.length === 0) {
+      return {
+        formError: "Vi fant ikke varelinjen som skulle merkes som basisvare.",
+        intent,
+      } satisfies FamilyShoppingActionData;
+    }
+
+    const result = await markGeneratedShoppingItemsAsStock({
+      familyId,
+      targets,
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      throw new Response("Fant ikke ukeplanen.", {
+        status: 404,
+        statusText: "Not Found",
+      });
+    }
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies FamilyShoppingActionData;
+    }
+
+    return redirect(
+      `/families/${familyId}/shopping?${new URLSearchParams({
+        notice: "generated-shopping-item-marked-as-stock",
+      })}`,
+    );
+  }
+
+  if (intent === "mark-family-shopping-item-as-stock") {
+    const result = await markFamilyShoppingItemAsStock({
+      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
+      familyId,
+      familyItemId: String(formData.get("familyItemId") ?? "").trim(),
+      userId: user.id,
+    });
+
+    if (result.status === "NOT_FOUND") {
+      return {
+        formError: "Vi fant ikke varelinjen som skulle merkes som basisvare.",
+        intent,
+      } satisfies FamilyShoppingActionData;
+    }
+
+    if (result.status === "VALIDATION_ERROR" || result.status === "CONFLICT") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies FamilyShoppingActionData;
+    }
+
+    return redirect(
+      `/families/${familyId}/shopping?${new URLSearchParams({
+        notice: "generated-shopping-item-marked-as-stock",
+      })}`,
+    );
   }
 
   return {
@@ -843,6 +919,7 @@ export default function FamilyShoppingRoute({
                         {section.items.map((item) =>
                           renderFamilyShoppingListItem({
                             actionData,
+                            canMarkAsStock: loaderData.userRole === "ADMIN",
                             categories: loaderData.categories,
                             familyId: loaderData.family.id,
                             item,
@@ -957,7 +1034,8 @@ function getFamilyShoppingNotice(
     notice === "family-shopping-item-deleted" ||
     notice === "family-shopping-item-updated" ||
     notice === "family-shopping-item-check-state-updated" ||
-    notice === "family-shopping-list-mode-updated"
+    notice === "family-shopping-list-mode-updated" ||
+    notice === "generated-shopping-item-marked-as-stock"
   ) {
     return notice;
   }
@@ -1082,6 +1160,7 @@ function getFamilyShoppingEmptyStateDescription(
 
 function renderFamilyShoppingListItem({
   actionData,
+  canMarkAsStock,
   categories,
   familyId,
   item,
@@ -1093,6 +1172,7 @@ function renderFamilyShoppingListItem({
   todayMealPlanId,
 }: {
   actionData?: FamilyShoppingActionData;
+  canMarkAsStock: boolean;
   categories: Awaited<ReturnType<typeof loader>>["categories"];
   familyId: string;
   item: SerializedProjectedShoppingItem;
@@ -1123,6 +1203,11 @@ function renderFamilyShoppingListItem({
   const isPendingFamilyDelete =
     navigation.state !== "idle" &&
     pendingIntent === "delete-family-shopping-item" &&
+    pendingSourceKey === item.sourceKey;
+  const isPendingMarkAsStock =
+    navigation.state !== "idle" &&
+    (pendingIntent === "mark-generated-shopping-item-as-stock" ||
+      pendingIntent === "mark-family-shopping-item-as-stock") &&
     pendingSourceKey === item.sourceKey;
   const familyValues =
     actionData?.intent === "update-family-shopping-item" &&
@@ -1193,6 +1278,17 @@ function renderFamilyShoppingListItem({
             sourceType: item.sourceType,
           })}
         </p>
+      ) : null}
+      {(item.sourceType === "GENERATED" || item.sourceType === "FAMILY") &&
+      canMarkAsStock ? (
+        <div className="mt-4">
+          <MarkGeneratedItemAsStockForm
+            displaySourceKey={item.sourceKey}
+            isPending={isPendingMarkAsStock}
+            item={item}
+            variant="list"
+          />
+        </div>
       ) : null}
       {item.sourceType === "FAMILY" ? (
         <details className="mt-4">
@@ -1294,6 +1390,12 @@ function getFamilyShoppingNoticeContent(notice: FamilyShoppingNotice) {
       return {
         description: "Visningsmodus for handlelisten er lagret.",
         title: "Visning oppdatert",
+      };
+    case "generated-shopping-item-marked-as-stock":
+      return {
+        description:
+          "Varen holdes utenfor handlelisten fremover. Du kan legge den til for denne uken, eller fjerne den fra Basisvarer.",
+        title: "Basisvare lagt til",
       };
   }
 }

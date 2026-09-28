@@ -13,11 +13,50 @@ export interface AddFamilyStockIngredientFieldErrors {
   ingredientId?: string;
 }
 
+const ALREADY_STOCK_INGREDIENT_MESSAGE =
+  "Ingrediensen er allerede lagt til som basisvare.";
+
 export async function addFamilyStockIngredient({
   familyId,
   userId,
   values,
 }: {
+  familyId: string;
+  userId: string;
+  values: AddFamilyStockIngredientValues;
+}) {
+  return writeFamilyStockIngredient({
+    duplicate: "error",
+    familyId,
+    userId,
+    values,
+  });
+}
+
+export async function ensureFamilyStockIngredient({
+  familyId,
+  userId,
+  values,
+}: {
+  familyId: string;
+  userId: string;
+  values: AddFamilyStockIngredientValues;
+}) {
+  return writeFamilyStockIngredient({
+    duplicate: "exists",
+    familyId,
+    userId,
+    values,
+  });
+}
+
+async function writeFamilyStockIngredient({
+  duplicate,
+  familyId,
+  userId,
+  values,
+}: {
+  duplicate: "error" | "exists";
   familyId: string;
   userId: string;
   values: AddFamilyStockIngredientValues;
@@ -82,9 +121,16 @@ export async function addFamilyStockIngredient({
     });
 
     if (existing) {
+      if (duplicate === "exists") {
+        return {
+          status: "ALREADY_EXISTS" as const,
+          stockIngredientId: existing.id,
+        };
+      }
+
       return {
         fieldErrors: {
-          ingredientId: "Ingrediensen er allerede lagt til som basisvare.",
+          ingredientId: ALREADY_STOCK_INGREDIENT_MESSAGE,
         },
         status: "VALIDATION_ERROR" as const,
         values: {
@@ -141,9 +187,16 @@ export async function addFamilyStockIngredient({
   });
 
   if (existing) {
+    if (duplicate === "exists") {
+      return {
+        status: "ALREADY_EXISTS" as const,
+        stockIngredientId: existing.id,
+      };
+    }
+
     return {
       fieldErrors: {
-        displayName: "Ingrediensen er allerede lagt til som basisvare.",
+        displayName: ALREADY_STOCK_INGREDIENT_MESSAGE,
       },
       status: "VALIDATION_ERROR" as const,
       values: {

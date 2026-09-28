@@ -6,7 +6,7 @@ import {
   matchesExpectedUpdatedAt,
 } from "./collaboration.server";
 import { db } from "./db.server";
-import { requireFamilyMembership } from "./family.server";
+import { requireFamilyAdmin, requireFamilyMembership } from "./family.server";
 import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import {
@@ -17,6 +17,7 @@ import {
   getStockIngredientsForMealPlan,
   loadShoppingMealPlan,
   projectCreatedManualShoppingItem,
+  resolveGeneratedStockIdentity,
 } from "./shopping.server";
 import {
   getFamilyShoppingCatalogItemByNormalizedName,
@@ -24,6 +25,7 @@ import {
 } from "./shopping-catalog.server";
 import { upsertFamilyShoppingCatalogItemFromQuickAdd } from "./shopping-catalog-write.server";
 import { getFamilyStockMatchSet } from "./stock.server";
+import { ensureFamilyStockIngredient } from "./stock-write.server";
 import { logCollaborationFailure, logCollaborationWrite } from "./write-observability.server";
 
 export interface ManualShoppingItemValues {
@@ -1159,6 +1161,200 @@ export async function optInStockShoppingItems({
 
     throw error;
   }
+}
+
+export async function markGeneratedShoppingItemsAsStock({
+  familyId,
+  targets,
+  userId,
+}: {
+  familyId: string;
+  targets: Array<{
+    mealPlanId: string;
+    sourceKey: string;
+  }>;
+  userId: string;
+}) {
+  await requireFamilyAdmin({
+    familyId,
+    userId,
+  });
+
+  if (targets.length === 0) {
+    return {
+      formError: "Vi fant ikke varelinjen som skulle merkes som basisvare.",
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
+  const identities: Array<{
+    displayName: string;
+    ingredientId: string | null;
+  }> = [];
+  const mealPlans = new Map<
+    string,
+    NonNullable<Awaited<ReturnType<typeof loadShoppingMealPlan>>>
+  >();
+
+  for (const target of targets) {
+    const mealPlanId = target.mealPlanId.trim();
+    const sourceKey = target.sourceKey.trim();
+
+    if (!mealPlanId || !sourceKey) {
+      return {
+        formError: "Vi fant ikke varelinjen som skulle merkes som basisvare.",
+        status: "VALIDATION_ERROR" as const,
+      };
+    }
+
+    let mealPlan = mealPlans.get(mealPlanId);
+
+    if (!mealPlan) {
+      const loadedMealPlan = await loadShoppingMealPlan({
+        familyId,
+        mealPlanId,
+      });
+
+      if (!loadedMealPlan) {
+        return {
+          status: "NOT_FOUND" as const,
+        };
+      }
+
+      mealPlan = loadedMealPlan;
+      mealPlans.set(mealPlanId, loadedMealPlan);
+    }
+
+    const identity = resolveGeneratedStockIdentity({
+      mealPlan,
+      sourceKey,
+    });
+
+    if (!identity) {
+      return {
+        status: "NOT_FOUND" as const,
+      };
+    }
+
+    identities.push(identity);
+  }
+
+  const ingredientIds = [
+    ...new Set(
+      identities.flatMap((identity) =>
+        identity.ingredientId ? [identity.ingredientId] : [],
+      ),
+    ),
+  ];
+  const sharesIngredientId =
+    ingredientIds.length === 1 &&
+    identities.every(
+      (identity) => identity.ingredientId === ingredientIds[0],
+    );
+  const displayName =
+    identities.find((identity) => identity.displayName.trim())?.displayName ??
+    "";
+  const result = await ensureFamilyStockIngredient({
+    familyId,
+    userId,
+    values: {
+      displayName: sharesIngredientId ? "" : displayName,
+      ingredientId: sharesIngredientId ? ingredientIds[0]! : "",
+      note: "",
+    },
+  });
+
+  if (result.status === "VALIDATION_ERROR") {
+    return {
+      formError:
+        result.fieldErrors.displayName ??
+        result.fieldErrors.ingredientId ??
+        "Kunne ikke merke varen som basisvare.",
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
+  return {
+    status: result.status,
+    stockIngredientId: result.stockIngredientId,
+  };
+}
+
+export async function markFamilyShoppingItemAsStock({
+  expectedUpdatedAt,
+  familyId,
+  familyItemId,
+  userId,
+}: {
+  expectedUpdatedAt: string;
+  familyId: string;
+  familyItemId: string;
+  userId: string;
+}) {
+  const item = await db.familyShoppingItem.findFirst({
+    select: {
+      id: true,
+      name: true,
+      updatedAt: true,
+    },
+    where: {
+      familyId,
+      id: familyItemId,
+    },
+  });
+
+  if (!item) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  if (!matchesExpectedUpdatedAt(expectedUpdatedAt, item.updatedAt)) {
+    return {
+      formError: COLLABORATION_CONFLICT_MESSAGE,
+      status: "CONFLICT" as const,
+    };
+  }
+
+  const stockResult = await ensureFamilyStockIngredient({
+    familyId,
+    userId,
+    values: {
+      displayName: item.name,
+      ingredientId: "",
+      note: "",
+    },
+  });
+
+  if (stockResult.status === "VALIDATION_ERROR") {
+    return {
+      formError:
+        stockResult.fieldErrors.displayName ??
+        stockResult.fieldErrors.ingredientId ??
+        "Kunne ikke merke varen som basisvare.",
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
+  const deleteResult = await db.familyShoppingItem.deleteMany({
+    where: {
+      familyId,
+      id: item.id,
+      updatedAt: item.updatedAt,
+    },
+  });
+
+  if (deleteResult.count === 0) {
+    return {
+      formError: COLLABORATION_CONFLICT_MESSAGE,
+      status: "CONFLICT" as const,
+    };
+  }
+
+  return {
+    status: stockResult.status,
+    stockIngredientId: stockResult.stockIngredientId,
+  };
 }
 
 export async function updateGeneratedShoppingItemOverride({

@@ -21,6 +21,7 @@ vi.mock("../lib/shopping-write.server", () => {
     createQuickManualShoppingItem: vi.fn(),
     deleteManualShoppingItem: vi.fn(),
     optInStockShoppingItems: vi.fn(),
+    markGeneratedShoppingItemsAsStock: vi.fn(),
     toggleShoppingItemChecked: vi.fn(),
     updateGeneratedShoppingItemOverride: vi.fn(),
     updateGeneratedShoppingItemQuantity: vi.fn(),
@@ -40,6 +41,7 @@ import { getMealPlanShoppingData } from "../lib/shopping.server";
 import {
   createManualShoppingItem,
   createQuickManualShoppingItem,
+  markGeneratedShoppingItemsAsStock,
   optInStockShoppingItems,
   toggleShoppingItemChecked,
   updateGeneratedShoppingItemOverride,
@@ -558,6 +560,79 @@ describe("family meal plan shopping route", () => {
     });
     expect(response).toBeInstanceOf(Response);
     expect((response as Response).status).toBe(302);
+  });
+
+  it("marks a generated shopping item as a basisvare", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(markGeneratedShoppingItemsAsStock).mockResolvedValue({
+      status: "CREATED",
+      stockIngredientId: "stock-1",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "mark-generated-shopping-item-as-stock");
+    formData.set("sourceKey", "entry-1:line-1|entry-2:line-2");
+    formData.append("memberMealPlanId", "meal-plan-1");
+    formData.append("memberSourceKey", "entry-1:line-1");
+    formData.append("memberMealPlanId", "meal-plan-1");
+    formData.append("memberSourceKey", "entry-2:line-2");
+
+    const response = await action({
+      params: {
+        familyId: "family-1",
+        mealPlanId: "meal-plan-1",
+      },
+      request: buildRequest(
+        "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping",
+        formData,
+      ),
+    });
+
+    expect(markGeneratedShoppingItemsAsStock).toHaveBeenCalledWith({
+      familyId: "family-1",
+      targets: [
+        {
+          mealPlanId: "meal-plan-1",
+          sourceKey: "entry-1:line-1",
+        },
+        {
+          mealPlanId: "meal-plan-1",
+          sourceKey: "entry-2:line-2",
+        },
+      ],
+      userId: "user-1",
+    });
+    expect(response).toBeInstanceOf(Response);
+    expect((response as Response).headers.get("Location")).toBe(
+      "/families/family-1/meal-plans/meal-plan-1/shopping?notice=generated-shopping-item-marked-as-stock",
+    );
+  });
+
+  it("rejects a non-admin mark-as-stock post", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(markGeneratedShoppingItemsAsStock).mockRejectedValue(
+      new Response("Du har ikke tilgang til å administrere denne familien.", {
+        status: 403,
+      }),
+    );
+
+    const formData = new FormData();
+    formData.set("intent", "mark-generated-shopping-item-as-stock");
+    formData.append("memberMealPlanId", "meal-plan-1");
+    formData.append("memberSourceKey", "entry-1:line-1");
+
+    await expect(
+      action({
+        params: {
+          familyId: "family-1",
+          mealPlanId: "meal-plan-1",
+        },
+        request: buildRequest(
+          "http://localhost/families/family-1/meal-plans/meal-plan-1/shopping",
+          formData,
+        ),
+      }),
+    ).rejects.toMatchObject({ status: 403 });
   });
 
   it("returns quick-add success data without redirecting", async () => {

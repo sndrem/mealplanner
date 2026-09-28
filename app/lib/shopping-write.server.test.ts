@@ -7,7 +7,9 @@ const {
   getStockIngredientsForMealPlanMock,
   loadShoppingMealPlanMock,
   projectCreatedManualShoppingItemMock,
+  requireFamilyAdminMock,
   requireFamilyMembershipMock,
+  resolveGeneratedStockIdentityMock,
   transactionMock,
 } = vi.hoisted(() => {
   const transactionMock = {
@@ -68,12 +70,22 @@ const {
         findFirst: vi.fn(),
         findUnique: vi.fn(),
       },
+      familyShoppingItem: {
+        deleteMany: vi.fn(),
+        findFirst: vi.fn(),
+      },
+      familyStockIngredient: {
+        create: vi.fn(),
+        findUnique: vi.fn(),
+      },
     },
     getFamilyStockMatchSetMock: vi.fn(),
     getStockIngredientsForMealPlanMock: vi.fn(),
     loadShoppingMealPlanMock: vi.fn(),
     projectCreatedManualShoppingItemMock: vi.fn(),
+    requireFamilyAdminMock: vi.fn(),
     requireFamilyMembershipMock: vi.fn(),
+    resolveGeneratedStockIdentityMock: vi.fn(),
     transactionMock,
   };
 });
@@ -86,6 +98,7 @@ vi.mock("./db.server", () => {
 
 vi.mock("./family.server", () => {
   return {
+    requireFamilyAdmin: requireFamilyAdminMock,
     requireFamilyMembership: requireFamilyMembershipMock,
   };
 });
@@ -102,6 +115,7 @@ vi.mock("./shopping.server", () => {
     getStockIngredientsForMealPlan: getStockIngredientsForMealPlanMock,
     loadShoppingMealPlan: loadShoppingMealPlanMock,
     projectCreatedManualShoppingItem: projectCreatedManualShoppingItemMock,
+    resolveGeneratedStockIdentity: resolveGeneratedStockIdentityMock,
   };
 });
 
@@ -123,6 +137,8 @@ import {
   deleteManualShoppingItem,
   resolveQuickAddManualShoppingItemValues,
   excludeGeneratedShoppingItem,
+  markFamilyShoppingItemAsStock,
+  markGeneratedShoppingItemsAsStock,
   optInStockShoppingItems,
   restoreGeneratedShoppingItem,
   toggleShoppingItemChecked,
@@ -142,6 +158,12 @@ describe("shopping-write.server", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requireFamilyMembershipMock.mockResolvedValue({
+      familyId: "family-1",
+      id: "membership-1",
+      role: "ADMIN",
+      userId: "user-1",
+    });
+    requireFamilyAdminMock.mockResolvedValue({
       familyId: "family-1",
       id: "membership-1",
       role: "ADMIN",
@@ -1060,5 +1082,207 @@ describe("shopping-write.server", () => {
         updatedAt: mockMealPlan.updatedAt,
       },
     });
+  });
+
+  it("marks a linked generated line as one canonical basisvare", async () => {
+    loadShoppingMealPlanMock.mockResolvedValue({ id: "meal-plan-1" });
+    resolveGeneratedStockIdentityMock.mockReturnValue({
+      displayName: "Salt",
+      ingredientId: "ingredient-salt",
+    });
+    dbMock.ingredient.findUnique.mockResolvedValue({ id: "ingredient-salt" });
+    dbMock.familyStockIngredient.findUnique.mockResolvedValue(null);
+    dbMock.familyStockIngredient.create.mockResolvedValue({ id: "stock-1" });
+
+    const result = await markGeneratedShoppingItemsAsStock({
+      familyId: "family-1",
+      targets: [
+        {
+          mealPlanId: "meal-plan-1",
+          sourceKey: "entry-1:ingredient-1",
+        },
+      ],
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "CREATED",
+      stockIngredientId: "stock-1",
+    });
+    expect(dbMock.familyStockIngredient.create).toHaveBeenCalledWith({
+      data: {
+        familyId: "family-1",
+        ingredientId: "ingredient-salt",
+        note: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+  });
+
+  it("marks a family shopping item as a basisvare and removes it from the list", async () => {
+    const updatedAt = new Date("2026-05-01T12:00:00.000Z");
+    dbMock.familyShoppingItem.findFirst.mockResolvedValue({
+      id: "family-milk",
+      name: "Melk",
+      updatedAt,
+    });
+    dbMock.familyStockIngredient.findUnique.mockResolvedValue(null);
+    dbMock.familyStockIngredient.create.mockResolvedValue({ id: "stock-milk" });
+    dbMock.familyShoppingItem.deleteMany.mockResolvedValue({ count: 1 });
+
+    const result = await markFamilyShoppingItemAsStock({
+      expectedUpdatedAt: updatedAt.toISOString(),
+      familyId: "family-1",
+      familyItemId: "family-milk",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "CREATED",
+      stockIngredientId: "stock-milk",
+    });
+    expect(dbMock.familyStockIngredient.create).toHaveBeenCalledWith({
+      data: {
+        displayNameNormalized: "melk",
+        familyId: "family-1",
+        note: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+    expect(dbMock.familyShoppingItem.deleteMany).toHaveBeenCalledWith({
+      where: {
+        familyId: "family-1",
+        id: "family-milk",
+        updatedAt,
+      },
+    });
+  });
+
+  it("marks an unlinked generated line by normalized display name", async () => {
+    loadShoppingMealPlanMock.mockResolvedValue({ id: "meal-plan-1" });
+    resolveGeneratedStockIdentityMock.mockReturnValue({
+      displayName: "Olivenolje",
+      ingredientId: null,
+    });
+    dbMock.familyStockIngredient.findUnique.mockResolvedValue(null);
+    dbMock.familyStockIngredient.create.mockResolvedValue({ id: "stock-2" });
+
+    const result = await markGeneratedShoppingItemsAsStock({
+      familyId: "family-1",
+      targets: [
+        {
+          mealPlanId: "meal-plan-1",
+          sourceKey: "entry-1:ingredient-2",
+        },
+      ],
+      userId: "user-1",
+    });
+
+    expect(result.status).toBe("CREATED");
+    expect(dbMock.familyStockIngredient.create).toHaveBeenCalledWith({
+      data: {
+        displayNameNormalized: "olivenolje",
+        familyId: "family-1",
+        note: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+  });
+
+  it("marks a grouped card with different ingredient ids by display name", async () => {
+    loadShoppingMealPlanMock.mockResolvedValue({ id: "meal-plan-1" });
+    resolveGeneratedStockIdentityMock
+      .mockReturnValueOnce({
+        displayName: "Hvitløk",
+        ingredientId: "ingredient-garlic-a",
+      })
+      .mockReturnValueOnce({
+        displayName: "Hvitløk",
+        ingredientId: "ingredient-garlic-b",
+      });
+    dbMock.familyStockIngredient.findUnique.mockResolvedValue(null);
+    dbMock.familyStockIngredient.create.mockResolvedValue({ id: "stock-3" });
+
+    const result = await markGeneratedShoppingItemsAsStock({
+      familyId: "family-1",
+      targets: [
+        {
+          mealPlanId: "meal-plan-1",
+          sourceKey: "entry-1:ingredient-1",
+        },
+        {
+          mealPlanId: "meal-plan-2",
+          sourceKey: "entry-2:ingredient-2",
+        },
+      ],
+      userId: "user-1",
+    });
+
+    expect(result.status).toBe("CREATED");
+    expect(dbMock.familyStockIngredient.create).toHaveBeenCalledTimes(1);
+    expect(dbMock.familyStockIngredient.create).toHaveBeenCalledWith({
+      data: {
+        displayNameNormalized: "hvitløk",
+        familyId: "family-1",
+        note: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+  });
+
+  it("returns not found when the generated line is missing", async () => {
+    loadShoppingMealPlanMock.mockResolvedValue({ id: "meal-plan-1" });
+    resolveGeneratedStockIdentityMock.mockReturnValue(null);
+
+    const result = await markGeneratedShoppingItemsAsStock({
+      familyId: "family-1",
+      targets: [
+        {
+          mealPlanId: "meal-plan-1",
+          sourceKey: "missing",
+        },
+      ],
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "NOT_FOUND",
+    });
+    expect(dbMock.familyStockIngredient.create).not.toHaveBeenCalled();
+  });
+
+  it("treats an already marked generated line as success", async () => {
+    loadShoppingMealPlanMock.mockResolvedValue({ id: "meal-plan-1" });
+    resolveGeneratedStockIdentityMock.mockReturnValue({
+      displayName: "Salt",
+      ingredientId: "ingredient-salt",
+    });
+    dbMock.ingredient.findUnique.mockResolvedValue({ id: "ingredient-salt" });
+    dbMock.familyStockIngredient.findUnique.mockResolvedValue({ id: "stock-1" });
+
+    const result = await markGeneratedShoppingItemsAsStock({
+      familyId: "family-1",
+      targets: [
+        {
+          mealPlanId: "meal-plan-1",
+          sourceKey: "entry-1:ingredient-1",
+        },
+      ],
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      status: "ALREADY_EXISTS",
+      stockIngredientId: "stock-1",
+    });
+    expect(dbMock.familyStockIngredient.create).not.toHaveBeenCalled();
   });
 });
