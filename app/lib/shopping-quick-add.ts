@@ -1,5 +1,4 @@
 import type { FamilyShoppingItemFieldErrors } from "./family-shopping-write.server";
-import type { RecentManualShoppingItem } from "./shopping.server";
 import type { SerializedProjectedShoppingItem } from "./shopping-serialize";
 import type { ManualShoppingItemFieldErrors } from "./shopping-write.server";
 
@@ -11,7 +10,6 @@ export type QuickAddShoppingSuccess = {
   intent: QuickAddShoppingIntent;
   item: SerializedProjectedShoppingItem;
   ok: true;
-  recentManualItem: RecentManualShoppingItem;
 };
 
 export type QuickAddShoppingError = {

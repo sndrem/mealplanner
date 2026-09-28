@@ -20,23 +20,9 @@ vi.mock("react-router", async (importOriginal) => {
 import { SHOPPING_QUICK_ADD_ROOT_ATTRIBUTE } from "../lib/shopping-quick-add-feedback.client";
 import { ManualShoppingQuickAdd } from "./manual-shopping-quick-add";
 
-const recentManualItems = [
-  {
-    categoryId: "cat-dairy",
-    displayName: "Melk",
-    nameNormalized: "melk",
-    quantity: "1 l",
-  },
-];
-
 describe("ManualShoppingQuickAdd", () => {
   it("clears the name field and keeps it focused after add", () => {
-    render(
-      <ManualShoppingQuickAdd
-        ingredientSearchPath="/search"
-        recentManualItems={[]}
-      />,
-    );
+    render(<ManualShoppingQuickAdd ingredientSearchPath="/search" />);
 
     const input = screen.getByPlaceholderText("For eksempel melk");
     fireEvent.change(input, { target: { value: "Melk" } });
@@ -50,12 +36,7 @@ describe("ManualShoppingQuickAdd", () => {
   });
 
   it("keeps the name field focused after submitting with Enter", () => {
-    render(
-      <ManualShoppingQuickAdd
-        ingredientSearchPath="/search"
-        recentManualItems={[]}
-      />,
-    );
+    render(<ManualShoppingQuickAdd ingredientSearchPath="/search" />);
 
     const input = screen.getByPlaceholderText("For eksempel melk");
     fireEvent.change(input, { target: { value: "Brød" } });
@@ -65,20 +46,18 @@ describe("ManualShoppingQuickAdd", () => {
     expect(input).toHaveFocus();
   });
 
-  it("keeps the dock expanded after adding from a recent chip", () => {
+  it("keeps the name field focused after adding from the docked layout", () => {
     render(
-      <ManualShoppingQuickAdd
-        ingredientSearchPath="/search"
-        recentManualItems={recentManualItems}
-        revealOnFocus
-      />,
+      <ManualShoppingQuickAdd ingredientSearchPath="/search" revealOnFocus />,
     );
 
     const input = screen.getByPlaceholderText("For eksempel melk");
     fireEvent.focus(input);
-    fireEvent.click(screen.getByRole("button", { name: "Melk" }));
+    fireEvent.change(input, { target: { value: "Melk" } });
+    fireEvent.click(screen.getByRole("button", { name: "Legg til" }));
 
+    expect(input).toHaveValue("");
     expect(input).toHaveFocus();
-    expect(screen.getByRole("button", { name: "Melk" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Lukk" })).toBeNull();
   });
 });

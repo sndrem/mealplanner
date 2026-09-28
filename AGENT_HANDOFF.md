@@ -2,37 +2,33 @@
 
 ## Current Objective
 
-Implement note-only meal plan entries in iCal feeds for issue #269 on `cursor/ical-notes-no-recipe-181e`.
+Ship issue #271 on `issue/271-dismiss-quick-add-dock`: remove unused Nylig brukt recents from shopping quick-add.
 
 ## Completed
 
-- Added support for displaying meal plan notes in iCal subscription when no recipe or freezer item is selected
-- Modified `getCalendarMealDetails` to return note text as event title when neither recipe nor freezer item exists
-- Updated `CalendarMealEntry` interface to include `note` field
-- Added `note` field to calendar subscription queries in `app/lib/calendar-subscription.server.ts`
-- Added `note` field to meal plan calendar export queries in `app/lib/calendar.server.ts`
-- Added comprehensive unit tests in both `calendar.server.test.ts` and `calendar-subscription.server.test.ts`
-- Committed, pushed, and created PR #270
+- Removed **Nylig brukt** chips and the recents fetch/write path (`listRecentManualShoppingItemsForFamily`, `prependRecentManualItem`, `recentNameNormalized`, `recentManualItem` on success).
+- Docked quick-add is the compact search/quantity/add row. Adding an item still keeps the field focused. No X or drag-to-dismiss (dropped after recents were gone).
+- Polyfilled `localStorage` in `app/test/setup-client.ts` so jsdom tests run on Node 25.
+- Recipe-picker **Nylig brukt** is unchanged.
 
 ## Files To Read First
 
-- `app/lib/calendar.server.ts` — Core calendar event generation logic, updated `getCalendarMealDetails` function
-- `app/lib/calendar-subscription.server.ts` — iCal feed subscription queries, added note field
-- `app/lib/calendar-subscription.server.test.ts` — New test cases for note-only events
-- `app/lib/calendar.server.test.ts` — Additional test case for note-only meal plan exports
+- `app/components/manual-shopping-quick-add.tsx` — recents UI removed
+- `app/routes/family-meal-plan-store-mode.tsx` / `family-shopping.tsx` / `family-meal-plan-shopping.tsx` — loaders no longer fetch recents
+- `app/test/setup-client.ts` — localStorage polyfill
 
 ## Validation
 
-- `npm run typecheck` — passed
+- `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 696 tests passed in 96 test files
-- Manual testing not required for this isolated backend change
+- `npm run test:run` — 692 tests passed
+- `npm run typecheck` — passed
+- Browser: Postgres at `localhost:5466` was down; could not exercise store mode / family shopping
 
 ## Open Items
 
-- PR #270 is created as draft and ready for review
-- Issue #269 will be automatically closed when PR is merged
+- Manual check on a phone-sized viewport once the database is up: recents gone, search/add still works, field stays focused after add.
 
 ## Next Step
 
-Review and merge PR #270 after confirming the implementation meets requirements.
+Review and merge the PR for issue #271.

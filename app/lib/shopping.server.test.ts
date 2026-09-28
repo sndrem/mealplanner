@@ -69,7 +69,6 @@ import {
   getFamilyShoppingData,
   getMealPlanShoppingData,
   getMealPlanStoreModeData,
-  listRecentManualShoppingItemsForFamily,
   mergeFamilyAndMealPlanShoppingItems,
 } from "./shopping.server";
 
@@ -3138,65 +3137,6 @@ describe("shopping.server", () => {
       result.familyStoreGroups[0]?.sections[0]?.items.map((item) => item.name),
     ).toEqual(["Batterier"]);
     expect(result.itemCounts.family).toBe(1);
-  });
-
-  it("lists recent manual shopping items deduped by normalized name", async () => {
-    dbMock.manualShoppingItem.findMany.mockResolvedValue([
-      {
-        categoryId: "category-dairy",
-        name: "Melk",
-        quantity: "2 liter",
-        updatedAt: new Date("2026-05-16T00:00:00.000Z"),
-      },
-      {
-        categoryId: "category-other",
-        name: "melk",
-        quantity: "1 liter",
-        updatedAt: new Date("2026-05-15T00:00:00.000Z"),
-      },
-      {
-        categoryId: "category-bakery",
-        name: "Brød",
-        quantity: null,
-        updatedAt: new Date("2026-05-14T00:00:00.000Z"),
-      },
-    ]);
-    dbMock.familyShoppingItem.findMany.mockResolvedValue([
-      {
-        categoryId: "category-other",
-        name: "Batterier",
-        quantity: "2",
-        updatedAt: new Date("2026-05-17T00:00:00.000Z"),
-      },
-    ]);
-
-    const result = await listRecentManualShoppingItemsForFamily({
-      familyId: "family-1",
-      limit: 5,
-    });
-
-    expect(dbMock.manualShoppingItem.findMany).toHaveBeenCalled();
-    expect(dbMock.familyShoppingItem.findMany).toHaveBeenCalled();
-    expect(result).toEqual([
-      {
-        categoryId: "category-other",
-        displayName: "Batterier",
-        nameNormalized: "batterier",
-        quantity: "2",
-      },
-      {
-        categoryId: "category-dairy",
-        displayName: "Melk",
-        nameNormalized: "melk",
-        quantity: "2 liter",
-      },
-      {
-        categoryId: "category-bakery",
-        displayName: "Brød",
-        nameNormalized: "brød",
-        quantity: "1",
-      },
-    ]);
   });
 
   it("dedupes meal-plan items that overlap with family items in combined mode", () => {

@@ -16,7 +16,6 @@ import type {
 import { isQuickAddShoppingSuccess } from "../lib/shopping-quick-add";
 import { SHOPPING_QUICK_ADD_ROOT_ATTRIBUTE } from "../lib/shopping-quick-add-feedback.client";
 import { createOptimisticSourceKey } from "../lib/shopping-list-client";
-import type { RecentManualShoppingItem } from "../lib/shopping.server";
 
 export interface IngredientSearchResult {
   canonicalName: string;
@@ -40,12 +39,10 @@ interface ManualShoppingQuickAddProps {
   onQuickAddSubmit?: (draft: OptimisticQuickAddDraft) => void;
   onQuickAddSuccess?: (payload: QuickAddShoppingSuccess) => void;
   quickAddIntent?: string;
-  recentManualItems: RecentManualShoppingItem[];
   /**
-   * Compact docked layout: hides label/description and recently used items
-   * until the input is focused, then slides them up above the input.
-   * Search dropdown also opens upward. Intended for fixed bottom bars where
-   * the thumb-reachable input should stay small until the user engages.
+   * Compact docked layout: hides label/description. Search dropdown opens
+   * upward. Intended for fixed bottom bars where the thumb-reachable input
+   * should stay small until the user engages.
    */
   revealOnFocus?: boolean;
   searchFetcherKey?: string;
@@ -83,9 +80,6 @@ const quickAddStyles = {
     option:
       "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-ink transition hover:bg-page disabled:cursor-not-allowed disabled:opacity-60",
     optionMeta: "text-xs text-muted",
-    recentButton:
-      "rounded-full border border-line bg-page px-4 py-2 text-sm font-medium text-ink transition hover:border-line hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60",
-    recentLabel: "text-sm font-medium text-muted",
     searchPending: "px-4 py-2 text-sm text-muted",
     submit:
       "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400",
@@ -109,9 +103,6 @@ const quickAddStyles = {
     option:
       "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-store-ink transition hover:bg-store-bg disabled:cursor-not-allowed disabled:opacity-60",
     optionMeta: "text-xs text-store-muted",
-    recentButton:
-      "rounded-full border border-store-line bg-store-bg px-4 py-2 text-sm font-medium text-store-ink transition hover:border-store-accent hover:bg-store-surface disabled:cursor-not-allowed disabled:opacity-60",
-    recentLabel: "text-sm font-medium text-store-muted",
     searchPending: "px-4 py-2 text-sm text-store-muted",
     submit:
       "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-store-ink px-5 py-3 text-sm font-medium text-store-bg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60",
@@ -131,7 +122,6 @@ export function ManualShoppingQuickAdd({
   onQuickAddSubmit,
   onQuickAddSuccess,
   quickAddIntent = DEFAULT_QUICK_ADD_INTENT,
-  recentManualItems,
   revealOnFocus = false,
   searchFetcherKey = DEFAULT_SEARCH_FETCHER_KEY,
   prefillRequest = null,
@@ -147,7 +137,6 @@ export function ManualShoppingQuickAdd({
   const [query, setQuery] = useState("");
   const [quantity, setQuantity] = useState("");
   const [isListOpen, setIsListOpen] = useState(false);
-  const [isInputFocused, setIsInputFocused] = useState(false);
   const [displayedResults, setDisplayedResults] = useState<
     IngredientSearchResult[]
   >([]);
@@ -198,7 +187,6 @@ export function ManualShoppingQuickAdd({
     ingredientId?: string;
     name?: string;
     quantity?: string;
-    recentNameNormalized?: string;
   }) {
     const formData = new FormData();
     formData.set("intent", quickAddIntent);
@@ -215,10 +203,6 @@ export function ManualShoppingQuickAdd({
       formData.set("name", fields.name);
     }
 
-    if (fields.recentNameNormalized) {
-      formData.set("recentNameNormalized", fields.recentNameNormalized);
-    }
-
     if (typeof fields.quantity === "string") {
       formData.set("quantity", fields.quantity);
     }
@@ -230,9 +214,6 @@ export function ManualShoppingQuickAdd({
           ingredient.id === fields.ingredientId ||
           ingredient.id === fields.catalogItemId,
       )?.canonicalName ||
-      recentManualItems.find(
-        (item) => item.nameNormalized === fields.recentNameNormalized,
-      )?.displayName ||
       trimmedQuery;
     const submittedQuantity = fields.quantity ?? quantity;
     const sourceKey = createOptimisticSourceKey();
@@ -243,7 +224,6 @@ export function ManualShoppingQuickAdd({
     };
 
     setIsListOpen(false);
-    setIsInputFocused(true);
     setQuery("");
     setQuantity("");
     lastRequestedQueryRef.current = null;
@@ -294,7 +274,6 @@ export function ManualShoppingQuickAdd({
     function handlePointerDown(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
         setIsListOpen(false);
-        setIsInputFocused(false);
       }
     }
 
@@ -332,13 +311,11 @@ export function ManualShoppingQuickAdd({
         setQuantity(lastSubmitted.quantity);
       }
 
-      setIsInputFocused(true);
       inputRef.current?.focus({ preventScroll: true });
       return;
     }
 
     setIsListOpen(false);
-    setIsInputFocused(true);
     onQuickAddSuccessRef.current?.(quickAddFetcher.data);
     inputRef.current?.focus({ preventScroll: true });
   }, [quickAddFetcher.data]);
@@ -359,7 +336,6 @@ export function ManualShoppingQuickAdd({
     setQuery(prefillRequest.name);
     setQuantity(prefillRequest.quantity?.trim() ?? "");
     setIsListOpen(false);
-    setIsInputFocused(true);
     inputRef.current?.focus({ preventScroll: true });
   }, [prefillRequest]);
 
@@ -379,8 +355,6 @@ export function ManualShoppingQuickAdd({
   const showDropdown = isListOpen && trimmedQuery.length >= MIN_SEARCH_LENGTH;
   const showCreateOption =
     trimmedQuery.length > 0 && !hasExactMatch && !isSearching;
-  const isExpanded =
-    !revealOnFocus || isInputFocused || trimmedQuery.length > 0;
 
   useLayoutEffect(() => {
     if (!showDropdown) {
@@ -425,30 +399,6 @@ export function ManualShoppingQuickAdd({
       window.removeEventListener("resize", updateDropdownMaxHeight);
     };
   }, [revealOnFocus, showDropdown]);
-  const recentsBlock =
-    recentManualItems.length > 0 ? (
-      <div className="space-y-2">
-        <p className={styles.recentLabel}>Nylig brukt</p>
-        <div className="flex flex-wrap gap-2">
-          {recentManualItems.map((item) => (
-            <button
-              key={item.nameNormalized}
-              className={styles.recentButton}
-              disabled={isQuickAdding}
-              onClick={() => {
-                submitQuickAdd({
-                  quantity,
-                  recentNameNormalized: item.nameNormalized,
-                });
-              }}
-              type="button"
-            >
-              {item.displayName}
-            </button>
-          ))}
-        </div>
-      </div>
-    ) : null;
 
   return (
     <div
@@ -464,8 +414,7 @@ export function ManualShoppingQuickAdd({
       </label>
       {!revealOnFocus ? (
         <p className={styles.description}>
-          Søk i ingrediensregisteret, skriv et nytt navn, eller velg en nylig
-          brukt vare.
+          Søk i ingrediensregisteret, eller skriv et nytt navn.
         </p>
       ) : null}
 
@@ -474,19 +423,6 @@ export function ManualShoppingQuickAdd({
       ) : null}
       {quickAddNameError ? (
         <p className={styles.error}>{quickAddNameError}</p>
-      ) : null}
-
-      {revealOnFocus && recentsBlock ? (
-        <div
-          aria-hidden={!isExpanded}
-          className={`grid min-w-0 max-w-full transition-[grid-template-rows,opacity,transform] duration-200 ease-out ${
-            isExpanded
-              ? "translate-y-0 grid-rows-[1fr] opacity-100"
-              : "pointer-events-none -translate-y-1 grid-rows-[0fr] opacity-0"
-          }`}
-        >
-          <div className="min-w-0 overflow-hidden">{recentsBlock}</div>
-        </div>
       ) : null}
 
       <div className="relative min-w-0 max-w-full">
@@ -506,7 +442,6 @@ export function ManualShoppingQuickAdd({
             }}
             onFocus={() => {
               setIsListOpen(true);
-              setIsInputFocused(true);
             }}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
@@ -532,9 +467,6 @@ export function ManualShoppingQuickAdd({
             inputMode="text"
             onChange={(event) => {
               setQuantity(event.target.value);
-            }}
-            onFocus={() => {
-              setIsInputFocused(true);
             }}
             placeholder="Mengde"
             type="text"
@@ -619,8 +551,6 @@ export function ManualShoppingQuickAdd({
           </div>
         ) : null}
       </div>
-
-      {!revealOnFocus && recentsBlock ? recentsBlock : null}
     </div>
   );
 }

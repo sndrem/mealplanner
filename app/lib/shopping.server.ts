@@ -468,89 +468,6 @@ export async function getMealPlanShoppingData({
   };
 }
 
-export const RECENT_MANUAL_SHOPPING_ITEM_LIMIT = 10;
-
-export interface RecentManualShoppingItem {
-  categoryId: string;
-  displayName: string;
-  nameNormalized: string;
-  quantity: string;
-}
-
-export async function listRecentManualShoppingItemsForFamily({
-  familyId,
-  limit = RECENT_MANUAL_SHOPPING_ITEM_LIMIT,
-}: {
-  familyId: string;
-  limit?: number;
-}) {
-  const [manualRows, familyRows] = await Promise.all([
-    db.manualShoppingItem.findMany({
-      orderBy: [{ updatedAt: "desc" }],
-      select: {
-        categoryId: true,
-        name: true,
-        quantity: true,
-        updatedAt: true,
-      },
-      take: 100,
-      where: {
-        mealPlan: {
-          familyId,
-        },
-      },
-    }),
-    db.familyShoppingItem.findMany({
-      orderBy: [{ updatedAt: "desc" }],
-      select: {
-        categoryId: true,
-        name: true,
-        quantity: true,
-        updatedAt: true,
-      },
-      take: 100,
-      where: {
-        familyId,
-      },
-    }),
-  ]);
-
-  const rows = [...manualRows, ...familyRows].sort(
-    (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
-  );
-
-  const seen = new Set<string>();
-  const recentItems: RecentManualShoppingItem[] = [];
-
-  for (const row of rows) {
-    const displayName = row.name.trim();
-
-    if (!displayName) {
-      continue;
-    }
-
-    const nameNormalized = normalizeIngredientCanonicalName(displayName);
-
-    if (seen.has(nameNormalized)) {
-      continue;
-    }
-
-    seen.add(nameNormalized);
-    recentItems.push({
-      categoryId: row.categoryId,
-      displayName,
-      nameNormalized,
-      quantity: row.quantity?.trim() || "1",
-    });
-
-    if (recentItems.length >= limit) {
-      break;
-    }
-  }
-
-  return recentItems;
-}
-
 export async function loadFamilyShoppingItems({
   checked,
   familyId,
@@ -583,19 +500,6 @@ export function projectFamilyShoppingItems({
       storeSectionsByStoreId,
     }),
   );
-}
-
-export function buildRecentManualItemFromProjectedItem(
-  item: Pick<ProjectedFamilyShoppingItem | ProjectedManualShoppingItem, "category" | "name" | "quantity">,
-): RecentManualShoppingItem {
-  const displayName = item.name.trim();
-
-  return {
-    categoryId: item.category.id,
-    displayName,
-    nameNormalized: normalizeIngredientCanonicalName(displayName),
-    quantity: item.quantity?.trim() || "1",
-  };
 }
 
 async function loadShoppingStoresForFamily(familyId: string) {

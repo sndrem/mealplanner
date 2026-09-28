@@ -11,7 +11,6 @@ import {
   mergeQuickAddedItemsIntoList,
   patchProjectedItemInSectionGroups,
   patchProjectedItemInStoreGroups,
-  prependRecentManualItem,
   relocateProjectedItemInSectionGroups,
   relocateProjectedItemInStoreGroups,
   removeProjectedItemFromStoreGroups,
@@ -132,27 +131,6 @@ describe("shopping-list-client", () => {
       "item-1",
       "item-2",
     ]);
-  });
-
-  it("prepends recent manual items without duplicates", () => {
-    const result = prependRecentManualItem(
-      [
-        {
-          categoryId: "category-1",
-          displayName: "Brød",
-          nameNormalized: "brod",
-          quantity: "1",
-        },
-      ],
-      {
-        categoryId: "category-2",
-        displayName: "Melk",
-        nameNormalized: "melk",
-        quantity: "1",
-      },
-    );
-
-    expect(result.map((item) => item.nameNormalized)).toEqual(["melk", "brod"]);
   });
 
   it("relocates an item into a new section group", () => {

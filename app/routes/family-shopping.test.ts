@@ -13,7 +13,6 @@ vi.mock("../lib/auth.server", async () => {
 
 vi.mock("../lib/shopping.server", () => ({
   getFamilyShoppingData: vi.fn(),
-  listRecentManualShoppingItemsForFamily: vi.fn(),
 }));
 
 vi.mock("../lib/family-shopping-write.server", () => ({
@@ -46,10 +45,7 @@ import {
   updateFamilyShoppingListMode,
 } from "../lib/shopping-preference-write.server";
 import { toggleShoppingItemChecked } from "../lib/shopping-write.server";
-import {
-  getFamilyShoppingData,
-  listRecentManualShoppingItemsForFamily,
-} from "../lib/shopping.server";
+import { getFamilyShoppingData } from "../lib/shopping.server";
 import { action, loader } from "./family-shopping";
 
 const mockUser = {
@@ -66,7 +62,6 @@ describe("family shopping route", () => {
 
   it("loads family shopping data", async () => {
     vi.mocked(requireUser).mockResolvedValue(mockUser);
-    vi.mocked(listRecentManualShoppingItemsForFamily).mockResolvedValue([]);
     vi.mocked(getFamilyShoppingData).mockResolvedValue({
       activeListMode: "GLOBAL",
       canOfferCombined: false,
@@ -168,7 +163,6 @@ describe("family shopping route", () => {
       ingredientId: "ingredient-1",
       name: "Melk",
       quantity: "",
-      recentNameNormalized: "",
     });
     vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({
       item: {
@@ -185,12 +179,6 @@ describe("family shopping route", () => {
         section: { displayName: "Meieri", sortOrder: 1 },
         sourceKey: "family-item-1",
         sourceType: "FAMILY",
-      },
-      recentManualItem: {
-        categoryId: "category-dairy",
-        displayName: "Melk",
-        nameNormalized: "melk",
-        quantity: "1",
       },
       status: "CREATED",
     });
@@ -214,7 +202,6 @@ describe("family shopping route", () => {
         ingredientId: "ingredient-1",
         name: "Melk",
         quantity: "",
-        recentNameNormalized: "",
       },
       userId: "user-1",
     });
@@ -236,12 +223,6 @@ describe("family shopping route", () => {
         sourceType: "FAMILY",
       },
       ok: true,
-      recentManualItem: {
-        categoryId: "category-dairy",
-        displayName: "Melk",
-        nameNormalized: "melk",
-        quantity: "1",
-      },
     });
   });
 
@@ -252,7 +233,6 @@ describe("family shopping route", () => {
       ingredientId: "",
       name: "",
       quantity: "",
-      recentNameNormalized: "",
     });
     vi.mocked(createQuickFamilyShoppingItem).mockResolvedValue({
       fieldErrors: {
