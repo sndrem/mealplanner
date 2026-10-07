@@ -41,6 +41,7 @@ import {
   applyOptimisticShoppingListFormOverlay,
   buildOptimisticManualShoppingItem,
   dropResolvedOptimisticItemsFromStoreGroups,
+  resolveQuickAddPlaceholderPlacement,
   filterStoreGroupsBySourceType,
   getOptimisticChecked,
   insertProjectedItemIntoStoreGroups,
@@ -548,22 +549,29 @@ export default function FamilyShoppingRoute({
 
   const handleQuickAddSubmit = useCallback(
     (draft: OptimisticQuickAddDraft) => {
-      const placeholder = buildOptimisticManualShoppingItem({
-        category: {
-          id: fallbackCategory.id,
-          name: fallbackCategory.displayName,
-        },
-        name: draft.name,
-        quantity: draft.quantity,
-        sourceKey: draft.sourceKey,
-        sourceType: "FAMILY",
+      setStoreGroups((currentGroups) => {
+        const placement = resolveQuickAddPlaceholderPlacement({
+          categories: loaderData.categories,
+          categoryId: draft.categoryId,
+          fallbackCategory,
+          sections: currentGroups.flatMap((group) => group.sections),
+        });
+
+        return insertProjectedItemIntoStoreGroups(
+          currentGroups,
+          buildOptimisticManualShoppingItem({
+            category: placement.category,
+            name: draft.name,
+            quantity: draft.quantity,
+            section: placement.section,
+            sourceKey: draft.sourceKey,
+            sourceType: "FAMILY",
+          }),
+        );
       });
-      setStoreGroups((currentGroups) =>
-        insertProjectedItemIntoStoreGroups(currentGroups, placeholder),
-      );
       setRecentlyAddedSourceKey(draft.sourceKey);
     },
-    [fallbackCategory.displayName, fallbackCategory.id],
+    [fallbackCategory, loaderData.categories],
   );
 
   const handleQuickAddSuccess = useCallback(

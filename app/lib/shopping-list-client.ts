@@ -320,6 +320,37 @@ export function dropResolvedOptimisticItemsFromStoreGroups(
     .filter((group) => group.sections.length > 0);
 }
 
+export function resolveQuickAddPlaceholderPlacement({
+  categories,
+  categoryId,
+  fallbackCategory,
+  sections,
+}: {
+  categories: ReadonlyArray<{ displayName: string; id: string }>;
+  categoryId?: string | null;
+  fallbackCategory: { displayName: string; id: string };
+  sections: ReadonlyArray<{ category: { id: string }; displayName: string }>;
+}) {
+  const matchedCategory = categoryId
+    ? categories.find((category) => category.id === categoryId)
+    : undefined;
+  const category = matchedCategory ?? fallbackCategory;
+  const displayName =
+    sections.find((section) => section.category.id === category.id)
+      ?.displayName ?? category.displayName;
+
+  return {
+    category: {
+      id: category.id,
+      name: category.displayName,
+    },
+    section: {
+      displayName,
+      sortOrder: 99,
+    },
+  };
+}
+
 export function buildOptimisticManualShoppingItem({
   buyOnDate = null,
   category,

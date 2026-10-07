@@ -20,6 +20,7 @@ import {
   resolveGeneratedStockIdentity,
 } from "./shopping.server";
 import {
+  findCanonicalIngredientByNormalizedName,
   getFamilyShoppingCatalogItemByNormalizedName,
   getFamilyShoppingCatalogItemForFamily,
 } from "./shopping-catalog.server";
@@ -133,7 +134,10 @@ export async function createQuickManualShoppingItem({
 
   await upsertFamilyShoppingCatalogItemFromQuickAdd({
     familyId,
-    ingredientId: input.ingredientId,
+    ingredientId:
+      resolvedValues.resolvedIngredientId ||
+      input.ingredientId?.trim() ||
+      undefined,
     item,
   });
 
@@ -2086,6 +2090,7 @@ export async function resolveQuickAddManualShoppingItemValues({
     if (ingredient) {
       return {
         ok: true as const,
+        resolvedIngredientId: ingredientId,
         values: buildQuickAddManualShoppingItemValues({
           categoryId: ingredient.defaultCategoryId ?? otherCategoryId,
           name: ingredient.canonicalName,
@@ -2102,6 +2107,27 @@ export async function resolveQuickAddManualShoppingItemValues({
     });
 
     if (catalogItem) {
+      const registerOverride = await findRegisterOverrideForOtherCatalog({
+        catalogCategoryId: catalogItem.defaultCategoryId,
+        name: catalogItem.displayName,
+        otherCategoryId,
+      });
+
+      if (registerOverride) {
+        return {
+          ok: true as const,
+          resolvedIngredientId: registerOverride.id,
+          values: buildQuickAddManualShoppingItemValues({
+            categoryId: registerOverride.defaultCategoryId ?? otherCategoryId,
+            name: registerOverride.canonicalName,
+            quantity:
+              requestedQuantity ||
+              catalogItem.defaultQuantity?.trim() ||
+              QUICK_ADD_DEFAULT_QUANTITY,
+          }),
+        };
+      }
+
       return {
         ok: true as const,
         values: buildQuickAddManualShoppingItemValues({
@@ -2135,10 +2161,52 @@ export async function resolveQuickAddManualShoppingItemValues({
     };
   }
 
-  const catalogItem = await getFamilyShoppingCatalogItemByNormalizedName({
-    familyId,
-    nameNormalized: normalizeIngredientCanonicalName(name),
-  });
+  const nameNormalized = normalizeIngredientCanonicalName(name);
+  const [catalogItem, ingredient] = await Promise.all([
+    getFamilyShoppingCatalogItemByNormalizedName({
+      familyId,
+      nameNormalized,
+    }),
+    findCanonicalIngredientByNormalizedName(nameNormalized),
+  ]);
+
+  if (
+    catalogItem &&
+    catalogItem.defaultCategoryId !== otherCategoryId
+  ) {
+    return {
+      ok: true as const,
+      values: buildQuickAddManualShoppingItemValues({
+        categoryId: catalogItem.defaultCategoryId,
+        name: catalogItem.displayName,
+        quantity:
+          requestedQuantity ||
+          catalogItem.defaultQuantity?.trim() ||
+          QUICK_ADD_DEFAULT_QUANTITY,
+      }),
+    };
+  }
+
+  if (ingredient) {
+    const registerCategoryId =
+      ingredient.defaultCategoryId &&
+      ingredient.defaultCategoryId !== otherCategoryId
+        ? ingredient.defaultCategoryId
+        : (catalogItem?.defaultCategoryId ?? otherCategoryId);
+
+    return {
+      ok: true as const,
+      resolvedIngredientId: ingredient.id,
+      values: buildQuickAddManualShoppingItemValues({
+        categoryId: registerCategoryId,
+        name: ingredient.canonicalName,
+        quantity:
+          requestedQuantity ||
+          catalogItem?.defaultQuantity?.trim() ||
+          QUICK_ADD_DEFAULT_QUANTITY,
+      }),
+    };
+  }
 
   if (catalogItem) {
     return {
@@ -2162,6 +2230,33 @@ export async function resolveQuickAddManualShoppingItemValues({
       quantity,
     }),
   };
+}
+
+async function findRegisterOverrideForOtherCatalog({
+  catalogCategoryId,
+  name,
+  otherCategoryId,
+}: {
+  catalogCategoryId: string;
+  name: string;
+  otherCategoryId: string;
+}) {
+  if (catalogCategoryId !== otherCategoryId) {
+    return null;
+  }
+
+  const ingredient = await findCanonicalIngredientByNormalizedName(
+    normalizeIngredientCanonicalName(name),
+  );
+
+  if (
+    !ingredient?.defaultCategoryId ||
+    ingredient.defaultCategoryId === otherCategoryId
+  ) {
+    return null;
+  }
+
+  return ingredient;
 }
 
 function normalizeGeneratedShoppingItemOverrideValues(

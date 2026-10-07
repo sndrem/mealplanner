@@ -34,6 +34,7 @@ const {
     dbMock: {
       $transaction: vi.fn(),
       ingredient: {
+        findFirst: vi.fn(),
         findUnique: vi.fn(),
       },
       ingredientCategory: {
@@ -184,6 +185,7 @@ describe("shopping-write.server", () => {
     dbMock.shoppingItemOverride.findMany.mockResolvedValue([]);
     dbMock.familyShoppingCatalogItem.findFirst.mockResolvedValue(null);
     dbMock.familyShoppingCatalogItem.findUnique.mockResolvedValue(null);
+    dbMock.ingredient.findFirst.mockResolvedValue(null);
     dbMock.$transaction.mockImplementation(async (callback: (tx: typeof transactionMock) => unknown) =>
       callback(transactionMock),
     );
@@ -348,6 +350,7 @@ describe("shopping-write.server", () => {
 
     expect(result).toEqual({
       ok: true,
+      resolvedIngredientId: "ingredient-milk",
       values: {
         buyOnDate: "",
         categoryId: "category-dairy",
@@ -378,6 +381,7 @@ describe("shopping-write.server", () => {
 
     expect(result).toEqual({
       ok: true,
+      resolvedIngredientId: "ingredient-milk",
       values: {
         buyOnDate: "",
         categoryId: "category-dairy",
@@ -553,6 +557,202 @@ describe("shopping-write.server", () => {
       ingredientId: undefined,
       item: expect.objectContaining({
         name: "Tannkrem",
+      }),
+    });
+  });
+
+  it("places a typed register name in the ingredient category", async () => {
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
+    dbMock.ingredient.findFirst.mockResolvedValue({
+      canonicalName: "Melk",
+      defaultCategoryId: "category-dairy",
+      id: "ingredient-milk",
+    });
+
+    const result = await resolveQuickAddManualShoppingItemValues({
+      familyId: "family-1",
+      input: {
+        name: "melk",
+      },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      resolvedIngredientId: "ingredient-milk",
+      values: {
+        buyOnDate: "",
+        categoryId: "category-dairy",
+        name: "Melk",
+        note: "",
+        preferredStoreId: "",
+        quantity: "1",
+      },
+    });
+  });
+
+  it("prefers a register category when the family catalog row is Annet", async () => {
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
+    dbMock.familyShoppingCatalogItem.findUnique.mockResolvedValue({
+      defaultCategoryId: "category-other",
+      defaultQuantity: "2 l",
+      displayName: "Melk",
+      id: "catalog-milk",
+    });
+    dbMock.ingredient.findFirst.mockResolvedValue({
+      canonicalName: "Melk",
+      defaultCategoryId: "category-dairy",
+      id: "ingredient-milk",
+    });
+
+    const result = await resolveQuickAddManualShoppingItemValues({
+      familyId: "family-1",
+      input: {
+        name: "Melk",
+      },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      resolvedIngredientId: "ingredient-milk",
+      values: {
+        buyOnDate: "",
+        categoryId: "category-dairy",
+        name: "Melk",
+        note: "",
+        preferredStoreId: "",
+        quantity: "2 l",
+      },
+    });
+  });
+
+  it("keeps a custom catalog category ahead of the register", async () => {
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
+    dbMock.familyShoppingCatalogItem.findUnique.mockResolvedValue({
+      defaultCategoryId: "category-household",
+      defaultQuantity: "2 pk",
+      displayName: "Tørkerull",
+      id: "catalog-1",
+    });
+    dbMock.ingredient.findFirst.mockResolvedValue({
+      canonicalName: "Tørkerull",
+      defaultCategoryId: "category-dairy",
+      id: "ingredient-towels",
+    });
+
+    const result = await resolveQuickAddManualShoppingItemValues({
+      familyId: "family-1",
+      input: {
+        name: "tørkerull",
+      },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      values: {
+        buyOnDate: "",
+        categoryId: "category-household",
+        name: "Tørkerull",
+        note: "",
+        preferredStoreId: "",
+        quantity: "2 pk",
+      },
+    });
+  });
+
+  it("uses the register category when a catalog id is stored as Annet", async () => {
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
+    dbMock.familyShoppingCatalogItem.findFirst.mockResolvedValue({
+      defaultCategoryId: "category-other",
+      defaultQuantity: "2 l",
+      displayName: "Melk",
+      id: "catalog-milk",
+    });
+    dbMock.ingredient.findFirst.mockResolvedValue({
+      canonicalName: "Melk",
+      defaultCategoryId: "category-dairy",
+      id: "ingredient-milk",
+    });
+
+    const result = await resolveQuickAddManualShoppingItemValues({
+      familyId: "family-1",
+      input: {
+        catalogItemId: "catalog-milk",
+      },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      resolvedIngredientId: "ingredient-milk",
+      values: {
+        buyOnDate: "",
+        categoryId: "category-dairy",
+        name: "Melk",
+        note: "",
+        preferredStoreId: "",
+        quantity: "2 l",
+      },
+    });
+  });
+
+  it("skips a family catalog row when a typed name matches the register", async () => {
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
+    dbMock.ingredient.findFirst.mockResolvedValue({
+      canonicalName: "Melk",
+      defaultCategoryId: "category-dairy",
+      id: "ingredient-milk",
+    });
+    dbMock.manualShoppingItem.create.mockResolvedValue({
+      id: "manual-item-4",
+    });
+    projectCreatedManualShoppingItemMock.mockResolvedValue({
+      buyOnDate: null,
+      category: { id: "category-dairy", name: "Meieri" },
+      checked: false,
+      collaborationVersion: "2026-05-31T00:00:00.000Z",
+      name: "Melk",
+      note: null,
+      overrideVersion: "",
+      preferredStore: null,
+      quantity: "1",
+      quantityLabel: "1",
+      section: { displayName: "Meieri", sortOrder: 3 },
+      sourceKey: "manual-item-4",
+      sourceType: "MANUAL",
+    });
+
+    await createQuickManualShoppingItem({
+      familyId: "family-1",
+      input: {
+        name: "Melk",
+      },
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(dbMock.manualShoppingItem.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        categoryId: "category-dairy",
+        name: "Melk",
+      }),
+    });
+    const { upsertFamilyShoppingCatalogItemFromQuickAdd } = await import(
+      "./shopping-catalog-write.server"
+    );
+    expect(upsertFamilyShoppingCatalogItemFromQuickAdd).toHaveBeenCalledWith({
+      familyId: "family-1",
+      ingredientId: "ingredient-milk",
+      item: expect.objectContaining({
+        name: "Melk",
       }),
     });
   });

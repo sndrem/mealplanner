@@ -13,7 +13,10 @@ import type {
   QuickAddShoppingActionData,
   QuickAddShoppingSuccess,
 } from "../lib/shopping-quick-add";
-import { isQuickAddShoppingSuccess } from "../lib/shopping-quick-add";
+import {
+  isQuickAddShoppingSuccess,
+  resolveTypedQuickAddTarget,
+} from "../lib/shopping-quick-add";
 import { SHOPPING_QUICK_ADD_ROOT_ATTRIBUTE } from "../lib/shopping-quick-add-feedback.client";
 import { createOptimisticSourceKey } from "../lib/shopping-list-client";
 
@@ -207,14 +210,14 @@ export function ManualShoppingQuickAdd({
       formData.set("quantity", fields.quantity);
     }
 
-    const draftName =
-      fields.name?.trim() ||
+    const matchedSuggestion =
       displayedResults.find(
         (ingredient) =>
           ingredient.id === fields.ingredientId ||
           ingredient.id === fields.catalogItemId,
-      )?.canonicalName ||
-      trimmedQuery;
+      ) ?? resolveTypedQuickAddTarget(fields.name ?? "", displayedResults);
+    const draftName =
+      fields.name?.trim() || matchedSuggestion?.canonicalName || trimmedQuery;
     const submittedQuantity = fields.quantity ?? quantity;
     const sourceKey = createOptimisticSourceKey();
     pendingOptimisticSourceKeyRef.current = sourceKey;
@@ -230,6 +233,7 @@ export function ManualShoppingQuickAdd({
 
     if (draftName) {
       onQuickAddSubmitRef.current?.({
+        categoryId: matchedSuggestion?.defaultCategoryId ?? null,
         name: draftName,
         quantity: submittedQuantity,
         sourceKey,
@@ -238,6 +242,33 @@ export function ManualShoppingQuickAdd({
 
     quickAddFetcher.submit(formData, { method: "post" });
     inputRef.current?.focus({ preventScroll: true });
+  }
+
+  function submitCurrentQuery() {
+    const exactMatch = resolveTypedQuickAddTarget(trimmedQuery, displayedResults);
+
+    if (!exactMatch) {
+      submitQuickAdd({ name: trimmedQuery, quantity });
+      return;
+    }
+
+    const submittedQuantity = quantityForSuggestion(
+      quantity,
+      exactMatch.defaultQuantity,
+    );
+
+    if (exactMatch.source === "catalog") {
+      submitQuickAdd({
+        catalogItemId: exactMatch.id,
+        quantity: submittedQuantity,
+      });
+      return;
+    }
+
+    submitQuickAdd({
+      ingredientId: exactMatch.id,
+      quantity: submittedQuantity,
+    });
   }
 
   useEffect(() => {
@@ -451,7 +482,7 @@ export function ManualShoppingQuickAdd({
 
               if (event.key === "Enter" && trimmedQuery && !isQuickAdding) {
                 event.preventDefault();
-                submitQuickAdd({ name: trimmedQuery, quantity });
+                submitCurrentQuery();
               }
             }}
             placeholder="For eksempel melk"
@@ -476,7 +507,7 @@ export function ManualShoppingQuickAdd({
             className={styles.submit}
             disabled={!trimmedQuery || isQuickAdding}
             onClick={() => {
-              submitQuickAdd({ name: trimmedQuery, quantity });
+              submitCurrentQuery();
             }}
             type="button"
           >
@@ -509,17 +540,22 @@ export function ManualShoppingQuickAdd({
                     className={styles.option}
                     disabled={isQuickAdding}
                     onClick={() => {
+                      const submittedQuantity = quantityForSuggestion(
+                        quantity,
+                        ingredient.defaultQuantity,
+                      );
+
                       if (ingredient.source === "catalog") {
                         submitQuickAdd({
                           catalogItemId: ingredient.id,
-                          quantity,
+                          quantity: submittedQuantity,
                         });
                         return;
                       }
 
                       submitQuickAdd({
                         ingredientId: ingredient.id,
-                        quantity,
+                        quantity: submittedQuantity,
                       });
                     }}
                     type="button"
@@ -553,6 +589,13 @@ export function ManualShoppingQuickAdd({
       </div>
     </div>
   );
+}
+
+function quantityForSuggestion(
+  typedQuantity: string,
+  defaultQuantity: string | null | undefined,
+) {
+  return typedQuantity.trim() || defaultQuantity?.trim() || typedQuantity;
 }
 
 function formatSuggestionMeta(ingredient: IngredientSearchResult) {
