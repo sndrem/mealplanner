@@ -6,6 +6,7 @@ import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import { searchCanonicalIngredients } from "./stock.server";
 
 const CATALOG_SEARCH_LIMIT = 20;
+const OTHER_INGREDIENT_CATEGORY_KEY = "other";
 
 const familyShoppingCatalogItemSelect =
   Prisma.validator<Prisma.FamilyShoppingCatalogItemSelect>()({
@@ -142,6 +143,7 @@ export async function findCanonicalIngredientByNormalizedName(
   return db.ingredient.findFirst({
     select: {
       canonicalName: true,
+      defaultCategoryId: true,
       id: true,
     },
     where: {
@@ -160,12 +162,20 @@ export async function searchShoppingQuickAddSuggestions({
   familyId: string;
   query: string;
 }): Promise<ShoppingQuickAddSuggestion[]> {
-  const [catalogItems, registerItems] = await Promise.all([
+  const [catalogItems, registerItems, otherCategory] = await Promise.all([
     searchFamilyShoppingCatalogItems({
       familyId,
       query,
     }),
     searchCanonicalIngredients(query),
+    db.ingredientCategory.findUnique({
+      select: {
+        id: true,
+      },
+      where: {
+        key: OTHER_INGREDIENT_CATEGORY_KEY,
+      },
+    }),
   ]);
 
   const suggestions: ShoppingQuickAddSuggestion[] = catalogItems.map(
@@ -182,6 +192,12 @@ export async function searchShoppingQuickAddSuggestions({
       normalizeIngredientCanonicalName(item.canonicalName),
     ),
   );
+  const catalogByName = new Map(
+    catalogItems.map((item) => [
+      normalizeIngredientCanonicalName(item.displayName),
+      item,
+    ]),
+  );
 
   for (const ingredient of registerItems) {
     const nameNormalized = normalizeIngredientCanonicalName(
@@ -189,6 +205,32 @@ export async function searchShoppingQuickAddSuggestions({
     );
 
     if (seen.has(nameNormalized)) {
+      const catalogItem = catalogByName.get(nameNormalized);
+
+      if (
+        otherCategory &&
+        catalogItem &&
+        catalogItem.defaultCategoryId === otherCategory.id &&
+        ingredient.defaultCategoryId &&
+        ingredient.defaultCategoryId !== otherCategory.id
+      ) {
+        const suggestionIndex = suggestions.findIndex(
+          (item) =>
+            normalizeIngredientCanonicalName(item.canonicalName) ===
+            nameNormalized,
+        );
+
+        if (suggestionIndex >= 0) {
+          suggestions[suggestionIndex] = {
+            canonicalName: ingredient.canonicalName,
+            defaultCategoryId: ingredient.defaultCategoryId,
+            defaultQuantity: catalogItem.defaultQuantity,
+            id: ingredient.id,
+            source: "register",
+          };
+        }
+      }
+
       continue;
     }
 

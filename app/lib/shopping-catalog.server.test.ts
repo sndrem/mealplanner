@@ -12,6 +12,9 @@ const { dbMock, requireFamilyMembershipMock, searchCanonicalIngredientsMock } =
         ingredient: {
           findFirst: vi.fn(),
         },
+        ingredientCategory: {
+          findUnique: vi.fn(),
+        },
       },
       requireFamilyMembershipMock: vi.fn(),
       searchCanonicalIngredientsMock: vi.fn(),
@@ -59,6 +62,9 @@ describe("shopping-catalog.server", () => {
       role: "MEMBER",
       userId: "user-1",
     });
+    dbMock.ingredientCategory.findUnique.mockResolvedValue({
+      id: "category-other",
+    });
   });
 
   it("lists family catalog items", async () => {
@@ -83,11 +89,12 @@ describe("shopping-catalog.server", () => {
     );
   });
 
-  it("merges catalog and register suggestions and prefers catalog duplicates", async () => {
+  it("prefers a custom catalog category over a register duplicate", async () => {
     dbMock.familyShoppingCatalogItem.findMany.mockResolvedValue([
       catalogPaperTowels,
       {
         ...catalogPaperTowels,
+        defaultCategoryId: "category-household",
         defaultQuantity: "2 l",
         displayName: "Melk",
         id: "catalog-milk",
@@ -122,7 +129,7 @@ describe("shopping-catalog.server", () => {
       },
       {
         canonicalName: "Melk",
-        defaultCategoryId: "category-other",
+        defaultCategoryId: "category-household",
         defaultQuantity: "2 l",
         id: "catalog-milk",
         source: "catalog",
@@ -132,6 +139,40 @@ describe("shopping-catalog.server", () => {
         defaultCategoryId: "category-sweets",
         defaultQuantity: null,
         id: "ingredient-chocolate",
+        source: "register",
+      },
+    ]);
+  });
+
+  it("replaces an Annet catalog duplicate with the register category", async () => {
+    dbMock.familyShoppingCatalogItem.findMany.mockResolvedValue([
+      {
+        ...catalogPaperTowels,
+        defaultQuantity: "2 l",
+        displayName: "Melk",
+        id: "catalog-milk",
+        nameNormalized: "melk",
+      },
+    ]);
+    searchCanonicalIngredientsMock.mockResolvedValue([
+      {
+        canonicalName: "Melk",
+        defaultCategoryId: "category-dairy",
+        id: "ingredient-milk",
+      },
+    ]);
+
+    const result = await searchShoppingQuickAddSuggestions({
+      familyId: "family-1",
+      query: "mel",
+    });
+
+    expect(result).toEqual([
+      {
+        canonicalName: "Melk",
+        defaultCategoryId: "category-dairy",
+        defaultQuantity: "2 l",
+        id: "ingredient-milk",
         source: "register",
       },
     ]);

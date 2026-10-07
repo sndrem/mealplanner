@@ -29,6 +29,7 @@ import {
   applyOptimisticShoppingListFormOverlay,
   buildOptimisticManualShoppingItem,
   dropResolvedOptimisticItemsFromStoreGroups,
+  resolveQuickAddPlaceholderPlacement,
   getOptimisticChecked,
   insertProjectedItemIntoStoreGroups,
   patchProjectedItemInStoreGroups,
@@ -785,28 +786,33 @@ export default function FamilyMealPlanShoppingRoute({
 
   const handleQuickAddSubmit = useCallback(
     (draft: OptimisticQuickAddDraft) => {
-      setStoreGroups((currentGroups) =>
-        insertProjectedItemIntoStoreGroups(
+      setStoreGroups((currentGroups) => {
+        const placement = resolveQuickAddPlaceholderPlacement({
+          categories: loaderData.categories,
+          categoryId: draft.categoryId,
+          fallbackCategory,
+          sections: currentGroups.flatMap((group) => group.sections),
+        });
+
+        return insertProjectedItemIntoStoreGroups(
           currentGroups,
           buildOptimisticManualShoppingItem({
             buyOnDate: loaderData.mealPlan.startDate,
-            category: {
-              id: fallbackCategory.id,
-              name: fallbackCategory.displayName,
-            },
+            category: placement.category,
             mealPlanId: loaderData.mealPlan.id,
             mealPlanTitle: loaderData.mealPlan.title,
             name: draft.name,
             quantity: draft.quantity,
+            section: placement.section,
             sourceKey: draft.sourceKey,
             sourceType: "MANUAL",
           }),
-        ),
-      );
+        );
+      });
     },
     [
-      fallbackCategory.displayName,
-      fallbackCategory.id,
+      fallbackCategory,
+      loaderData.categories,
       loaderData.mealPlan.id,
       loaderData.mealPlan.startDate,
       loaderData.mealPlan.title,

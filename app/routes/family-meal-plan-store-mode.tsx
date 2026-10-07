@@ -52,6 +52,7 @@ import {
 import {
   buildOptimisticManualShoppingItem,
   dropResolvedOptimisticItemsFromSectionGroups,
+  resolveQuickAddPlaceholderPlacement,
   insertProjectedItemIntoSectionGroups,
   patchProjectedItemInSectionGroups,
   relocateProjectedItemInSectionGroups,
@@ -840,31 +841,40 @@ export default function FamilyMealPlanStoreModeRoute({
     );
   }, [loaderData.dueSectionGroups]);
 
-  const fallbackCategory = loaderData.categories[0] ?? {
-    displayName: "Annet",
-    id: "uncategorized",
-  };
+  const fallbackCategory = useMemo(
+    () =>
+      loaderData.categories[0] ?? {
+        displayName: "Annet",
+        id: "uncategorized",
+      },
+    [loaderData.categories],
+  );
 
   const handleQuickAddSubmit = useCallback(
     (draft: OptimisticQuickAddDraft) => {
-      setDueSectionGroups((currentSections) =>
-        insertProjectedItemIntoSectionGroups(
+      setDueSectionGroups((currentSections) => {
+        const placement = resolveQuickAddPlaceholderPlacement({
+          categories: loaderData.categories,
+          categoryId: draft.categoryId,
+          fallbackCategory,
+          sections: currentSections,
+        });
+
+        return insertProjectedItemIntoSectionGroups(
           currentSections,
           buildOptimisticManualShoppingItem({
-            category: {
-              id: fallbackCategory.id,
-              name: fallbackCategory.displayName,
-            },
+            category: placement.category,
             name: draft.name,
             quantity: draft.quantity,
+            section: placement.section,
             sourceKey: draft.sourceKey,
             sourceType: "FAMILY",
           }),
-        ),
-      );
+        );
+      });
       setRecentlyAddedSourceKey(draft.sourceKey);
     },
-    [fallbackCategory.displayName, fallbackCategory.id],
+    [fallbackCategory, loaderData.categories],
   );
 
   const handleQuickAddSuccess = useCallback(

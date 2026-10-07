@@ -30,7 +30,33 @@ export function isQuickAddShoppingSuccess(
 }
 
 export interface OptimisticQuickAddDraft {
+  categoryId?: string | null;
   name: string;
   quantity: string;
   sourceKey: string;
+}
+
+export interface QuickAddNameMatch {
+  canonicalName: string;
+  defaultCategoryId: string | null;
+  defaultQuantity?: string | null;
+  id: string;
+  source?: "catalog" | "register";
+}
+
+export function resolveTypedQuickAddTarget(
+  name: string,
+  results: readonly QuickAddNameMatch[],
+): QuickAddNameMatch | null {
+  const normalized = name.trim().toLowerCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return (
+    results.find(
+      (result) => result.canonicalName.trim().toLowerCase() === normalized,
+    ) ?? null
+  );
 }

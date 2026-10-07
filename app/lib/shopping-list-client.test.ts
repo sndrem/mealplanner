@@ -14,6 +14,7 @@ import {
   relocateProjectedItemInSectionGroups,
   relocateProjectedItemInStoreGroups,
   removeProjectedItemFromStoreGroups,
+  resolveQuickAddPlaceholderPlacement,
 } from "./shopping-list-client";
 import type { SerializedProjectedShoppingItem } from "./shopping-serialize";
 
@@ -355,6 +356,43 @@ describe("shopping-list-client", () => {
     expect(item.quantity).toBe("1 liter");
     expect(item.checked).toBe(false);
     expect(item.sourceKey.startsWith("optimistic:")).toBe(true);
+  });
+
+  it("places a known quick-add category in its existing section", () => {
+    const placement = resolveQuickAddPlaceholderPlacement({
+      categories: [
+        { displayName: "Annet", id: "category-other" },
+        { displayName: "Meieri", id: "category-dairy" },
+      ],
+      categoryId: "category-dairy",
+      fallbackCategory: { displayName: "Annet", id: "category-other" },
+      sections: [
+        {
+          category: { id: "category-dairy" },
+          displayName: "Meieri",
+        },
+      ],
+    });
+
+    expect(placement).toEqual({
+      category: { id: "category-dairy", name: "Meieri" },
+      section: { displayName: "Meieri", sortOrder: 99 },
+    });
+  });
+
+  it("falls back to Annet when a quick-add has no category", () => {
+    const placement = resolveQuickAddPlaceholderPlacement({
+      categories: [{ displayName: "Annet", id: "category-other" }],
+      categoryId: null,
+      fallbackCategory: { displayName: "Annet", id: "category-other" },
+      sections: [],
+    });
+
+    expect(placement.category).toEqual({
+      id: "category-other",
+      name: "Annet",
+    });
+    expect(placement.section.displayName).toBe("Annet");
   });
 
   it("drops optimistic placeholders once the loader has a matching name", () => {

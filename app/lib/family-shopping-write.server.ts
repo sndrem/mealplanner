@@ -93,7 +93,10 @@ export async function createQuickFamilyShoppingItem({
 
   await upsertFamilyShoppingCatalogItemFromQuickAdd({
     familyId,
-    ingredientId: input.ingredientId,
+    ingredientId:
+      resolvedValues.resolvedIngredientId ||
+      input.ingredientId?.trim() ||
+      undefined,
     item,
   });
 
@@ -567,6 +570,7 @@ async function resolveQuickAddFamilyShoppingItemValues({
   if (manualResolved.ok) {
     return {
       ok: true as const,
+      resolvedIngredientId: manualResolved.resolvedIngredientId,
       values: toFamilyShoppingItemValues(manualResolved.values),
     };
   }

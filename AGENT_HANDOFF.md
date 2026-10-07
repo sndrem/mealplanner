@@ -2,35 +2,34 @@
 
 ## Current Objective
 
-Issue #272 on `issue/272-mark-basisvare-from-card`: let a family admin mark a shopping item as a basisvare while going through the list.
+Issue #275 on `issue/275-quick-add-section`: quick-add should put a known ingredient in its category section instead of Annet.
 
 ## Completed
 
-- Admins can confirm **Merk som basisvare** on a generated recipe line from the week list and the family shopping list.
-- The same action is on family shopping-list items. Confirming one saves a basisvare by display name and removes that family row.
-- In store mode the action sits inside the info panel, not on the card face.
-- The server saves one `FamilyStockIngredient` by canonical id when every generated member shares one, otherwise by display name. An existing basisvare is success. **Fjern fra handlelisten** is unchanged.
-- The line leaves the list immediately. Generated matches can still be opted in for the week. Non-admins, manual items, and the read-only share card do not get the action.
+- Typed names that match the ingredient register save with that ingredient's category. Annet is only the fallback when neither the register nor a custom family-catalog category applies.
+- A family catalog row stored as Annet no longer hides a register ingredient that has a real category. A custom catalog category still wins.
+- Register matches skip creating another Annet catalog row. Enter and **Legg til** submit an exact suggestion id, and the optimistic row uses that category.
 
 ## Files To Read First
 
-- `app/lib/shopping-write.server.ts` — `markGeneratedShoppingItemsAsStock` and `markFamilyShoppingItemAsStock`
-- `app/components/mark-generated-item-as-stock-form.tsx` — confirm step
-- `app/components/store-mode-shopping-item-card.tsx` — info-panel placement
-- `app/routes/family-meal-plan-store-mode.tsx` — store-mode actions and optimistic removal
+- `app/lib/shopping-write.server.ts` — `resolveQuickAddManualShoppingItemValues`
+- `app/lib/shopping-catalog.server.ts` — suggestion merge when a catalog row is Annet
+- `app/components/manual-shopping-quick-add.tsx` — exact-name submit
+- `app/lib/shopping-list-client.ts` — `resolveQuickAddPlaceholderPlacement`
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 717 tests passed
+- `npm run test:run` — 727 tests passed
 - `npm run typecheck` — passed
-- Browser: the store-mode cards were inspected against the running list. The info-panel placement was not clicked through in a logged-in session after the last move.
+- Browser: not checked. Confirming the section needs a logged-in shopping list.
 
 ## Open Items
 
-- Manual check: mark a generated item and a family item (Egg, Melk) from store mode info, confirm each leaves the list and appears under basisvarer, opt a generated match in for this week, then open another plan and confirm it stays off until opted in.
+- Manual check: type Melk and press Enter, confirm it lands in Meieri; type an unknown name and confirm Annet; type a custom family item and confirm its catalog category.
+- Existing shopping lines already saved as Annet stay where they are. The next quick-add of that name uses the register category.
 
 ## Next Step
 
-Merge the PR for issue #272 after the manual store-mode check.
+Review and merge the pull request for issue #275.
