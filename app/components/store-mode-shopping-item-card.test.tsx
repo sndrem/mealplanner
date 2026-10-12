@@ -6,6 +6,35 @@ import { describe, expect, it, vi } from "vitest";
 import { StoreModeShoppingItemCard } from "./store-mode-shopping-item-card";
 import { renderWithRouter } from "../test/render-with-router";
 
+function generatedItem(lastDate: string, name: string) {
+  return {
+    category: { id: "cat-dry", name: "Tørrvarer" },
+    checked: false,
+    collaborationVersion: "v1",
+    isStockItem: false,
+    lastDate,
+    mealPlanId: "meal-plan-1",
+    name,
+    note: null,
+    occurrenceCount: 1,
+    occurrences: [
+      {
+        date: lastDate,
+        quantityLabel: "1 ts",
+        recipeTitle: "Taco",
+      },
+    ],
+    postponedUntilDate: null,
+    preferredStore: null,
+    preferredStoreConflict: false,
+    quantity: null,
+    quantityLabel: "1 ts",
+    recipeCount: 1,
+    sourceKey: `entry:${lastDate}`,
+    sourceType: "GENERATED" as const,
+  };
+}
+
 const familyItem = {
   category: { id: "cat-dairy", name: "Meieri" },
   checked: false,
@@ -312,6 +341,42 @@ describe("StoreModeShoppingItemCard", () => {
         name: "Merk som basisvare",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("prefixes a date in the coming week with kommende", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-05-11T08:00:00.000Z"));
+
+    try {
+      const { unmount } = renderWithRouter(
+        <StoreModeShoppingItemCard
+          item={generatedItem("2026-05-22", "Salt")}
+          layout="grid"
+          onToggle={vi.fn()}
+          selectedStoreId="store-1"
+        />,
+      );
+
+      expect(
+        screen.getByText("Fra Taco fram til kommende fredag 22. mai."),
+      ).toBeInTheDocument();
+      unmount();
+
+      renderWithRouter(
+        <StoreModeShoppingItemCard
+          item={generatedItem("2026-05-15", "Pepper")}
+          layout="grid"
+          onToggle={vi.fn()}
+          selectedStoreId="store-1"
+        />,
+      );
+
+      expect(
+        screen.getByText("Fra Taco fram til fredag 15. mai."),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("uses notice-success tokens for the recently added highlight", () => {

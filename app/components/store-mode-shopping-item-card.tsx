@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { getNextCalendarWeekBounds } from "../lib/meal-plan-week";
 import {
   formatGeneratedOccurrenceAttribution,
   formatGeneratedQuantityBadge,
@@ -146,8 +147,7 @@ export function StoreModeShoppingItemCard({
   const [noteDraft, setNoteDraft] = useState(item.note ?? "");
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const showCategoryEdit =
-    !readOnly &&
-    (item.sourceType === "FAMILY" || item.sourceType === "MANUAL");
+    !readOnly && (item.sourceType === "FAMILY" || item.sourceType === "MANUAL");
   const savedNote = item.note ?? "";
   const hasNote = Boolean(noteDraft.trim());
   const isNoteDirty = noteDraft.trim() !== savedNote.trim();
@@ -326,9 +326,7 @@ export function StoreModeShoppingItemCard({
               <button
                 className={`${badgeClass} pointer-events-auto bg-store-accent-light text-store-accent-text ring-1 ring-store-accent/40 transition hover:bg-store-accent-light/80`}
                 onClick={() => {
-                  setQuantityDraft(
-                    item.quantity ?? item.quantityLabel ?? "",
-                  );
+                  setQuantityDraft(item.quantity ?? item.quantityLabel ?? "");
                   setIsQuantityModalOpen(true);
                 }}
                 type="button"
@@ -339,7 +337,9 @@ export function StoreModeShoppingItemCard({
                 </span>
               </button>
             ) : quantityBadge ? (
-              <span className={`${badgeClass} bg-surface text-store-muted ring-1 ring-store-line`}>
+              <span
+                className={`${badgeClass} bg-surface text-store-muted ring-1 ring-store-line`}
+              >
                 {quantityBadge}
               </span>
             ) : null}
@@ -392,25 +392,25 @@ export function StoreModeShoppingItemCard({
         </div>
 
         {readOnly ? null : (
-        <details
-          className="group mt-auto flex w-7 min-w-7 flex-col-reverse items-stretch self-start pointer-events-auto open:w-1/2 open:min-w-[50%] open:max-w-full"
-          onToggle={(event) => {
-            setIsDetailsOpen(event.currentTarget.open);
-          }}
-          open={isDetailsOpen}
-        >
-          <summary
-            aria-label={`Vis informasjon om ${item.name}`}
-            className="mt-1 flex h-7 w-7 shrink-0 cursor-pointer list-none items-center justify-center self-start rounded-full border border-store-line bg-surface text-store-muted transition hover:bg-store-bg hover:text-store-ink group-open:border-store-accent group-open:bg-store-accent-light group-open:text-store-accent-text marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent [&::-webkit-details-marker]:hidden"
+          <details
+            className="group mt-auto flex w-7 min-w-7 flex-col-reverse items-stretch self-start pointer-events-auto open:w-1/2 open:min-w-[50%] open:max-w-full"
+            onToggle={(event) => {
+              setIsDetailsOpen(event.currentTarget.open);
+            }}
+            open={isDetailsOpen}
           >
-            <StoreModeInfoIcon className="h-3.5 w-3.5" />
-            <span className="sr-only">Vis informasjon</span>
-          </summary>
-          <div
-            className="mb-1 w-full min-w-0 space-y-1.5 border-b border-store-line pb-1.5 pointer-events-auto"
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          >
+            <summary
+              aria-label={`Vis informasjon om ${item.name}`}
+              className="mt-1 flex h-7 w-7 shrink-0 cursor-pointer list-none items-center justify-center self-start rounded-full border border-store-line bg-surface text-store-muted transition hover:bg-store-bg hover:text-store-ink group-open:border-store-accent group-open:bg-store-accent-light group-open:text-store-accent-text marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent [&::-webkit-details-marker]:hidden"
+            >
+              <StoreModeInfoIcon className="h-3.5 w-3.5" />
+              <span className="sr-only">Vis informasjon</span>
+            </summary>
+            <div
+              className="mb-1 w-full min-w-0 space-y-1.5 border-b border-store-line pb-1.5 pointer-events-auto"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
               <p className="break-words text-xs leading-4 text-store-muted">
                 {formatStoreModeItemSourceLine(item)}
               </p>
@@ -425,78 +425,81 @@ export function StoreModeShoppingItemCard({
                   ))}
                 </ul>
               ) : null}
-            {!showCategoryEdit && item.note ? (
-              <p className="break-words text-xs leading-4 text-store-muted">
-                Notat: {item.note}
-              </p>
-            ) : null}
-            {showCategoryEdit ? (
-              <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-store-muted">
-                  Endre seksjon
-                  <select
-                    aria-busy={isSavingCategory}
-                    className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-sm text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:opacity-70"
-                    disabled={isSavingCategory}
-                    onChange={(event) =>
-                      handleCategoryChange(event.currentTarget.value)
-                    }
-                    value={categoryDraft}
-                  >
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.displayName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block text-xs font-medium text-store-muted">
-                  Notat
-                  <input
-                    aria-busy={isSavingCategory}
-                    className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-sm text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
-                    onChange={(event) => setNoteDraft(event.currentTarget.value)}
-                    placeholder="F.eks. Tine lettmelk"
-                    type="text"
-                    value={noteDraft}
-                  />
-                </label>
-                {categoryError ? (
-                  <p className="text-xs text-rose-600">{categoryError}</p>
-                ) : null}
-                {isSavingCategory ? (
-                  <p className="text-xs text-store-muted">Lagrer...</p>
-                ) : null}
-              </div>
-            ) : null}
-            <button
-              className="inline-flex w-fit rounded-full border border-store-accent/40 bg-store-accent-light px-2.5 py-1 text-xs font-medium text-store-accent-text transition hover:border-store-accent hover:bg-store-accent-light/80"
-              onClick={() =>
-                onQuickAddFromCard?.({
-                  name: item.name,
-                  quantityLabel: item.quantityLabel,
-                })
-              }
-              type="button"
-            >
-              Hurtiglegg til
-            </button>
-            {(item.sourceType === "GENERATED" || item.sourceType === "FAMILY") &&
-            canMarkAsStock ? (
-              <MarkGeneratedItemAsStockForm
-                displaySourceKey={item.sourceKey}
-                isPending={isPendingMarkAsStock}
-                item={item}
-                variant="store"
-              />
-            ) : null}
-            {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
-              <p className="break-words text-xs leading-4 text-amber-800">
-                Utsatt til {formatDateLabel(item.postponedUntilDate)}.
-              </p>
-            ) : null}
-          </div>
-        </details>
+              {!showCategoryEdit && item.note ? (
+                <p className="break-words text-xs leading-4 text-store-muted">
+                  Notat: {item.note}
+                </p>
+              ) : null}
+              {showCategoryEdit ? (
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-store-muted">
+                    Endre seksjon
+                    <select
+                      aria-busy={isSavingCategory}
+                      className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-sm text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:opacity-70"
+                      disabled={isSavingCategory}
+                      onChange={(event) =>
+                        handleCategoryChange(event.currentTarget.value)
+                      }
+                      value={categoryDraft}
+                    >
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs font-medium text-store-muted">
+                    Notat
+                    <input
+                      aria-busy={isSavingCategory}
+                      className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-sm text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
+                      onChange={(event) =>
+                        setNoteDraft(event.currentTarget.value)
+                      }
+                      placeholder="F.eks. Tine lettmelk"
+                      type="text"
+                      value={noteDraft}
+                    />
+                  </label>
+                  {categoryError ? (
+                    <p className="text-xs text-rose-600">{categoryError}</p>
+                  ) : null}
+                  {isSavingCategory ? (
+                    <p className="text-xs text-store-muted">Lagrer...</p>
+                  ) : null}
+                </div>
+              ) : null}
+              <button
+                className="inline-flex w-fit rounded-full border border-store-accent/40 bg-store-accent-light px-2.5 py-1 text-xs font-medium text-store-accent-text transition hover:border-store-accent hover:bg-store-accent-light/80"
+                onClick={() =>
+                  onQuickAddFromCard?.({
+                    name: item.name,
+                    quantityLabel: item.quantityLabel,
+                  })
+                }
+                type="button"
+              >
+                Hurtiglegg til
+              </button>
+              {(item.sourceType === "GENERATED" ||
+                item.sourceType === "FAMILY") &&
+              canMarkAsStock ? (
+                <MarkGeneratedItemAsStockForm
+                  displaySourceKey={item.sourceKey}
+                  isPending={isPendingMarkAsStock}
+                  item={item}
+                  variant="store"
+                />
+              ) : null}
+              {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
+                <p className="break-words text-xs leading-4 text-amber-800">
+                  Utsatt til {formatDateLabel(item.postponedUntilDate)}.
+                </p>
+              ) : null}
+            </div>
+          </details>
         )}
       </div>
 
@@ -598,7 +601,7 @@ function formatStoreModeItemSourceLine(item: StoreModeShoppingItemCardItem) {
         : formatGeneratedOccurrenceAttribution(item.occurrences);
 
     return item.occurrenceCount === 1
-      ? `${mealPlanAttribution}Fra ${recipeAttribution} fram til ${formatDateLabel(item.lastDate)}.`
+      ? `${mealPlanAttribution}Fra ${recipeAttribution} fram til ${formatDateWithWeekdayLabel(item.lastDate)}.`
       : `${mealPlanAttribution}Brukt i ${recipeAttribution}.`;
   }
 
@@ -612,7 +615,25 @@ function formatDateLabel(value: string) {
     day: "numeric",
     month: "long",
     timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00.000Z`));
+  }).format(parseDateOnly(value));
+}
+
+function formatDateWithWeekdayLabel(value: string) {
+  const label = new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+    weekday: "long",
+  }).format(parseDateOnly(value));
+  const nextWeek = getNextCalendarWeekBounds();
+  const isComingWeek =
+    value >= nextWeek.weekStart && value <= nextWeek.weekEnd;
+
+  return isComingWeek ? `kommende ${label}` : label;
+}
+
+function parseDateOnly(value: string) {
+  return new Date(`${value}T00:00:00.000Z`);
 }
 
 function StoreModeInfoIcon({ className }: { className?: string }) {

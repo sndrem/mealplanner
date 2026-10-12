@@ -2,34 +2,33 @@
 
 ## Current Objective
 
-Issue #275 on `issue/275-quick-add-section`: quick-add should put a known ingredient in its category section instead of Annet.
+Store-mode source lines for a single recipe occurrence include the weekday, and say "kommende" when that date is next week.
 
 ## Completed
 
-- Typed names that match the ingredient register save with that ingredient's category. Annet is only the fallback when neither the register nor a custom family-catalog category applies.
-- A family catalog row stored as Annet no longer hides a register ingredient that has a real category. A custom catalog category still wins.
-- Register matches skip creating another Annet catalog row. Enter and **Legg til** submit an exact suggestion id, and the optimistic row uses that category.
+- A generated item used once now reads "fram til fredag 15. mai".
+- When `lastDate` falls in the next Oslo calendar week (Monday–Sunday), the line reads "fram til kommende fredag 22. mai".
+- Dates in the current week, and dates further out than next week, stay as weekday plus date without "kommende".
 
 ## Files To Read First
 
-- `app/lib/shopping-write.server.ts` — `resolveQuickAddManualShoppingItemValues`
-- `app/lib/shopping-catalog.server.ts` — suggestion merge when a catalog row is Annet
-- `app/components/manual-shopping-quick-add.tsx` — exact-name submit
-- `app/lib/shopping-list-client.ts` — `resolveQuickAddPlaceholderPlacement`
+- `app/components/store-mode-shopping-item-card.tsx` — `formatDateWithWeekdayLabel`
+- `app/lib/meal-plan-week.ts` — `getNextCalendarWeekBounds`
+- `app/components/store-mode-shopping-item-card.test.tsx` — coming-week vs current-week copy
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 727 tests passed
+- `npm run test:run` — 728 tests passed
 - `npm run typecheck` — passed
-- Browser: not checked. Confirming the section needs a logged-in shopping list.
+- Browser: not checked. The line is inside the store-mode info panel and depends on today's Oslo week.
 
 ## Open Items
 
-- Manual check: type Melk and press Enter, confirm it lands in Meieri; type an unknown name and confirm Annet; type a custom family item and confirm its catalog category.
-- Existing shopping lines already saved as Annet stay where they are. The next quick-add of that name uses the register category.
+- No GitHub issue is linked to this change.
+- Manual check: open a single-occurrence item this week and one next week, and confirm the info line.
 
 ## Next Step
 
-Review and merge the pull request for issue #275.
+Review and merge the pull request.
