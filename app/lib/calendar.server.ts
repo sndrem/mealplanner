@@ -1,7 +1,4 @@
-import { MealType, Prisma } from "@prisma/client";
-
-import { db } from "./db.server";
-import { requireFamilyMembership } from "./family.server";
+import { Prisma } from "@prisma/client";
 
 const CALENDAR_TIME_ZONE = "Europe/Oslo";
 const DINNER_END_HOUR = 17;
@@ -17,35 +14,6 @@ export const calendarRecipeSelect = Prisma.validator<Prisma.RecipeSelect>()({
       unit: true,
     },
   },
-  title: true,
-});
-
-const mealPlanCalendarSelect = Prisma.validator<Prisma.MealPlanSelect>()({
-  endDate: true,
-  entries: {
-    orderBy: [{ date: "asc" }],
-    select: {
-      date: true,
-      freezerItem: {
-        select: {
-          label: true,
-          note: true,
-        },
-      },
-      freezerItemId: true,
-      note: true,
-      recipe: {
-        select: calendarRecipeSelect,
-      },
-      recipeId: true,
-      updatedAt: true,
-    },
-    where: {
-      mealType: MealType.DINNER,
-    },
-  },
-  id: true,
-  startDate: true,
   title: true,
 });
 
@@ -104,68 +72,6 @@ const EUROPE_OSLO_VTIMEZONE = [
   "END:VTIMEZONE",
 ].join("\r\n");
 
-interface MealPlanCalendarExportInput {
-  familyId: string;
-  mealPlanId: string;
-  userId: string;
-}
-
-interface MealPlanDayCalendarExportInput extends MealPlanCalendarExportInput {
-  date: string;
-}
-
-interface CalendarFileResult {
-  content: string;
-  fileName: string;
-}
-
-export async function getMealPlanCalendarExport(
-  input: MealPlanCalendarExportInput,
-): Promise<CalendarFileResult> {
-  const mealPlan = await getMealPlanCalendarData(input);
-  const events = buildMealPlanEvents(mealPlan);
-
-  if (!events.length) {
-    throw new Response("Fant ingen planlagte middager a eksportere.", {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  return {
-    content: createCalendarFile(getCalendarName(mealPlan.title), events),
-    fileName: `${getMealPlanFileSlug(mealPlan.title)}-ukeplan.ics`,
-  };
-}
-
-export async function getMealPlanDayCalendarExport(
-  input: MealPlanDayCalendarExportInput,
-): Promise<CalendarFileResult> {
-  const mealPlan = await getMealPlanCalendarData(input);
-  const requestedDate = parseDateOnly(input.date);
-
-  if (!requestedDate || !isDateWithinRange(requestedDate, mealPlan.startDate, mealPlan.endDate)) {
-    throw new Response("Fant ikke dagen i ukeplanen.", {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  const event = buildMealPlanEventForDate(mealPlan, input.date);
-
-  if (!event) {
-    throw new Response("Fant ingen planlagt middag denne dagen.", {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  return {
-    content: createCalendarFile(getCalendarName(mealPlan.title), [event]),
-    fileName: `${getMealPlanFileSlug(mealPlan.title)}-${input.date}.ics`,
-  };
-}
-
 export function createCalendarFile(
   calendarName: string,
   events: CalendarEventInput[],
@@ -200,75 +106,6 @@ export function createCalendarFile(
   lines.push("END:VCALENDAR");
 
   return lines.join("\r\n");
-}
-
-async function getMealPlanCalendarData({ familyId, mealPlanId, userId }: MealPlanCalendarExportInput) {
-  await requireFamilyMembership({
-    familyId,
-    userId,
-  });
-
-  const mealPlan = await db.mealPlan.findFirst({
-    select: mealPlanCalendarSelect,
-    where: {
-      familyId,
-      id: mealPlanId,
-    },
-  });
-
-  if (!mealPlan) {
-    throw new Response("Fant ikke ukeplanen.", {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  return mealPlan;
-}
-
-function buildMealPlanEvents(mealPlan: Awaited<ReturnType<typeof getMealPlanCalendarData>>) {
-  return mealPlan.entries.flatMap((entry) => {
-    const date = formatDateOnly(entry.date);
-    const meal = getCalendarMealDetails(entry);
-
-    if (!meal) {
-      return [];
-    }
-
-    return [
-      createMealPlanCalendarEvent({
-        date,
-        description: meal.description,
-        ingredients: meal.ingredients,
-        lastModified: entry.updatedAt,
-        mealPlanId: mealPlan.id,
-        mealPlanTitle: mealPlan.title,
-        title: meal.title,
-      }),
-    ];
-  });
-}
-
-function buildMealPlanEventForDate(
-  mealPlan: Awaited<ReturnType<typeof getMealPlanCalendarData>>,
-  date: string,
-) {
-  const entry = mealPlan.entries.find((mealPlanEntry) => formatDateOnly(mealPlanEntry.date) === date);
-  const meal = entry ? getCalendarMealDetails(entry) : null;
-
-  if (!entry || !meal) {
-    return null;
-  }
-
-  return createMealPlanCalendarEvent({
-    date,
-    description: meal.description,
-    ingredients: meal.ingredients,
-    lastModified: entry.updatedAt,
-    mealPlanId: mealPlan.id,
-    mealPlanTitle: mealPlan.title,
-    title: meal.title,
-  });
 }
 
 export function getCalendarMealDetails(entry: CalendarMealEntry) {
@@ -397,30 +234,8 @@ function formatCalendarIngredientLine(ingredient: CalendarRecipeIngredient) {
   return [quantity, displayName].filter((value) => value.length > 0).join(" ");
 }
 
-function getCalendarName(mealPlanTitle: string) {
-  return `Mealplanner - ${mealPlanTitle}`;
-}
-
 export function getFamilyCalendarName(familyName: string) {
   return `Mealplanner - ${familyName}`;
-}
-
-function getMealPlanFileSlug(mealPlanTitle: string) {
-  const slug = mealPlanTitle
-    .toLowerCase()
-    .trim()
-    .replaceAll(/[^a-z0-9]+/g, "-")
-    .replaceAll(/^-+|-+$/g, "");
-
-  return slug || "meal-plan";
-}
-
-function formatDateOnly(date: Date) {
-  return [
-    date.getUTCFullYear().toString().padStart(4, "0"),
-    (date.getUTCMonth() + 1).toString().padStart(2, "0"),
-    date.getUTCDate().toString().padStart(2, "0"),
-  ].join("-");
 }
 
 function parseDateOnly(value: string) {
@@ -444,10 +259,6 @@ function parseDateOnly(value: string) {
   }
 
   return parsedDate;
-}
-
-function isDateWithinRange(date: Date, startDate: Date, endDate: Date) {
-  return date.getTime() >= startDate.getTime() && date.getTime() <= endDate.getTime();
 }
 
 function formatIcsDate(value: string) {

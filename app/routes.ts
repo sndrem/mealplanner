@@ -25,14 +25,6 @@ export default [
       "routes/family-meal-plan-proposal.tsx",
     ),
     route("families/:familyId/meal-plans/:mealPlanId", "routes/family-meal-plan.tsx"),
-    route(
-      "families/:familyId/meal-plans/:mealPlanId/calendar.ics",
-      "routes/family-meal-plan-calendar.ts",
-    ),
-    route(
-      "families/:familyId/meal-plans/:mealPlanId/days/:date/calendar.ics",
-      "routes/family-meal-plan-day-calendar.ts",
-    ),
     route("families/:familyId/meal-plans/:mealPlanId/shopping", "routes/family-meal-plan-shopping.tsx"),
     route(
       "families/:familyId/meal-plans/:mealPlanId/shopping/ingredient-search",

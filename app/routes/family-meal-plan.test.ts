@@ -144,7 +144,6 @@ describe("family meal plan route", () => {
     });
     expect(listFamilyMembers).toHaveBeenCalledWith("family-1");
     expect(result).toEqual({
-      calendarExportDates: [],
       family: {
         id: "family-1",
         name: "Solberg",
