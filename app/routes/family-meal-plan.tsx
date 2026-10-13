@@ -480,6 +480,28 @@ export default function FamilyMealPlanRoute({
     formRef: entriesFormRef,
   });
   const isUpdatingMetadata = isPending && pendingIntent === "update-meal-plan";
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const wasUpdatingMetadata = useRef(false);
+  const metadataFailed =
+    actionData?.intent === "update-meal-plan" &&
+    Boolean(actionData.fieldErrors || actionData.formError);
+  const showMealPlanSettings =
+    settingsOpen || metadataFailed || isUpdatingMetadata;
+
+  useEffect(() => {
+    if (isUpdatingMetadata) {
+      wasUpdatingMetadata.current = true;
+      return;
+    }
+
+    if (
+      wasUpdatingMetadata.current &&
+      loaderData.notice === "meal-plan-updated"
+    ) {
+      wasUpdatingMetadata.current = false;
+      setSettingsOpen(false);
+    }
+  }, [isUpdatingMetadata, loaderData.notice]);
   const noticeContent = loaderData.notice
     ? getMealPlanNoticeContent(loaderData.notice, loaderData.noticeMeta)
     : null;
@@ -661,6 +683,22 @@ export default function FamilyMealPlanRoute({
                 >
                   Abonner i kalenderen
                 </Link>
+                <button
+                  aria-controls="meal-plan-settings"
+                  aria-expanded={showMealPlanSettings}
+                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                  onClick={() => {
+                    if (metadataFailed || isUpdatingMetadata) {
+                      setSettingsOpen(true);
+                      return;
+                    }
+
+                    setSettingsOpen((open) => !open);
+                  }}
+                  type="button"
+                >
+                  Innstillinger
+                </button>
                 <Link
                   className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
                   to={`/families/${loaderData.family.id}/meal-plans`}
@@ -684,6 +722,100 @@ export default function FamilyMealPlanRoute({
             />
           </div>
         </section>
+
+        {showMealPlanSettings ? (
+          <article
+            className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line"
+            id="meal-plan-settings"
+          >
+            <div className="flex flex-col gap-2">
+              <h2 className="text-lg font-semibold text-ink">
+                Oppdater ukeplan
+              </h2>
+              <p className="text-sm leading-6 text-muted">
+                Du kan fortsatt endre navn og datointervall her. Datointervallet
+                kan være maks {MEAL_PLAN_MAX_SPAN_DAYS} dager. Middager og
+                handledatoer utenfor det nye intervallet fjernes eller justeres
+                automatisk.
+              </p>
+            </div>
+
+            <Form className="mt-6 space-y-4" method="post">
+              <input name="intent" type="hidden" value="update-meal-plan" />
+              <input
+                name="mealPlanUpdatedAt"
+                type="hidden"
+                value={loaderData.mealPlan.updatedAt}
+              />
+
+              <label className="block text-sm font-medium text-muted">
+                Navn
+                <input
+                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  defaultValue={titleValue}
+                  name="title"
+                  type="text"
+                />
+              </label>
+
+              {actionData?.intent === "update-meal-plan" &&
+              actionData.fieldErrors?.title ? (
+                <p className="text-sm text-rose-600">
+                  {actionData.fieldErrors.title}
+                </p>
+              ) : null}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-medium text-muted">
+                  Startdato
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    defaultValue={startDateValue}
+                    name="startDate"
+                    type="date"
+                  />
+                </label>
+
+                <label className="block text-sm font-medium text-muted">
+                  Sluttdato
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    defaultValue={endDateValue}
+                    name="endDate"
+                    type="date"
+                  />
+                </label>
+              </div>
+
+              {actionData?.intent === "update-meal-plan" &&
+              actionData.fieldErrors?.startDate ? (
+                <p className="text-sm text-rose-600">
+                  {actionData.fieldErrors.startDate}
+                </p>
+              ) : null}
+              {actionData?.intent === "update-meal-plan" &&
+              actionData.fieldErrors?.endDate ? (
+                <p className="text-sm text-rose-600">
+                  {actionData.fieldErrors.endDate}
+                </p>
+              ) : null}
+              {actionData?.intent === "update-meal-plan" &&
+              actionData.formError ? (
+                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {actionData.formError}
+                </p>
+              ) : null}
+
+              <button
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                disabled={isUpdatingMetadata}
+                type="submit"
+              >
+                {isUpdatingMetadata ? "Lagrer..." : "Lagre endringer"}
+              </button>
+            </Form>
+          </article>
+        ) : null}
 
         {noticeContent ? (
           <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
@@ -889,96 +1021,6 @@ export default function FamilyMealPlanRoute({
                 visibleDates={loaderData.visibleDates}
               />
             </div>
-          </article>
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-          <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
-            <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-ink">
-                Oppdater ukeplan
-              </h2>
-              <p className="text-sm leading-6 text-muted">
-                Du kan fortsatt endre navn og datointervall her. Datointervallet
-                kan være maks {MEAL_PLAN_MAX_SPAN_DAYS} dager. Middager og
-                handledatoer utenfor det nye intervallet fjernes eller justeres
-                automatisk.
-              </p>
-            </div>
-
-            <Form className="mt-6 space-y-4" method="post">
-              <input name="intent" type="hidden" value="update-meal-plan" />
-              <input
-                name="mealPlanUpdatedAt"
-                type="hidden"
-                value={loaderData.mealPlan.updatedAt}
-              />
-
-              <label className="block text-sm font-medium text-muted">
-                Navn
-                <input
-                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                  defaultValue={titleValue}
-                  name="title"
-                  type="text"
-                />
-              </label>
-
-              {actionData?.intent === "update-meal-plan" &&
-              actionData.fieldErrors?.title ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.fieldErrors.title}
-                </p>
-              ) : null}
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-medium text-muted">
-                  Startdato
-                  <input
-                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={startDateValue}
-                    name="startDate"
-                    type="date"
-                  />
-                </label>
-
-                <label className="block text-sm font-medium text-muted">
-                  Sluttdato
-                  <input
-                    className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                    defaultValue={endDateValue}
-                    name="endDate"
-                    type="date"
-                  />
-                </label>
-              </div>
-
-              {actionData?.intent === "update-meal-plan" &&
-              actionData.fieldErrors?.startDate ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.fieldErrors.startDate}
-                </p>
-              ) : null}
-              {actionData?.intent === "update-meal-plan" &&
-              actionData.fieldErrors?.endDate ? (
-                <p className="text-sm text-rose-600">
-                  {actionData.fieldErrors.endDate}
-                </p>
-              ) : null}
-              {actionData?.formError ? (
-                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {actionData.formError}
-                </p>
-              ) : null}
-
-              <button
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={isUpdatingMetadata}
-                type="submit"
-              >
-                {isUpdatingMetadata ? "Lagrer..." : "Lagre endringer"}
-              </button>
-            </Form>
           </article>
         </section>
       </div>

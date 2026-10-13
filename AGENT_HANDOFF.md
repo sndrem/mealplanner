@@ -2,19 +2,19 @@
 
 ## Current Objective
 
-Store-mode source lines for a single recipe occurrence include the weekday, and say "kommende" when that date is next week.
+Hide the meal plan name and date form behind a settings control on the week page (issue #278).
 
 ## Completed
 
-- A generated item used once now reads "fram til fredag 15. mai".
-- When `lastDate` falls in the next Oslo calendar week (Monday–Sunday), the line reads "fram til kommende fredag 22. mai".
-- Dates in the current week, and dates further out than next week, stay as weekday plus date without "kommende".
+- "Oppdater ukeplan" is closed until the header "Innstillinger" button is opened.
+- The same `update-meal-plan` form still saves name, start date, and end date.
+- The panel stays open while that save is in progress and when it returns field errors or a form error.
+- A successful save closes the panel and shows the existing "Ukeplan oppdatert" notice.
+- Title and date inputs use `text-base` so iOS does not zoom on focus.
 
 ## Files To Read First
 
-- `app/components/store-mode-shopping-item-card.tsx` — `formatDateWithWeekdayLabel`
-- `app/lib/meal-plan-week.ts` — `getNextCalendarWeekBounds`
-- `app/components/store-mode-shopping-item-card.test.tsx` — coming-week vs current-week copy
+- `app/routes/family-meal-plan.tsx` — settings button, `showMealPlanSettings`, and the moved form
 
 ## Validation
 
@@ -22,13 +22,12 @@ Store-mode source lines for a single recipe occurrence include the weekday, and 
 - `npm run lint` — passed
 - `npm run test:run` — 728 tests passed
 - `npm run typecheck` — passed
-- Browser: not checked. The line is inside the store-mode info panel and depends on today's Oslo week.
+- Browser: form hidden by default; invalid end date keeps the panel open with the error; a successful rename updates the header, shows the notice, and closes the panel. The temporary title was restored.
 
 ## Open Items
 
-- No GitHub issue is linked to this change.
-- Manual check: open a single-occurrence item this week and one next week, and confirm the info line.
+- None for this change.
 
 ## Next Step
 
-Review and merge the pull request.
+Review and merge the pull request for issue #278.
