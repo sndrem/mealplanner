@@ -66,8 +66,6 @@ interface MealPlanNoticeMeta {
   warning?: string;
 }
 
-const CALENDAR_DOWNLOAD_TARGET = "meal-plan-calendar-download";
-
 interface MealPlanFamilyMemberOption {
   displayName: string;
   id: string;
@@ -172,20 +170,8 @@ export async function loader({
   const entriesSnapshot = buildMealPlanEntriesSnapshot(
     result.mealPlan.entries.filter((entry) => entry.mealType === "DINNER"),
   );
-  const calendarExportDates = result.mealPlan.entries.flatMap((entry) => {
-    if (entry.mealType !== "DINNER") {
-      return [];
-    }
-
-    if (!entry.recipe && !entry.freezerItem) {
-      return [];
-    }
-
-    return [formatDateOnly(entry.date)];
-  });
 
   return {
-    calendarExportDates,
     family: result.family,
     mealPlan: {
       ...result.mealPlan,
@@ -598,8 +584,6 @@ export default function FamilyMealPlanRoute({
 
     return ids;
   }, [mealSelectionsByDate]);
-  const calendarExportDateSet = new Set(loaderData.calendarExportDates);
-  const hasMealPlanCalendarExport = calendarExportDateSet.size > 0;
 
   const handleUserMealSelectionsChange = useCallback(
     (
@@ -624,13 +608,6 @@ export default function FamilyMealPlanRoute({
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-page px-4 py-6 text-ink md:py-12">
-      <iframe
-        aria-hidden="true"
-        className="hidden"
-        name={CALENDAR_DOWNLOAD_TARGET}
-        tabIndex={-1}
-        title="Kalendernedlasting"
-      />
       <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-5 py-6 text-white shadow-xl sm:px-8 sm:py-8">
           <div className="flex flex-col gap-6">
@@ -664,19 +641,6 @@ export default function FamilyMealPlanRoute({
                 >
                   Åpne butikkmodus
                 </Link>
-                {hasMealPlanCalendarExport ? (
-                  <a
-                    className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                    href={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/calendar.ics`}
-                    target={CALENDAR_DOWNLOAD_TARGET}
-                  >
-                    Eksporter ukeplan (.ics)
-                  </a>
-                ) : (
-                  <span className="rounded-2xl bg-white/5 px-5 py-3 text-sm font-medium text-slate-400 ring-1 ring-white/10">
-                    Eksporter ukeplan (.ics)
-                  </span>
-                )}
                 <Link
                   className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
                   to={`/families/${loaderData.family.id}?tab=familie`}
@@ -897,8 +861,6 @@ export default function FamilyMealPlanRoute({
 
             <MealPlanWeekEntriesForm
               activeAssignDate={activeAssignDate}
-              calendarDownloadTarget={CALENDAR_DOWNLOAD_TARGET}
-              calendarExportDateSet={calendarExportDateSet}
               entryFormError={
                 autosaveEntryFormError ||
                 ((actionData?.intent === "save-meal-plan-entries" ||
@@ -917,7 +879,6 @@ export default function FamilyMealPlanRoute({
               isAutosaving={isAutosaving}
               isResettingEntries={isResettingEntries}
               isSavingEntries={isSavingEntries}
-              mealPlanId={loaderData.mealPlan.id}
               mealSelectionsByDate={mealSelectionsByDate}
               onActiveAssignDateChange={setActiveAssignDate}
               onMealSelectionsByDateChange={setMealSelectionsByDate}

@@ -2,32 +2,35 @@
 
 ## Current Objective
 
-Hide the meal plan name and date form behind a settings control on the week page (issue #278).
+Remove the one-off week and day ICS file downloads from the meal plan. Calendar access stays on the family subscription feed.
 
 ## Completed
 
-- "Oppdater ukeplan" is closed until the header "Innstillinger" button is opened.
-- The same `update-meal-plan` form still saves name, start date, and end date.
-- The panel stays open while that save is in progress and when it returns field errors or a form error.
-- A successful save closes the panel and shows the existing "Ukeplan oppdatert" notice.
-- Title and date inputs use `text-base` so iOS does not zoom on focus.
+- The meal plan header no longer shows "Eksporter ukeplan (.ics)" or the disabled placeholder.
+- An open day no longer shows "Eksporter dag (.ics)", and the hidden download iframe is gone.
+- The week and day `calendar.ics` routes, handlers, tests, and export-only helpers are removed.
+- `c/:token/calendar.ics` and the shared ICS builders used by the subscription remain.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan.tsx` — settings button, `showMealPlanSettings`, and the moved form
+- `app/routes/family-meal-plan.tsx` — header subscribe link, no export control
+- `app/components/meal-plan-week-entries-form.tsx` — open day without a day export
+- `app/lib/calendar.server.ts` — shared ICS builders only
+- `app/routes.ts` — subscription route kept, download routes removed
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 728 tests passed
+- `npm run test:run` — 719 tests passed
 - `npm run typecheck` — passed
-- Browser: form hidden by default; invalid end date keeps the panel open with the error; a successful rename updates the header, shows the notice, and closes the panel. The temporary title was restored.
+- Browser on the local meal plan "Uke 43": header has "Abonner i kalenderen" and no week export. Opening Monday shows the dinner editor and no day export.
+- Authenticated requests to the old week and day `calendar.ics` URLs return 404. The family tab still renders the subscription card.
 
 ## Open Items
 
-- None for this change.
+- A bookmarked week or day `.ics` URL now 404s. That is intended.
 
 ## Next Step
 
-Review and merge the pull request for issue #278.
+Review and merge the pull request for issue 279.

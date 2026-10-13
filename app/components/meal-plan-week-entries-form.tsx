@@ -118,8 +118,6 @@ function MealPlanDndProvider({ children }: { children: ReactNode }) {
 
 export function MealPlanWeekEntriesForm({
   activeAssignDate,
-  calendarDownloadTarget,
-  calendarExportDateSet,
   entryFormError,
   entriesSnapshot,
   entryValues,
@@ -131,7 +129,6 @@ export function MealPlanWeekEntriesForm({
   isAutosaving,
   isResettingEntries,
   isSavingEntries,
-  mealPlanId,
   mealSelectionsByDate,
   onActiveAssignDateChange,
   onMealSelectionsByDateChange,
@@ -141,8 +138,6 @@ export function MealPlanWeekEntriesForm({
   visibleDates,
 }: {
   activeAssignDate: string | null;
-  calendarDownloadTarget: string;
-  calendarExportDateSet: Set<string>;
   entryFormError?: string;
   entriesSnapshot: string;
   entryValues: Record<string, MealPlanEntryFormState>;
@@ -154,7 +149,6 @@ export function MealPlanWeekEntriesForm({
   isAutosaving?: boolean;
   isResettingEntries: boolean;
   isSavingEntries: boolean;
-  mealPlanId: string;
   mealSelectionsByDate: Record<string, string>;
   onActiveAssignDateChange: (date: string | null) => void;
   onMealSelectionsByDateChange: (
@@ -255,8 +249,6 @@ export function MealPlanWeekEntriesForm({
             ) : null}
             <MealPlanDayRow
               activeAssignDate={activeAssignDate}
-              calendarDownloadTarget={calendarDownloadTarget}
-              canExportDay={calendarExportDateSet.has(date)}
               date={date}
               entry={entry}
               familyId={familyId}
@@ -266,7 +258,6 @@ export function MealPlanWeekEntriesForm({
               isAutoFillingEntries={isAutoFillingEntries}
               isReorderMode={isReorderMode}
               isToday={isPlanDateToday(date)}
-              mealPlanId={mealPlanId}
               mealSelection={mealSelectionsByDate[date] ?? ""}
               onActiveAssignDateChange={onActiveAssignDateChange}
               onMealSelectionChange={(value) => {
@@ -357,8 +348,6 @@ export function MealPlanWeekEntriesForm({
 
 function MealPlanDayRow({
   activeAssignDate,
-  calendarDownloadTarget,
-  canExportDay,
   date,
   entry,
   familyId,
@@ -368,7 +357,6 @@ function MealPlanDayRow({
   isAutoFillingEntries,
   isReorderMode,
   isToday,
-  mealPlanId,
   mealSelection,
   onActiveAssignDateChange,
   onMealSelectionChange,
@@ -378,8 +366,6 @@ function MealPlanDayRow({
   visibleDates,
 }: {
   activeAssignDate: string | null;
-  calendarDownloadTarget: string;
-  canExportDay: boolean;
   date: string;
   entry: MealPlanEntryFormState;
   familyId: string;
@@ -389,7 +375,6 @@ function MealPlanDayRow({
   isAutoFillingEntries: boolean;
   isReorderMode: boolean;
   isToday: boolean;
-  mealPlanId: string;
   mealSelection: string;
   onActiveAssignDateChange: (date: string | null) => void;
   onMealSelectionChange: (value: string) => void;
@@ -594,16 +579,6 @@ function MealPlanDayRow({
             type="hidden"
             value={entry.updatedAt}
           />
-
-          {canExportDay ? (
-            <a
-              className="inline-flex w-full items-center justify-center rounded-2xl bg-surface px-4 py-2 text-sm font-medium text-muted ring-1 ring-line transition hover:bg-page"
-              href={`/families/${familyId}/meal-plans/${mealPlanId}/days/${date}/calendar.ics`}
-              target={calendarDownloadTarget}
-            >
-              Eksporter dag (.ics)
-            </a>
-          ) : null}
 
           <div className="min-w-0">
             <p className="text-sm font-medium text-muted">Middag</p>
