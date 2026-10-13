@@ -67,6 +67,8 @@ describe("RecipeReminderModal", () => {
     expect(datetimeLayout).toContainElement(timeField);
     expect(datetimeLayout).toHaveClass("grid", "gap-3", "sm:grid-cols-2");
     expect(datetimeLayout).not.toHaveClass("grid-cols-2");
+    expect(dateField).toHaveClass("min-w-0", "max-w-full", "text-base");
+    expect(timeField).toHaveClass("min-w-0", "max-w-full", "text-base");
     expect(
       screen.getByRole("button", { name: "Opprett i Påminnelser" }),
     ).toBeEnabled();
