@@ -6,7 +6,6 @@ const {
   getFamilyStockMatchSetMock,
   getStockIngredientsForMealPlanMock,
   loadShoppingMealPlanMock,
-  projectCreatedManualShoppingItemMock,
   requireFamilyAdminMock,
   requireFamilyMembershipMock,
   resolveGeneratedStockIdentityMock,
@@ -83,7 +82,6 @@ const {
     getFamilyStockMatchSetMock: vi.fn(),
     getStockIngredientsForMealPlanMock: vi.fn(),
     loadShoppingMealPlanMock: vi.fn(),
-    projectCreatedManualShoppingItemMock: vi.fn(),
     requireFamilyAdminMock: vi.fn(),
     requireFamilyMembershipMock: vi.fn(),
     resolveGeneratedStockIdentityMock: vi.fn(),
@@ -115,7 +113,6 @@ vi.mock("./shopping.server", () => {
   return {
     getStockIngredientsForMealPlan: getStockIngredientsForMealPlanMock,
     loadShoppingMealPlan: loadShoppingMealPlanMock,
-    projectCreatedManualShoppingItem: projectCreatedManualShoppingItemMock,
     resolveGeneratedStockIdentity: resolveGeneratedStockIdentityMock,
   };
 });
@@ -126,25 +123,13 @@ vi.mock("./stock.server", () => {
   };
 });
 
-vi.mock("./shopping-catalog-write.server", () => {
-  return {
-    upsertFamilyShoppingCatalogItemFromQuickAdd: vi.fn(),
-  };
-});
-
 import {
-  createManualShoppingItem,
-  createQuickManualShoppingItem,
-  deleteManualShoppingItem,
-  resolveQuickAddManualShoppingItemValues,
-  excludeGeneratedShoppingItem,
   markFamilyShoppingItemAsStock,
   markGeneratedShoppingItemsAsStock,
   optInStockShoppingItems,
-  restoreGeneratedShoppingItem,
+  resolveQuickAddManualShoppingItemValues,
   toggleShoppingItemChecked,
   updateActiveShoppingDate,
-  updateGeneratedShoppingItemOverride,
   updateGeneratedShoppingItemQuantity,
 } from "./shopping-write.server";
 
@@ -209,128 +194,6 @@ describe("shopping-write.server", () => {
     });
   });
 
-  it("returns manual item validation errors before writing", async () => {
-    const result = await createManualShoppingItem({
-      familyId: "family-1",
-      mealPlanId: "meal-plan-1",
-      userId: "user-1",
-      values: {
-        buyOnDate: "2026-05-25",
-        categoryId: "",
-        name: "   ",
-        note: "",
-        preferredStoreId: "",
-        quantity: "",
-      },
-    });
-
-    expect(result).toEqual({
-      fieldErrors: {
-        buyOnDate: "Datoen må ligge innenfor en av familiens ukeplaner.",
-        categoryId: "Velg en kategori.",
-        name: "Skriv inn et varenavn.",
-      },
-      status: "VALIDATION_ERROR",
-      values: {
-        buyOnDate: "2026-05-25",
-        categoryId: "",
-        name: "",
-        note: "",
-        preferredStoreId: "",
-        quantity: "",
-      },
-    });
-    expect(dbMock.ingredientCategory.findUnique).not.toHaveBeenCalled();
-    expect(dbMock.manualShoppingItem.create).not.toHaveBeenCalled();
-  });
-
-  it("creates a scoped manual shopping item with trimmed values", async () => {
-    dbMock.ingredientCategory.findUnique.mockResolvedValue({
-      id: "category-produce",
-    });
-    dbMock.store.findFirst.mockResolvedValue({
-      id: "store-1",
-    });
-    dbMock.manualShoppingItem.create.mockResolvedValue({
-      id: "manual-item-1",
-    });
-
-    const result = await createManualShoppingItem({
-      familyId: "family-1",
-      mealPlanId: "meal-plan-1",
-      userId: "user-1",
-      values: {
-        buyOnDate: "2026-05-16",
-        categoryId: "category-produce",
-        name: "  Bananer  ",
-        note: "  Til smoothien  ",
-        preferredStoreId: "store-1",
-        quantity: "  6 stk  ",
-      },
-    });
-
-    expect(result).toEqual({
-      manualItemId: "manual-item-1",
-      status: "CREATED",
-    });
-    expect(dbMock.manualShoppingItem.create).toHaveBeenCalledWith({
-      data: {
-        buyOnDate: new Date("2026-05-16T00:00:00.000Z"),
-        categoryId: "category-produce",
-        mealPlanId: "meal-plan-1",
-        name: "Bananer",
-        note: "Til smoothien",
-        preferredStoreId: "store-1",
-        quantity: "6 stk",
-        updatedByUserId: "user-1",
-      },
-    });
-  });
-
-  it("accepts a buyOnDate from another family meal plan range", async () => {
-    dbMock.mealPlan.findMany.mockResolvedValue([
-      {
-        endDate: new Date("2026-05-18T00:00:00.000Z"),
-        startDate: new Date("2026-05-15T00:00:00.000Z"),
-      },
-      {
-        endDate: new Date("2026-05-25T00:00:00.000Z"),
-        startDate: new Date("2026-05-22T00:00:00.000Z"),
-      },
-    ]);
-    dbMock.ingredientCategory.findUnique.mockResolvedValue({
-      id: "category-produce",
-    });
-    dbMock.store.findFirst.mockResolvedValue(null);
-    dbMock.manualShoppingItem.create.mockResolvedValue({
-      id: "manual-item-2",
-    });
-
-    const result = await createManualShoppingItem({
-      familyId: "family-1",
-      mealPlanId: "meal-plan-1",
-      userId: "user-1",
-      values: {
-        buyOnDate: "2026-05-23",
-        categoryId: "category-produce",
-        name: "Bananer",
-        note: "",
-        preferredStoreId: "",
-        quantity: "",
-      },
-    });
-
-    expect(result).toEqual({
-      manualItemId: "manual-item-2",
-      status: "CREATED",
-    });
-    expect(dbMock.manualShoppingItem.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        buyOnDate: new Date("2026-05-23T00:00:00.000Z"),
-        mealPlanId: "meal-plan-1",
-      }),
-    });
-  });
 
   it("resolves quick-add values from a canonical ingredient", async () => {
     dbMock.ingredientCategory.findUnique.mockResolvedValue({
@@ -487,79 +350,6 @@ describe("shopping-write.server", () => {
     });
   });
 
-  it("creates a quick-add manual item with Annet defaults for new names", async () => {
-    dbMock.ingredientCategory.findUnique.mockResolvedValue({
-      id: "category-other",
-    });
-    dbMock.manualShoppingItem.create.mockResolvedValue({
-      id: "manual-item-3",
-    });
-    projectCreatedManualShoppingItemMock.mockResolvedValue({
-      buyOnDate: null,
-      category: { id: "category-other", name: "Annet" },
-      checked: false,
-      collaborationVersion: "2026-05-31T00:00:00.000Z",
-      name: "Tannkrem",
-      note: null,
-      overrideVersion: "",
-      preferredStore: null,
-      quantity: "1",
-      quantityLabel: "1",
-      section: { displayName: "Annet", sortOrder: 99 },
-      sourceKey: "manual-item-3",
-      sourceType: "MANUAL",
-    });
-
-    const result = await createQuickManualShoppingItem({
-      familyId: "family-1",
-      input: {
-        name: "Tannkrem",
-      },
-      mealPlanId: "meal-plan-1",
-      userId: "user-1",
-    });
-
-    expect(result).toEqual({
-      item: {
-        buyOnDate: null,
-        category: { id: "category-other", name: "Annet" },
-        checked: false,
-        collaborationVersion: "2026-05-31T00:00:00.000Z",
-        name: "Tannkrem",
-        note: null,
-        overrideVersion: "",
-        preferredStore: null,
-        quantity: "1",
-        quantityLabel: "1",
-        section: { displayName: "Annet", sortOrder: 99 },
-        sourceKey: "manual-item-3",
-        sourceType: "MANUAL",
-      },
-      status: "CREATED",
-    });
-    expect(dbMock.manualShoppingItem.create).toHaveBeenCalledWith({
-      data: {
-        buyOnDate: null,
-        categoryId: "category-other",
-        mealPlanId: "meal-plan-1",
-        name: "Tannkrem",
-        note: null,
-        preferredStoreId: null,
-        quantity: "1",
-        updatedByUserId: "user-1",
-      },
-    });
-    const { upsertFamilyShoppingCatalogItemFromQuickAdd } = await import(
-      "./shopping-catalog-write.server"
-    );
-    expect(upsertFamilyShoppingCatalogItemFromQuickAdd).toHaveBeenCalledWith({
-      familyId: "family-1",
-      ingredientId: undefined,
-      item: expect.objectContaining({
-        name: "Tannkrem",
-      }),
-    });
-  });
 
   it("places a typed register name in the ingredient category", async () => {
     dbMock.ingredientCategory.findUnique.mockResolvedValue({
@@ -702,92 +492,6 @@ describe("shopping-write.server", () => {
     });
   });
 
-  it("skips a family catalog row when a typed name matches the register", async () => {
-    dbMock.ingredientCategory.findUnique.mockResolvedValue({
-      id: "category-other",
-    });
-    dbMock.ingredient.findFirst.mockResolvedValue({
-      canonicalName: "Melk",
-      defaultCategoryId: "category-dairy",
-      id: "ingredient-milk",
-    });
-    dbMock.manualShoppingItem.create.mockResolvedValue({
-      id: "manual-item-4",
-    });
-    projectCreatedManualShoppingItemMock.mockResolvedValue({
-      buyOnDate: null,
-      category: { id: "category-dairy", name: "Meieri" },
-      checked: false,
-      collaborationVersion: "2026-05-31T00:00:00.000Z",
-      name: "Melk",
-      note: null,
-      overrideVersion: "",
-      preferredStore: null,
-      quantity: "1",
-      quantityLabel: "1",
-      section: { displayName: "Meieri", sortOrder: 3 },
-      sourceKey: "manual-item-4",
-      sourceType: "MANUAL",
-    });
-
-    await createQuickManualShoppingItem({
-      familyId: "family-1",
-      input: {
-        name: "Melk",
-      },
-      mealPlanId: "meal-plan-1",
-      userId: "user-1",
-    });
-
-    expect(dbMock.manualShoppingItem.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        categoryId: "category-dairy",
-        name: "Melk",
-      }),
-    });
-    const { upsertFamilyShoppingCatalogItemFromQuickAdd } = await import(
-      "./shopping-catalog-write.server"
-    );
-    expect(upsertFamilyShoppingCatalogItemFromQuickAdd).toHaveBeenCalledWith({
-      familyId: "family-1",
-      ingredientId: "ingredient-milk",
-      item: expect.objectContaining({
-        name: "Melk",
-      }),
-    });
-  });
-
-  it("deletes a manual shopping item together with any manual override rows", async () => {
-    dbMock.manualShoppingItem.findFirst.mockResolvedValue({
-      id: "manual-item-1",
-      updatedAt: new Date("2026-05-15T00:00:00.000Z"),
-    });
-
-    const result = await deleteManualShoppingItem({
-      expectedUpdatedAt: new Date("2026-05-15T00:00:00.000Z").toISOString(),
-      familyId: "family-1",
-      manualItemId: "manual-item-1",
-      mealPlanId: "meal-plan-1",
-      userId: "user-1",
-    });
-
-    expect(result).toEqual({
-      status: "DELETED",
-    });
-    expect(dbMock.manualShoppingItem.deleteMany).toHaveBeenCalledWith({
-      where: {
-        id: "manual-item-1",
-        updatedAt: new Date("2026-05-15T00:00:00.000Z"),
-      },
-    });
-    expect(dbMock.shoppingItemOverride.deleteMany).toHaveBeenCalledWith({
-      where: {
-        mealPlanId: "meal-plan-1",
-        sourceKey: "manual-item-1",
-        sourceType: ShoppingItemSource.MANUAL,
-      },
-    });
-  });
 
   it("removes manual checked overrides when unchecking a manual row", async () => {
     dbMock.manualShoppingItem.findFirst.mockResolvedValue({
@@ -899,119 +603,7 @@ describe("shopping-write.server", () => {
     expect(dbMock.$transaction).not.toHaveBeenCalled();
     expect(transactionMock.shoppingItemCheckEvent.create).not.toHaveBeenCalled();
   });
-  it("upserts generated override fields while preserving checked state", async () => {
-    dbMock.store.findFirst.mockResolvedValue({
-      id: "store-2",
-    });
-    dbMock.shoppingItemOverride.findUnique.mockResolvedValue({
-      checked: true,
-      excludedFromList: false,
-      id: "override-1",
-      includeDespiteStock: false,
-      note: null,
-      postponedUntilDate: null,
-      preferredStoreId: null,
-      updatedAt: new Date("2026-05-15T00:00:00.000Z"),
-    });
 
-    const result = await updateGeneratedShoppingItemOverride({
-      expectedUpdatedAt: new Date("2026-05-15T00:00:00.000Z").toISOString(),
-      familyId: "family-1",
-      mealPlanId: "meal-plan-1",
-      sourceKey: "entry-1:ingredient-1",
-      userId: "user-1",
-      values: {
-        note: "  Husk tilbud  ",
-        postponedUntilDate: "2026-05-17",
-        preferredStoreId: "store-2",
-        quantity: " 4 flasker ",
-      },
-    });
-
-    expect(result).toEqual({
-      status: "UPDATED",
-    });
-    expect(dbMock.shoppingItemOverride.updateMany).toHaveBeenCalledWith({
-      data: {
-        checked: true,
-        excludedFromList: false,
-        includeDespiteStock: false,
-        note: "Husk tilbud",
-        postponedUntilDate: new Date("2026-05-17T00:00:00.000Z"),
-        preferredStoreId: "store-2",
-        quantity: "4 flasker",
-        sourceKey: "entry-1:ingredient-1",
-        updatedByUserId: "user-1",
-      },
-      where: {
-        id: "override-1",
-        updatedAt: new Date("2026-05-15T00:00:00.000Z"),
-      },
-    });
-  });
-
-  it("marks a generated shopping item as excluded from the list", async () => {
-    dbMock.shoppingItemOverride.findUnique.mockResolvedValue(null);
-
-    const result = await excludeGeneratedShoppingItem({
-      expectedUpdatedAt: "",
-      familyId: "family-1",
-      mealPlanId: "meal-plan-1",
-      sourceKey: "entry-1:ingredient-1",
-      userId: "user-1",
-    });
-
-    expect(result).toEqual({
-      status: "EXCLUDED",
-    });
-    expect(dbMock.shoppingItemOverride.create).toHaveBeenCalledWith({
-      data: {
-        checked: false,
-        excludedFromList: true,
-        includeDespiteStock: false,
-        mealPlanId: "meal-plan-1",
-        note: null,
-        postponedUntilDate: null,
-        preferredStoreId: null,
-        quantity: null,
-        sourceKey: "entry-1:ingredient-1",
-        sourceType: ShoppingItemSource.GENERATED,
-        updatedByUserId: "user-1",
-      },
-    });
-  });
-
-  it("restores a generated shopping item by clearing excludedFromList", async () => {
-    dbMock.shoppingItemOverride.findUnique.mockResolvedValue({
-      checked: false,
-      excludedFromList: true,
-      id: "override-1",
-      includeDespiteStock: false,
-      note: null,
-      postponedUntilDate: null,
-      preferredStoreId: null,
-      updatedAt: new Date("2026-05-15T00:00:00.000Z"),
-    });
-
-    const result = await restoreGeneratedShoppingItem({
-      expectedUpdatedAt: new Date("2026-05-15T00:00:00.000Z").toISOString(),
-      familyId: "family-1",
-      mealPlanId: "meal-plan-1",
-      sourceKey: "entry-1:ingredient-1",
-      userId: "user-1",
-    });
-
-    expect(result).toEqual({
-      status: "RESTORED",
-    });
-    expect(dbMock.shoppingItemOverride.deleteMany).toHaveBeenCalledWith({
-      where: {
-        id: "override-1",
-        updatedAt: new Date("2026-05-15T00:00:00.000Z"),
-      },
-    });
-    expect(dbMock.shoppingItemOverride.updateMany).not.toHaveBeenCalled();
-  });
 
   it("updates quantity on a generated shopping item", async () => {
     dbMock.shoppingItemOverride.findUnique.mockResolvedValue({

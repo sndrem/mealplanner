@@ -2,9 +2,7 @@ import type { FamilyShoppingItemFieldErrors } from "./family-shopping-write.serv
 import type { SerializedProjectedShoppingItem } from "./shopping-serialize";
 import type { ManualShoppingItemFieldErrors } from "./shopping-write.server";
 
-export type QuickAddShoppingIntent =
-  | "quick-add-manual-shopping-item"
-  | "quick-add-family-shopping-item";
+export type QuickAddShoppingIntent = "quick-add-family-shopping-item";
 
 export type QuickAddShoppingSuccess = {
   intent: QuickAddShoppingIntent;

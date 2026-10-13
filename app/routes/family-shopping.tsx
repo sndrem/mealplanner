@@ -929,7 +929,6 @@ export default function FamilyShoppingRoute({
                             actionData,
                             canMarkAsStock: loaderData.userRole === "ADMIN",
                             categories: loaderData.categories,
-                            familyId: loaderData.family.id,
                             item,
                             navigation,
                             pendingIntent,
@@ -1170,7 +1169,6 @@ function renderFamilyShoppingListItem({
   actionData,
   canMarkAsStock,
   categories,
-  familyId,
   item,
   navigation,
   pendingIntent,
@@ -1182,7 +1180,6 @@ function renderFamilyShoppingListItem({
   actionData?: FamilyShoppingActionData;
   canMarkAsStock: boolean;
   categories: Awaited<ReturnType<typeof loader>>["categories"];
-  familyId: string;
   item: SerializedProjectedShoppingItem;
   navigation: ReturnType<typeof useNavigation>;
   pendingIntent: FormDataEntryValue | null | undefined;
@@ -1312,13 +1309,7 @@ function renderFamilyShoppingListItem({
               isPendingCheckToggle={isPendingCheckToggle}
               isPendingFamilyDelete={isPendingFamilyDelete}
               isPendingFamilySave={isPendingFamilySave}
-              isPendingGeneratedExclude={false}
-              isPendingGeneratedSave={false}
-              isPendingManualDelete={false}
-              isPendingManualSave={false}
               item={item}
-              manualValues={null}
-              overrideValues={null}
               stores={stores}
               toggleExpectedVersion={getToggleExpectedVersion(item)}
             />
@@ -1357,15 +1348,6 @@ function renderFamilyShoppingListItem({
                 ? "Fjern avkryssing"
                 : "Marker som kjøpt"}
           </button>
-          <p className="mt-3 text-xs text-muted">
-            <Link
-              className="font-medium text-emerald-700 underline"
-              to={`/families/${familyId}/meal-plans/${todayMealPlanId}/shopping`}
-            >
-              Åpne full handleliste for ukeplanen
-            </Link>{" "}
-            for redigering av detaljer.
-          </p>
         </Form>
       ) : null}
     </article>
