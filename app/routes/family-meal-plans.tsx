@@ -508,10 +508,10 @@ function CreateMealPlanForm({
       <input name="intent" type="hidden" value="create-meal-plan" />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-medium text-muted">
+        <label className="block min-w-0 text-sm font-medium text-muted">
           Startdato
           <input
-            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             name="startDate"
             onChange={(event) => handleStartDateChange(event.target.value)}
             type="date"
@@ -519,10 +519,10 @@ function CreateMealPlanForm({
           />
         </label>
 
-        <label className="block text-sm font-medium text-muted">
+        <label className="block min-w-0 text-sm font-medium text-muted">
           Sluttdato
           <input
-            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             name="endDate"
             onChange={(event) =>
               setFormState((current) => ({

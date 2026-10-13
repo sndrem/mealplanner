@@ -212,7 +212,7 @@ export default function FamilyRecipesRoute({
 
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <div className="mx-auto flex min-w-0 max-w-6xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
@@ -480,7 +480,7 @@ export default function FamilyRecipesRoute({
           </label>
         </section>
 
-        <section className="rounded-[28px] border border-line bg-surface p-6 shadow-sm">
+        <section className="min-w-0 rounded-[28px] border border-line bg-surface p-6 shadow-sm">
           <div className="flex flex-col gap-2">
             <span className="inline-flex w-fit rounded-full bg-notice-success px-3 py-1 text-xs font-medium text-notice-success-ink">
               Familie
@@ -501,7 +501,7 @@ export default function FamilyRecipesRoute({
               Ingen familieoppskrifter matcher søket.
             </p>
           ) : (
-            <div className="mt-6 grid gap-3">
+            <div className="mt-6 grid min-w-0 gap-3">
               {displayFamilyRecipes.map((recipe) => (
                 <RecipeListCard
                   key={recipe.id}
@@ -519,7 +519,7 @@ export default function FamilyRecipesRoute({
           )}
         </section>
 
-        <section className="rounded-[28px] border border-line bg-page p-6 shadow-sm">
+        <section className="min-w-0 rounded-[28px] border border-line bg-page p-6 shadow-sm">
           <div className="flex flex-col gap-2">
             <span className="inline-flex w-fit rounded-full bg-page px-3 py-1 text-xs font-medium text-muted ring-1 ring-line">
               Standard (global)
@@ -539,7 +539,7 @@ export default function FamilyRecipesRoute({
               Ingen standardoppskrifter matcher søket.
             </p>
           ) : (
-            <div className="mt-6 grid gap-3">
+            <div className="mt-6 grid min-w-0 gap-3">
               {filteredGlobalRecipes.map((recipe) => (
                 <RecipeListCard
                   key={recipe.id}
@@ -590,11 +590,11 @@ function RecipeListCard({
     <article
       className={
         readOnly
-          ? "rounded-[24px] border border-line bg-surface p-5"
-          : "rounded-[24px] border border-line bg-surface p-5 transition hover:border-notice-success-line hover:bg-page"
+          ? "min-w-0 max-w-full rounded-[24px] border border-line bg-surface p-5"
+          : "min-w-0 max-w-full rounded-[24px] border border-line bg-surface p-5 transition hover:border-notice-success-line hover:bg-page"
       }
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <RecipePickerMedia
             imageUrl={recipe.imageUrl}
@@ -614,18 +614,18 @@ function RecipeListCard({
                 </span>
               ) : null}
             </div>
-            <h3 className="mt-3 text-base font-semibold text-ink">
+            <h3 className="mt-3 break-words text-base font-semibold text-ink">
               {recipe.title}
             </h3>
             {recipe.description ? (
-              <p className="mt-2 text-sm leading-6 text-muted whitespace-break-spaces">
+              <p className="mt-2 break-words text-sm leading-6 text-muted whitespace-break-spaces">
                 {recipe.description}
               </p>
             ) : null}
           </div>
         </div>
         {!readOnly && to ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-2 sm:shrink-0">
             <Link
               className="rounded-full bg-page px-3 py-1 text-xs font-medium text-notice-success-ink ring-1 ring-notice-success-line"
               to={to}
@@ -654,7 +654,7 @@ function RecipeListCard({
         {recipe.tags.map((tag) => (
           <span
             key={tag}
-            className="rounded-full bg-page px-2.5 py-1 ring-1 ring-line"
+            className="max-w-full break-words rounded-full bg-page px-2.5 py-1 ring-1 ring-line"
           >
             {tag}
           </span>

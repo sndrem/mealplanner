@@ -2,20 +2,20 @@
 
 ## Current Objective
 
-Remove the unused week shopping list page (issue #280) so store mode is the only week shopping UI.
+Keep family recipe cards and week-plan date fields inside their parents on narrow screens (issue #284).
 
 ## Completed
 
-- Unregistered `/families/:familyId/meal-plans/:mealPlanId/shopping` and its ingredient-search route, and deleted those route modules and tests.
-- Removed the week-shopping links from the meal plan header, the store mode header, and generated lines on the family list. "Åpne butikkmodus" is now the emerald action on the meal plan.
-- Deleted week-only writes: create/delete manual items, exclude/restore generated lines, and full generated-line edits. Store mode quantity, category, check-off, and family-list edits stay.
-- `ShoppingListItemExpanded` now only edits standing family items.
+- Family recipe cards stack the title above Åpne and Rediger below the `sm` breakpoint, and long titles, descriptions, and tags wrap instead of widening the page.
+- Startdato and Sluttdato on Oppdater ukeplan and the create-week-plan form match the Navn field width. Create-form dates are 16px so iOS does not zoom on focus.
+- The reminder modal date and time fields use the same width constraint.
 
 ## Files To Read First
 
-- `app/routes.ts` — week shopping routes are gone
-- `app/routes/family-meal-plan.tsx` — store mode is the shopping entry
-- `app/lib/shopping-write.server.ts` — remaining shared shopping writes
+- `app/routes/family-recipes.tsx` — `RecipeListCard` and the recipe list sections
+- `app/routes/family-meal-plan.tsx` — Oppdater ukeplan date fields
+- `app/routes/family-meal-plans.tsx` — create-week-plan date fields
+- `app/components/recipe-reminder-modal.tsx` — reminder date and time fields
 
 ## Validation
 
@@ -23,14 +23,12 @@ Remove the unused week shopping list page (issue #280) so store mode is the only
 - `npm run lint` — passed
 - `npm run test:run` — 695 tests passed
 - `npm run typecheck` — passed
-- Browser on `http://localhost:5175`: meal plan offers only "Åpne butikkmodus"; store mode header has "Del liste" and "Butikker" and checking Hvetemel persisted in history, then was unchecked again on the family list; family list loads with no week-shopping link; the old week shopping URL and its ingredient-search URL 404.
+- Browser on `http://localhost:5175` at 390px: family recipe cards caused no horizontal scroll, including a long title and tag; Oppdater ukeplan Startdato, Sluttdato, and Navn were all 310px; create-week-plan dates matched Navn; reminder date and time stayed inside the sheet. At 768px the date pair is still two columns, and recipe actions are one row from 640px.
 
 ## Open Items
 
-- Existing week-only manual items can still be checked off or recategorized in store mode, but they can no longer be added, renamed, or deleted.
-- Already-excluded generated lines stay excluded. There is no restore control.
-- `getMealPlanShoppingData` is unused by routes and still backs `shopping.server.test.ts`.
+- Chrome responsive mode did not clip the native date text, so the WebKit `datetime-edit` override was not added. iOS Safari was not checked.
 
 ## Next Step
 
-Review and open a pull request for issue #280.
+Review and merge the pull request for issue #284.
