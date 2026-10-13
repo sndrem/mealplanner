@@ -1437,12 +1437,6 @@ export default function FamilyMealPlanStoreModeRoute({
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <Link
               className="text-store-muted underline-offset-2 hover:text-store-ink hover:underline"
-              to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}/shopping`}
-            >
-              Handleliste
-            </Link>
-            <Link
-              className="text-store-muted underline-offset-2 hover:text-store-ink hover:underline"
               to={`/families/${loaderData.family.id}/store-mode/share`}
             >
               Del liste

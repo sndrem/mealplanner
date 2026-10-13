@@ -58,7 +58,7 @@ interface ManualShoppingQuickAddProps {
 
 const MIN_SEARCH_LENGTH = 2;
 const SEARCH_DEBOUNCE_MS = 250;
-const DEFAULT_QUICK_ADD_INTENT = "quick-add-manual-shopping-item";
+const DEFAULT_QUICK_ADD_INTENT = "quick-add-family-shopping-item";
 const DEFAULT_SEARCH_FETCHER_KEY = "manual-shopping-ingredient-search";
 const DEFAULT_QUICK_ADD_FETCHER_KEY = "manual-shopping-quick-add";
 const DROPDOWN_MAX_HEIGHT_PX = 256;
