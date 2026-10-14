@@ -11,6 +11,8 @@ import {
   buildStoreModeStockReminderDismissedStorageKey,
   buildStoreModeViewStorageKey,
   computeStoreModeProgress,
+  computeStoreModeScanProgress,
+  getStoreModeTripFocusScanLabel,
   getToggleExpectedVersion,
   partitionStoreModeSections,
   readStoreModeDeprioritizeBought,
@@ -206,6 +208,48 @@ describe("shopping-store-mode-client", () => {
       checkedCount: 2,
       totalCount: 3,
     });
+  });
+
+  it("turns partial progress into items left and a fill percent", () => {
+    expect(
+      computeStoreModeScanProgress({
+        checkedCount: 15,
+        totalCount: 21,
+      }),
+    ).toEqual({
+      percent: (15 / 21) * 100,
+      remainingCount: 6,
+    });
+  });
+
+  it("reports a full bar when every item is checked", () => {
+    expect(
+      computeStoreModeScanProgress({
+        checkedCount: 3,
+        totalCount: 3,
+      }),
+    ).toEqual({
+      percent: 100,
+      remainingCount: 0,
+    });
+  });
+
+  it("reports an empty bar when the list has no items", () => {
+    expect(
+      computeStoreModeScanProgress({
+        checkedCount: 0,
+        totalCount: 0,
+      }),
+    ).toEqual({
+      percent: 0,
+      remainingCount: 0,
+    });
+  });
+
+  it("labels trip focus for the scan line", () => {
+    expect(getStoreModeTripFocusScanLabel("CURRENT")).toBe("Denne uken");
+    expect(getStoreModeTripFocusScanLabel("NEXT")).toBe("Neste uke");
+    expect(getStoreModeTripFocusScanLabel("ALL")).toBe("Alle åpne");
   });
 
   it("removes queue entries that already match loader state", () => {

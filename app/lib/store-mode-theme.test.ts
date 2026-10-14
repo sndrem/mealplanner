@@ -8,6 +8,7 @@ import {
   storeModeMetaStoreSelectClass,
   storeModeMetaTripFocusSelectClass,
   storeModePageClass,
+  storeModeScanBarClass,
   storeModeSelectClass,
   storeModeSyncOverlayShellClass,
   storeModeUndoBarActionClass,
@@ -52,6 +53,13 @@ describe("store-mode-theme", () => {
     expect(storeModeBottomChromeShellClass).toContain("bottom-0");
     expect(storeModeUndoBarClass).toContain("min-h-11");
     expect(storeModeUndoBarActionClass).toContain("min-h-11");
+  });
+
+  it("pins the scan bar under the app nav", () => {
+    expect(storeModeScanBarClass).toContain("sticky");
+    expect(storeModeScanBarClass).toContain("top-[75px]");
+    expect(storeModeScanBarClass).toContain("z-30");
+    expect(storeModeScanBarClass).toContain("bg-store-bg");
   });
 
   it("uses store tokens for page and surface chrome", () => {
