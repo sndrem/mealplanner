@@ -723,7 +723,7 @@ export default function FamilyMealPlanRoute({
                 </p>
               ) : null}
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block min-w-0 text-sm font-medium text-muted">
                   Startdato
                   <input

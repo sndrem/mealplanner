@@ -2,20 +2,19 @@
 
 ## Current Objective
 
-Keep family recipe cards and week-plan date fields inside their parents on narrow screens (issue #284).
+Stop iOS date and time fields from painting outside their card. The earlier `min-w-0` fix holds in desktop Chrome and still fails in Arc Search on iPhone (issue #284 follow-up).
 
 ## Completed
 
-- Family recipe cards stack the title above Åpne and Rediger below the `sm` breakpoint, and long titles, descriptions, and tags wrap instead of widening the page.
-- Startdato and Sluttdato on Oppdater ukeplan and the create-week-plan form match the Navn field width. Create-form dates are 16px so iOS does not zoom on focus.
-- The reminder modal date and time fields use the same width constraint.
+- On WebKit (`-webkit-touch-callout`), date, time, and datetime-local inputs reset `appearance` so they use the same border box as text fields. The native picker still opens on tap.
+- Create-week-plan, Oppdater ukeplan, and the reminder modal date grids use `grid-cols-1` (`minmax(0, 1fr)`) below `sm`, and the create-plan column can shrink.
 
 ## Files To Read First
 
-- `app/routes/family-recipes.tsx` — `RecipeListCard` and the recipe list sections
+- `app/app.css` — the WebKit date-input rule in `@layer base`
+- `app/routes/family-meal-plans.tsx` — Opprett ukeplan Startdato and Sluttdato
 - `app/routes/family-meal-plan.tsx` — Oppdater ukeplan date fields
-- `app/routes/family-meal-plans.tsx` — create-week-plan date fields
-- `app/components/recipe-reminder-modal.tsx` — reminder date and time fields
+- `app/components/recipe-reminder-modal.tsx` — reminder date and time
 
 ## Validation
 
@@ -23,12 +22,12 @@ Keep family recipe cards and week-plan date fields inside their parents on narro
 - `npm run lint` — passed
 - `npm run test:run` — 695 tests passed
 - `npm run typecheck` — passed
-- Browser on `http://localhost:5175` at 390px: family recipe cards caused no horizontal scroll, including a long title and tag; Oppdater ukeplan Startdato, Sluttdato, and Navn were all 310px; create-week-plan dates matched Navn; reminder date and time stayed inside the sheet. At 768px the date pair is still two columns, and recipe actions are one row from 640px.
+- Browser on `http://localhost:5175` at 390px in desktop Chrome: Startdato, Sluttdato, and Navn are 310px and stay inside the card. Chrome does not apply the WebKit rule (`appearance` stays `auto`). iOS was not rechecked.
 
 ## Open Items
 
-- Chrome responsive mode did not clip the native date text, so the WebKit `datetime-edit` override was not added. iOS Safari was not checked.
+- Confirm on an iPhone in Arc Search after deploy. Desktop responsive mode cannot reproduce the overflow.
 
 ## Next Step
 
-Review and merge the pull request for issue #284.
+Review and merge the pull request, then check Opprett ukeplan on an iPhone in Arc Search.

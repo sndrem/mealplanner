@@ -65,7 +65,13 @@ describe("RecipeReminderModal", () => {
     const timeField = screen.getByLabelText("Klokkeslett");
     const datetimeLayout = dateField.closest("div");
     expect(datetimeLayout).toContainElement(timeField);
-    expect(datetimeLayout).toHaveClass("grid", "gap-3", "sm:grid-cols-2");
+    expect(datetimeLayout).toHaveClass(
+      "grid",
+      "min-w-0",
+      "grid-cols-1",
+      "gap-3",
+      "sm:grid-cols-2",
+    );
     expect(datetimeLayout).not.toHaveClass("grid-cols-2");
     expect(dateField).toHaveClass("min-w-0", "max-w-full", "text-base");
     expect(timeField).toHaveClass("min-w-0", "max-w-full", "text-base");
