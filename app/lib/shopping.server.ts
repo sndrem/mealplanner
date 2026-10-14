@@ -890,41 +890,23 @@ export async function getMealPlanStoreModeData({
     selectedStorePreference?.selectedStoreId ?? null,
   );
   const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
-  const aggregatedItems = mealPlansForStoreMode.reduce(
-    (accumulator, plan) => {
-      const planItems = buildStoreModeItemsForPlan({
-        globalShoppingDate: activeShoppingDate,
+  const dueItems = mealPlansForStoreMode
+    .flatMap((plan) =>
+      buildStoreModeItemsForPlan({
         mealPlan: plan,
         stockMatchSet,
         stores,
         todayAtUtcMidnight,
-      });
-
-      accumulator.dueItems.push(...planItems.dueItems);
-      accumulator.laterItems.push(...planItems.laterItems);
-
-      return accumulator;
-    },
-    {
-      dueItems: [] as Array<
-        ProjectedGeneratedShoppingItem | ProjectedManualShoppingItem
-      >,
-      laterItems: [] as Array<
-        ProjectedGeneratedShoppingItem | ProjectedManualShoppingItem
-      >,
-    },
-  );
-  const dueItems = aggregatedItems.dueItems.sort((left, right) =>
-    compareProjectedItemsForStoreMode(
-      left,
-      right,
-      selectedStore,
-      storeSectionsByStoreId,
-    ),
-  );
-  const laterItems = aggregatedItems.laterItems.sort(
-    compareProjectedItemsByRelevantDate,
-  );
+      }),
+    )
+    .sort((left, right) =>
+      compareProjectedItemsForStoreMode(
+        left,
+        right,
+        selectedStore,
+        storeSectionsByStoreId,
+      ),
+    );
   const uncheckedFamilyItems = await loadFamilyShoppingItems({
     checked: false,
     familyId,
@@ -948,10 +930,6 @@ export async function getMealPlanStoreModeData({
         storeSectionsByStoreId,
       ),
     ),
-    groceryGrouping,
-  );
-  const groupedLaterItems = groupGeneratedShoppingItemsForDisplay(
-    laterItems,
     groceryGrouping,
   );
   const focusedDateRanges = mealPlansForStoreMode.map((plan) => ({
@@ -1001,7 +979,6 @@ export async function getMealPlanStoreModeData({
       title: plan.title,
     })),
     groceryGrouping,
-    laterItems: groupedLaterItems,
     mealPlan: shoppingDateOwnerPlan,
     progress: buildStoreModeProgress(mergedDueItems),
     selectedStore,
@@ -1012,7 +989,6 @@ export async function getMealPlanStoreModeData({
     })),
     tripFocus: savedTripFocus,
     userRole: membership.role,
-    selectableShoppingDates: unionMealPlanDateRanges(focusedDateRanges),
     visibleDates: unionMealPlanDateRanges(focusedDateRanges),
   };
 }
@@ -1375,13 +1351,11 @@ function projectManualShoppingItems({
 }
 
 function buildStoreModeItemsForPlan({
-  globalShoppingDate,
   mealPlan,
   stockMatchSet,
   stores,
   todayAtUtcMidnight,
 }: {
-  globalShoppingDate: Date;
   mealPlan: ShoppingMealPlan;
   stockMatchSet: FamilyStockMatchSet;
   stores: ShoppingStore[];
@@ -1403,24 +1377,13 @@ function buildStoreModeItemsForPlan({
     }),
   ];
 
-  return {
-    dueItems: projectedItems.filter((item) =>
-      isProjectedItemInStoreModeTrip(
-        item,
-        globalShoppingDate,
-        mealPlan.endDate,
-        todayAtUtcMidnight,
-      ),
+  return projectedItems.filter((item) =>
+    isProjectedItemInStoreModeTrip(
+      item,
+      mealPlan.endDate,
+      todayAtUtcMidnight,
     ),
-    laterItems: projectedItems.filter((item) =>
-      isProjectedItemBeforeShoppingDate(
-        item,
-        globalShoppingDate,
-        mealPlan.endDate,
-        todayAtUtcMidnight,
-      ),
-    ),
-  };
+  );
 }
 
 function buildProjectedStoreGroups(
@@ -1889,43 +1852,13 @@ function isGeneratedItemFullyPast(
 
 function isGeneratedItemInTripWindow(
   item: ProjectedGeneratedShoppingItem,
-  activeShoppingDate: Date,
   endDate: Date,
   todayAtUtcMidnight: Date,
 ) {
-  return getGeneratedEffectiveDates(item).some(
-    (date) =>
-      date.getTime() >= activeShoppingDate.getTime() &&
-      date.getTime() <= endDate.getTime() &&
-      isDateOnOrAfterToday(date, todayAtUtcMidnight),
-  );
-}
-
-function isGeneratedItemBeforeShoppingDate(
-  item: ProjectedGeneratedShoppingItem,
-  activeShoppingDate: Date,
-  endDate: Date,
-  todayAtUtcMidnight: Date,
-) {
-  if (isGeneratedItemFullyPast(item, todayAtUtcMidnight)) {
-    return false;
-  }
-
-  if (
-    isGeneratedItemInTripWindow(
-      item,
-      activeShoppingDate,
-      endDate,
-      todayAtUtcMidnight,
-    )
-  ) {
-    return false;
-  }
-
   return getGeneratedEffectiveDates(item).some(
     (date) =>
       isDateOnOrAfterToday(date, todayAtUtcMidnight) &&
-      date.getTime() < activeShoppingDate.getTime(),
+      date.getTime() <= endDate.getTime(),
   );
 }
 
@@ -1948,17 +1881,11 @@ function isProjectedItemPast(
 
 function isProjectedItemInStoreModeTrip(
   item: ProjectedShoppingItem,
-  activeShoppingDate: Date,
   endDate: Date,
   todayAtUtcMidnight: Date,
 ) {
   if (item.sourceType === "GENERATED") {
-    return isGeneratedItemInTripWindow(
-      item,
-      activeShoppingDate,
-      endDate,
-      todayAtUtcMidnight,
-    );
+    return isGeneratedItemInTripWindow(item, endDate, todayAtUtcMidnight);
   }
 
   if (isProjectedItemPast(item, todayAtUtcMidnight)) {
@@ -1972,37 +1899,9 @@ function isProjectedItemInStoreModeTrip(
   }
 
   return (
-    relevantDate.getTime() >= activeShoppingDate.getTime() &&
+    relevantDate.getTime() >= todayAtUtcMidnight.getTime() &&
     relevantDate.getTime() <= endDate.getTime()
   );
-}
-
-function isProjectedItemBeforeShoppingDate(
-  item: ProjectedShoppingItem,
-  activeShoppingDate: Date,
-  endDate: Date,
-  todayAtUtcMidnight: Date,
-) {
-  if (item.sourceType === "GENERATED") {
-    return isGeneratedItemBeforeShoppingDate(
-      item,
-      activeShoppingDate,
-      endDate,
-      todayAtUtcMidnight,
-    );
-  }
-
-  if (isProjectedItemPast(item, todayAtUtcMidnight)) {
-    return false;
-  }
-
-  const relevantDate = getProjectedItemRelevantDate(item);
-
-  if (!relevantDate) {
-    return false;
-  }
-
-  return relevantDate.getTime() < activeShoppingDate.getTime();
 }
 
 function getProjectedItemRelevantDate(item: ProjectedShoppingItem) {
@@ -2168,26 +2067,6 @@ function compareProjectedItemsForStoreMode(
 
   if (leftPreferredStoreComparison !== 0) {
     return leftPreferredStoreComparison;
-  }
-
-  const nameComparison = left.name.localeCompare(right.name, "nb");
-
-  if (nameComparison !== 0) {
-    return nameComparison;
-  }
-
-  return left.sourceKey.localeCompare(right.sourceKey, "nb");
-}
-
-function compareProjectedItemsByRelevantDate(
-  left: ProjectedShoppingItem,
-  right: ProjectedShoppingItem,
-) {
-  const leftRelevantTimestamp = getProjectedItemRelevantTimestamp(left);
-  const rightRelevantTimestamp = getProjectedItemRelevantTimestamp(right);
-
-  if (leftRelevantTimestamp !== rightRelevantTimestamp) {
-    return leftRelevantTimestamp - rightRelevantTimestamp;
   }
 
   const nameComparison = left.name.localeCompare(right.name, "nb");
