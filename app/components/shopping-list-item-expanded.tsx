@@ -7,10 +7,10 @@ import type {
 } from "../lib/family-shopping-write.server";
 
 export const shoppingDateInputClassName =
-  "mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100";
+  "mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft";
 
 const familyFieldClassName =
-  "mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100";
+  "mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft";
 
 function buildShoppingDateSelectOptions(
   selectableShoppingDates: string[],
@@ -192,7 +192,7 @@ export function ShoppingListItemExpanded({
             value={toggleExpectedVersion}
           />
           <button
-            className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="inline-flex w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isPendingCheckToggle}
             type="submit"
           >

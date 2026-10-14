@@ -22,8 +22,8 @@ export function ShoppingGroceryGroupingToggle({
           checked={grouping === "GROUPED"}
           className={
             grouping === "GROUPED"
-              ? "rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white"
-              : "rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+              ? "rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
+              : "rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
           }
           grouping="GROUPED"
           label="Samme vare"
@@ -32,8 +32,8 @@ export function ShoppingGroceryGroupingToggle({
           checked={grouping === "SPLIT"}
           className={
             grouping === "SPLIT"
-              ? "rounded-2xl bg-white px-5 py-3 text-sm font-medium text-slate-950"
-              : "rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+              ? "rounded-2xl bg-white px-5 py-3 text-sm font-medium text-band"
+              : "rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
           }
           grouping="SPLIT"
           label="Hver mengde"

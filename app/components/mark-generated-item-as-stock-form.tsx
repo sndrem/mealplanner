@@ -39,8 +39,8 @@ export function MarkGeneratedItemAsStockForm({
 
   const buttonClassName =
     variant === "store"
-      ? "inline-flex max-w-full whitespace-normal rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-left text-xs font-medium text-emerald-900 transition hover:border-emerald-400 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-      : "inline-flex w-full items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-900 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60";
+      ? "inline-flex max-w-full whitespace-normal rounded-full border border-accent/40 bg-accent-soft px-2.5 py-1 text-left text-xs font-medium text-accent-strong transition hover:border-accent hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-60"
+      : "inline-flex w-full items-center justify-center rounded-2xl border border-accent/30 bg-accent-soft px-5 py-3 text-sm font-medium text-accent-strong transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-60";
   const copyClassName =
     variant === "store"
       ? "text-xs leading-4 text-store-muted"

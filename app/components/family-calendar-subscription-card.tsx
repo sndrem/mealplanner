@@ -46,7 +46,7 @@ export function FamilyCalendarSubscriptionCard({
             value="create-calendar-subscription"
           />
           <button
-            className="inline-flex w-fit items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+            className="inline-flex w-fit items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
             type="submit"
           >
             {isCreating ? "Oppretter..." : "Opprett abonnement"}
@@ -72,7 +72,7 @@ export function FamilyCalendarSubscriptionCard({
               value="rotate-calendar-subscription"
             />
             <button
-              className="inline-flex w-fit items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="inline-flex w-fit items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
               type="submit"
             >
               {isRotating ? "Bytter lenke..." : "Bytt lenke"}
@@ -147,12 +147,12 @@ function CopyableCalendarUrl({
     <label className="block text-sm font-medium text-muted">
       {label}
       <input
-        className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-slate-400"
+        className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent"
         readOnly
         value={url}
       />
       <button
-        className="mt-2 inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+        className="mt-2 inline-flex items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(url);

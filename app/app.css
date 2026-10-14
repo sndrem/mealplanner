@@ -16,22 +16,31 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  --color-page: #f1f5f9;
+  --color-page: #f3f6f4;
   --color-surface: #ffffff;
-  --color-ink: #0f172a;
-  --color-muted: #475569;
-  --color-line: #e2e8f0;
+  --color-ink: #14211c;
+  --color-muted: #5c6b64;
+  --color-line: #d9e3dc;
+  --color-accent: #0f766e;
+  --color-accent-strong: #115e59;
+  --color-accent-soft: #d8f3ee;
+  --color-paper: #fffdf8;
+  --color-band: #14211c;
+  --color-on-band: #f4faf7;
+  --color-on-band-muted: #c9d7d1;
+  --color-on-band-quiet: #9fb2aa;
+  --color-kicker: #9ee6db;
 
-  /* Store mode — Nordic Playful warm accent */
-  --color-store-bg: #fafaf9;
+  /* Store mode uses the same brand roles */
+  --color-store-bg: #f3f6f4;
   --color-store-surface: #ffffff;
-  --color-store-ink: #1c1917;
-  --color-store-muted: #57534e;
-  --color-store-line: #e7e5e4;
-  --color-store-accent-light: #ebe4dc;
-  --color-store-accent: #c9bfb0;
-  --color-store-accent-deep: #a89988;
-  --color-store-accent-text: #57534e;
+  --color-store-ink: #14211c;
+  --color-store-muted: #5c6b64;
+  --color-store-line: #d9e3dc;
+  --color-store-accent-light: #d8f3ee;
+  --color-store-accent: #0f766e;
+  --color-store-accent-deep: #115e59;
+  --color-store-accent-text: #115e59;
 
   --color-notice-success: #ecfdf5;
   --color-notice-success-ink: #064e3b;
@@ -53,21 +62,30 @@ html.light {
 
 html.dark {
   color-scheme: dark;
-  --color-page: #020617;
-  --color-surface: #0f172a;
-  --color-ink: #f1f5f9;
-  --color-muted: #94a3b8;
-  --color-line: #334155;
+  --color-page: #0e1915;
+  --color-surface: #17241f;
+  --color-ink: #f4faf7;
+  --color-muted: #9fb2aa;
+  --color-line: #314840;
+  --color-accent: #0f766e;
+  --color-accent-strong: #14b8a6;
+  --color-accent-soft: #14332f;
+  --color-paper: #1c2823;
+  --color-band: #24352e;
+  --color-on-band: #f4faf7;
+  --color-on-band-muted: #c9d7d1;
+  --color-on-band-quiet: #9fb2aa;
+  --color-kicker: #9ee6db;
 
-  --color-store-bg: #1c1917;
-  --color-store-surface: #292524;
-  --color-store-ink: #fafaf9;
-  --color-store-muted: #a8a29e;
-  --color-store-line: #44403c;
-  --color-store-accent-light: #3f3a34;
-  --color-store-accent: #a89988;
-  --color-store-accent-deep: #c9bfb0;
-  --color-store-accent-text: #e7e5e4;
+  --color-store-bg: #0e1915;
+  --color-store-surface: #17241f;
+  --color-store-ink: #f4faf7;
+  --color-store-muted: #9fb2aa;
+  --color-store-line: #314840;
+  --color-store-accent-light: #14332f;
+  --color-store-accent: #0f766e;
+  --color-store-accent-deep: #14b8a6;
+  --color-store-accent-text: #9ee6db;
 
   --color-notice-success: #047857;
   --color-notice-success-ink: #ecfdf5;
@@ -89,21 +107,30 @@ html.system {
 
 @media (prefers-color-scheme: dark) {
   html.system {
-    --color-page: #020617;
-    --color-surface: #0f172a;
-    --color-ink: #f1f5f9;
-    --color-muted: #94a3b8;
-    --color-line: #334155;
+    --color-page: #0e1915;
+    --color-surface: #17241f;
+    --color-ink: #f4faf7;
+    --color-muted: #9fb2aa;
+    --color-line: #314840;
+    --color-accent: #0f766e;
+    --color-accent-strong: #14b8a6;
+    --color-accent-soft: #14332f;
+    --color-paper: #1c2823;
+    --color-band: #24352e;
+    --color-on-band: #f4faf7;
+    --color-on-band-muted: #c9d7d1;
+    --color-on-band-quiet: #9fb2aa;
+    --color-kicker: #9ee6db;
 
-    --color-store-bg: #1c1917;
-    --color-store-surface: #292524;
-    --color-store-ink: #fafaf9;
-    --color-store-muted: #a8a29e;
-    --color-store-line: #44403c;
-    --color-store-accent-light: #3f3a34;
-    --color-store-accent: #a89988;
-    --color-store-accent-deep: #c9bfb0;
-    --color-store-accent-text: #e7e5e4;
+    --color-store-bg: #0e1915;
+    --color-store-surface: #17241f;
+    --color-store-ink: #f4faf7;
+    --color-store-muted: #9fb2aa;
+    --color-store-line: #314840;
+    --color-store-accent-light: #14332f;
+    --color-store-accent: #0f766e;
+    --color-store-accent-deep: #14b8a6;
+    --color-store-accent-text: #9ee6db;
 
     --color-notice-success: #047857;
     --color-notice-success-ink: #ecfdf5;

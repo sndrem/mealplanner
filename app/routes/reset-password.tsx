@@ -109,7 +109,7 @@ export default function ResetPasswordRoute({ actionData, loaderData }: Route.Com
           <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {actionData?.formError ?? "Lenken er ugyldig eller utløpt. Be om en ny lenke og prøv igjen."}
           </p>
-          <Link className="inline-flex text-sm font-medium text-emerald-700 hover:text-emerald-800" to="/forgot-password">
+          <Link className="inline-flex text-sm font-medium text-accent-strong hover:text-accent" to="/forgot-password">
             Glemt passord
           </Link>
         </div>

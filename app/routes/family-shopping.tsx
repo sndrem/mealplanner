@@ -685,29 +685,29 @@ export default function FamilyShoppingRoute({
   return (
     <main className="min-h-screen bg-page px-4 pb-44 pt-8 text-ink lg:pb-12 lg:py-12">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8 lg:py-8">
+        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8 lg:py-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
+              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
                 Alltid på listen
               </span>
               <h1 className="mt-4 text-3xl font-semibold tracking-tight lg:text-4xl">
                 {loaderData.family.name}
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
                 Varer her følger familien på tvers av ukeplaner og vises i
                 handlelisten når dere handler for en uke.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
-                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
                 to={`/families/${loaderData.family.id}/meal-plans`}
               >
                 Åpne ukeplaner
               </Link>
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
                 to={`/families/${loaderData.family.id}`}
               >
                 Tilbake til familie
@@ -717,9 +717,9 @@ export default function FamilyShoppingRoute({
         </section>
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
+          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">
+            <p className="mt-2 text-sm leading-6 text-accent-strong">
               {noticeContent.description}
             </p>
           </section>
@@ -759,7 +759,7 @@ export default function FamilyShoppingRoute({
                   <button
                     className={`rounded-2xl px-5 py-3 text-sm font-medium transition ${
                       displayListMode === "GLOBAL"
-                        ? "bg-slate-950 text-white"
+                        ? "bg-accent text-white"
                         : "bg-surface text-ink ring-1 ring-sky-200 hover:bg-sky-100"
                     }`}
                     disabled={
@@ -781,7 +781,7 @@ export default function FamilyShoppingRoute({
                   <button
                     className={`rounded-2xl px-5 py-3 text-sm font-medium transition ${
                       displayListMode === "COMBINED"
-                        ? "bg-emerald-600 text-white"
+                        ? "bg-accent text-white"
                         : "bg-surface text-ink ring-1 ring-sky-200 hover:bg-sky-100"
                     }`}
                     disabled={
@@ -895,7 +895,7 @@ export default function FamilyShoppingRoute({
                   </select>
                 </label>
                 <button
-                  className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
+                  className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
                   type="submit"
                 >
                   Legg til vare
@@ -995,7 +995,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
         <h1 className="text-2xl font-semibold text-ink">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
         <Link
-          className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
+          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
           to="/app"
         >
           Til appen
@@ -1106,7 +1106,7 @@ function getFamilyShoppingSourceBadge(item: SerializedProjectedShoppingItem) {
   if (item.sourceType === "GENERATED") {
     return {
       className:
-        "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800",
+        "rounded-full bg-accent-soft px-3 py-1 text-xs font-medium text-accent-strong",
       label: "Ukeplan",
     };
   }
@@ -1336,7 +1336,7 @@ function renderFamilyShoppingListItem({
             value={getToggleExpectedVersion(item)}
           />
           <button
-            className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800 disabled:opacity-60"
+            className="rounded-xl bg-accent px-4 py-2 text-xs font-medium text-white transition hover:bg-accent-strong disabled:opacity-60"
             disabled={isPendingCheckToggle}
             type="submit"
           >

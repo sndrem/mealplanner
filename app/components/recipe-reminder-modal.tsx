@@ -145,7 +145,7 @@ export function RecipeReminderModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-band/40 sm:items-center sm:p-4"
       onClick={onClose}
       role="presentation"
     >
@@ -192,7 +192,7 @@ export function RecipeReminderModal({
                   <button
                     className={
                       selected
-                        ? "rounded-full bg-emerald-100 px-3 py-2 text-sm font-medium text-emerald-900 ring-1 ring-emerald-300"
+                        ? "rounded-full bg-accent-soft px-3 py-2 text-sm font-medium text-accent-strong ring-1 ring-accent/40"
                         : "rounded-full bg-page px-3 py-2 text-sm font-medium text-muted ring-1 ring-line"
                     }
                     key={suggestion.id ?? suggestion.title}
@@ -210,7 +210,7 @@ export function RecipeReminderModal({
         <label className="mt-4 block text-sm font-medium text-muted">
           Tekst
           <input
-            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
             onChange={(event) => {
               setTitle(event.target.value);
               setSelectedSuggestionId(undefined);
@@ -229,7 +229,7 @@ export function RecipeReminderModal({
                 aria-pressed={presetId === preset.id}
                 className={
                   presetId === preset.id
-                    ? "rounded-full bg-emerald-100 px-3 py-2 text-sm font-medium text-emerald-900 ring-1 ring-emerald-300"
+                    ? "rounded-full bg-accent-soft px-3 py-2 text-sm font-medium text-accent-strong ring-1 ring-accent/40"
                     : "rounded-full bg-page px-3 py-2 text-sm font-medium text-muted ring-1 ring-line"
                 }
                 key={preset.id}
@@ -246,7 +246,7 @@ export function RecipeReminderModal({
           <label className="block min-w-0 text-sm font-medium text-muted">
             Dato
             <input
-              className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-3 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-3 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               onChange={(event) => handleDateChange(event.target.value)}
               type="date"
               value={date}
@@ -255,7 +255,7 @@ export function RecipeReminderModal({
           <label className="block min-w-0 text-sm font-medium text-muted">
             Klokkeslett
             <input
-              className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-3 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-3 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               onChange={(event) => handleTimeChange(event.target.value)}
               type="time"
               value={time}
@@ -320,7 +320,7 @@ export function RecipeReminderModal({
             Avbryt
           </button>
           <button
-            className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+            className="rounded-2xl bg-accent px-4 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!canSubmit}
             onClick={handleCreate}
             type="button"

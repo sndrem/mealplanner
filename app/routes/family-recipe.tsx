@@ -198,16 +198,16 @@ export default function FamilyRecipeRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
+              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
                 Familieoppskrift
               </span>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">
                 {loaderData.recipe.title}
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
                 Rediger oppskriften for {loaderData.family.name}. Endringer
                 vises i ukeplaner og handlelister som bruker denne oppskriften.
               </p>
@@ -215,13 +215,13 @@ export default function FamilyRecipeRoute({
 
             <div className="flex flex-wrap gap-3">
               <Link
-                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
                 to={`/families/${loaderData.family.id}/recipes`}
               >
                 Alle oppskrifter
               </Link>
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
                 to={`/families/${loaderData.family.id}/meal-plans`}
               >
                 Ukeplaner
@@ -289,7 +289,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
         <h1 className="text-2xl font-semibold text-ink">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
         <Link
-          className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
+          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
           to="/app"
         >
           Til appen

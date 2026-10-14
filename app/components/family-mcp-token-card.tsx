@@ -30,7 +30,7 @@ export function FamilyMcpTokenCard({
       <label className="mt-6 block text-sm font-medium text-muted">
         MCP-adresse
         <input
-          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-slate-400"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent"
           readOnly
           value={mcpUrl}
         />
@@ -43,7 +43,7 @@ export function FamilyMcpTokenCard({
         <Form className="mt-6" method="post">
           <input name="intent" type="hidden" value="create-mcp-token" />
           <button
-            className="inline-flex w-fit items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+            className="inline-flex w-fit items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
             type="submit"
           >
             {isCreating ? "Oppretter..." : "Opprett nøkkel"}
@@ -65,7 +65,7 @@ export function FamilyMcpTokenCard({
           >
             <input name="intent" type="hidden" value="rotate-mcp-token" />
             <button
-              className="inline-flex w-fit items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="inline-flex w-fit items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
               type="submit"
             >
               {isRotating ? "Bytter nøkkel..." : "Bytt nøkkel"}
@@ -108,7 +108,7 @@ function McpTokenResult({ token }: { token: string }) {
       <label className="block text-sm font-medium text-muted">
         Nøkkel
         <input
-          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-slate-400"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent"
           readOnly
           value={token}
         />
@@ -126,7 +126,7 @@ function CopyButton({ label, value }: { label: string; value: string }) {
   return (
     <>
       <button
-        className="mt-2 inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+        className="mt-2 inline-flex items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(value);

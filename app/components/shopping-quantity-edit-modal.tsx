@@ -21,7 +21,7 @@ export function ShoppingQuantityEditModal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/35 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-band/35 p-4"
       onClick={onCancel}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -40,7 +40,7 @@ export function ShoppingQuantityEditModal({
         <label className="mt-3 block text-xs font-medium text-store-muted">
           Mengde
           <input
-            className="mt-1 w-full rounded-xl border border-store-line bg-surface px-3 py-2 text-base text-store-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-1 w-full rounded-xl border border-store-line bg-surface px-3 py-2 text-base text-store-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
             onChange={(event) => setQuantity(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {

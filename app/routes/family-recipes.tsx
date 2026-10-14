@@ -213,16 +213,16 @@ export default function FamilyRecipesRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex min-w-0 max-w-6xl flex-col gap-6">
-        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
+              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
                 Oppskrifter
               </span>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">
                 {loaderData.family.name}
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
                 Familieoppskrifter kan redigeres her. Standardoppskrifter er
                 felles for alle familier og kan bare leses i appen.
               </p>
@@ -231,20 +231,20 @@ export default function FamilyRecipesRoute({
             <div className="flex flex-wrap gap-3">
               {loaderData.returnTo ? (
                 <Link
-                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
                   to={loaderData.returnTo}
                 >
                   Tilbake til ukeplan
                 </Link>
               ) : null}
               <Link
-                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
                 to={`/families/${loaderData.family.id}/meal-plans`}
               >
                 Åpne ukeplaner
               </Link>
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
                 to={`/families/${loaderData.family.id}`}
               >
                 Tilbake til familie
@@ -341,7 +341,7 @@ export default function FamilyRecipesRoute({
                     Velg bilde
                     <input
                       accept="image/jpeg,image/png,image/webp"
-                      className="mt-2 block w-full text-base text-muted file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+                      className="mt-2 block w-full text-base text-muted file:mr-3 file:rounded-xl file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
                       disabled={
                         !loaderData.r2Configured || isCompressingCreateCover
                       }
@@ -434,7 +434,7 @@ export default function FamilyRecipesRoute({
                 </p>
               ) : null}
               <button
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={
                   (navigation.state !== "idle" &&
                     pendingIntent === "create-recipe") ||
@@ -460,7 +460,7 @@ export default function FamilyRecipesRoute({
             <div className="mt-2 flex gap-2">
               <input
                 autoComplete="off"
-                className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20"
+                className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/20"
                 id="recipe-search"
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="For eksempel tomatsuppe"
@@ -633,7 +633,7 @@ function RecipeListCard({
               Åpne
             </Link>
             <Link
-              className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white"
+              className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white"
               to={`${to}?edit=1`}
             >
               Rediger
@@ -686,7 +686,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
         <h1 className="text-2xl font-semibold text-ink">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
         <Link
-          className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
+          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
           to="/app"
         >
           Til appen

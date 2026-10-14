@@ -276,7 +276,7 @@ export function StoreModeShoppingItemCard({
     : "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-store-bg active:bg-store-line";
 
   const nameClass = item.checked
-    ? "text-sm font-semibold leading-5 text-store-muted line-through decoration-stone-400"
+    ? "text-sm font-semibold leading-5 text-store-muted line-through decoration-line"
     : "text-sm font-semibold leading-5 text-store-ink";
   const showQuantityEdit =
     !readOnly &&
@@ -344,7 +344,7 @@ export function StoreModeShoppingItemCard({
               </span>
             ) : null}
             {item.sourceType === "GENERATED" && item.recipeCount > 1 ? (
-              <span className={`${badgeClass} bg-emerald-100 text-emerald-800`}>
+              <span className={`${badgeClass} bg-accent-soft text-accent-strong`}>
                 {item.recipeCount} oppskrifter
               </span>
             ) : null}

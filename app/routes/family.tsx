@@ -162,7 +162,7 @@ function MealPlanStatusBadge({
 }) {
   if (muted) {
     return (
-      <span className="rounded-full bg-page px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-400 ring-1 ring-slate-100">
+      <span className="rounded-full bg-page px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted ring-1 ring-line">
         {status === "APPROVED" ? "Godkjent" : "Utkast"}
       </span>
     );
@@ -172,7 +172,7 @@ function MealPlanStatusBadge({
     <span
       className={
         status === "APPROVED"
-          ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200"
+          ? "rounded-full bg-accent-soft px-3 py-1 text-xs font-medium uppercase tracking-wide text-accent-strong ring-1 ring-accent/30"
           : "rounded-full bg-surface px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted ring-1 ring-line"
       }
     >
@@ -214,7 +214,7 @@ function MealPlanLinkCard({
       <p
         className={
           isPast
-            ? "mt-2 text-sm leading-6 text-slate-400"
+            ? "mt-2 text-sm leading-6 text-muted"
             : "mt-2 text-sm leading-6 text-muted"
         }
       >
@@ -571,16 +571,16 @@ export default function FamilyRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
+              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
                 Familie
               </span>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">
                 {loaderData.family.name}
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
                 {isAdmin
                   ? "Du kan administrere medlemmer og dele familiekoden med nye deltakere."
                   : "Du har tilgang til familien og kan bruke den videre beskyttede appen."}
@@ -590,9 +590,9 @@ export default function FamilyRoute({
         </section>
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
+          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">
+            <p className="mt-2 text-sm leading-6 text-accent-strong">
               {noticeContent.description}
             </p>
           </section>
@@ -667,7 +667,7 @@ export default function FamilyRoute({
                       Familie-e-post
                       <input
                         autoComplete="email"
-                        className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-slate-400"
+                        className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent"
                         defaultValue={reminderEmailValue}
                         key={reminderEmailValue}
                         name="reminderEmail"
@@ -681,7 +681,7 @@ export default function FamilyRoute({
                       </p>
                     ) : null}
                     <button
-                      className="inline-flex w-fit items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                      className="inline-flex w-fit items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
                       type="submit"
                     >
                       {isSavingReminderEmail ? "Lagrer..." : "Lagre e-post"}
@@ -829,7 +829,7 @@ export default function FamilyRoute({
                   <p className="mt-6 rounded-[24px] border border-dashed border-line bg-page px-5 py-4 text-sm leading-6 text-muted">
                     Ingen ukeplaner denne uken.{" "}
                     <Link
-                      className="font-medium text-ink underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
+                      className="font-medium text-ink underline decoration-line underline-offset-2 hover:decoration-muted"
                       to={`/families/${familyId}/meal-plans`}
                     >
                       Opprett eller velg en plan
@@ -879,7 +879,7 @@ export default function FamilyRoute({
                   </div>
 
                   <Link
-                    className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                    className="inline-flex items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
                     to={`/families/${familyId}/store-mode`}
                   >
                     Åpne handleliste
@@ -889,7 +889,7 @@ export default function FamilyRoute({
                 <p className="mt-4 text-sm leading-6 text-muted">
                   Trenger du varer uten ukeplan?{" "}
                   <Link
-                    className="font-medium text-ink underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
+                    className="font-medium text-ink underline decoration-line underline-offset-2 hover:decoration-muted"
                     to={`/families/${familyId}/shopping`}
                   >
                     Åpne Alltid på listen
@@ -900,7 +900,7 @@ export default function FamilyRoute({
 
               <p className="text-center text-sm text-muted">
                 <Link
-                  className="font-medium text-ink underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
+                  className="font-medium text-ink underline decoration-line underline-offset-2 hover:decoration-muted"
                   to={`/families/${familyId}/meal-plans`}
                 >
                   Administrer ukeplaner
@@ -934,7 +934,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         <h1 className="text-2xl font-semibold text-ink">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
         <Link
-          className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
           to="/app"
         >
           Tilbake til oversikten

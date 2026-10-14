@@ -243,7 +243,7 @@ export function MealPlanWeekEntriesForm({
         return (
           <div key={date} className="grid min-w-0 gap-2">
             {showWeekSeparator ? (
-              <p className="pt-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+              <p className="pt-1 text-xs font-medium uppercase tracking-wide text-muted">
                 {formatWeekChunkLabel(date)}
               </p>
             ) : null}
@@ -289,7 +289,7 @@ export function MealPlanWeekEntriesForm({
         <button
           className={
             isReorderMode
-              ? "inline-flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 sm:w-auto"
+              ? "inline-flex w-full items-center justify-center rounded-2xl bg-accent px-4 py-2.5 text-sm font-medium text-white transition hover:bg-accent-strong sm:w-auto"
               : "inline-flex w-full items-center justify-center rounded-2xl border border-line bg-surface px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-page sm:w-auto"
           }
           onClick={() => setIsReorderMode((current) => !current)}
@@ -300,7 +300,7 @@ export function MealPlanWeekEntriesForm({
       </div>
 
       {isReorderMode ? (
-        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-950">
+        <p className="rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3 text-sm leading-6 text-ink">
           Dra middager mellom dager, eller bruk Bytt med. Notat og ansvarlig
           blir stående på samme dag.
         </p>
@@ -322,7 +322,7 @@ export function MealPlanWeekEntriesForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <button
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+          className="inline-flex w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
           disabled={isEntryMutationPending}
           name="intent"
           type="submit"
@@ -519,7 +519,7 @@ function MealPlanDayRow({
     >
       <div className="flex items-start justify-between gap-2 p-3">
         <button
-          className="min-w-0 flex-1 rounded-xl text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500"
+          className="min-w-0 flex-1 rounded-xl text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
           onClick={toggleDayOpen}
           type="button"
         >
@@ -562,7 +562,7 @@ function MealPlanDayRow({
             </span>
           ) : null}
           <button
-            className="text-xs text-slate-400"
+            className="text-xs text-muted"
             onClick={toggleDayOpen}
             type="button"
           >
@@ -605,7 +605,7 @@ function MealPlanDayRow({
           <label className="block min-w-0 text-sm font-medium text-muted">
             Ansvarlig
             <select
-              className="mt-2 box-border w-full max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 box-border w-full max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               name={`responsibleUserId:${date}`}
               onChange={(event) =>
                 setSelectedResponsibleUserId(event.target.value)
@@ -624,7 +624,7 @@ function MealPlanDayRow({
           <label className="block min-w-0 text-sm font-medium text-muted">
             Notat
             <textarea
-              className="mt-2 box-border min-h-24 w-full max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 box-border min-h-24 w-full max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               defaultValue={entry.note}
               name={`note:${date}`}
               placeholder="F.eks. bytt ut ris med pasta eller husk rester til dagen etter"
@@ -781,7 +781,7 @@ function MealPlanReorderDayRow({
       ? "border-notice-success-line bg-notice-success ring-1 ring-notice-success-line"
       : "border-line bg-page",
     isDragging ? "opacity-50" : "",
-    dropHighlight ? "ring-2 ring-emerald-400" : "",
+    dropHighlight ? "ring-2 ring-accent" : "",
     hasMealSelection ? "active:cursor-grabbing" : "",
   ]
     .filter(Boolean)
@@ -796,7 +796,7 @@ function MealPlanReorderDayRow({
             className={
               hasMealSelection
                 ? "mt-1 shrink-0 cursor-grab touch-none rounded-xl border border-dashed border-line bg-surface px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-muted active:cursor-grabbing"
-                : "mt-1 shrink-0 rounded-xl border border-dashed border-line bg-page px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-300"
+                : "mt-1 shrink-0 rounded-xl border border-dashed border-line bg-page px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-on-band-muted"
             }
             onMouseDown={(event) => {
               if (!hasMealSelection) {
@@ -869,7 +869,7 @@ function MealPlanReorderDayRow({
             Bytt med
             <select
               aria-label="Bytt middag med annen dag"
-              className="mt-2 box-border w-full max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 box-border w-full max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               onChange={(event) => {
                 const targetDate = event.target.value;
                 setByttMedValue("");

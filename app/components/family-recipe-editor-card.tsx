@@ -308,7 +308,7 @@ export function FamilyRecipeEditorCard({
             </button>
             {canManageRecipes ? (
               <button
-                className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                className="inline-flex items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
                 onClick={() => setIsEditing(true)}
                 type="button"
               >
@@ -372,14 +372,14 @@ export function FamilyRecipeEditorCard({
           />
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
-              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isUpdatingRecipe || isCompressingCover}
               type="submit"
             >
               {isUpdatingRecipe ? "Lagrer..." : "Lagre oppskrift"}
             </button>
             <button
-              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-surface px-5 py-3 text-sm font-medium text-muted ring-1 ring-slate-300 transition hover:bg-page"
+              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-surface px-5 py-3 text-sm font-medium text-muted ring-1 ring-line transition hover:bg-page"
               onClick={handleCancelEditing}
               type="button"
             >
@@ -487,7 +487,7 @@ function RecipeCoverField({
             Velg bilde
             <input
               accept="image/jpeg,image/png,image/webp"
-              className="mt-2 block w-full text-base text-muted file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+              className="mt-2 block w-full text-base text-muted file:mr-3 file:rounded-xl file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
               disabled={disabled}
               name="coverImage"
               onChange={onFileChange}
@@ -560,7 +560,7 @@ function RecipeFields({
       <label className="block text-sm font-medium text-muted">
         Tittel
         <input
-          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
           name="title"
           onChange={(event) =>
             setDraftValues((current) => ({
@@ -579,7 +579,7 @@ function RecipeFields({
       <label className="block text-sm font-medium text-muted">
         Beskrivelse
         <textarea
-          className="mt-2 min-h-24 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="mt-2 min-h-24 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
           name="description"
           onChange={(event) =>
             setDraftValues((current) => ({
@@ -591,7 +591,7 @@ function RecipeFields({
         />
       </label>
       <button
-        className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+        className="inline-flex items-center gap-2 rounded-2xl bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
         disabled={isGenerating || !draftValues.title}
         onClick={async () => {
           setIsGenerating(true);
@@ -643,7 +643,7 @@ function RecipeFields({
         <label className="block text-sm font-medium text-muted">
           Porsjoner
           <input
-            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
             inputMode="numeric"
             name="defaultServings"
             onChange={(event) =>
@@ -666,7 +666,7 @@ function RecipeFields({
         <label className="block text-sm font-medium text-muted">
           Tilberedning (min)
           <input
-            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
             inputMode="numeric"
             name="prepMinutes"
             onChange={(event) =>
@@ -690,7 +690,7 @@ function RecipeFields({
       <label className="block text-sm font-medium text-muted">
         Stikkord (kommaseparert)
         <input
-          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
           name="tags"
           onChange={(event) =>
             setDraftValues((current) => ({
@@ -900,7 +900,7 @@ function ReminderSuggestionEditor({
           <label className="mt-4 block text-sm font-medium text-muted">
             Tittel
             <input
-              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               name={`reminderTitle:${index}`}
               onChange={(event) => updateRow(row.key, { title: event.target.value })}
               placeholder="Ta deigen ut av kjøleskapet"
@@ -917,7 +917,7 @@ function ReminderSuggestionEditor({
           <label className="mt-3 block text-sm font-medium text-muted">
             Notat (valgfritt)
             <textarea
-              className="mt-2 min-h-20 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 min-h-20 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               name={`reminderNote:${index}`}
               onChange={(event) => updateRow(row.key, { note: event.target.value })}
               placeholder="F.eks. ta ut dagen før"
@@ -933,7 +933,7 @@ function ReminderSuggestionEditor({
           <label className="mt-3 block text-sm font-medium text-muted">
             Når (valgfritt)
             <select
-              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               name={`reminderTimingKind:${index}`}
               onChange={(event) =>
                 updateRow(row.key, { timingKind: event.target.value })

@@ -1793,7 +1793,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
         <h1 className="text-2xl font-semibold text-store-ink">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-store-muted">{message}</p>
         <Link
-          className="mt-6 inline-flex rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white"
+          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
           to="/app"
         >
           Til appen

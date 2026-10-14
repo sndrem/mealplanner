@@ -43,8 +43,8 @@ function navLinkClassName({ isActive }: { isActive: boolean }) {
   return [
     "rounded-2xl px-4 py-2 text-sm font-medium transition",
     isActive
-      ? "bg-emerald-500 text-white"
-      : "text-slate-200 hover:bg-white/10 hover:text-white",
+      ? "bg-accent text-white"
+      : "text-on-band-muted hover:bg-white/10 hover:text-white",
   ].join(" ");
 }
 
@@ -102,7 +102,7 @@ export function AppTopNav({
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950 text-slate-100">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-band text-on-band">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link
           aria-label="Mealplanner forsiden"
@@ -111,7 +111,7 @@ export function AppTopNav({
         >
           <span
             aria-hidden
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-emerald-500/20 text-xs font-semibold text-emerald-200"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-accent/20 text-xs font-semibold text-kicker"
           >
             MP
           </span>
@@ -127,7 +127,7 @@ export function AppTopNav({
           aria-controls={menuId}
           aria-expanded={menuOpen}
           aria-label={menuOpen ? "Lukk meny" : "Åpne meny"}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-slate-100 transition hover:bg-white/15 md:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-on-band transition hover:bg-white/15 md:hidden"
           onClick={() => {
             setMenuOpen((open) => !open);
           }}

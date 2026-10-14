@@ -86,7 +86,7 @@ describe("AppTopNav", () => {
       initialEntries: ["/families/family-1/stores"],
     });
 
-    expect(screen.getByRole("link", { name: "Butikker" })).toHaveClass("bg-emerald-500");
+    expect(screen.getByRole("link", { name: "Butikker" })).toHaveClass("bg-accent");
   });
 
   it("shows the theme toggle in desktop nav and the mobile menu", () => {

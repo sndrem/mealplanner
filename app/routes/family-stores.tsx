@@ -327,16 +327,16 @@ export default function FamilyStoresRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
+              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
                 Butikker
               </span>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">
                 {loaderData.family.name}
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
                 Administrer familiebutikker og bestem seksjonsrekkefølgen slik
                 at butikkmodus følger handleturen deres.
               </p>
@@ -344,13 +344,13 @@ export default function FamilyStoresRoute({
 
             <div className="flex flex-wrap gap-3">
               <Link
-                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
                 to={`/families/${loaderData.family.id}/meal-plans`}
               >
                 Åpne ukeplaner
               </Link>
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
                 to={`/families/${loaderData.family.id}`}
               >
                 Tilbake til familie
@@ -360,9 +360,9 @@ export default function FamilyStoresRoute({
         </section>
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
+          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">
+            <p className="mt-2 text-sm leading-6 text-accent-strong">
               {noticeContent.description}
             </p>
           </section>
@@ -394,7 +394,7 @@ export default function FamilyStoresRoute({
               <label className="block text-sm font-medium text-muted">
                 Butikknavn
                 <input
-                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                   defaultValue={createValues.name}
                   name="name"
                   placeholder="For eksempel Helgebutikk"
@@ -408,7 +408,7 @@ export default function FamilyStoresRoute({
                 </p>
               ) : null}
               <button
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={
                   navigation.state !== "idle" && pendingIntent === "create-store"
                 }
@@ -454,7 +454,7 @@ export default function FamilyStoresRoute({
                         value={category.id}
                       />
                       <button
-                        className="text-slate-400 transition hover:text-rose-600"
+                        className="text-muted transition hover:text-rose-600"
                         title="Slett kategori"
                         type="submit"
                       >
@@ -469,13 +469,13 @@ export default function FamilyStoresRoute({
             <Form className="mt-4 flex gap-3" method="post">
               <input name="intent" type="hidden" value="create-category" />
               <input
-                className="min-w-0 flex-1 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="min-w-0 flex-1 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                 name="categoryDisplayName"
                 placeholder="Ny kategori, f.eks. Helsekost"
                 type="text"
               />
               <button
-                className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
                 type="submit"
               >
                 Legg til
@@ -585,7 +585,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
         <h1 className="text-2xl font-semibold text-ink">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
         <Link
-          className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white"
+          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
           to="/app"
         >
           Til appen

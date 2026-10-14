@@ -159,12 +159,12 @@ export function MealPlanRecipePicker({
         aria-controls={isOpen ? listboxId : undefined}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="mt-2 flex w-full max-w-full items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3 text-left text-sm text-ink outline-none transition hover:bg-page focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+        className="mt-2 flex w-full max-w-full items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3 text-left text-sm text-ink outline-none transition hover:bg-page focus:border-accent focus:ring-4 focus:ring-accent-soft"
         onClick={() => setIsOpen((current) => !current)}
         type="button"
       >
         <span className="min-w-0 truncate font-medium">{buttonLabel}</span>
-        <span className="shrink-0 text-xs text-slate-400">
+        <span className="shrink-0 text-xs text-muted">
           {isOpen ? "Lukk" : "Velg"}
         </span>
       </button>
@@ -179,7 +179,7 @@ export function MealPlanRecipePicker({
             Søk
             <input
               autoComplete="off"
-              className="mt-1.5 w-full rounded-xl border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-1.5 w-full rounded-xl border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="For eksempel tomatsuppe"
               ref={searchInputRef}
@@ -200,7 +200,7 @@ export function MealPlanRecipePicker({
                       key={tag}
                       className={
                         isSelected
-                          ? "shrink-0 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white"
+                          ? "shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-white"
                           : "shrink-0 rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted transition hover:bg-line"
                       }
                       onClick={() => toggleTag(tag)}
@@ -231,7 +231,7 @@ export function MealPlanRecipePicker({
             <button
               className={
                 value === ""
-                  ? "w-full rounded-2xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-left text-sm font-medium text-emerald-900"
+                  ? "w-full rounded-2xl border border-accent/40 bg-accent-soft px-3 py-2 text-left text-sm font-medium text-accent-strong"
                   : "w-full rounded-2xl border border-dashed border-line bg-page px-3 py-2 text-left text-sm font-medium text-muted transition hover:bg-surface"
               }
               onClick={() => selectValue("")}
@@ -313,7 +313,7 @@ function PickerSection({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+      <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
         {title}
       </p>
       <div className="space-y-1.5">{children}</div>

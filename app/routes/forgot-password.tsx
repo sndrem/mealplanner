@@ -67,7 +67,7 @@ export default function ForgotPasswordRoute({ actionData }: Route.ComponentProps
       heading="Glemt passord"
     >
       {actionData?.success ? (
-        <p className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <p className="mt-8 rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-accent-strong">
           Hvis det finnes en konto med denne e-postadressen, har vi sendt en lenke for å tilbakestille passordet.
         </p>
       ) : (

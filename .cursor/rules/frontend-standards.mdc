@@ -20,6 +20,42 @@ alwaysApply: true
 - Client form submissions must update visible data immediately (optimistic). Pending-only `"Lagrer..."` is not enough; follow `.cursor/rules/optimistic-form-updates.mdc`.
 - Text inputs (`input`, `textarea`, searchable fields) must use `text-base` (16px) or larger — never `text-sm`/`text-xs` — to prevent iOS Safari focus zoom. See `.cursor/rules/ios-input-font-size.mdc`.
 
+## Brand palette
+
+The Ukesstripe home design is the color source for the product. Use these tokens for shared chrome (page, cards, text, borders, primary actions). Do not introduce new slate, emerald, or one-off hex colors for that chrome.
+
+Define them in `app/app.css` `@theme` when implementing the home page, then reuse the Tailwind colors (`bg-page`, `text-ink`, `bg-accent`, and so on). Light values replace the current slate scale (`#f1f5f9`, `#0f172a`, `#475569`, `#e2e8f0`).
+
+| Token | Light | Role |
+| --- | --- | --- |
+| `--color-page` | `#f3f6f4` | Page background |
+| `--color-surface` | `#ffffff` | Cards and panels |
+| `--color-ink` | `#14211c` | Body text. It flips in dark mode, so do not use it as a hero background. |
+| `--color-band` | `#14211c` | Dark heroes, closing bands, and the top bar. Dark mode lifts this to `#24352e`. |
+| `--color-on-band` | `#f4faf7` | Text on `band` |
+| `--color-on-band-muted` | `#c9d7d1` | Secondary text on `band` |
+| `--color-on-band-quiet` | `#9fb2aa` | Quiet text on `band` |
+| `--color-kicker` | `#9ee6db` | Eyebrow labels on `band` |
+| `--color-muted` | `#5c6b64` | Secondary text |
+| `--color-line` | `#d9e3dc` | Borders and dividers |
+| `--color-accent` | `#0f766e` | Primary buttons and kickers |
+| `--color-accent-strong` | `#115e59` | Primary hover |
+| `--color-accent-soft` | `#d8f3ee` | Soft accent fills |
+| `--color-paper` | `#fffdf8` | Warm illustrated cards |
+
+Dark hero and closing band, on `--color-ink`:
+
+| Role | Color |
+| --- | --- |
+| Text | `#f4faf7` |
+| Secondary text | `#c9d7d1` |
+| Quiet text | `#9fb2aa` |
+| Kicker | `#9ee6db` |
+
+Dark mode stays in this green-black family. Do not keep the slate dark scale (`#020617`, `#0f172a`, `#334155`). Page `#0e1915`, surface `#17241f`, ink `#f4faf7`, muted `#9fb2aa`, line `#314840`, accent-strong `#14b8a6` (lighter hover), accent-soft `#14332f`. Store-mode tokens (`--color-store-*`) use these same brand roles. Notice colors stay as they are.
+
+Illustration-only colors, for flat drawings and not UI chrome: stroke `#1c2b24`, tomato `#e36b4f`, yolk `#f0c14d`, leaf `#3d9a78`, salmon `#f0a07a`, dough `#f3e2c4`, meat `#c46b4a`. Drawings stay clearly illustrated.
+
 ```tsx
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   tone?: "primary" | "secondary";

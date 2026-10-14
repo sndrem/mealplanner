@@ -90,7 +90,7 @@ export function AuthForm({ actionData, description, isSubmitting, mode, redirect
 
         {!isRegisterMode ? (
           <p>
-            <Link className="text-sm font-medium text-emerald-700 hover:text-emerald-800" to="/forgot-password">
+            <Link className="text-sm font-medium text-accent-strong hover:text-accent" to="/forgot-password">
               Glemt passord?
             </Link>
           </p>

@@ -156,7 +156,7 @@ export default function FamilyStoreModeShareRoute({
             </details>
           ) : null}
           <button
-            className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-wait disabled:opacity-70"
+            className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-wait disabled:opacity-70"
             disabled={isSubmitting}
             type="submit"
           >
@@ -188,7 +188,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
         <h1 className="text-2xl font-semibold text-store-ink">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-store-muted">{message}</p>
         <Link
-          className="mt-6 inline-flex rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white"
+          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
           to="/app"
         >
           Til appen
@@ -250,7 +250,7 @@ function CurationItemRow({
     <li>
       <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border border-store-line bg-store-bg px-3 py-2.5">
         <input
-          className="mt-1 size-4 shrink-0 accent-stone-900"
+          className="mt-1 size-4 shrink-0 accent-accent"
           defaultChecked={defaultSelected}
           name="item"
           type="checkbox"
@@ -301,7 +301,7 @@ function ShareUrlResult({ shareUrl }: { shareUrl: string }) {
       </label>
       <div className="mt-3 flex flex-wrap gap-2">
         <button
-          className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-stone-900 px-4 py-2 text-sm font-medium text-white"
+          className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-accent px-4 py-2 text-sm font-medium text-white"
           onClick={async () => {
             try {
               await navigator.clipboard.writeText(shareUrl);
