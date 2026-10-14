@@ -227,7 +227,7 @@ export default function FamilyMealPlansRoute({
 
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
         <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
@@ -263,8 +263,8 @@ export default function FamilyMealPlansRoute({
           </section>
         ) : null}
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <article className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
+        <section className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <article className="min-w-0 rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold text-ink">
                 Opprett ukeplan
@@ -507,7 +507,7 @@ function CreateMealPlanForm({
     <Form className="mt-6 space-y-4" method="post">
       <input name="intent" type="hidden" value="create-meal-plan" />
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="block min-w-0 text-sm font-medium text-muted">
           Startdato
           <input

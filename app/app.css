@@ -132,4 +132,32 @@ html.system {
   body {
     @apply min-h-screen bg-page text-ink;
   }
+
+  /*
+    iOS WebKit, including Arc Search, sizes date and time inputs from the
+    localized value and extra internal padding. width, min-width, and
+    max-width on the input do not override that, so the control paints
+    outside its parent on a phone while desktop Chrome stays inside.
+    Resetting appearance makes these controls use the same border box as
+    text inputs. The native picker still opens on tap.
+  */
+  @supports (-webkit-touch-callout: none) {
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"] {
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+      box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    input[type="date"]::-webkit-date-and-time-value,
+    input[type="time"]::-webkit-date-and-time-value,
+    input[type="datetime-local"]::-webkit-date-and-time-value {
+      min-width: 0;
+      text-align: left;
+    }
+  }
 }

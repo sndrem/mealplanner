@@ -242,7 +242,7 @@ export function RecipeReminderModal({
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block min-w-0 text-sm font-medium text-muted">
             Dato
             <input
