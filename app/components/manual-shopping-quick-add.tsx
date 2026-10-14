@@ -68,7 +68,7 @@ const DROPDOWN_GAP_PX = 8;
 const quickAddStyles = {
   default: {
     createOption:
-      "flex w-full px-4 py-3 text-left text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60",
+      "flex w-full px-4 py-3 text-left text-sm font-medium text-accent-strong transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-60",
     description: "text-sm leading-6 text-muted",
     dropdown:
       "absolute z-10 w-full rounded-2xl border border-line bg-surface shadow-lg",
@@ -78,16 +78,16 @@ const quickAddStyles = {
       "absolute bottom-full z-10 mb-2 w-full rounded-2xl border border-line bg-surface shadow-lg",
     error: "text-sm text-rose-600",
     input:
-      "min-w-0 w-0 flex-1 rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
+      "min-w-0 w-0 flex-1 rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft",
     label: "block text-sm font-medium text-muted",
     option:
       "flex w-full items-center justify-between px-4 py-3 text-left text-sm text-ink transition hover:bg-page disabled:cursor-not-allowed disabled:opacity-60",
     optionMeta: "text-xs text-muted",
     searchPending: "px-4 py-2 text-sm text-muted",
     submit:
-      "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400",
+      "inline-flex h-full shrink-0 items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60",
     quantityInput:
-      "w-24 shrink-0 rounded-2xl border border-line bg-surface px-3 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100",
+      "w-24 shrink-0 rounded-2xl border border-line bg-surface px-3 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft",
   },
   "store-mode": {
     createOption:

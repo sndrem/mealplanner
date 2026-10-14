@@ -609,20 +609,20 @@ export default function FamilyMealPlanRoute({
   return (
     <main className="min-h-screen overflow-x-hidden bg-page px-4 py-6 text-ink md:py-12">
       <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-slate-950 px-5 py-6 text-white shadow-xl sm:px-8 sm:py-8">
+        <section className="rounded-[32px] bg-band px-5 py-6 text-white shadow-xl sm:px-8 sm:py-8">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0 flex-1">
-                <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
+                <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
                   Middagsplanlegging
                 </span>
                 <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
                   {displayTitle}
                 </h1>
-                <p className="mt-2 text-sm font-medium text-emerald-200/90">
+                <p className="mt-2 text-sm font-medium text-kicker/90">
                   {formatMealPlanWindow(displayStartDate, displayEndDate)}
                 </p>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-on-band-muted sm:text-base sm:leading-7">
                   Se hele uken med ett blikk. Trykk på en dag for å planlegge
                   middag og notater.
                 </p>
@@ -630,13 +630,13 @@ export default function FamilyMealPlanRoute({
 
               <div className="flex flex-wrap gap-2 sm:gap-3 md:max-w-md md:justify-end">
                 <Link
-                  className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+                  className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
                   to={`/families/${loaderData.family.id}/store-mode`}
                 >
                   Åpne butikkmodus
                 </Link>
                 <Link
-                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
                   to={`/families/${loaderData.family.id}?tab=familie`}
                 >
                   Abonner i kalenderen
@@ -644,7 +644,7 @@ export default function FamilyMealPlanRoute({
                 <button
                   aria-controls="meal-plan-settings"
                   aria-expanded={showMealPlanSettings}
-                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
                   onClick={() => {
                     if (metadataFailed || isUpdatingMetadata) {
                       setSettingsOpen(true);
@@ -658,7 +658,7 @@ export default function FamilyMealPlanRoute({
                   Innstillinger
                 </button>
                 <Link
-                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
                   to={`/families/${loaderData.family.id}/meal-plans`}
                 >
                   Tilbake til ukeplaner
@@ -709,7 +709,7 @@ export default function FamilyMealPlanRoute({
               <label className="block text-sm font-medium text-muted">
                 Navn
                 <input
-                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                   defaultValue={titleValue}
                   name="title"
                   type="text"
@@ -727,7 +727,7 @@ export default function FamilyMealPlanRoute({
                 <label className="block min-w-0 text-sm font-medium text-muted">
                   Startdato
                   <input
-                    className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                     defaultValue={startDateValue}
                     name="startDate"
                     type="date"
@@ -737,7 +737,7 @@ export default function FamilyMealPlanRoute({
                 <label className="block min-w-0 text-sm font-medium text-muted">
                   Sluttdato
                   <input
-                    className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                     defaultValue={endDateValue}
                     name="endDate"
                     type="date"
@@ -765,7 +765,7 @@ export default function FamilyMealPlanRoute({
               ) : null}
 
               <button
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isUpdatingMetadata}
                 type="submit"
               >
@@ -776,9 +776,9 @@ export default function FamilyMealPlanRoute({
         ) : null}
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
+          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">
+            <p className="mt-2 text-sm leading-6 text-accent-strong">
               {noticeContent.description}
             </p>
           </section>
@@ -796,7 +796,7 @@ export default function FamilyMealPlanRoute({
             </div>
 
             <details className="group mt-2 min-w-0">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-2xl border border-line bg-page px-4 py-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-2xl border border-line bg-page px-4 py-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink">Fryser</p>
                   <p className="text-sm text-muted">
@@ -804,10 +804,10 @@ export default function FamilyMealPlanRoute({
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-xs text-slate-400 group-open:hidden">
+                  <span className="text-xs text-muted group-open:hidden">
                     Åpne
                   </span>
-                  <span className="hidden text-xs text-slate-400 group-open:inline">
+                  <span className="hidden text-xs text-muted group-open:inline">
                     Lukk
                   </span>
                 </div>
@@ -932,7 +932,7 @@ export default function FamilyMealPlanRoute({
 
           <article className="min-w-0 w-full rounded-[28px] bg-surface p-4 shadow-sm ring-1 ring-line sm:p-6">
             <details className="group min-w-0 lg:hidden">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-lg font-semibold text-ink">
                     Oppskriftsbank
@@ -942,10 +942,10 @@ export default function FamilyMealPlanRoute({
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-xs text-slate-400 group-open:hidden">
+                  <span className="text-xs text-muted group-open:hidden">
                     Åpne
                   </span>
-                  <span className="hidden text-xs text-slate-400 group-open:inline">
+                  <span className="hidden text-xs text-muted group-open:inline">
                     Lukk
                   </span>
                 </div>
@@ -1003,7 +1003,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
         <h1 className="text-2xl font-semibold text-ink">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
         <Link
-          className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
           to="/app"
         >
           Tilbake til oversikten
@@ -1239,11 +1239,11 @@ function MealPlanApprovalSection({
           className={
             isHero
               ? mealPlanStatus === "APPROVED"
-                ? "rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-100 ring-1 ring-emerald-400/30"
-                : "rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/15"
+                ? "rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-kicker ring-1 ring-accent/30"
+                : "rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-on-band-muted ring-1 ring-white/15"
               : mealPlanStatus === "APPROVED"
-                ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800"
-                : "rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-muted"
+                ? "rounded-full bg-accent-soft px-3 py-1 text-xs font-medium text-accent-strong"
+                : "rounded-full bg-line px-3 py-1 text-xs font-medium text-muted"
           }
         >
           {statusLabel}
@@ -1251,7 +1251,7 @@ function MealPlanApprovalSection({
         {approvedAt ? (
           <span
             className={
-              isHero ? "text-xs text-slate-300" : "text-xs text-muted"
+              isHero ? "text-xs text-on-band-muted" : "text-xs text-muted"
             }
           >
             {formatApprovalTimestamp(approvedAt)}
@@ -1279,7 +1279,7 @@ function MealPlanApprovalSection({
         <p
           className={
             isHero
-              ? "text-sm leading-6 text-slate-300"
+              ? "text-sm leading-6 text-on-band-muted"
               : "text-sm leading-6 text-muted"
           }
         >
@@ -1304,8 +1304,8 @@ function MealPlanApprovalSection({
         <button
           className={
             isHero
-              ? "inline-flex w-full items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-500/50 sm:w-auto"
-              : "inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              ? "inline-flex w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              : "inline-flex w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
           }
           disabled={isApprovingMealPlan || isReopeningMealPlan}
           type="submit"
@@ -1393,7 +1393,7 @@ function RecipeBankContent({
         Åpne en dag i ukeoversikten, eller velg dag nedenfor, og trykk Legg til.
       </p>
       <Link
-        className="mt-1 inline-flex w-fit items-center justify-center rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
+        className="mt-1 inline-flex w-fit items-center justify-center rounded-2xl bg-accent-soft px-4 py-2 text-sm font-medium text-accent-strong ring-1 ring-accent/30 transition hover:bg-accent-soft"
         to={`/families/${familyId}/recipes`}
       >
         Administrer oppskrifter
@@ -1404,7 +1404,7 @@ function RecipeBankContent({
           Søk oppskrifter
           <input
             autoComplete="off"
-            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="For eksempel tomatsuppe"
             type="search"
@@ -1424,7 +1424,7 @@ function RecipeBankContent({
                     key={tag}
                     className={
                       isSelected
-                        ? "shrink-0 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white"
+                        ? "shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-white"
                         : "shrink-0 rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted transition hover:bg-line"
                     }
                     onClick={() => {
@@ -1461,7 +1461,7 @@ function RecipeBankContent({
           <label className="block text-sm font-medium text-muted">
             Legg til på dag
             <select
-              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               onChange={(event) => setFallbackAssignDate(event.target.value)}
               value={fallbackAssignDate}
             >
@@ -1473,7 +1473,7 @@ function RecipeBankContent({
             </select>
           </label>
         ) : activeAssignDate && assignDateLabel ? (
-          <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+          <p className="rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-ink">
             Valgt dag: {assignDateLabel}. Trykk Legg til på en oppskrift.
           </p>
         ) : null}
@@ -1535,7 +1535,7 @@ function RecipeBankContent({
 
                   {assignDate ? (
                     <button
-                      className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                      className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-accent px-4 py-2.5 text-sm font-medium text-white transition hover:bg-accent-strong"
                       onClick={() => onAssignRecipe(recipe.id, assignDate)}
                       type="button"
                     >

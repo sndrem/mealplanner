@@ -25,7 +25,7 @@ function bottomNavLinkClassName({ isActive }: { isActive: boolean }) {
   return [
     "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-xs font-medium transition",
     isActive
-      ? "bg-emerald-500/15 text-emerald-700"
+      ? "bg-accent/15 text-accent-strong"
       : "text-muted hover:bg-page hover:text-ink",
   ].join(" ");
 }

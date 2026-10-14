@@ -182,7 +182,7 @@ export function FamilyStoreEditorCard({
 
         {canManageStores && !isEditing && !store.id.startsWith("optimistic:") ? (
           <button
-            className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+            className="rounded-2xl bg-accent px-4 py-2.5 text-sm font-medium text-white transition hover:bg-accent-strong"
             onClick={handleStartEditing}
             type="button"
           >
@@ -199,7 +199,7 @@ export function FamilyStoreEditorCard({
           <label className="block text-sm font-medium text-muted">
             Butikknavn
             <input
-              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               name="name"
               onChange={(event) => setDraftName(event.target.value)}
               type="text"
@@ -228,7 +228,7 @@ export function FamilyStoreEditorCard({
             {unusedCategories.length > 0 ? (
               <div className="flex items-center gap-3">
                 <select
-                  className="min-w-0 flex-1 rounded-2xl border border-dashed border-line bg-surface px-4 py-3 text-sm text-muted outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                  className="min-w-0 flex-1 rounded-2xl border border-dashed border-line bg-surface px-4 py-3 text-sm text-muted outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                   defaultValue=""
                   onChange={(e) => {
                     if (e.target.value) {
@@ -258,14 +258,14 @@ export function FamilyStoreEditorCard({
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
-              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isUpdatingStore}
               type="submit"
             >
               {isUpdatingStore ? "Lagrer..." : "Lagre endringer"}
             </button>
             <button
-              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-surface px-5 py-3 text-sm font-medium text-muted ring-1 ring-slate-300 transition hover:bg-page"
+              className="inline-flex flex-1 items-center justify-center rounded-2xl bg-surface px-5 py-3 text-sm font-medium text-muted ring-1 ring-line transition hover:bg-page"
               onClick={handleCancelEditing}
               type="button"
             >
@@ -389,7 +389,7 @@ function StoreSectionEditorRow({
     <div
       className={
         isDragging
-          ? "rounded-[20px] border border-emerald-300 bg-emerald-50 p-4 opacity-60"
+          ? "rounded-[20px] border border-accent/40 bg-accent-soft p-4 opacity-60"
           : "rounded-[20px] border border-line bg-surface p-4"
       }
       ref={ref}
@@ -417,7 +417,7 @@ function StoreSectionEditorRow({
 
         <div className="min-w-0 flex-1">
           <input
-            className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
             name={`sectionDisplayName:${section.categoryId}`}
             onChange={(event) =>
               onDisplayNameChange(section.categoryId, event.target.value)
@@ -431,7 +431,7 @@ function StoreSectionEditorRow({
         </div>
 
         <button
-          className="rounded-xl px-2 py-1 text-slate-400 transition hover:text-rose-600"
+          className="rounded-xl px-2 py-1 text-muted transition hover:text-rose-600"
           onClick={() => onRemove(section.categoryId)}
           title="Fjern seksjon"
           type="button"

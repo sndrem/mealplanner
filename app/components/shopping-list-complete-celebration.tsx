@@ -56,17 +56,17 @@ export function ShoppingListCompleteCelebration({
         role="status"
       >
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-emerald-950">
+          <p className="font-semibold text-ink">
             {SHOPPING_LIST_COMPLETE_HEADING}
           </p>
-          <p className="mt-0.5 text-sm leading-5 text-emerald-900">
+          <p className="mt-0.5 text-sm leading-5 text-accent-strong">
             {SHOPPING_LIST_COMPLETE_BODY}
           </p>
         </div>
         {onDismiss ? (
           <button
             aria-label="Lukk"
-            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-emerald-700 transition hover:bg-emerald-100/80 hover:text-emerald-950"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-accent-strong transition hover:bg-accent-soft/80 hover:text-ink"
             onClick={onDismiss}
             type="button"
           >
@@ -84,7 +84,7 @@ export function ShoppingListCompleteCelebration({
       role="status"
     >
       <h2 className="text-base font-semibold">{SHOPPING_LIST_COMPLETE_HEADING}</h2>
-      <p className="mt-2 text-sm leading-6 text-emerald-900">
+      <p className="mt-2 text-sm leading-6 text-accent-strong">
         {SHOPPING_LIST_COMPLETE_BODY}
       </p>
     </section>

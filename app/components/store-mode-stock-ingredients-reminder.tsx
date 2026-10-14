@@ -103,7 +103,7 @@ export function StoreModeStockIngredientsReminder({
             />
           ))}
           <button
-            className="rounded-2xl bg-stone-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isSubmittingAll}
             type="submit"
           >
@@ -161,7 +161,7 @@ export function StoreModeStockIngredientsReminder({
                     value={ingredient.sourceKey}
                   />
                   <button
-                    className="rounded-xl bg-stone-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-xl bg-accent px-4 py-2 text-xs font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={submittingSourceKey === ingredient.sourceKey}
                     type="submit"
                   >

@@ -228,16 +228,16 @@ export default function FamilyMealPlansRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
+              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
                 Ukeplaner
               </span>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">
                 {loaderData.family.name}
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
                 Opprett og administrer familieukeplaner med lagrede start- og
                 sluttdatoer.
               </p>
@@ -245,7 +245,7 @@ export default function FamilyMealPlansRoute({
 
             <div className="flex flex-wrap gap-3">
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
                 to={`/families/${loaderData.family.id}`}
               >
                 Tilbake til familie
@@ -255,9 +255,9 @@ export default function FamilyMealPlansRoute({
         </section>
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
+          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">
+            <p className="mt-2 text-sm leading-6 text-accent-strong">
               {noticeContent.description}
             </p>
           </section>
@@ -328,7 +328,7 @@ export default function FamilyMealPlansRoute({
 
                 {partitionedMealPlans.active.length > 0 ? (
                   <div className="grid gap-3">
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-accent-strong">
                       Aktiv
                     </h3>
                     <div className="grid gap-4">
@@ -356,7 +356,7 @@ export default function FamilyMealPlansRoute({
 
                 {partitionedMealPlans.past.length > 0 ? (
                   <div className="grid gap-3">
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                       Tidligere
                     </h3>
                     <div className="grid gap-4">
@@ -382,7 +382,7 @@ export default function FamilyMealPlansRoute({
                     {hiddenPastMealPlanCount > 0 ? (
                       <button
                         aria-expanded={showAllPastMealPlans}
-                        className="justify-self-start text-sm font-medium text-muted underline decoration-slate-300 underline-offset-4 transition hover:text-ink"
+                        className="justify-self-start text-sm font-medium text-muted underline decoration-line underline-offset-4 transition hover:text-ink"
                         onClick={() =>
                           setShowAllPastMealPlans((current) => !current)
                         }
@@ -511,7 +511,7 @@ function CreateMealPlanForm({
         <label className="block min-w-0 text-sm font-medium text-muted">
           Startdato
           <input
-            className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
             name="startDate"
             onChange={(event) => handleStartDateChange(event.target.value)}
             type="date"
@@ -522,7 +522,7 @@ function CreateMealPlanForm({
         <label className="block min-w-0 text-sm font-medium text-muted">
           Sluttdato
           <input
-            className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="mt-2 w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
             name="endDate"
             onChange={(event) =>
               setFormState((current) => ({
@@ -546,7 +546,7 @@ function CreateMealPlanForm({
       <label className="block text-sm font-medium text-muted">
         Navn
         <input
-          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
           name="title"
           onChange={(event) =>
             setFormState((current) => ({
@@ -567,7 +567,7 @@ function CreateMealPlanForm({
       <label className="block text-sm font-medium text-muted">
         Start med eksisterende ukeplan
         <select
-          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
           name="sourceMealPlanId"
           onChange={(event) =>
             setFormState((current) => ({
@@ -600,7 +600,7 @@ function CreateMealPlanForm({
       ) : null}
 
       <button
-        className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+        className="inline-flex w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
         disabled={isCreatingMealPlan}
         type="submit"
       >
@@ -641,8 +641,8 @@ function MealPlanListCard({
       : "mt-2 text-sm leading-6 text-muted";
   const openLinkClassName =
     timeStatus === "active"
-      ? "inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-emerald-950"
-      : "inline-flex items-center justify-center rounded-2xl bg-slate-700 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800";
+      ? "inline-flex items-center justify-center rounded-2xl bg-accent px-4 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
+      : "inline-flex items-center justify-center rounded-2xl bg-band px-4 py-3 text-sm font-medium text-on-band transition hover:bg-band/80";
   const isPlaceholder = mealPlan.id.startsWith("optimistic:");
   const timeStatusBadge =
     timeStatus === "active"
@@ -673,7 +673,7 @@ function MealPlanListCard({
             <span
               className={
                 mealPlan.status === "APPROVED"
-                  ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200"
+                  ? "rounded-full bg-accent-soft px-3 py-1 text-xs font-medium uppercase tracking-wide text-accent-strong ring-1 ring-accent/30"
                   : "rounded-full bg-surface px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted ring-1 ring-line"
               }
             >
@@ -687,7 +687,7 @@ function MealPlanListCard({
 
         <div className="flex flex-wrap gap-3">
           {isPlaceholder ? (
-            <span className="inline-flex items-center justify-center rounded-2xl bg-slate-200 px-4 py-3 text-sm font-medium text-muted">
+            <span className="inline-flex items-center justify-center rounded-2xl bg-line px-4 py-3 text-sm font-medium text-muted">
               Oppretter...
             </span>
           ) : (

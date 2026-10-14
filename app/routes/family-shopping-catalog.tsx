@@ -286,16 +286,16 @@ export default function FamilyShoppingCatalogRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-emerald-200">
+              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
                 Handlevarer
               </span>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">
                 {loaderData.family.name}
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
                 Gjenbrukbare varenavn som ikke kommer fra oppskrifter, for
                 eksempel husholdningsvarer. Når dere legger til et nytt navn i
                 handlelisten, lagres det her så det kan søkes opp neste uke.
@@ -305,13 +305,13 @@ export default function FamilyShoppingCatalogRoute({
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
-                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
+                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
                 to={`/families/${loaderData.family.id}/store-mode`}
               >
                 Åpne handleliste
               </Link>
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
                 to={`/families/${loaderData.family.id}/stock-ingredients`}
               >
                 Basisvarer
@@ -321,9 +321,9 @@ export default function FamilyShoppingCatalogRoute({
         </section>
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 px-6 py-5 text-emerald-950 shadow-sm">
+          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
             <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">
+            <p className="mt-2 text-sm leading-6 text-accent-strong">
               {noticeContent.description}
             </p>
           </section>
@@ -354,7 +354,7 @@ export default function FamilyShoppingCatalogRoute({
             <label className="block text-sm font-medium text-muted sm:col-span-2">
               Navn
               <input
-                className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                 defaultValue={addValues.name}
                 name="name"
                 placeholder="For eksempel tørkerull"
@@ -369,7 +369,7 @@ export default function FamilyShoppingCatalogRoute({
             <label className="block text-sm font-medium text-muted">
               Standardmengde
               <input
-                className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                 defaultValue={addValues.quantity}
                 name="quantity"
                 placeholder="For eksempel 1 pk"
@@ -379,7 +379,7 @@ export default function FamilyShoppingCatalogRoute({
             <label className="block text-sm font-medium text-muted">
               Kategori
               <select
-                className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                 defaultValue={addValues.categoryId}
                 name="categoryId"
               >
@@ -397,7 +397,7 @@ export default function FamilyShoppingCatalogRoute({
               </p>
             ) : null}
             <button
-              className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 sm:col-span-2"
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
               disabled={
                 navigation.state !== "idle" &&
                 pendingIntent === "add-catalog-item"
@@ -470,7 +470,7 @@ export default function FamilyShoppingCatalogRoute({
                       <label className="block text-sm font-medium text-muted">
                         Navn
                         <input
-                          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                          className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                           defaultValue={updateValues.name}
                           name="name"
                           type="text"
@@ -485,7 +485,7 @@ export default function FamilyShoppingCatalogRoute({
                         <label className="block text-sm font-medium text-muted">
                           Standardmengde
                           <input
-                            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                             defaultValue={updateValues.quantity}
                             name="quantity"
                             type="text"
@@ -494,7 +494,7 @@ export default function FamilyShoppingCatalogRoute({
                         <label className="block text-sm font-medium text-muted">
                           Kategori
                           <select
-                            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                            className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
                             defaultValue={updateValues.categoryId}
                             name="categoryId"
                           >
@@ -514,7 +514,7 @@ export default function FamilyShoppingCatalogRoute({
                       ) : null}
                       <div className="flex flex-wrap gap-3">
                         <button
-                          className="rounded-2xl border border-line bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                          className="rounded-2xl border border-line bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
                           disabled={isUpdating || isRemoving}
                           type="submit"
                         >

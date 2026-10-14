@@ -298,13 +298,13 @@ export default function FamilyMealPlanProposalRoute({
     return (
       <main className="min-h-screen overflow-x-hidden bg-page px-4 py-6 text-ink">
         <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
-          <section className="rounded-[24px] border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-950">
+          <section className="rounded-[24px] border border-accent/30 bg-accent-soft px-4 py-4 text-ink">
             <h1 className="text-xl font-semibold">Forslaget er godkjent</h1>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">
+            <p className="mt-2 text-sm leading-6 text-accent-strong">
               {loaderData.mealPlan.title} er nå en ekte ukeplan.
             </p>
             <Link
-              className="mt-4 inline-flex min-h-11 items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-700"
+              className="mt-4 inline-flex min-h-11 items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
               to={`/families/${loaderData.family.id}/meal-plans/${loaderData.mealPlan.id}`}
             >
               {isApprovingMealPlan ? "Godkjent" : "Åpne ukeplanen"}
@@ -318,20 +318,20 @@ export default function FamilyMealPlanProposalRoute({
   return (
     <main className="min-h-screen overflow-x-hidden bg-page px-4 py-6 text-ink">
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
-        <section className="sticky top-14 z-40 rounded-[24px] bg-slate-950 px-4 py-4 text-white shadow-lg">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-200">
+        <section className="sticky top-14 z-40 rounded-[24px] bg-band px-4 py-4 text-white shadow-lg">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-kicker">
             Forslag
           </p>
           <h1 className="mt-1 truncate text-xl font-semibold">
             {loaderData.mealPlan.title}
           </h1>
-          <p className="mt-1 text-sm text-slate-300">
+          <p className="mt-1 text-sm text-on-band-muted">
             {formatMealPlanWindow(
               loaderData.mealPlan.startDate,
               loaderData.mealPlan.endDate,
             )}
           </p>
-          <p className="mt-3 text-sm leading-6 text-slate-300">
+          <p className="mt-3 text-sm leading-6 text-on-band-muted">
             Juster middagene om du vil, og godkjenn når forslaget ser bra ut.
           </p>
         </section>
@@ -432,7 +432,7 @@ export default function FamilyMealPlanProposalRoute({
                 <label className="mt-3 block text-sm font-medium text-muted">
                   Notat
                   <textarea
-                    className="mt-2 min-h-20 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-slate-400"
+                    className="mt-2 min-h-20 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent"
                     name={`note:${date}`}
                     onChange={(event) => {
                       setNotesByDate((current) => ({
@@ -458,7 +458,7 @@ export default function FamilyMealPlanProposalRoute({
               {isSavingEntries ? "Lagret" : "Lagre endringer"}
             </button>
             <button
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isPending}
               name="intent"
               type="submit"

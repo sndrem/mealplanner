@@ -37,7 +37,7 @@ export function RecipePickerCard({
       aria-pressed={selected}
       className={
         selected
-          ? "flex w-full min-w-0 items-start gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-left transition hover:bg-emerald-100"
+          ? "flex w-full min-w-0 items-start gap-3 rounded-2xl border border-accent/40 bg-accent-soft px-3 py-2.5 text-left transition hover:bg-accent-soft"
           : "flex w-full min-w-0 items-start gap-3 rounded-2xl border border-line bg-surface px-3 py-2.5 text-left transition hover:bg-page"
       }
       onClick={onSelect}

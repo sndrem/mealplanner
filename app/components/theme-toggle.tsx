@@ -107,14 +107,14 @@ export function ThemeToggle({ variant }: { variant: "desktop" | "mobile" }) {
             ? [
                 "inline-flex size-9 items-center justify-center rounded-xl transition",
                 checked
-                  ? "bg-white text-slate-950 shadow-sm"
-                  : "text-slate-200 hover:bg-white/10 hover:text-white",
+                  ? "bg-on-band text-band shadow-sm"
+                  : "text-on-band-muted hover:bg-white/10 hover:text-white",
               ].join(" ")
             : [
                 "flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition",
                 checked
-                  ? "bg-white text-slate-950 shadow-sm"
-                  : "text-slate-200 hover:bg-white/10 hover:text-white",
+                  ? "bg-on-band text-band shadow-sm"
+                  : "text-on-band-muted hover:bg-white/10 hover:text-white",
               ].join(" ");
 
         return (
