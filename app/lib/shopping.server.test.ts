@@ -1632,19 +1632,14 @@ describe("shopping.server", () => {
     });
     expect(result.activeShoppingDate).toEqual(new Date("2026-05-16T00:00:00.000Z"));
     expect(result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name))).toEqual([
+      "Wraps",
+      "Paprika",
       "Yoghurt",
     ]);
-    expect(result.laterItems.map((item) => item.name).sort()).toEqual(["Paprika", "Wraps"]);
     expect(result.progress).toEqual({
       checkedCount: 0,
-      totalCount: 1,
+      totalCount: 3,
     });
-    expect(result.selectableShoppingDates).toEqual([
-      "2026-05-15",
-      "2026-05-16",
-      "2026-05-17",
-      "2026-05-18",
-    ]);
     expect(result.includedMealPlans).toEqual([
       {
         id: "meal-plan-1",
@@ -1660,9 +1655,9 @@ describe("shopping.server", () => {
     );
   });
 
-  it("includes all items from the shopping date through the end of the meal plan", async () => {
+  it("includes items from today through plan end even when the saved shopping date is later", async () => {
     registerStoreModePlans({
-      activeShoppingDate: new Date("2026-05-15T00:00:00.000Z"),
+      activeShoppingDate: new Date("2026-05-17T00:00:00.000Z"),
       endDate: new Date("2026-05-17T00:00:00.000Z"),
       entries: [
         {
@@ -1782,14 +1777,13 @@ describe("shopping.server", () => {
     expect(
       result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
     ).toEqual(["Wraps", "Paprika", "Yoghurt"]);
-    expect(result.laterItems).toEqual([]);
     expect(result.progress).toEqual({
       checkedCount: 0,
       totalCount: 3,
     });
   });
 
-  it("excludes past meals from both the trip list and the before-shopping-date list", async () => {
+  it("excludes past meals from the trip list", async () => {
     vi.setSystemTime(new Date("2026-05-16T09:30:45.000Z"));
 
     registerStoreModePlans({
@@ -1883,10 +1877,9 @@ describe("shopping.server", () => {
     expect(
       result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
     ).toEqual(["Paprika"]);
-    expect(result.laterItems.map((item) => item.name)).toEqual([]);
   });
 
-  it("includes merged cross-day ingredients on a last-day-only shopping trip", async () => {
+  it("includes merged cross-day ingredients through the end of the meal plan", async () => {
     registerStoreModePlans({
       activeShoppingDate: new Date("2026-05-18T00:00:00.000Z"),
       endDate: new Date("2026-05-18T00:00:00.000Z"),
@@ -1992,10 +1985,9 @@ describe("shopping.server", () => {
         .flatMap((section) => section.items.map((item) => item.name))
         .sort(),
     ).toEqual(["Krem", "Løk"]);
-    expect(result.laterItems.map((item) => item.name)).toEqual([]);
   });
 
-  it("includes a postponed generated item when postponedUntilDate matches the last-day trip", async () => {
+  it("includes a postponed generated item when the postponed date is still ahead", async () => {
     registerStoreModePlans({
       activeShoppingDate: new Date("2026-05-18T00:00:00.000Z"),
       endDate: new Date("2026-05-18T00:00:00.000Z"),
@@ -2070,7 +2062,6 @@ describe("shopping.server", () => {
     expect(
       result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
     ).toEqual(["Paprika"]);
-    expect(result.laterItems.map((item) => item.name)).toEqual([]);
   });
 
   it("keeps merged cross-day ingredients on the trip when today is after the first occurrence", async () => {
@@ -2161,7 +2152,6 @@ describe("shopping.server", () => {
     expect(
       result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
     ).toEqual(["Løk"]);
-    expect(result.laterItems.map((item) => item.name)).toEqual([]);
   });
 
   it("does not pull generated items into the trip when all effective dates are in the past", async () => {
@@ -2228,10 +2218,9 @@ describe("shopping.server", () => {
     expect(
       result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
     ).toEqual([]);
-    expect(result.laterItems.map((item) => item.name)).toEqual([]);
   });
 
-  it("merges due items from multiple non-past meal plans using the anchor shopping date", async () => {
+  it("merges due items from multiple non-past meal plans", async () => {
     const anchorPlan = {
       activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
       endDate: new Date("2026-05-18T00:00:00.000Z"),

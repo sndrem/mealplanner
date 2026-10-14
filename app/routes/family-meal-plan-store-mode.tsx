@@ -15,7 +15,6 @@ import {
 
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
 import { ShoppingListCompleteCelebration } from "../components/shopping-list-complete-celebration";
-import { ShoppingDateSelect } from "../components/shopping-list-item-expanded";
 import { StoreModeDeprioritizeBoughtToggle } from "../components/store-mode-deprioritize-bought-toggle";
 import {
   StoreModeShoppingItemCard,
@@ -80,7 +79,6 @@ import {
   optInStockShoppingItems,
   parseManualShoppingItemValues,
   toggleShoppingItemChecked,
-  updateActiveShoppingDate,
   updateGeneratedShoppingItemQuantity,
   updateManualShoppingItem,
 } from "../lib/shopping-write.server";
@@ -102,7 +100,6 @@ import {
   storeModeBottomChromeShellClass,
   storeModeCountChipClass,
   storeModeHandletFoldClass,
-  storeModeLaterChipClass,
   storeModeMutedPanelClass,
   storeModePageClass,
   storeModeQuickAddDockClass,
@@ -125,7 +122,6 @@ import { useVisibleIntervalRevalidate } from "../lib/use-visible-interval-revali
 import type { Route } from "./+types/family-meal-plan-store-mode";
 
 type StoreModeNotice =
-  | "active-shopping-date-updated"
   | "family-shopping-item-added"
   | "generated-shopping-item-marked-as-stock"
   | "selected-store-updated"
@@ -146,16 +142,11 @@ type StoreModeIntent =
   | "update-manual-shopping-item-category"
   | "toggle-family-shopping-item-checked"
   | "toggle-shopping-item-checked"
-  | "update-active-shopping-date"
   | "update-selected-store"
   | "update-shopping-grocery-grouping"
   | "update-store-mode-trip-focus";
 
 interface StoreModeActionData {
-  activeShoppingDateFieldErrors?: {
-    activeShoppingDate?: string;
-  };
-  activeShoppingDateValue?: string;
   categoryFieldErrors?: {
     categoryId?: string;
   };
@@ -221,7 +212,6 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     family: result.family,
     groceryGrouping: result.groceryGrouping,
     includedMealPlans: result.includedMealPlans,
-    laterItems: result.laterItems.map(serializeProjectedShoppingItem),
     mealPlan: {
       ...result.mealPlan,
       activeShoppingDate: result.mealPlan.activeShoppingDate
@@ -237,7 +227,6 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     notice: getStoreModeNotice(request),
     progress: result.progress,
     selectedStore: result.selectedStore,
-    selectableShoppingDates: result.selectableShoppingDates,
     shoppingHistory,
     stockIngredientsForStoreMode: result.stockIngredientsForStoreMode,
     stores: result.stores,
@@ -256,44 +245,6 @@ export async function action({ params, request }: Route.ActionArgs) {
     familyId,
     formData,
   });
-
-  if (intent === "update-active-shopping-date") {
-    const activeShoppingDate = String(formData.get("activeShoppingDate") ?? "");
-    const result = await updateActiveShoppingDate({
-      activeShoppingDate,
-      expectedMealPlanUpdatedAt: String(
-        formData.get("mealPlanUpdatedAt") ?? "",
-      ),
-      familyId,
-      mealPlanId: anchorMealPlanId,
-      userId: user.id,
-    });
-
-    if (result.status === "NOT_FOUND") {
-      throw buildMealPlanNotFoundResponse();
-    }
-
-    if (result.status === "VALIDATION_ERROR") {
-      return {
-        activeShoppingDateFieldErrors: result.fieldErrors,
-        activeShoppingDateValue: result.values.activeShoppingDate,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    if (result.status === "CONFLICT") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return buildFamilyStoreModeRedirect({
-      familyId,
-      notice: "active-shopping-date-updated",
-      request,
-    });
-  }
 
   if (intent === "update-selected-store") {
     const selectedStoreId = String(formData.get("selectedStoreId") ?? "");
@@ -824,9 +775,6 @@ export default function FamilyMealPlanStoreModeRoute({
   const isSavingStore =
     navigation.state === "submitting" &&
     pendingIntent === "update-selected-store";
-  const isSavingShoppingDate =
-    navigation.state === "submitting" &&
-    pendingIntent === "update-active-shopping-date";
   const isSavingTripFocus =
     navigation.state === "submitting" &&
     pendingIntent === "update-store-mode-trip-focus";
@@ -1287,11 +1235,6 @@ export default function FamilyMealPlanStoreModeRoute({
     actionData.selectedStoreValue !== undefined
       ? actionData.selectedStoreValue
       : (loaderData.selectedStore?.id ?? "");
-  const activeShoppingDateValue =
-    actionData?.intent === "update-active-shopping-date" &&
-    actionData.activeShoppingDateValue
-      ? actionData.activeShoppingDateValue
-      : loaderData.activeShoppingDate;
   const tripFocusValue =
     actionData?.intent === "update-store-mode-trip-focus" &&
     actionData.tripFocusValue
@@ -1428,46 +1371,6 @@ export default function FamilyMealPlanStoreModeRoute({
                 actionData.selectedStoreFieldErrors?.selectedStoreId ? (
                   <p className="text-sm text-rose-600">
                     {actionData.selectedStoreFieldErrors.selectedStoreId}
-                  </p>
-                ) : null}
-              </Form>
-              <Form className="grid gap-1" method="post">
-                <span className="text-xs font-semibold text-store-muted">
-                  Handledato
-                </span>
-                <input
-                  name="intent"
-                  type="hidden"
-                  value="update-active-shopping-date"
-                />
-                <input
-                  name="mealPlanId"
-                  type="hidden"
-                  value={loaderData.mealPlan.id}
-                />
-                <input
-                  name="mealPlanUpdatedAt"
-                  type="hidden"
-                  value={loaderData.mealPlan.updatedAt}
-                />
-                <ShoppingDateSelect
-                  aria-busy={isSavingShoppingDate}
-                  aria-label="Velg handledato"
-                  className={storeModeSelectClass}
-                  defaultValue={activeShoppingDateValue}
-                  disabled={isSavingShoppingDate}
-                  name="activeShoppingDate"
-                  onChange={(event) => {
-                    submitSelectForm(event, activeShoppingDateValue, submit);
-                  }}
-                  selectableShoppingDates={loaderData.selectableShoppingDates}
-                  showEmptyOption={false}
-                />
-                {actionData?.intent === "update-active-shopping-date" &&
-                actionData.activeShoppingDateFieldErrors
-                  ?.activeShoppingDate ? (
-                  <p className="text-sm text-rose-600">
-                    {actionData.activeShoppingDateFieldErrors.activeShoppingDate}
                   </p>
                 ) : null}
               </Form>
@@ -1638,7 +1541,7 @@ export default function FamilyMealPlanStoreModeRoute({
                   Ingen varer må handles nå
                 </h3>
                 <p className="mt-3 text-sm leading-6 text-store-muted">
-                  Alt er enten ferdig handlet, utenfor denne handleturen, eller
+                  Alt er enten ferdig handlet, utenfor uken du handler for, eller
                   allerede passert.
                 </p>
               </article>
@@ -1650,7 +1553,7 @@ export default function FamilyMealPlanStoreModeRoute({
               Ingen varer må handles nå
             </h2>
             <p className="mt-3 text-sm leading-6 text-store-muted">
-              Alt er enten ferdig handlet, utenfor denne handleturen, eller
+              Alt er enten ferdig handlet, utenfor uken du handler for, eller
               allerede passert.
             </p>
           </section>
@@ -1666,36 +1569,6 @@ export default function FamilyMealPlanStoreModeRoute({
             submittingSourceKey={optingInStockSourceKey}
           />
         ) : null}
-
-        <section className={`${storeModeSurfaceCardClass} p-6`}>
-          <h2 className="text-lg font-semibold tracking-tight text-store-ink">
-            Før handledato
-          </h2>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {loaderData.laterItems.length > 0 ? (
-              loaderData.laterItems.map((item) => (
-                <span
-                  key={`later:${item.sourceKey}`}
-                  className={storeModeLaterChipClass}
-                >
-                  {item.name}
-                  {" · "}
-                  {item.sourceType === "GENERATED"
-                    ? formatDateLabel(item.postponedUntilDate ?? item.firstDate)
-                    : item.sourceType === "MANUAL" && item.buyOnDate
-                      ? formatDateLabel(item.buyOnDate)
-                      : item.sourceType === "FAMILY"
-                        ? "Alltid på listen"
-                        : "Ingen dato"}
-                </span>
-              ))
-            ) : (
-              <p className="text-sm leading-6 text-store-muted">
-                Ingen varer ligger før handledato akkurat nå.
-              </p>
-            )}
-          </div>
-        </section>
 
         <details className={storeModeMutedPanelClass}>
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
@@ -1846,7 +1719,6 @@ function getStoreModeNotice(request: Request): StoreModeNotice | null {
   const notice = new URL(request.url).searchParams.get("notice");
 
   if (
-    notice === "active-shopping-date-updated" ||
     notice === "family-shopping-item-added" ||
     notice === "generated-shopping-item-marked-as-stock" ||
     notice === "selected-store-updated" ||
@@ -1877,11 +1749,6 @@ function getStoreModeNoticeContent(notice: StoreModeNotice) {
       return {
         description: "Visningen av like varer ble oppdatert.",
         title: "Gruppering lagret",
-      };
-    case "active-shopping-date-updated":
-      return {
-        description: "Handledatoen for ukeplanen ble oppdatert.",
-        title: "Handledato lagret",
       };
     case "shopping-item-check-state-updated":
       return {
@@ -2105,14 +1972,6 @@ function formatDateOnly(date: Date) {
     (date.getUTCMonth() + 1).toString().padStart(2, "0"),
     date.getUTCDate().toString().padStart(2, "0"),
   ].join("-");
-}
-
-function formatDateLabel(value: string) {
-  return new Intl.DateTimeFormat("nb-NO", {
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00.000Z`));
 }
 
 function formatHistoryTimestamp(value: string) {

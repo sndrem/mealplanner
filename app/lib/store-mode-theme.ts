@@ -48,9 +48,6 @@ export const storeModeMetaTripFocusSelectClass = `${storeModeMetaSelectBase} max
 export const storeModeCountChipClass =
   "rounded-full bg-store-bg px-3 py-1 text-xs font-medium text-store-muted";
 
-export const storeModeLaterChipClass =
-  "rounded-full bg-store-bg px-3 py-1.5 text-xs font-medium text-store-ink";
-
 export const storeModeQuickAddDockClass =
   "min-w-0 max-w-full rounded-[28px] bg-store-surface p-4 shadow-2xl ring-2 ring-store-accent";
 

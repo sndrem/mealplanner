@@ -42,7 +42,6 @@ vi.mock("../lib/shopping-write.server", () => {
   return {
     parseManualShoppingItemValues: vi.fn(),
     toggleShoppingItemChecked: vi.fn(),
-    updateActiveShoppingDate: vi.fn(),
     updateGeneratedShoppingItemQuantity: vi.fn(),
     updateManualShoppingItem: vi.fn(),
   };
@@ -92,7 +91,6 @@ import {
 import {
   parseManualShoppingItemValues,
   toggleShoppingItemChecked,
-  updateActiveShoppingDate,
   updateGeneratedShoppingItemQuantity,
   updateManualShoppingItem,
 } from "../lib/shopping-write.server";
@@ -211,7 +209,6 @@ describe("family store mode route", () => {
           title: "Langhelg",
         },
       ],
-      laterItems: [],
       mealPlan: {
         activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
         endDate: new Date("2026-05-18T00:00:00.000Z"),
@@ -241,14 +238,6 @@ describe("family store mode route", () => {
         },
       ],
       userRole: "ADMIN",
-      selectableShoppingDates: [
-        "2026-05-15",
-        "2026-05-16",
-        "2026-05-17",
-        "2026-05-18",
-        "2026-05-22",
-        "2026-05-23",
-      ],
       stockIngredientsForStoreMode: [],
       visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
     });
@@ -280,14 +269,6 @@ describe("family store mode route", () => {
     ]);
     expect(result.shoppingHistory).toEqual([]);
     expect(result.activeShoppingDate).toBe("2026-05-16");
-    expect(result.selectableShoppingDates).toEqual([
-      "2026-05-15",
-      "2026-05-16",
-      "2026-05-17",
-      "2026-05-18",
-      "2026-05-22",
-      "2026-05-23",
-    ]);
     expect(result.mealPlan.activeShoppingDate).toBe("2026-05-16");
     expect(result.includedMealPlans).toEqual([
       {
@@ -330,7 +311,6 @@ describe("family store mode route", () => {
           title: "Langhelg",
         },
       ],
-      laterItems: [],
       mealPlan: {
         activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
         endDate: new Date("2026-05-18T00:00:00.000Z"),
@@ -351,7 +331,6 @@ describe("family store mode route", () => {
         id: "store-1",
         name: "Meny",
       },
-      selectableShoppingDates: ["2026-05-15", "2026-05-16"],
       stockIngredientsForStoreMode: [],
       stores: [
         {
@@ -414,49 +393,6 @@ describe("family store mode route", () => {
         "/families/family-1/meal-plans",
       );
     }
-  });
-
-  it("returns active shopping date validation errors from the server module", async () => {
-    vi.mocked(requireUser).mockResolvedValue(mockUser);
-    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
-      id: "meal-plan-1",
-    });
-    vi.mocked(updateActiveShoppingDate).mockResolvedValue({
-      fieldErrors: {
-        activeShoppingDate: "Datoen må ligge innenfor ukeplanens aktive periode.",
-      },
-      status: "VALIDATION_ERROR",
-      values: {
-        activeShoppingDate: "2026-05-20",
-      },
-    });
-
-    const formData = new FormData();
-    formData.set("intent", "update-active-shopping-date");
-    formData.set("activeShoppingDate", "2026-05-20");
-    formData.set("mealPlanId", "meal-plan-1");
-
-    const result = await action({
-      params: {
-        familyId: "family-1",
-      },
-      request: buildRequest(undefined, formData),
-    } as never);
-
-    expect(updateActiveShoppingDate).toHaveBeenCalledWith({
-      activeShoppingDate: "2026-05-20",
-      expectedMealPlanUpdatedAt: "",
-      familyId: "family-1",
-      mealPlanId: "meal-plan-1",
-      userId: "user-1",
-    });
-    expect(result).toEqual({
-      activeShoppingDateFieldErrors: {
-        activeShoppingDate: "Datoen må ligge innenfor ukeplanens aktive periode.",
-      },
-      activeShoppingDateValue: "2026-05-20",
-      intent: "update-active-shopping-date",
-    });
   });
 
   it("returns quick-add success data without redirecting", async () => {
