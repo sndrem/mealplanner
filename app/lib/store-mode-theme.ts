@@ -11,8 +11,20 @@ export const storeModeProgressPillClass =
 export const storeModeProgressDotClass =
   "size-1.5 shrink-0 rounded-full bg-store-accent-deep";
 
+/** Pinned under the app nav (75px). The settings panel stays outside this element. */
+export const storeModeScanBarClass =
+  "sticky top-[75px] z-30 -mt-8 border-b border-store-line bg-store-bg py-2";
+
+export const storeModeScanProgressTrackClass =
+  "mt-2 h-1 overflow-hidden rounded-full bg-store-line";
+
+export const storeModeScanProgressFillClass =
+  "h-full rounded-full bg-store-accent-deep";
+
 export const storeModeSurfaceCardClass =
   "rounded-[28px] bg-store-surface shadow-sm ring-1 ring-store-line";
+
+export const storeModeScanPanelClass = `${storeModeSurfaceCardClass} p-5`;
 
 export const storeModeSectionCardClass = `${storeModeSurfaceCardClass} p-5`;
 

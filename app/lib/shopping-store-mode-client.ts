@@ -27,6 +27,20 @@ export interface StoreModeProgress {
   totalCount: number;
 }
 
+export interface StoreModeScanProgress {
+  percent: number;
+  remainingCount: number;
+}
+
+export type StoreModeTripFocusScanValue = "ALL" | "CURRENT" | "NEXT";
+
+const storeModeTripFocusScanLabels: Record<StoreModeTripFocusScanValue, string> =
+  {
+    ALL: "Alle åpne",
+    CURRENT: "Denne uken",
+    NEXT: "Neste uke",
+  };
+
 export type StoreModeShoppingView = "list" | "grid";
 
 export const DEFAULT_STORE_MODE_SHOPPING_VIEW: StoreModeShoppingView = "grid";
@@ -353,6 +367,39 @@ export function computeStoreModeProgress(
     checkedCount: items.filter((item) => item.checked).length,
     totalCount: items.length,
   };
+}
+
+export function computeStoreModeScanProgress(
+  progress: StoreModeProgress,
+): StoreModeScanProgress {
+  const remainingCount = Math.max(
+    0,
+    progress.totalCount - progress.checkedCount,
+  );
+  const percent =
+    progress.totalCount === 0
+      ? 0
+      : Math.min(
+          100,
+          Math.max(0, (progress.checkedCount / progress.totalCount) * 100),
+        );
+
+  return {
+    percent,
+    remainingCount,
+  };
+}
+
+export function isStoreModeTripFocusScanValue(
+  value: unknown,
+): value is StoreModeTripFocusScanValue {
+  return value === "ALL" || value === "CURRENT" || value === "NEXT";
+}
+
+export function getStoreModeTripFocusScanLabel(
+  focus: StoreModeTripFocusScanValue,
+) {
+  return storeModeTripFocusScanLabels[focus];
 }
 
 export function areToggleQueuesEqual(

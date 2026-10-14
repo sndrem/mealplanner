@@ -21,6 +21,7 @@ import {
   StoreModeShoppingItemCard,
   type StoreModeCategoryUpdateRequest,
 } from "../components/store-mode-shopping-item-card";
+import { StoreModeScanBar } from "../components/store-mode-scan-bar";
 import { StoreModeShoppingViewToggle } from "../components/store-mode-shopping-view-toggle";
 import { StoreModeStockIngredientsReminder } from "../components/store-mode-stock-ingredients-reminder";
 import { ShoppingGroceryGroupingToggle } from "../components/shopping-grocery-grouping-toggle";
@@ -39,6 +40,8 @@ import {
   buildStoreModeStockReminderDismissedStorageKey,
   buildStoreModeViewStorageKey,
   computeStoreModeProgress,
+  getStoreModeTripFocusScanLabel,
+  isStoreModeTripFocusScanValue,
   partitionStoreModeSections,
   readStoreModeDeprioritizeBought,
   readStoreModeShoppingView,
@@ -100,16 +103,12 @@ import {
   storeModeCountChipClass,
   storeModeHandletFoldClass,
   storeModeLaterChipClass,
-  storeModeMetaDateSelectClass,
-  storeModeMetaStoreSelectClass,
-  storeModeMetaTripFocusSelectClass,
-  storeModeMetaStripClass,
   storeModeMutedPanelClass,
   storeModePageClass,
-  storeModeProgressDotClass,
-  storeModeProgressPillClass,
   storeModeQuickAddDockClass,
+  storeModeScanPanelClass,
   storeModeSectionCardClass,
+  storeModeSelectClass,
   storeModeSurfaceCardClass,
   storeModeSyncOverlayShellClass,
   storeModeUndoBarActionClass,
@@ -1298,8 +1297,34 @@ export default function FamilyMealPlanStoreModeRoute({
     actionData.tripFocusValue
       ? actionData.tripFocusValue
       : loaderData.effectiveTripFocus;
+  const pendingTripFocusValue = navigation.formData?.get("tripFocus");
+  const inFlightTripFocus =
+    navigation.state !== "idle" &&
+    navigation.formData?.get("intent") === "update-store-mode-trip-focus" &&
+    isStoreModeTripFocusScanValue(pendingTripFocusValue)
+      ? pendingTripFocusValue
+      : null;
+  const scanTripFocus = inFlightTripFocus
+    ? inFlightTripFocus
+    : isStoreModeTripFocusScanValue(tripFocusValue)
+      ? tripFocusValue
+      : loaderData.effectiveTripFocus;
+  const inFlightStoreId =
+    navigation.state !== "idle" &&
+    navigation.formData?.get("intent") === "update-selected-store"
+      ? String(navigation.formData.get("selectedStoreId") ?? "")
+      : null;
+  const scanStoreId = inFlightStoreId ?? selectedStoreValue;
+  const matchingScanStore = loaderData.stores.find(
+    (store) => store.id === scanStoreId,
+  );
+  const scanStoreName =
+    matchingScanStore?.name ??
+    (loaderData.selectedStore?.id === scanStoreId
+      ? loaderData.selectedStore.name
+      : "Ingen butikk");
   const tripFocusSubtitle = getStoreModeTripFocusSubtitle({
-    effectiveTripFocus: loaderData.effectiveTripFocus,
+    effectiveTripFocus: scanTripFocus,
     includedMealPlans: loaderData.includedMealPlans,
     mealPlanTitle: loaderData.mealPlan.title,
   });
@@ -1322,133 +1347,167 @@ export default function FamilyMealPlanStoreModeRoute({
   return (
     <main className={pageClass}>
       <div className="mx-auto flex max-w-4xl flex-col gap-5">
-        <section className={storeModeMetaStripClass}>
-          <div className="min-w-0">
-            <h1 className="truncate font-semibold text-store-ink">Butikkmodus</h1>
-            <p className="truncate text-xs text-store-muted">{tripFocusSubtitle}</p>
+        <StoreModeScanBar
+          checkedCount={displayProgress.checkedCount}
+          focusLabel={getStoreModeTripFocusScanLabel(scanTripFocus)}
+          isCelebrating={isCelebrating}
+          storeName={scanStoreName}
+          totalCount={displayProgress.totalCount}
+        >
+          <div className={`${storeModeScanPanelClass} grid gap-6`}>
+            <div className="grid gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-store-ink">
+                  Handletur
+                </h2>
+                <p className="mt-1 text-xs text-store-muted">
+                  {tripFocusSubtitle}
+                </p>
+              </div>
+              <Form className="grid gap-1" method="post">
+                <span className="text-xs font-semibold text-store-muted">
+                  Fokus
+                </span>
+                <input
+                  name="intent"
+                  type="hidden"
+                  value="update-store-mode-trip-focus"
+                />
+                <select
+                  aria-busy={isSavingTripFocus}
+                  aria-label="Velg handletur-fokus"
+                  className={storeModeSelectClass}
+                  defaultValue={tripFocusValue}
+                  disabled={isSavingTripFocus}
+                  key={tripFocusValue}
+                  name="tripFocus"
+                  onChange={(event) => {
+                    submitSelectForm(event, tripFocusValue, submit);
+                  }}
+                >
+                  <option value="CURRENT">Denne uken</option>
+                  <option disabled={!loaderData.canFocusNext} value="NEXT">
+                    Neste uke
+                  </option>
+                  <option value="ALL">Alle åpne</option>
+                </select>
+                {actionData?.intent === "update-store-mode-trip-focus" &&
+                actionData.tripFocusFieldErrors?.tripFocus ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.tripFocusFieldErrors.tripFocus}
+                  </p>
+                ) : null}
+              </Form>
+              <Form className="grid gap-1" method="post">
+                <span className="text-xs font-semibold text-store-muted">
+                  Butikk
+                </span>
+                <input
+                  name="intent"
+                  type="hidden"
+                  value="update-selected-store"
+                />
+                <select
+                  aria-busy={isSavingStore}
+                  aria-label="Velg butikk"
+                  className={storeModeSelectClass}
+                  defaultValue={selectedStoreValue}
+                  disabled={isSavingStore}
+                  name="selectedStoreId"
+                  onChange={(event) => {
+                    submitSelectForm(event, selectedStoreValue, submit);
+                  }}
+                >
+                  {loaderData.stores.map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {store.name}
+                    </option>
+                  ))}
+                </select>
+                {actionData?.intent === "update-selected-store" &&
+                actionData.selectedStoreFieldErrors?.selectedStoreId ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.selectedStoreFieldErrors.selectedStoreId}
+                  </p>
+                ) : null}
+              </Form>
+              <Form className="grid gap-1" method="post">
+                <span className="text-xs font-semibold text-store-muted">
+                  Handledato
+                </span>
+                <input
+                  name="intent"
+                  type="hidden"
+                  value="update-active-shopping-date"
+                />
+                <input
+                  name="mealPlanId"
+                  type="hidden"
+                  value={loaderData.mealPlan.id}
+                />
+                <input
+                  name="mealPlanUpdatedAt"
+                  type="hidden"
+                  value={loaderData.mealPlan.updatedAt}
+                />
+                <ShoppingDateSelect
+                  aria-busy={isSavingShoppingDate}
+                  aria-label="Velg handledato"
+                  className={storeModeSelectClass}
+                  defaultValue={activeShoppingDateValue}
+                  disabled={isSavingShoppingDate}
+                  name="activeShoppingDate"
+                  onChange={(event) => {
+                    submitSelectForm(event, activeShoppingDateValue, submit);
+                  }}
+                  selectableShoppingDates={loaderData.selectableShoppingDates}
+                  showEmptyOption={false}
+                />
+                {actionData?.intent === "update-active-shopping-date" &&
+                actionData.activeShoppingDateFieldErrors
+                  ?.activeShoppingDate ? (
+                  <p className="text-sm text-rose-600">
+                    {actionData.activeShoppingDateFieldErrors.activeShoppingDate}
+                  </p>
+                ) : null}
+              </Form>
+              <div className="flex gap-4">
+                <Link
+                  className="text-sm text-store-muted underline-offset-2 hover:text-store-ink hover:underline"
+                  to={`/families/${loaderData.family.id}/store-mode/share`}
+                >
+                  Del liste
+                </Link>
+                <Link
+                  className="text-sm text-store-muted underline-offset-2 hover:text-store-ink hover:underline"
+                  to={`/families/${loaderData.family.id}/stores`}
+                >
+                  Butikker
+                </Link>
+              </div>
+            </div>
+            {displaySectionGroups.length > 0 ? (
+              <div className="grid gap-3">
+                <h2 className="text-base font-semibold text-store-ink">
+                  Visning
+                </h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ShoppingGroceryGroupingToggle
+                    grouping={loaderData.groceryGrouping}
+                  />
+                  <StoreModeDeprioritizeBoughtToggle
+                    enabled={deprioritizeBought}
+                    onChange={handleDeprioritizeBoughtChange}
+                  />
+                  <StoreModeShoppingViewToggle
+                    onChange={handleShoppingViewChange}
+                    view={shoppingView}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
-          <span className="hidden text-store-muted sm:inline" aria-hidden="true">
-            ·
-          </span>
-          <Form className="inline-flex min-w-0 flex-col gap-1" method="post">
-            <input
-              name="intent"
-              type="hidden"
-              value="update-store-mode-trip-focus"
-            />
-            <select
-              aria-busy={isSavingTripFocus}
-              aria-label="Velg handletur-fokus"
-              className={storeModeMetaTripFocusSelectClass}
-              defaultValue={tripFocusValue}
-              disabled={isSavingTripFocus}
-              key={tripFocusValue}
-              name="tripFocus"
-              onChange={(event) => {
-                submitSelectForm(event, tripFocusValue, submit);
-              }}
-            >
-              <option value="CURRENT">Denne uken</option>
-              <option disabled={!loaderData.canFocusNext} value="NEXT">
-                Neste uke
-              </option>
-              <option value="ALL">Alle åpne</option>
-            </select>
-            {actionData?.intent === "update-store-mode-trip-focus" &&
-            actionData.tripFocusFieldErrors?.tripFocus ? (
-              <p className="text-sm text-rose-600">
-                {actionData.tripFocusFieldErrors.tripFocus}
-              </p>
-            ) : null}
-          </Form>
-          <Form className="inline-flex min-w-0 flex-col gap-1" method="post">
-            <input name="intent" type="hidden" value="update-selected-store" />
-            <select
-              aria-busy={isSavingStore}
-              aria-label="Velg butikk"
-              className={storeModeMetaStoreSelectClass}
-              defaultValue={selectedStoreValue}
-              disabled={isSavingStore}
-              name="selectedStoreId"
-              onChange={(event) => {
-                submitSelectForm(event, selectedStoreValue, submit);
-              }}
-            >
-              {loaderData.stores.map((store) => (
-                <option key={store.id} value={store.id}>
-                  {store.name}
-                </option>
-              ))}
-            </select>
-            {actionData?.intent === "update-selected-store" &&
-            actionData.selectedStoreFieldErrors?.selectedStoreId ? (
-              <p className="text-sm text-rose-600">
-                {actionData.selectedStoreFieldErrors.selectedStoreId}
-              </p>
-            ) : null}
-          </Form>
-          <Form className="inline-flex min-w-0 flex-col gap-1" method="post">
-            <input
-              name="intent"
-              type="hidden"
-              value="update-active-shopping-date"
-            />
-            <input
-              name="mealPlanId"
-              type="hidden"
-              value={loaderData.mealPlan.id}
-            />
-            <input
-              name="mealPlanUpdatedAt"
-              type="hidden"
-              value={loaderData.mealPlan.updatedAt}
-            />
-            <ShoppingDateSelect
-              aria-busy={isSavingShoppingDate}
-              aria-label="Velg handledato"
-              className={storeModeMetaDateSelectClass}
-              defaultValue={activeShoppingDateValue}
-              disabled={isSavingShoppingDate}
-              name="activeShoppingDate"
-              onChange={(event) => {
-                submitSelectForm(event, activeShoppingDateValue, submit);
-              }}
-              selectableShoppingDates={loaderData.selectableShoppingDates}
-              showEmptyOption={false}
-            />
-            {actionData?.intent === "update-active-shopping-date" &&
-            actionData.activeShoppingDateFieldErrors?.activeShoppingDate ? (
-              <p className="text-sm text-rose-600">
-                {actionData.activeShoppingDateFieldErrors.activeShoppingDate}
-              </p>
-            ) : null}
-          </Form>
-          <span className="hidden text-store-muted sm:inline" aria-hidden="true">
-            ·
-          </span>
-          <span
-            className={`${storeModeProgressPillClass}${
-              isCelebrating ? " motion-safe:animate-pulse" : ""
-            }`}
-          >
-            <span aria-hidden="true" className={storeModeProgressDotClass} />
-            {displayProgress.checkedCount}/{displayProgress.totalCount}
-          </span>
-          <div className="ml-auto flex shrink-0 items-center gap-3">
-            <Link
-              className="text-store-muted underline-offset-2 hover:text-store-ink hover:underline"
-              to={`/families/${loaderData.family.id}/store-mode/share`}
-            >
-              Del liste
-            </Link>
-            <Link
-              className="text-store-muted underline-offset-2 hover:text-store-ink hover:underline"
-              to={`/families/${loaderData.family.id}/stores`}
-            >
-              Butikker
-            </Link>
-          </div>
-        </section>
+        </StoreModeScanBar>
 
         {noticeContent ? (
           <section className={getStoreModeBannerClass("success")}>
@@ -1471,26 +1530,6 @@ export default function FamilyMealPlanStoreModeRoute({
         {displaySectionGroups.length > 0 ||
         (hasUnusedStockIngredients && !stockReminderDismissed) ? (
           <section className="grid gap-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-semibold tracking-tight text-store-ink">
-                Varer å handle
-              </h2>
-              {displaySectionGroups.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <ShoppingGroceryGroupingToggle
-                    grouping={loaderData.groceryGrouping}
-                  />
-                  <StoreModeDeprioritizeBoughtToggle
-                    enabled={deprioritizeBought}
-                    onChange={handleDeprioritizeBoughtChange}
-                  />
-                  <StoreModeShoppingViewToggle
-                    onChange={handleShoppingViewChange}
-                    view={shoppingView}
-                  />
-                </div>
-              ) : null}
-            </div>
             {hasUnusedStockIngredients && !stockReminderDismissed ? (
               <StoreModeStockIngredientsReminder
                 ingredients={loaderData.stockIngredientsForStoreMode}

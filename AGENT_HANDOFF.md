@@ -2,42 +2,36 @@
 
 ## Current Objective
 
-Ship the Ukesstripe home page and the shared green-black palette on `issue/288-ukesstripe-home` for [#288](https://github.com/sndrem/mealplanner/issues/288).
+Ship the sticky store-mode scan bar on `issue/290-sticky-scan-bar` for [#290](https://github.com/sndrem/mealplanner/issues/290).
 
 ## Completed
 
-- Rebuilt `app/routes/home.tsx` from the Ukesstripe draft: dark hero, illustrated week, three parts, sample shopping list, and closing band. Norwegian copy. Auth links go to `/register` and `/login`.
-- Added brand tokens in `app/app.css` for light and dark, and mapped `--color-store-*` onto the same roles.
-- Replaced hardcoded slate, emerald, and stone chrome across nav, auth, family screens, and store mode. Notice colors and rose/red destructive actions stay.
-
-## Brand Palette
-
-Source of truth: `.cursor/rules/frontend-standards.mdc`. Use `bg-page`, `text-ink`, `bg-accent`, `bg-band`, and `text-on-band`. Do not add slate, emerald, or stone utilities for chrome.
-
-Light: page `#f3f6f4`, ink `#14211c`, muted `#5c6b64`, line `#d9e3dc`, accent `#0f766e`, accent-strong `#115e59`, accent-soft `#d8f3ee`, paper `#fffdf8`, band `#14211c`. On band: text `#f4faf7`, secondary `#c9d7d1`, quiet `#9fb2aa`, kicker `#9ee6db`.
-
-Dark: page `#0e1915`, surface `#17241f`, ink `#f4faf7`, muted `#9fb2aa`, line `#314840`, accent-strong `#14b8a6`, accent-soft `#14332f`, band `#24352e`. Store-mode tokens use these roles. Notice colors stay.
+- Replaced the Butikkmodus panel and the always-visible list controls with a sticky scan bar: items left, checked of the whole list, store, and week focus.
+- Moved trip focus, store, date, Del liste, Butikker, grouping, hide-bought, and grid/list behind **Tilpass**. The settings panel scrolls with the list.
+- Scan line updates from in-flight form data, then action data, then the loader. The bar offset is `top-[75px]` because the nav is 75px tall.
 
 ## Files To Read First
 
-- `app/routes/home.tsx` — landing page
-- `app/components/landing-meal-icons.tsx` — flat meal drawings
-- `app/app.css` — theme tokens
-- `.cursor/rules/frontend-standards.mdc` — palette rule
+- `app/components/store-mode-scan-bar.tsx` — sticky bar and Tilpass panel
+- `app/routes/family-meal-plan-store-mode.tsx` — wiring and optimistic scan values
+- `app/lib/shopping-store-mode-client.ts` — remaining count and focus labels
+- `app/lib/store-mode-theme.ts` — sticky bar classes
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 695 tests passed
+- `npm run test:run` — 703 tests passed
 - `npm run typecheck` — passed
-- Browser on `http://localhost:5176`: home at 390px and 1100px. Logged-in overview and store mode in light and dark. `/login` redirected to `/app` because a session was already active.
+- Browser on `http://localhost:5176/families/cms77vj9m0002nk3e9xnzl9cj/store-mode` at 390px and 1100px. Bar stays flush under the nav while scrolling. Tilpass updates focus and the scan line. Liste still switches the view. Checking an item updates `igjen` immediately. List restored to 31 unchecked, Rema 1000, Alle åpne.
 
 ## Open Items
 
-- `temp-delete-later/home-landing-proposals/` stays untracked and is not part of the commit.
-- Two filled actions on the same screen are both teal. Check family home, recipes, and meal plan if the primary action feels unclear.
+- `temp-delete-later/` mockups stay untracked and are not part of the commit.
+- Public share pages still use the old meta strip.
+- Handlehistorikk has two extra Hvetemel lines from browser verification (check, then restore).
+- Sync banner stacking was checked from CSS (`z-[60]` over the bar’s `z-30`), not by triggering a live sync.
 
 ## Next Step
 
-Review and merge the pull request for [#288](https://github.com/sndrem/mealplanner/issues/288).
+Review and merge the pull request for [#290](https://github.com/sndrem/mealplanner/issues/290).
