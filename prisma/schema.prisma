@@ -244,6 +244,7 @@ model Recipe {
   createdByUser       User?                      @relation("RecipeCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   ingredients         RecipeIngredient[]
   mealPlanEntries     MealPlanEntry[]
+  mealPlanExtraMeals  MealPlanExtraMeal[]
   reminderSuggestions RecipeReminderSuggestion[]
 
   @@unique([familyId, source, sourceExternalId])
@@ -311,6 +312,7 @@ model MealPlan {
   copiedFromMealPlan      MealPlan?                @relation("MealPlanCopies", fields: [copiedFromMealPlanId], references: [id], onDelete: SetNull)
   copiedToMealPlans       MealPlan[]               @relation("MealPlanCopies")
   entries                 MealPlanEntry[]
+  extraMeals              MealPlanExtraMeal[]
   manualShoppingItems     ManualShoppingItem[]
   shoppingOverrides       ShoppingItemOverride[]
   shoppingItemCheckEvents ShoppingItemCheckEvent[]
@@ -347,6 +349,21 @@ model MealPlanEntry {
   @@index([recipeId])
   @@index([freezerItemId])
   @@index([responsibleUserId])
+}
+
+model MealPlanExtraMeal {
+  id         String   @id @default(cuid())
+  mealPlanId String
+  recipeId   String
+  note       String?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe     Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([mealPlanId, sortOrder])
+  @@index([recipeId])
 }
 
 model ManualShoppingItem {

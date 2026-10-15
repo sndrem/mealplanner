@@ -69,6 +69,7 @@ describe("family meal plan route", () => {
         copiedFromMealPlanId: null,
         createdAt: new Date("2026-05-01T12:00:00.000Z"),
         endDate: new Date("2026-05-18T00:00:00.000Z"),
+        extraMeals: [],
         entries: [
           {
             createdAt: new Date("2026-05-01T12:00:00.000Z"),
@@ -156,6 +157,7 @@ describe("family meal plan route", () => {
         createdAt: new Date("2026-05-01T12:00:00.000Z"),
         endDate: "2026-05-18",
         entries: undefined,
+        extraMeals: undefined,
         id: "meal-plan-1",
         startDate: "2026-05-15",
         status: "DRAFT",
@@ -164,6 +166,7 @@ describe("family meal plan route", () => {
       },
       entriesSnapshot:
         "2026-05-15T00:00:00.000Z:DINNER:2026-05-01T12:00:00.000Z",
+      extraMeals: [],
       familyMembers: [
         { displayName: "Ola", id: "user-1" },
         { displayName: "Kari", id: "user-2" },

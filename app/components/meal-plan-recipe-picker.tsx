@@ -14,6 +14,7 @@ import {
 } from "./recipe-picker-card";
 
 export function MealPlanRecipePicker({
+  allowClear = true,
   freezerItems,
   inPlanRecipeIds,
   name,
@@ -24,6 +25,7 @@ export function MealPlanRecipePicker({
   triggerLabel,
   value,
 }: {
+  allowClear?: boolean;
   freezerItems: RecipePickerCardFreezerItem[];
   inPlanRecipeIds: ReadonlySet<string>;
   name: string;
@@ -228,17 +230,19 @@ export function MealPlanRecipePicker({
           ) : null}
 
           <div className="mt-3 max-h-72 space-y-3 overflow-y-auto overscroll-y-contain">
-            <button
-              className={
-                value === ""
-                  ? "w-full rounded-2xl border border-accent/40 bg-accent-soft px-3 py-2 text-left text-sm font-medium text-accent-strong"
-                  : "w-full rounded-2xl border border-dashed border-line bg-page px-3 py-2 text-left text-sm font-medium text-muted transition hover:bg-surface"
-              }
-              onClick={() => selectValue("")}
-              type="button"
-            >
-              Ingen middag valgt
-            </button>
+            {allowClear ? (
+              <button
+                className={
+                  value === ""
+                    ? "w-full rounded-2xl border border-accent/40 bg-accent-soft px-3 py-2 text-left text-sm font-medium text-accent-strong"
+                    : "w-full rounded-2xl border border-dashed border-line bg-page px-3 py-2 text-left text-sm font-medium text-muted transition hover:bg-surface"
+                }
+                onClick={() => selectValue("")}
+                type="button"
+              >
+                Ingen middag valgt
+              </button>
+            ) : null}
 
             {searchableFreezerItems.length > 0 ? (
               <PickerSection title="Fryser">

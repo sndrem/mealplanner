@@ -1381,6 +1381,115 @@ describe("shopping.server", () => {
     );
   });
 
+  it("merges undated extra meals with dinners and keeps extra-only ingredients", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      activeShoppingDate: null,
+      endDate: new Date("2026-05-18T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-taco",
+            ingredients: [
+              {
+                amount: "1",
+                category: { displayName: "Kjott", id: "category-meat" },
+                categoryId: "category-meat",
+                displayName: "Kylling",
+                id: "ingredient-dinner",
+                ingredientId: "canonical-chicken",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+            ],
+            title: "Taco",
+          },
+          recipeId: "recipe-taco",
+        },
+      ],
+      extraMeals: [
+        {
+          id: "extra-1",
+          recipe: {
+            id: "recipe-salad",
+            ingredients: [
+              {
+                amount: "1",
+                category: { displayName: "Kjott", id: "category-meat" },
+                categoryId: "category-meat",
+                displayName: "Kylling",
+                id: "ingredient-extra",
+                ingredientId: "canonical-chicken",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+              {
+                amount: "1",
+                category: { displayName: "Frukt og gront", id: "category-produce" },
+                categoryId: "category-produce",
+                displayName: "Salat",
+                id: "ingredient-salad",
+                ingredientId: "canonical-salad",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 2,
+                unit: "stk",
+              },
+            ],
+            title: "Kyllingsalat",
+          },
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Ukehandel",
+      updatedAt: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.store.findMany.mockResolvedValue([]);
+
+    const result = await getMealPlanShoppingData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+    const generatedItems = result.projectedItems.filter(
+      (item) => item.sourceType === "GENERATED",
+    );
+    const chicken = generatedItems.find((item) => item.name === "Kylling");
+    const salad = generatedItems.find((item) => item.name === "Salat");
+
+    expect(generatedItems.map((item) => item.name).sort()).toEqual([
+      "Kylling",
+      "Salat",
+    ]);
+    expect(chicken).toEqual(
+      expect.objectContaining({
+        firstDate: new Date("2026-05-15T00:00:00.000Z"),
+        occurrenceCount: 2,
+        sourceKey: "entry-1:ingredient-dinner|extra-1:ingredient-extra",
+      }),
+    );
+    expect(salad).toEqual(
+      expect.objectContaining({
+        firstDate: null,
+        occurrenceCount: 1,
+        sourceKey: "extra-1:ingredient-salad",
+      }),
+    );
+    if (salad?.sourceType === "GENERATED") {
+      expect(salad.occurrences[0]?.date).toBeNull();
+    }
+  });
+
   describe("getMealPlanStoreModeData", () => {
     function registerStoreModePlans(
       anchorPlan: Record<string, unknown>,
@@ -1877,6 +1986,133 @@ describe("shopping.server", () => {
     expect(
       result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
     ).toEqual(["Paprika"]);
+  });
+
+  it("keeps undated extra meals on the trip after earlier dinners are past", async () => {
+    vi.setSystemTime(new Date("2026-05-16T09:30:45.000Z"));
+
+    registerStoreModePlans({
+      activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+      endDate: new Date("2026-05-17T00:00:00.000Z"),
+      entries: [
+        {
+          date: new Date("2026-05-14T00:00:00.000Z"),
+          id: "entry-1",
+          mealType: "DINNER",
+          recipe: {
+            id: "recipe-taco",
+            ingredients: [
+              {
+                amount: "1",
+                category: { displayName: "Kjott", id: "category-meat" },
+                categoryId: "category-meat",
+                displayName: "Kylling",
+                id: "ingredient-dinner",
+                ingredientId: "canonical-chicken",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+              {
+                amount: "1",
+                category: { displayName: "Brod", id: "category-bakery" },
+                categoryId: "category-bakery",
+                displayName: "Lefse",
+                id: "ingredient-lefse",
+                ingredientId: "canonical-lefse",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 2,
+                unit: "pk",
+              },
+            ],
+            title: "Taco",
+          },
+          recipeId: "recipe-taco",
+        },
+      ],
+      extraMeals: [
+        {
+          id: "extra-1",
+          recipe: {
+            id: "recipe-salad",
+            ingredients: [
+              {
+                amount: "1",
+                category: { displayName: "Kjott", id: "category-meat" },
+                categoryId: "category-meat",
+                displayName: "Kylling",
+                id: "ingredient-extra",
+                ingredientId: "canonical-chicken",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 1,
+                unit: "stk",
+              },
+              {
+                amount: "1",
+                category: { displayName: "Frukt og gront", id: "category-produce" },
+                categoryId: "category-produce",
+                displayName: "Salat",
+                id: "ingredient-salad",
+                ingredientId: "canonical-salad",
+                preferredStore: null,
+                preferredStoreId: null,
+                sortOrder: 2,
+                unit: "stk",
+              },
+            ],
+            title: "Kyllingsalat",
+          },
+        },
+      ],
+      id: "meal-plan-1",
+      manualShoppingItems: [],
+      shoppingOverrides: [],
+      startDate: new Date("2026-05-14T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Ukehandel",
+    });
+    dbMock.store.findMany.mockResolvedValue([
+      {
+        familyId: "family-1",
+        id: "store-1",
+        name: "Coop Mega",
+        sections: [
+          {
+            categoryId: "category-meat",
+            displayName: "Kjott",
+            id: "section-1",
+            sortOrder: 1,
+          },
+          {
+            categoryId: "category-produce",
+            displayName: "Frukt og gront",
+            id: "section-2",
+            sortOrder: 2,
+          },
+          {
+            categoryId: "category-bakery",
+            displayName: "Brod",
+            id: "section-3",
+            sortOrder: 3,
+          },
+        ],
+      },
+    ]);
+
+    const result = await getMealPlanStoreModeData({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(
+      result.dueSectionGroups
+        .flatMap((section) => section.items.map((item) => item.name))
+        .sort(),
+    ).toEqual(["Kylling", "Salat"]);
   });
 
   it("includes merged cross-day ingredients through the end of the meal plan", async () => {
