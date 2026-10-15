@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isPlanDateToday } from "./meal-plan-dates";
+import { differenceInUtcDateOnlyDays, isPlanDateToday } from "./meal-plan-dates";
 
 describe("isPlanDateToday", () => {
   it("returns true when plan date matches the reference UTC calendar day", () => {
@@ -23,5 +23,14 @@ describe("isPlanDateToday", () => {
     expect(isPlanDateToday("2026-05-26", lateUtcEvening)).toBe(true);
     expect(isPlanDateToday("2026-05-26", nextUtcDay)).toBe(false);
     expect(isPlanDateToday("2026-05-27", nextUtcDay)).toBe(true);
+  });
+});
+
+describe("differenceInUtcDateOnlyDays", () => {
+  it("counts whole UTC days, including across a month boundary", () => {
+    expect(differenceInUtcDateOnlyDays("2026-05-26", "2026-05-26")).toBe(0);
+    expect(differenceInUtcDateOnlyDays("2026-05-26", "2026-05-27")).toBe(1);
+    expect(differenceInUtcDateOnlyDays("2026-05-31", "2026-06-02")).toBe(2);
+    expect(differenceInUtcDateOnlyDays("2026-05-26", "2026-05-25")).toBe(-1);
   });
 });

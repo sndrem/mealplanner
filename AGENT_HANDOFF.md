@@ -2,35 +2,35 @@
 
 ## Current Objective
 
-Ship [#295](https://github.com/sndrem/mealplanner/issues/295) on `issue/295-extra-meals`: undated extra meals on the weekly plan, included in the shopping list.
+Ship [#296](https://github.com/sndrem/mealplanner/issues/296) on `issue/296-recipe-urgency`: an optional store-mode mark for how soon an unbought recipe item is needed. The branch was cut from current `origin/main`.
 
 ## Completed
 
-- Added `MealPlanExtraMeal` and applied migration `20261015120000_add_meal_plan_extra_meal` to the local database.
-- The meal plan page has **Ekstra denne uken**: add a recipe, optional note, and remove. Dinner days are unchanged.
-- Copying a plan copies extra meals without a day shift. Recipes outside the family are rejected.
-- Extra-meal ingredients join the generated shopping list and merge with dinner ingredients. Undated items stay in store mode after earlier dinners are past, and attribution says **Denne uken** instead of a weekday.
+- Tilpass → Visning has **Farge etter bruk**. It is off until turned on, and the choice is stored per family in `localStorage`.
+- Unchecked generated items use `firstDate`: a strong left edge plus `i dag` or `i morgen` for today and tomorrow, a lighter edge for 2–4 days, and the normal card otherwise.
+- Checked, postponed, manual, family, undated extra-meal, and recently added rows stay plain. The shared list is unchanged.
 
 ## Files To Read First
 
-- `app/components/meal-plan-extra-meals.tsx` — the week-plan section
-- `app/lib/meal-plan.server.ts` — add, note, remove, and copy
-- `app/lib/shopping.server.ts` — `listGeneratedMealSources` and the store-mode trip window
-- `app/lib/shopping-display.ts` — undated attribution
+- `app/lib/store-mode-recipe-urgency.ts` — the day buckets
+- `app/components/store-mode-shopping-item-card.tsx` — edge and label
+- `app/routes/family-meal-plan-store-mode.tsx` — the Tilpass toggle
+- `app/lib/shopping-store-mode-client.ts` — the saved preference
 
 ## Validation
 
-- `npm run test:run` — 709 tests passed
-- `npx tsc --noEmit` — passed
-- `npx eslint` on the touched files — passed
-- `npm run prisma:migrate:deploy` — applied the new migration locally
-- Live meal-plan UI was not exercised. The app at `http://localhost:5176/` is logged out.
+- `npm run prisma:generate` — passed
+- `npm run lint` — passed
+- `npm run test:run` — 722 tests passed
+- `npm run typecheck` — passed
+- On `http://localhost:5176/` the soon edge computes to a 4px `#115e59` left border, and the upcoming edge is a 50% accent left border. Store mode was not clicked through because the homepage is logged out.
 
 ## Open Items
 
-- Not committed or pushed.
-- Confirm in the browser: add kyllingsalat under Ekstra denne uken, check the shopping list and store mode, then copy the week.
+- Confirm in a logged-in phone-width store-mode list: turn the toggle on, check tomorrow versus a later-week item, and confirm bought and postponed rows stay plain.
+- Untracked `temp-delete-later/` drafts are not part of this change.
+- The already-running server on port 5176 has a separate Prisma error (`Unknown field extraMeals`) on the meal-plan loader.
 
 ## Next Step
 
-Log in locally and walk through add, shopping attribution, and copy-week before opening a pull request.
+Review the pull request for #296.

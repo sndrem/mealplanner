@@ -49,6 +49,8 @@ const STORE_MODE_QUEUE_KEY_PREFIX = "mealplanner:store-mode-queue:v1";
 const STORE_MODE_VIEW_KEY_PREFIX = "mealplanner:store-mode-view:v1";
 const STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX =
   "mealplanner:store-mode-deprioritize-bought:v1";
+const STORE_MODE_RECIPE_URGENCY_KEY_PREFIX =
+  "mealplanner:store-mode-recipe-urgency:v1";
 const STORE_MODE_STOCK_REMINDER_DISMISSED_KEY_PREFIX =
   "mealplanner:store-mode-stock-reminder-dismissed:v1";
 
@@ -126,6 +128,41 @@ export function readStoreModeDeprioritizeBought(storageKey: string): boolean {
 }
 
 export function writeStoreModeDeprioritizeBought(
+  storageKey: string,
+  enabled: boolean,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(storageKey, enabled ? "true" : "false");
+  } catch {
+    // Private mode or quota exceeded — in-session state still works.
+  }
+}
+
+export function buildStoreModeRecipeUrgencyStorageKey({
+  familyId,
+}: {
+  familyId: string;
+}) {
+  return `${STORE_MODE_RECIPE_URGENCY_KEY_PREFIX}:${familyId}`;
+}
+
+export function readStoreModeRecipeUrgency(storageKey: string): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    return window.localStorage.getItem(storageKey) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function writeStoreModeRecipeUrgency(
   storageKey: string,
   enabled: boolean,
 ) {
