@@ -28,7 +28,10 @@ import {
   type FamilyRecipeIngredientValues,
   type FamilyRecipeValues,
 } from "./recipe-write.server";
-import { getFamilyShoppingData } from "./shopping.server";
+import {
+  getFamilyShoppingData,
+  getFamilyStoreModeData,
+} from "./shopping.server";
 import {
   getStoreOfferBriefing,
   publishStoreOfferBriefing,
@@ -258,6 +261,43 @@ export async function getShoppingListForMcp({ familyId, userId }: McpActor) {
       sourceType: item.sourceType,
       store: item.preferredStore?.name ?? null,
     })),
+  };
+}
+
+export async function getActiveShoppingListForMcp({
+  familyId,
+  userId,
+}: McpActor) {
+  const data = await getFamilyStoreModeData({ familyId, userId });
+
+  if (!data) {
+    return {
+      itemCount: 0,
+      items: [],
+      mealPlan: null,
+      tripFocus: null,
+    };
+  }
+
+  const items = data.dueSectionGroups
+    .flatMap((section) => section.items)
+    .filter((item) => !item.checked)
+    .map((item) => ({
+      category: item.category.name,
+      name: item.name,
+      quantity: item.quantityLabel,
+      sourceType: item.sourceType,
+      store: item.preferredStore?.name ?? null,
+    }));
+
+  return {
+    itemCount: items.length,
+    items,
+    mealPlan: {
+      id: data.mealPlan.id,
+      title: data.mealPlan.title,
+    },
+    tripFocus: data.effectiveTripFocus,
   };
 }
 

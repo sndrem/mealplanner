@@ -47,7 +47,8 @@ Authenticated clients can call:
 - `list_ingredient_categories` — global ingredient categories (`id`, `key`, `displayName`) for `upsert_recipe`
 - `get_current_week_meal_plan` — Europe/Oslo calendar week dinners (live DRAFT/APPROVED plans only)
 - `list_meal_plans` — plan summaries (excludes open proposals)
-- `get_shopping_list` — current family shopping projection
+- `get_shopping_list` — full family shopping projection (includes checked items and the whole covering week)
+- `get_active_shopping_list` — unchecked items still due on Handleliste for the saved trip focus
 - `get_recent_dinners` — recently used dinner recipes
 - `list_freezer_items` — freezer stock
 - `create_meal_plan_proposal` — create or replace a proposed dinner plan for a calendar week
@@ -68,6 +69,8 @@ The tool returns `proposalUrl`. Put that in email as **Se forslaget i Mealplanne
 - `content`: the full findings as plain text. Start with a short planning paragraph. Then one block per store: the store name on its own line, then one offer per line. End with one line for items that have no offer. Separate blocks with a blank line. Do not use HTML or Markdown.
 
 `get_store_offer_briefing` uses the same week default and returns the stored title, subtitle, and content, or an empty result when that week has no briefing.
+
+`get_shopping_list` is the full projection. `get_active_shopping_list` is the shorter Handleliste trip: items still to buy for the saved focus (this week, next week, or all open plans). Use that tool when matching flyers to what the family is about to shop. It follows the MCP user's saved Handletur focus.
 
 The token is scoped to one family.
 

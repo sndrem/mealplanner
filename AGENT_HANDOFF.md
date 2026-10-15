@@ -2,38 +2,34 @@
 
 ## Current Objective
 
-Ship [#298](https://github.com/sndrem/mealplanner/issues/298) on `issue/298-store-offer-briefing`: a weekly store-offer banner on Handleliste, published by the family MCP server as title, subtitle, and plain text. The branch was cut from current `origin/main`.
+Add `get_active_shopping_list` so the newspaper agent reads the Handleliste trip instead of the full family shopping projection. Branch `get-active-shopping-list` is cut from current `origin/main` after #300 merged.
 
 ## Completed
 
-- `publish_store_offer_briefing` and `get_store_offer_briefing` store one briefing per family per Europe/Oslo week. Omitting the week targets next Monday–Sunday. Republish replaces the three texts.
-- Handleliste shows `Ukens tilbud` under the scan bar: title, subtitle, and a `Ny` chip. Expanding shows the plain-text findings. Skjul leaves `Vis ukens tilbud`. A new `updatedAt` shows `Ny` again.
-- A next-week briefing stays loud on the default `Denne uken` focus through `weekEnd`. After that, an overlapping focused week becomes the quiet line `Tilbudene for denne uken er ute`.
-- The share list does not load the briefing. Local migration `20261015140000_add_store_offer_briefing` is applied on the local database.
+- The new read tool returns unchecked items still due for the MCP user's saved trip focus (this week, next week, or all open plans).
+- Bought rows, past days, and postponed items stay out of that payload.
+- `get_shopping_list` still returns the full projection. Its description points agents at `get_active_shopping_list` for flyer matching.
+- `docs/mcp.md` documents both tools.
 
 ## Files To Read First
 
-- `app/lib/store-offer-briefing.ts` — text limits, week check, loud/quiet/hidden selection
-- `app/lib/store-offer-briefing.server.ts` — upsert and the store-mode query
-- `app/components/store-offer-briefing-banner.tsx` — the banner
-- `app/lib/mcp-handler.server.ts` — the tool descriptions the agent sees
-- `docs/mcp.md` — the format to give the newspaper agent
+- `app/lib/mcp-tools.server.ts` — `getActiveShoppingListForMcp`
+- `app/lib/mcp-handler.server.ts` — the tool description
+- `docs/mcp.md` — what to tell the agent
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 741 tests passed
+- `npm run test:run` — 743 tests passed
 - `npm run typecheck` — passed
-- `npm run prisma:migrate:deploy` — applied `20261015140000_add_store_offer_briefing` earlier in this branch
-- Opened `http://localhost:5176/`. The homepage is logged out, so Handleliste was not clicked through.
+- Handleliste was not clicked through. This change is an MCP read tool.
 
 ## Open Items
 
-- Confirm while logged in, at phone width: publish the sample brief, see the banner with Handletur collapsed, expand it, hide it, republish, and confirm `Ny` returns. Confirm the share link has no banner.
+- Refresh the agent's MCP tool list after deploy, or it will keep calling `get_shopping_list`.
 - Untracked `temp-delete-later/` drafts are not part of this change.
-- The long-running dev server on port 5176 was started before this branch. Restart it if Handleliste errors on the new Prisma model.
 
 ## Next Step
 
-Review the pull request for #298, then check the banner on a logged-in Handleliste.
+Review the pull request, then confirm a flyer run uses `get_active_shopping_list` and returns the short trip.
