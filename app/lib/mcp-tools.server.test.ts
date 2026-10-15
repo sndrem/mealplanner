@@ -6,6 +6,7 @@ const {
   getCalendarWeekBoundsMock,
   getCalendarWeekDatesMock,
   getFamilyShoppingDataMock,
+  getFamilyStoreModeDataMock,
   getMealPlanPlanningDataMock,
   getRecentlyUsedRecipeIdsMock,
   getRecipeManagementDataMock,
@@ -31,6 +32,7 @@ const {
   getCalendarWeekBoundsMock: vi.fn(),
   getCalendarWeekDatesMock: vi.fn(),
   getFamilyShoppingDataMock: vi.fn(),
+  getFamilyStoreModeDataMock: vi.fn(),
   getMealPlanPlanningDataMock: vi.fn(),
   getRecentlyUsedRecipeIdsMock: vi.fn(),
   getRecipeManagementDataMock: vi.fn(),
@@ -69,6 +71,7 @@ vi.mock("./meal-plan-week", () => ({
 
 vi.mock("./shopping.server", () => ({
   getFamilyShoppingData: getFamilyShoppingDataMock,
+  getFamilyStoreModeData: getFamilyStoreModeDataMock,
 }));
 
 vi.mock("./freezer.server", () => ({
@@ -92,6 +95,7 @@ vi.mock("./recipe-write.server", () => ({
 import {
   createMealPlanProposalForMcp,
   getCurrentWeekMealPlanForMcp,
+  getActiveShoppingListForMcp,
   getRecentDinnersForMcp,
   getRecipeForMcp,
   getShoppingListForMcp,
@@ -489,6 +493,68 @@ describe("mcp-tools.server", () => {
           store: null,
         },
       ],
+    });
+  });
+
+  it("returns unchecked items still due on the active shopping trip", async () => {
+    getFamilyStoreModeDataMock.mockResolvedValue({
+      dueSectionGroups: [
+        {
+          items: [
+            {
+              category: { id: "cat-1", name: "Kjøtt og fisk" },
+              checked: false,
+              name: "Laksefilet",
+              preferredStore: { id: "store-1", name: "Rema 1000" },
+              quantityLabel: "500 g",
+              sourceType: "GENERATED",
+            },
+            {
+              category: { id: "cat-1", name: "Kjøtt og fisk" },
+              checked: true,
+              name: "Kyllingfilet",
+              preferredStore: { id: "store-1", name: "Rema 1000" },
+              quantityLabel: "1 kg",
+              sourceType: "GENERATED",
+            },
+          ],
+        },
+      ],
+      effectiveTripFocus: "CURRENT",
+      mealPlan: {
+        id: "plan-1",
+        title: "Uke 42",
+      },
+    });
+
+    await expect(getActiveShoppingListForMcp(actor)).resolves.toEqual({
+      itemCount: 1,
+      items: [
+        {
+          category: "Kjøtt og fisk",
+          name: "Laksefilet",
+          quantity: "500 g",
+          sourceType: "GENERATED",
+          store: "Rema 1000",
+        },
+      ],
+      mealPlan: {
+        id: "plan-1",
+        title: "Uke 42",
+      },
+      tripFocus: "CURRENT",
+    });
+    expect(getFamilyStoreModeDataMock).toHaveBeenCalledWith(actor);
+  });
+
+  it("returns an empty active list when the family has no shopping trip", async () => {
+    getFamilyStoreModeDataMock.mockResolvedValue(null);
+
+    await expect(getActiveShoppingListForMcp(actor)).resolves.toEqual({
+      itemCount: 0,
+      items: [],
+      mealPlan: null,
+      tripFocus: null,
     });
   });
 

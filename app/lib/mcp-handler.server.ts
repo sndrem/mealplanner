@@ -8,6 +8,7 @@ import { z } from "zod";
 import { upsertRecipeInputSchema } from "./mcp-recipe-schema";
 import {
   createMealPlanProposalForMcp,
+  getActiveShoppingListForMcp,
   getCurrentWeekMealPlanForMcp,
   getRecentDinnersForMcp,
   getRecipeForMcp,
@@ -139,7 +140,7 @@ export const mcpHttpHandler = createMcpHandler(
       "get_shopping_list",
       {
         description:
-          "Get the current family shopping list (generated, manual, and family items).",
+          "Get the full family shopping projection: every family item, including checked ones, plus the whole meal plan that covers today. This is larger than the list on Handleliste. For items still to buy on the current trip, use get_active_shopping_list.",
         inputSchema: z.object({}),
       },
       async () => {
@@ -147,6 +148,24 @@ export const mcpHttpHandler = createMcpHandler(
         return jsonResult(
           data,
           `${data.itemCounts.unchecked} unchecked of ${data.itemCounts.total} items (${data.activeListMode}).`,
+        );
+      },
+    );
+
+    server.registerTool(
+      "get_active_shopping_list",
+      {
+        description:
+          "Get the active Handleliste trip: unchecked items still due for the saved trip focus (this week, next week, or all open plans). Use this when matching a shopping list to store flyers. Omits bought items, past days, postponed items, and the full family projection.",
+        inputSchema: z.object({}),
+      },
+      async () => {
+        const data = await getActiveShoppingListForMcp(actor);
+        return jsonResult(
+          data,
+          data.tripFocus
+            ? `${data.itemCount} items still to buy (${data.tripFocus}).`
+            : "No active shopping trip.",
         );
       },
     );
