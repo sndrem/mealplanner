@@ -411,9 +411,11 @@ export function StoreModeShoppingItemCard({
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
             >
-              <p className="break-words text-xs leading-4 text-store-muted">
-                {formatStoreModeItemSourceLine(item)}
-              </p>
+              {showGroupedMeasurements ? null : (
+                <p className="break-words text-xs leading-4 text-store-muted">
+                  {formatStoreModeItemSourceLine(item)}
+                </p>
+              )}
               {showGroupedMeasurements ? (
                 <ul className="space-y-1 text-xs leading-4 text-store-muted">
                   {item.occurrences.map((occurrence, index) => (
