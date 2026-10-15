@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { formatDateOnly } from "../lib/meal-plan-dates";
 import { getNextCalendarWeekBounds } from "../lib/meal-plan-week";
 import {
   formatGeneratedOccurrenceAttribution,
@@ -8,6 +9,11 @@ import {
 } from "../lib/shopping-display";
 import { isGroupedShoppingItem } from "../lib/shopping-grocery-grouping";
 import type { StoreModeShoppingView } from "../lib/shopping-store-mode-client";
+import { resolveStoreModeRecipeUrgency } from "../lib/store-mode-recipe-urgency";
+import {
+  storeModeRecipeUrgencySoonEdgeClass,
+  storeModeRecipeUrgencyUpcomingEdgeClass,
+} from "../lib/store-mode-theme";
 import type { StoreCategory } from "../lib/store.server";
 import { ShoppingQuantityEditModal } from "./shopping-quantity-edit-modal";
 import { MarkGeneratedItemAsStockForm } from "./mark-generated-item-as-stock-form";
@@ -41,6 +47,7 @@ interface StoreModeShoppingItemCardGenerated extends StoreModeShoppingItemCardBa
     quantityLabel: string | null;
     sourceKey: string;
   }>;
+  firstDate: string | null;
   isStockItem: boolean;
   lastDate: string | null;
   occurrenceCount: number;
@@ -117,6 +124,7 @@ interface StoreModeShoppingItemCardProps {
   onToggle: () => void;
   readOnly?: boolean;
   selectedStoreId: string | undefined;
+  showRecipeUrgency?: boolean;
 }
 
 const badgeClass = "rounded-full px-2 py-0.5 text-[11px] font-medium leading-4";
@@ -137,6 +145,7 @@ export function StoreModeShoppingItemCard({
   onToggle,
   readOnly = false,
   selectedStoreId,
+  showRecipeUrgency = false,
 }: StoreModeShoppingItemCardProps) {
   const quantityBadge = formatGeneratedQuantityBadge(item);
   const shouldAutoOpenDetails = shouldAutoOpenStoreModeDetails(item);
@@ -264,12 +273,28 @@ export function StoreModeShoppingItemCard({
     submitItemFields,
   ]);
 
+  const recipeUrgency =
+    showRecipeUrgency && !isRecentlyAdded && item.sourceType === "GENERATED"
+      ? resolveStoreModeRecipeUrgency({
+          checked: item.checked,
+          earliestDate: item.firstDate,
+          postponedUntilDate: item.postponedUntilDate,
+          sourceType: item.sourceType,
+          todayDateOnly: formatDateOnly(new Date()),
+        })
+      : { label: null, step: null };
+  const recipeUrgencyEdgeClass =
+    recipeUrgency.step === "soon"
+      ? storeModeRecipeUrgencySoonEdgeClass
+      : recipeUrgency.step === "upcoming"
+        ? storeModeRecipeUrgencyUpcomingEdgeClass
+        : "";
   const cardStateClass = isRecentlyAdded
     ? "border-notice-success-line bg-notice-success"
     : item.checked
       ? "border-red-200 bg-red-50"
       : "border-store-line bg-store-bg";
-  const cardShellClass = `relative flex min-h-[44px] flex-col rounded-2xl border p-2.5 transition-colors duration-250 ${cardStateClass}`;
+  const cardShellClass = `relative flex min-h-[44px] flex-col rounded-2xl border p-2.5 transition-colors duration-250 ${cardStateClass}${recipeUrgencyEdgeClass ? ` ${recipeUrgencyEdgeClass}` : ""}`;
 
   const toggleOverlayClass = item.checked
     ? "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-red-100 active:bg-red-200"
@@ -316,6 +341,11 @@ export function StoreModeShoppingItemCard({
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="min-w-0">
               <span className={nameClass}>{item.name}</span>
+              {recipeUrgency.label ? (
+                <span className="ml-1.5 align-middle text-xs font-semibold text-store-accent-text">
+                  {recipeUrgency.label}
+                </span>
+              ) : null}
               {item.sourceType !== "FAMILY" && item.mealPlanTitle ? (
                 <span className="mt-0.5 block text-xs font-normal text-store-muted">
                   {item.mealPlanTitle}

@@ -8,6 +8,7 @@ import {
   areToggleQueuesEqual,
   buildStoreModeDeprioritizeBoughtStorageKey,
   buildStoreModeQueueStorageKey,
+  buildStoreModeRecipeUrgencyStorageKey,
   buildStoreModeStockReminderDismissedStorageKey,
   buildStoreModeViewStorageKey,
   computeStoreModeProgress,
@@ -16,6 +17,7 @@ import {
   getToggleExpectedVersion,
   partitionStoreModeSections,
   readStoreModeDeprioritizeBought,
+  readStoreModeRecipeUrgency,
   readStoreModeShoppingView,
   readStoreModeStockReminderDismissed,
   readStoreModeToggleQueue,
@@ -24,6 +26,7 @@ import {
   sortStoreModeItemsByName,
   upsertToggleOp,
   writeStoreModeDeprioritizeBought,
+  writeStoreModeRecipeUrgency,
   writeStoreModeShoppingView,
   writeStoreModeStockReminderDismissed,
   writeStoreModeToggleQueue,
@@ -478,6 +481,48 @@ describe("shopping-store-mode-client", () => {
     window.localStorage.setItem(storageKey, "yes");
 
     expect(readStoreModeDeprioritizeBought(storageKey)).toBe(true);
+  });
+
+  it("builds isolated recipe-urgency storage keys per family", () => {
+    expect(
+      buildStoreModeRecipeUrgencyStorageKey({
+        familyId: "family-1",
+      }),
+    ).not.toBe(
+      buildStoreModeRecipeUrgencyStorageKey({
+        familyId: "family-2",
+      }),
+    );
+  });
+
+  it("defaults recipe-urgency preference to off", () => {
+    const storageKey = buildStoreModeRecipeUrgencyStorageKey({
+      familyId: "family-1",
+    });
+
+    expect(readStoreModeRecipeUrgency(storageKey)).toBe(false);
+  });
+
+  it("persists and reads recipe-urgency preference", () => {
+    const storageKey = buildStoreModeRecipeUrgencyStorageKey({
+      familyId: "family-1",
+    });
+
+    writeStoreModeRecipeUrgency(storageKey, true);
+    expect(readStoreModeRecipeUrgency(storageKey)).toBe(true);
+
+    writeStoreModeRecipeUrgency(storageKey, false);
+    expect(readStoreModeRecipeUrgency(storageKey)).toBe(false);
+  });
+
+  it("falls back to off for invalid stored recipe-urgency values", () => {
+    const storageKey = buildStoreModeRecipeUrgencyStorageKey({
+      familyId: "family-1",
+    });
+
+    window.localStorage.setItem(storageKey, "yes");
+
+    expect(readStoreModeRecipeUrgency(storageKey)).toBe(false);
   });
 
   it("builds isolated stock-reminder dismiss keys per family and meal plan", () => {

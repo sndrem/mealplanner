@@ -4,7 +4,22 @@ import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { StoreModeShoppingItemCard } from "./store-mode-shopping-item-card";
+import { formatDateOnly } from "../lib/meal-plan-dates";
+import {
+  storeModeRecipeUrgencySoonEdgeClass,
+  storeModeRecipeUrgencyUpcomingEdgeClass,
+} from "../lib/store-mode-theme";
 import { renderWithRouter } from "../test/render-with-router";
+
+function shiftDateOnly(date: string, days: number) {
+  const shifted = new Date(`${date}T00:00:00.000Z`);
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return formatDateOnly(shifted);
+}
+
+function cardBySourceKey(sourceKey: string) {
+  return document.querySelector(`[data-shopping-source-key="${sourceKey}"]`);
+}
 
 function generatedItem(lastDate: string, name: string) {
   return {
@@ -12,6 +27,7 @@ function generatedItem(lastDate: string, name: string) {
     checked: false,
     collaborationVersion: "v1",
     isStockItem: false,
+    firstDate: lastDate,
     lastDate,
     mealPlanId: "meal-plan-1",
     name,
@@ -125,6 +141,7 @@ describe("StoreModeShoppingItemCard", () => {
               sourceKey: "entry-3:ingredient-3",
             },
           ],
+          firstDate: "2026-05-15",
           isStockItem: false,
           lastDate: "2026-05-17",
           mealPlanId: "meal-plan-1",
@@ -188,6 +205,7 @@ describe("StoreModeShoppingItemCard", () => {
           checked: false,
           collaborationVersion: "v1",
           isStockItem: false,
+          firstDate: "2026-05-15",
           lastDate: "2026-05-15",
           mealPlanId: "meal-plan-1",
           name: "Salt",
@@ -263,6 +281,7 @@ describe("StoreModeShoppingItemCard", () => {
           checked: false,
           collaborationVersion: "v1",
           isStockItem: false,
+          firstDate: "2026-05-15",
           lastDate: "2026-05-15",
           mealPlanId: "meal-plan-1",
           name: "Salt",
@@ -331,6 +350,7 @@ describe("StoreModeShoppingItemCard", () => {
           checked: false,
           collaborationVersion: "v1",
           isStockItem: false,
+          firstDate: "2026-05-15",
           lastDate: "2026-05-15",
           mealPlanId: "meal-plan-1",
           name: "Salt",
@@ -411,5 +431,127 @@ describe("StoreModeShoppingItemCard", () => {
     expect(
       document.querySelector(`[data-shopping-source-key="${familyItem.sourceKey}"]`),
     ).toHaveClass("border-notice-success-line", "bg-notice-success");
+  });
+
+  it("marks tomorrow's unbought recipe item when urgency is on", () => {
+    const today = formatDateOnly(new Date());
+    const item = {
+      ...generatedItem(shiftDateOnly(today, 6), "Melk"),
+      firstDate: shiftDateOnly(today, 1),
+    };
+
+    renderWithRouter(
+      <StoreModeShoppingItemCard
+        item={item}
+        layout="list"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+        showRecipeUrgency
+      />,
+    );
+
+    expect(screen.getByText("i morgen")).toBeInTheDocument();
+    expect(cardBySourceKey(item.sourceKey)).toHaveClass(
+      ...storeModeRecipeUrgencySoonEdgeClass.split(" "),
+    );
+  });
+
+  it("uses a lighter edge without a label for items needed in a few days", () => {
+    const today = formatDateOnly(new Date());
+    const item = generatedItem(shiftDateOnly(today, 3), "Ris");
+
+    renderWithRouter(
+      <StoreModeShoppingItemCard
+        item={item}
+        layout="list"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+        showRecipeUrgency
+      />,
+    );
+
+    expect(screen.queryByText("i dag")).not.toBeInTheDocument();
+    expect(screen.queryByText("i morgen")).not.toBeInTheDocument();
+    expect(cardBySourceKey(item.sourceKey)).toHaveClass(
+      ...storeModeRecipeUrgencyUpcomingEdgeClass.split(" "),
+    );
+  });
+
+  it("keeps the normal card when urgency is off or the item should stay plain", () => {
+    const today = formatDateOnly(new Date());
+    const tomorrow = shiftDateOnly(today, 1);
+    const plain = generatedItem(tomorrow, "Melk");
+    const checked = { ...plain, checked: true, sourceKey: "checked-milk" };
+    const postponed = {
+      ...plain,
+      postponedUntilDate: tomorrow,
+      sourceKey: "postponed-milk",
+    };
+    const undated = { ...plain, firstDate: null, sourceKey: "undated-milk" };
+    const manual = {
+      buyOnDate: tomorrow,
+      category: { id: "cat-dry", name: "Tørrvarer" },
+      checked: false,
+      collaborationVersion: "v1",
+      mealPlanId: "meal-plan-1",
+      name: "Kaffe",
+      note: null,
+      preferredStore: null,
+      quantity: null,
+      quantityLabel: null,
+      sourceKey: "manual-coffee",
+      sourceType: "MANUAL" as const,
+    };
+
+    const { unmount } = renderWithRouter(
+      <StoreModeShoppingItemCard
+        item={plain}
+        layout="list"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+      />,
+    );
+    expect(screen.queryByText("i morgen")).not.toBeInTheDocument();
+    expect(cardBySourceKey(plain.sourceKey)).not.toHaveClass("border-l-4");
+    unmount();
+
+    for (const item of [checked, postponed, undated, manual, familyItem]) {
+      const view = renderWithRouter(
+        <StoreModeShoppingItemCard
+          item={item}
+          layout="list"
+          onToggle={vi.fn()}
+          selectedStoreId="store-1"
+          showRecipeUrgency
+        />,
+      );
+      expect(screen.queryByText("i dag")).not.toBeInTheDocument();
+      expect(screen.queryByText("i morgen")).not.toBeInTheDocument();
+      expect(cardBySourceKey(item.sourceKey)).not.toHaveClass("border-l-4");
+      view.unmount();
+    }
+  });
+
+  it("lets the recently added highlight win over the urgency edge", () => {
+    const today = formatDateOnly(new Date());
+    const item = generatedItem(shiftDateOnly(today, 1), "Melk");
+
+    renderWithRouter(
+      <StoreModeShoppingItemCard
+        isRecentlyAdded
+        item={item}
+        layout="list"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+        showRecipeUrgency
+      />,
+    );
+
+    expect(screen.queryByText("i morgen")).not.toBeInTheDocument();
+    expect(cardBySourceKey(item.sourceKey)).toHaveClass(
+      "border-notice-success-line",
+      "bg-notice-success",
+    );
+    expect(cardBySourceKey(item.sourceKey)).not.toHaveClass("border-l-4");
   });
 });

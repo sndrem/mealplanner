@@ -18,3 +18,12 @@ export function isPlanDateToday(
 ) {
   return planDate === formatDateOnly(referenceDate);
 }
+
+const MS_PER_UTC_DAY = 86_400_000;
+
+export function differenceInUtcDateOnlyDays(fromDate: string, toDate: string) {
+  const from = Date.parse(`${fromDate}T00:00:00.000Z`);
+  const to = Date.parse(`${toDate}T00:00:00.000Z`);
+
+  return Math.round((to - from) / MS_PER_UTC_DAY);
+}

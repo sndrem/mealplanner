@@ -16,6 +16,7 @@ import {
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
 import { ShoppingListCompleteCelebration } from "../components/shopping-list-complete-celebration";
 import { StoreModeDeprioritizeBoughtToggle } from "../components/store-mode-deprioritize-bought-toggle";
+import { StoreModeRecipeUrgencyToggle } from "../components/store-mode-recipe-urgency-toggle";
 import {
   StoreModeShoppingItemCard,
   type StoreModeCategoryUpdateRequest,
@@ -36,6 +37,7 @@ import {
 import { useShoppingListCompletionCelebration } from "../lib/use-shopping-list-completion-celebration";
 import {
   buildStoreModeDeprioritizeBoughtStorageKey,
+  buildStoreModeRecipeUrgencyStorageKey,
   buildStoreModeStockReminderDismissedStorageKey,
   buildStoreModeViewStorageKey,
   computeStoreModeProgress,
@@ -43,11 +45,13 @@ import {
   isStoreModeTripFocusScanValue,
   partitionStoreModeSections,
   readStoreModeDeprioritizeBought,
+  readStoreModeRecipeUrgency,
   readStoreModeShoppingView,
   readStoreModeStockReminderDismissed,
   sortStoreModeItemsByName,
   type StoreModeShoppingView,
   writeStoreModeDeprioritizeBought,
+  writeStoreModeRecipeUrgency,
   writeStoreModeShoppingView,
   writeStoreModeStockReminderDismissed,
 } from "../lib/shopping-store-mode-client";
@@ -1105,6 +1109,13 @@ export default function FamilyMealPlanStoreModeRoute({
       }),
     [loaderData.family.id],
   );
+  const recipeUrgencyStorageKey = useMemo(
+    () =>
+      buildStoreModeRecipeUrgencyStorageKey({
+        familyId: loaderData.family.id,
+      }),
+    [loaderData.family.id],
+  );
   const stockReminderDismissedStorageKey = useMemo(
     () =>
       buildStoreModeStockReminderDismissedStorageKey({
@@ -1118,6 +1129,9 @@ export default function FamilyMealPlanStoreModeRoute({
   );
   const [deprioritizeBought, setDeprioritizeBought] = useState(() =>
     readStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey),
+  );
+  const [showRecipeUrgency, setShowRecipeUrgency] = useState(() =>
+    readStoreModeRecipeUrgency(recipeUrgencyStorageKey),
   );
   const [stockReminderDismissed, setStockReminderDismissed] = useState(() =>
     readStoreModeStockReminderDismissed(stockReminderDismissedStorageKey),
@@ -1135,6 +1149,13 @@ export default function FamilyMealPlanStoreModeRoute({
       writeStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey, enabled);
     },
     [deprioritizeBoughtStorageKey],
+  );
+  const handleRecipeUrgencyChange = useCallback(
+    (enabled: boolean) => {
+      setShowRecipeUrgency(enabled);
+      writeStoreModeRecipeUrgency(recipeUrgencyStorageKey, enabled);
+    },
+    [recipeUrgencyStorageKey],
   );
   const handleDismissStockReminder = useCallback(() => {
     setStockReminderDismissed(true);
@@ -1158,6 +1179,9 @@ export default function FamilyMealPlanStoreModeRoute({
       readStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey),
     );
   }, [deprioritizeBoughtStorageKey]);
+  useEffect(() => {
+    setShowRecipeUrgency(readStoreModeRecipeUrgency(recipeUrgencyStorageKey));
+  }, [recipeUrgencyStorageKey]);
   useEffect(() => {
     setStockReminderDismissed(
       readStoreModeStockReminderDismissed(stockReminderDismissedStorageKey),
@@ -1402,6 +1426,10 @@ export default function FamilyMealPlanStoreModeRoute({
                     enabled={deprioritizeBought}
                     onChange={handleDeprioritizeBoughtChange}
                   />
+                  <StoreModeRecipeUrgencyToggle
+                    enabled={showRecipeUrgency}
+                    onChange={handleRecipeUrgencyChange}
+                  />
                   <StoreModeShoppingViewToggle
                     onChange={handleShoppingViewChange}
                     view={shoppingView}
@@ -1477,6 +1505,7 @@ export default function FamilyMealPlanStoreModeRoute({
                       pendingMarkAsStockSourceKey={pendingMarkAsStockSourceKey}
                       recentlyAddedSourceKey={recentlyAddedSourceKey}
                       selectedStoreId={loaderData.selectedStore?.id}
+                      showRecipeUrgency={showRecipeUrgency}
                     />
                   ) : null}
 
@@ -1510,6 +1539,7 @@ export default function FamilyMealPlanStoreModeRoute({
                         pendingMarkAsStockSourceKey={pendingMarkAsStockSourceKey}
                         recentlyAddedSourceKey={recentlyAddedSourceKey}
                         selectedStoreId={loaderData.selectedStore?.id}
+                        showRecipeUrgency={showRecipeUrgency}
                       />
                     </details>
                   ) : null}
@@ -1849,6 +1879,7 @@ function StoreModeItemGrid<
   pendingMarkAsStockSourceKey = "",
   recentlyAddedSourceKey,
   selectedStoreId,
+  showRecipeUrgency = false,
 }: {
   canMarkAsStock?: boolean;
   categories: ComponentProps<typeof StoreModeShoppingItemCard>["categories"];
@@ -1870,6 +1901,7 @@ function StoreModeItemGrid<
   pendingMarkAsStockSourceKey?: string;
   recentlyAddedSourceKey: string | null;
   selectedStoreId?: string;
+  showRecipeUrgency?: boolean;
 }) {
   const sortedItems = useMemo(
     () => sortStoreModeItemsByName(items),
@@ -1904,6 +1936,7 @@ function StoreModeItemGrid<
           onUpdateQuantity={onUpdateQuantity}
           onToggle={() => onToggleItem(item)}
           selectedStoreId={selectedStoreId}
+          showRecipeUrgency={showRecipeUrgency}
         />
       ))}
     </div>
