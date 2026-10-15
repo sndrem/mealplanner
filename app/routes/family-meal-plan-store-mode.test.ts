@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../lib/auth.server", async () => {
   const actual = await vi.importActual<typeof import("../lib/auth.server")>("../lib/auth.server");
@@ -24,6 +24,12 @@ vi.mock("../lib/shopping.server", () => {
 vi.mock("../lib/shopping-check-history.server", () => {
   return {
     listShoppingCheckHistoryForStoreMode: vi.fn(),
+  };
+});
+
+vi.mock("../lib/store-offer-briefing.server", () => {
+  return {
+    listStoreOfferBriefingsForStoreMode: vi.fn(),
   };
 });
 
@@ -83,6 +89,8 @@ import {
 import { requireUser } from "../lib/auth.server";
 import { resolveStoreModeAnchorMealPlan } from "../lib/meal-plan-for-date.server";
 import { listShoppingCheckHistoryForStoreMode } from "../lib/shopping-check-history.server";
+import { getNextCalendarWeekBounds } from "../lib/meal-plan-week";
+import { listStoreOfferBriefingsForStoreMode } from "../lib/store-offer-briefing.server";
 import {
   getFamilyStoreModeData,
   projectCreatedFamilyShoppingItem,
@@ -124,6 +132,10 @@ function buildRequest(
 }
 
 describe("family store mode route", () => {
+  beforeEach(() => {
+    vi.mocked(listStoreOfferBriefingsForStoreMode).mockResolvedValue([]);
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -281,6 +293,7 @@ describe("family store mode route", () => {
     expect(result.tripFocus).toBe("CURRENT");
     expect(result.effectiveTripFocus).toBe("CURRENT");
     expect(result.canFocusNext).toBe(true);
+    expect(result.storeOfferBriefing).toEqual({ kind: "hidden" });
     expect(result.dueSectionGroups[0]?.items[0]).toEqual(
       expect.objectContaining({
         firstDate: "2026-05-15",
@@ -374,6 +387,98 @@ describe("family store mode route", () => {
         sourceType: "FAMILY",
       },
     ]);
+  });
+
+  it("includes a loud next-week store offer briefing", async () => {
+    const nextWeek = getNextCalendarWeekBounds();
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(listIngredientCategories).mockResolvedValue([]);
+    vi.mocked(getFamilyStoreModeData).mockResolvedValue({
+      activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+      canFocusNext: true,
+      dueSectionGroups: [],
+      effectiveTripFocus: "CURRENT",
+      family: {
+        id: "family-1",
+        name: "Solberg",
+      },
+      groceryGrouping: "GROUPED" as const,
+      includedMealPlans: [
+        {
+          id: "meal-plan-1",
+          status: "DRAFT",
+          title: "Langhelg",
+        },
+      ],
+      mealPlan: {
+        activeShoppingDate: new Date("2026-05-16T00:00:00.000Z"),
+        endDate: new Date("2026-05-18T00:00:00.000Z"),
+        entries: [],
+        extraMeals: [],
+        id: "meal-plan-1",
+        manualShoppingItems: [],
+        shoppingOverrides: [],
+        startDate: new Date("2026-05-15T00:00:00.000Z"),
+        status: "DRAFT",
+        title: "Langhelg",
+        updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+      },
+      progress: {
+        checkedCount: 0,
+        totalCount: 0,
+      },
+      selectedStore: {
+        id: "store-1",
+        name: "Meny",
+      },
+      stockIngredientsForStoreMode: [],
+      stores: [
+        {
+          id: "store-1",
+          name: "Meny",
+        },
+      ],
+      tripFocus: "CURRENT",
+      userRole: "ADMIN",
+      visibleDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
+    });
+    vi.mocked(listShoppingCheckHistoryForStoreMode).mockResolvedValue([]);
+    vi.mocked(listStoreOfferBriefingsForStoreMode).mockResolvedValue([
+      {
+        content: "Rema 1000\nLaksefilet uten skinn 500 g, 79,20",
+        id: "briefing-1",
+        subtitle: "De fleste tilbudene går ut lørdag 17. okt.",
+        title: "Rema 1000 er beste hovedbutikk",
+        updatedAt: "2026-10-15T10:00:00.000Z",
+        weekEnd: nextWeek.weekEnd,
+        weekStart: nextWeek.weekStart,
+      },
+    ]);
+
+    const result = await loader({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(),
+    } as never);
+
+    expect(listStoreOfferBriefingsForStoreMode).toHaveBeenCalledWith({
+      familyId: "family-1",
+      focusedDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
+      userId: "user-1",
+    });
+    expect(result.storeOfferBriefing).toEqual({
+      briefing: {
+        content: "Rema 1000\nLaksefilet uten skinn 500 g, 79,20",
+        id: "briefing-1",
+        subtitle: "De fleste tilbudene går ut lørdag 17. okt.",
+        title: "Rema 1000 er beste hovedbutikk",
+        updatedAt: "2026-10-15T10:00:00.000Z",
+        weekEnd: nextWeek.weekEnd,
+        weekStart: nextWeek.weekStart,
+      },
+      kind: "loud",
+    });
   });
 
   it("redirects to meal plans when the family has none", async () => {

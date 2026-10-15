@@ -12,12 +12,20 @@ import {
   getRecentDinnersForMcp,
   getRecipeForMcp,
   getShoppingListForMcp,
+  getStoreOfferBriefingForMcp,
   listFreezerItemsForMcp,
   listIngredientCategoriesForMcp,
   listMealPlansForMcp,
   listRecipesForMcp,
+  publishStoreOfferBriefingForMcp,
   upsertRecipeForMcp,
 } from "./mcp-tools.server";
+import {
+  PUBLISH_STORE_OFFER_BRIEFING_DESCRIPTION,
+  STORE_OFFER_BRIEFING_CONTENT_MAX_LENGTH,
+  STORE_OFFER_BRIEFING_SUBTITLE_MAX_LENGTH,
+  STORE_OFFER_BRIEFING_TITLE_MAX_LENGTH,
+} from "./store-offer-briefing";
 
 function requireMcpActor(authInfo: AuthInfo | undefined) {
   const familyId =
@@ -238,6 +246,105 @@ export const mcpHttpHandler = createMcpHandler(
         return jsonResult(
           data,
           `Proposal ${data.proposalId} ready for ${data.weekStart}–${data.weekEnd}.`,
+        );
+      },
+    );
+
+    server.registerTool(
+      "publish_store_offer_briefing",
+      {
+        description: PUBLISH_STORE_OFFER_BRIEFING_DESCRIPTION,
+        inputSchema: z.object({
+          content: z
+            .string()
+            .min(1)
+            .max(STORE_OFFER_BRIEFING_CONTENT_MAX_LENGTH)
+            .describe(
+              "Plain-text findings. Store name on its own line, one offer per line, then items with no offer.",
+            ),
+          subtitle: z
+            .string()
+            .min(1)
+            .max(STORE_OFFER_BRIEFING_SUBTITLE_MAX_LENGTH)
+            .describe(
+              "One line on when to shop and when offers expire.",
+            ),
+          title: z
+            .string()
+            .min(1)
+            .max(STORE_OFFER_BRIEFING_TITLE_MAX_LENGTH)
+            .describe(
+              "One short line naming the best main store.",
+            ),
+          weekEnd: z
+            .string()
+            .optional()
+            .describe("Sunday YYYY-MM-DD of the calendar week"),
+          weekStart: z
+            .string()
+            .optional()
+            .describe("Monday YYYY-MM-DD of the calendar week"),
+        }),
+      },
+      async ({ content, subtitle, title, weekEnd, weekStart }) => {
+        const data = await publishStoreOfferBriefingForMcp({
+          ...actor,
+          content,
+          subtitle,
+          title,
+          weekEnd,
+          weekStart,
+        });
+
+        if (data.status !== "PUBLISHED") {
+          return {
+            content: [{ text: data.formError, type: "text" as const }],
+            isError: true,
+          };
+        }
+
+        return jsonResult(
+          data,
+          `Store offer briefing ${data.briefingId} ready for ${data.weekStart}–${data.weekEnd}.`,
+        );
+      },
+    );
+
+    server.registerTool(
+      "get_store_offer_briefing",
+      {
+        description:
+          "Read the stored store-offer briefing (title, subtitle, content) for a Europe/Oslo calendar week. Defaults to next week when weekStart and weekEnd are omitted.",
+        inputSchema: z.object({
+          weekEnd: z
+            .string()
+            .optional()
+            .describe("Sunday YYYY-MM-DD of the calendar week"),
+          weekStart: z
+            .string()
+            .optional()
+            .describe("Monday YYYY-MM-DD of the calendar week"),
+        }),
+      },
+      async ({ weekEnd, weekStart }) => {
+        const data = await getStoreOfferBriefingForMcp({
+          ...actor,
+          weekEnd,
+          weekStart,
+        });
+
+        if (data.status === "VALIDATION_ERROR") {
+          return {
+            content: [{ text: data.formError, type: "text" as const }],
+            isError: true,
+          };
+        }
+
+        return jsonResult(
+          data,
+          data.briefing
+            ? data.briefing.title
+            : `No store offer briefing for ${data.weekStart}–${data.weekEnd}.`,
         );
       },
     );

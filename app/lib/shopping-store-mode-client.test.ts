@@ -10,6 +10,8 @@ import {
   buildStoreModeQueueStorageKey,
   buildStoreModeRecipeUrgencyStorageKey,
   buildStoreModeStockReminderDismissedStorageKey,
+  buildStoreOfferBriefingDismissedStorageKey,
+  buildStoreOfferBriefingSeenStorageKey,
   buildStoreModeViewStorageKey,
   computeStoreModeProgress,
   computeStoreModeScanProgress,
@@ -523,6 +525,29 @@ describe("shopping-store-mode-client", () => {
     window.localStorage.setItem(storageKey, "yes");
 
     expect(readStoreModeRecipeUrgency(storageKey)).toBe(false);
+  });
+
+  it("builds a store-offer briefing key per family, briefing, and version", () => {
+    const seen = buildStoreOfferBriefingSeenStorageKey({
+      briefingId: "briefing-1",
+      familyId: "family-1",
+      updatedAt: "2026-10-15T10:00:00.000Z",
+    });
+
+    expect(seen).not.toBe(
+      buildStoreOfferBriefingSeenStorageKey({
+        briefingId: "briefing-1",
+        familyId: "family-1",
+        updatedAt: "2026-10-16T10:00:00.000Z",
+      }),
+    );
+    expect(seen).not.toBe(
+      buildStoreOfferBriefingDismissedStorageKey({
+        briefingId: "briefing-1",
+        familyId: "family-1",
+        updatedAt: "2026-10-15T10:00:00.000Z",
+      }),
+    );
   });
 
   it("builds isolated stock-reminder dismiss keys per family and meal plan", () => {

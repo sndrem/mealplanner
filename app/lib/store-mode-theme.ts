@@ -85,7 +85,13 @@ export const storeModeStockReminderClass =
 export const storeModeStockReminderChipClass =
   "rounded-full bg-notice-warning-line/30 px-3 py-1 text-xs font-medium text-notice-warning-ink";
 
-export type StoreModeBannerTone = "success" | "sync" | "error";
+export type StoreModeBannerTone = "success" | "sync" | "error" | "offer";
+
+export const storeModeOfferQuietClass =
+  "rounded-2xl border border-store-line bg-store-surface px-4 py-3 text-sm text-store-muted";
+
+export const storeModeOfferChipClass =
+  "rounded-full bg-store-accent px-2.5 py-0.5 text-xs font-semibold text-white";
 
 export type StoreModeSyncOverlayTone = "sync" | "error";
 
@@ -101,6 +107,8 @@ export function getStoreModeBannerClass(tone: StoreModeBannerTone) {
       return "rounded-[28px] border border-notice-warning-line bg-notice-warning px-6 py-5 text-notice-warning-ink shadow-sm";
     case "error":
       return "rounded-[28px] border border-notice-danger-line bg-notice-danger px-6 py-5 text-notice-danger-ink shadow-sm";
+    case "offer":
+      return "rounded-[28px] border border-store-accent/40 bg-store-accent-light px-6 py-5 text-store-ink shadow-sm";
   }
 }
 

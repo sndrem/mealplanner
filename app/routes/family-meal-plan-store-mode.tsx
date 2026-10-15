@@ -17,6 +17,7 @@ import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add"
 import { ShoppingListCompleteCelebration } from "../components/shopping-list-complete-celebration";
 import { StoreModeDeprioritizeBoughtToggle } from "../components/store-mode-deprioritize-bought-toggle";
 import { StoreModeRecipeUrgencyToggle } from "../components/store-mode-recipe-urgency-toggle";
+import { StoreOfferBriefingBanner } from "../components/store-offer-briefing-banner";
 import {
   StoreModeShoppingItemCard,
   type StoreModeCategoryUpdateRequest,
@@ -77,6 +78,12 @@ import {
   projectCreatedFamilyShoppingItem,
   projectCreatedManualShoppingItem,
 } from "../lib/shopping.server";
+import { listStoreOfferBriefingsForStoreMode } from "../lib/store-offer-briefing.server";
+import {
+  getNextCalendarWeekBounds,
+  getTodayDateOnly,
+} from "../lib/meal-plan-week";
+import { selectStoreOfferBriefing } from "../lib/store-offer-briefing";
 import {
   markFamilyShoppingItemAsStock,
   markGeneratedShoppingItemsAsStock,
@@ -199,10 +206,17 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw redirect(`/families/${familyId}/meal-plans`);
   }
 
-  const shoppingHistory = await listShoppingCheckHistoryForStoreMode({
-    familyId,
-    mealPlanIds: result.includedMealPlans.map((plan) => plan.id),
-  });
+  const [shoppingHistory, storeOfferBriefings] = await Promise.all([
+    listShoppingCheckHistoryForStoreMode({
+      familyId,
+      mealPlanIds: result.includedMealPlans.map((plan) => plan.id),
+    }),
+    listStoreOfferBriefingsForStoreMode({
+      familyId,
+      focusedDates: result.visibleDates,
+      userId: user.id,
+    }),
+  ]);
 
   return {
     activeShoppingDate: formatDateOnly(result.activeShoppingDate),
@@ -233,6 +247,12 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     selectedStore: result.selectedStore,
     shoppingHistory,
     stockIngredientsForStoreMode: result.stockIngredientsForStoreMode,
+    storeOfferBriefing: selectStoreOfferBriefing({
+      briefings: storeOfferBriefings,
+      focusedDates: result.visibleDates,
+      nextWeek: getNextCalendarWeekBounds(),
+      today: getTodayDateOnly(),
+    }),
     stores: result.stores,
     tripFocus: result.tripFocus,
     userRole: result.userRole,
@@ -1439,6 +1459,18 @@ export default function FamilyMealPlanStoreModeRoute({
             ) : null}
           </div>
         </StoreModeScanBar>
+
+        {loaderData.storeOfferBriefing.kind === "hidden" ? null : (
+          <StoreOfferBriefingBanner
+            key={
+              loaderData.storeOfferBriefing.kind === "loud"
+                ? `${loaderData.storeOfferBriefing.briefing.id}:${loaderData.storeOfferBriefing.briefing.updatedAt}`
+                : "store-offer-briefing-quiet"
+            }
+            familyId={loaderData.family.id}
+            selection={loaderData.storeOfferBriefing}
+          />
+        )}
 
         {noticeContent ? (
           <section className={getStoreModeBannerClass("success")}>
