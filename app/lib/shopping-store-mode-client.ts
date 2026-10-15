@@ -53,6 +53,10 @@ const STORE_MODE_RECIPE_URGENCY_KEY_PREFIX =
   "mealplanner:store-mode-recipe-urgency:v1";
 const STORE_MODE_STOCK_REMINDER_DISMISSED_KEY_PREFIX =
   "mealplanner:store-mode-stock-reminder-dismissed:v1";
+const STORE_OFFER_BRIEFING_SEEN_KEY_PREFIX =
+  "mealplanner:store-offer-briefing-seen:v1";
+const STORE_OFFER_BRIEFING_DISMISSED_KEY_PREFIX =
+  "mealplanner:store-offer-briefing-dismissed:v1";
 
 export function buildStoreModeViewStorageKey({
   familyId,
@@ -185,6 +189,30 @@ export function buildStoreModeStockReminderDismissedStorageKey({
   mealPlanId: string;
 }) {
   return `${STORE_MODE_STOCK_REMINDER_DISMISSED_KEY_PREFIX}:${familyId}:${mealPlanId}`;
+}
+
+export function buildStoreOfferBriefingSeenStorageKey({
+  briefingId,
+  familyId,
+  updatedAt,
+}: {
+  briefingId: string;
+  familyId: string;
+  updatedAt: string;
+}) {
+  return `${STORE_OFFER_BRIEFING_SEEN_KEY_PREFIX}:${familyId}:${briefingId}:${updatedAt}`;
+}
+
+export function buildStoreOfferBriefingDismissedStorageKey({
+  briefingId,
+  familyId,
+  updatedAt,
+}: {
+  briefingId: string;
+  familyId: string;
+  updatedAt: string;
+}) {
+  return `${STORE_OFFER_BRIEFING_DISMISSED_KEY_PREFIX}:${familyId}:${briefingId}:${updatedAt}`;
 }
 
 export function readStoreModeStockReminderDismissed(storageKey: string): boolean {

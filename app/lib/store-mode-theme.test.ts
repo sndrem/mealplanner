@@ -21,11 +21,15 @@ describe("store-mode-theme", () => {
     const success = getStoreModeBannerClass("success");
     const sync = getStoreModeBannerClass("sync");
     const error = getStoreModeBannerClass("error");
+    const offer = getStoreModeBannerClass("offer");
 
     expect(success).toContain("notice-success");
     expect(sync).toContain("notice-warning");
     expect(error).toContain("notice-danger");
+    expect(offer).toContain("store-accent");
     expect(success).not.toBe(sync);
+    expect(offer).not.toBe(success);
+    expect(offer).not.toBe(error);
   });
 
   it("returns compact fixed overlay classes for sync and error", () => {

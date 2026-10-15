@@ -29,6 +29,10 @@ import {
   type FamilyRecipeValues,
 } from "./recipe-write.server";
 import { getFamilyShoppingData } from "./shopping.server";
+import {
+  getStoreOfferBriefing,
+  publishStoreOfferBriefing,
+} from "./store-offer-briefing.server";
 import { listIngredientCategories } from "./store.server";
 
 const NO_CURRENT_MEAL_PLAN_ID = "__none__";
@@ -717,4 +721,16 @@ export async function upsertRecipeForMcp({
     title: values.title,
     userId,
   });
+}
+
+export async function publishStoreOfferBriefingForMcp(
+  input: Parameters<typeof publishStoreOfferBriefing>[0],
+) {
+  return publishStoreOfferBriefing(input);
+}
+
+export async function getStoreOfferBriefingForMcp(
+  input: Parameters<typeof getStoreOfferBriefing>[0],
+) {
+  return getStoreOfferBriefing(input);
 }

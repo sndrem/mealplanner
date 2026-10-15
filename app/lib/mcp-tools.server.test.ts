@@ -15,6 +15,8 @@ const {
   createFamilyRecipeMock,
   createOrReplaceMealPlanProposalMock,
   updateFamilyRecipeMock,
+  getStoreOfferBriefingMock,
+  publishStoreOfferBriefingMock,
   dbMock,
 } = vi.hoisted(() => ({
   createFamilyRecipeMock: vi.fn(),
@@ -35,6 +37,8 @@ const {
   listFamilyFreezerItemsMock: vi.fn(),
   listIngredientCategoriesMock: vi.fn(),
   listMealPlansForFamilyMock: vi.fn(),
+  getStoreOfferBriefingMock: vi.fn(),
+  publishStoreOfferBriefingMock: vi.fn(),
   updateFamilyRecipeMock: vi.fn(),
 }));
 
@@ -75,6 +79,11 @@ vi.mock("./store.server", () => ({
   listIngredientCategories: listIngredientCategoriesMock,
 }));
 
+vi.mock("./store-offer-briefing.server", () => ({
+  getStoreOfferBriefing: getStoreOfferBriefingMock,
+  publishStoreOfferBriefing: publishStoreOfferBriefingMock,
+}));
+
 vi.mock("./recipe-write.server", () => ({
   createFamilyRecipe: createFamilyRecipeMock,
   updateFamilyRecipe: updateFamilyRecipeMock,
@@ -90,6 +99,8 @@ import {
   listIngredientCategoriesForMcp,
   listMealPlansForMcp,
   listRecipesForMcp,
+  getStoreOfferBriefingForMcp,
+  publishStoreOfferBriefingForMcp,
   upsertRecipeForMcp,
 } from "./mcp-tools.server";
 
@@ -989,5 +1000,83 @@ describe("mcp-tools.server", () => {
         title: "Wok",
       },
     });
+  });
+});
+
+describe("store offer briefing mcp tools", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("publishes through the family briefing store", async () => {
+    publishStoreOfferBriefingMock.mockResolvedValue({
+      briefingId: "briefing-1",
+      status: "PUBLISHED",
+      weekEnd: "2026-10-25",
+      weekStart: "2026-10-19",
+    });
+
+    await expect(
+      publishStoreOfferBriefingForMcp({
+        ...actor,
+        content: "Rema 1000\nLaks, 79,20",
+        subtitle: "Handle i helgen.",
+        title: "Rema 1000 er beste hovedbutikk",
+      }),
+    ).resolves.toEqual({
+      briefingId: "briefing-1",
+      status: "PUBLISHED",
+      weekEnd: "2026-10-25",
+      weekStart: "2026-10-19",
+    });
+    expect(publishStoreOfferBriefingMock).toHaveBeenCalledWith({
+      content: "Rema 1000\nLaks, 79,20",
+      familyId: "family-1",
+      subtitle: "Handle i helgen.",
+      title: "Rema 1000 er beste hovedbutikk",
+      userId: "user-1",
+    });
+  });
+
+  it("returns a validation error without treating it as a stored briefing", async () => {
+    publishStoreOfferBriefingMock.mockResolvedValue({
+      formError: "Tittel, undertittel og innhold må fylles ut.",
+      status: "VALIDATION_ERROR",
+    });
+
+    await expect(
+      publishStoreOfferBriefingForMcp({
+        ...actor,
+        content: "Funnene",
+        subtitle: " ",
+        title: "Rema 1000",
+      }),
+    ).resolves.toEqual({
+      formError: "Tittel, undertittel og innhold må fylles ut.",
+      status: "VALIDATION_ERROR",
+    });
+  });
+
+  it("returns the stored briefing or an empty week", async () => {
+    getStoreOfferBriefingMock.mockResolvedValue({
+      briefing: {
+        content: "Rema 1000\nLaks, 79,20",
+        id: "briefing-1",
+        subtitle: "Handle i helgen.",
+        title: "Rema 1000 er beste hovedbutikk",
+        updatedAt: "2026-10-15T10:00:00.000Z",
+        weekEnd: "2026-10-25",
+        weekStart: "2026-10-19",
+      },
+      status: "FOUND",
+      weekEnd: "2026-10-25",
+      weekStart: "2026-10-19",
+    });
+
+    await expect(getStoreOfferBriefingForMcp(actor)).resolves.toEqual(
+      expect.objectContaining({
+        status: "FOUND",
+      }),
+    );
   });
 });

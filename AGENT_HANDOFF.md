@@ -2,35 +2,38 @@
 
 ## Current Objective
 
-Ship [#296](https://github.com/sndrem/mealplanner/issues/296) on `issue/296-recipe-urgency`: an optional store-mode mark for how soon an unbought recipe item is needed. The branch was cut from current `origin/main`.
+Ship [#298](https://github.com/sndrem/mealplanner/issues/298) on `issue/298-store-offer-briefing`: a weekly store-offer banner on Handleliste, published by the family MCP server as title, subtitle, and plain text. The branch was cut from current `origin/main`.
 
 ## Completed
 
-- Tilpass → Visning has **Farge etter bruk**. It is off until turned on, and the choice is stored per family in `localStorage`.
-- Unchecked generated items use `firstDate`: a strong left edge plus `i dag` or `i morgen` for today and tomorrow, a lighter edge for 2–4 days, and the normal card otherwise.
-- Checked, postponed, manual, family, undated extra-meal, and recently added rows stay plain. The shared list is unchanged.
+- `publish_store_offer_briefing` and `get_store_offer_briefing` store one briefing per family per Europe/Oslo week. Omitting the week targets next Monday–Sunday. Republish replaces the three texts.
+- Handleliste shows `Ukens tilbud` under the scan bar: title, subtitle, and a `Ny` chip. Expanding shows the plain-text findings. Skjul leaves `Vis ukens tilbud`. A new `updatedAt` shows `Ny` again.
+- A next-week briefing stays loud on the default `Denne uken` focus through `weekEnd`. After that, an overlapping focused week becomes the quiet line `Tilbudene for denne uken er ute`.
+- The share list does not load the briefing. Local migration `20261015140000_add_store_offer_briefing` is applied on the local database.
 
 ## Files To Read First
 
-- `app/lib/store-mode-recipe-urgency.ts` — the day buckets
-- `app/components/store-mode-shopping-item-card.tsx` — edge and label
-- `app/routes/family-meal-plan-store-mode.tsx` — the Tilpass toggle
-- `app/lib/shopping-store-mode-client.ts` — the saved preference
+- `app/lib/store-offer-briefing.ts` — text limits, week check, loud/quiet/hidden selection
+- `app/lib/store-offer-briefing.server.ts` — upsert and the store-mode query
+- `app/components/store-offer-briefing-banner.tsx` — the banner
+- `app/lib/mcp-handler.server.ts` — the tool descriptions the agent sees
+- `docs/mcp.md` — the format to give the newspaper agent
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 722 tests passed
+- `npm run test:run` — 741 tests passed
 - `npm run typecheck` — passed
-- On `http://localhost:5176/` the soon edge computes to a 4px `#115e59` left border, and the upcoming edge is a 50% accent left border. Store mode was not clicked through because the homepage is logged out.
+- `npm run prisma:migrate:deploy` — applied `20261015140000_add_store_offer_briefing` earlier in this branch
+- Opened `http://localhost:5176/`. The homepage is logged out, so Handleliste was not clicked through.
 
 ## Open Items
 
-- Confirm in a logged-in phone-width store-mode list: turn the toggle on, check tomorrow versus a later-week item, and confirm bought and postponed rows stay plain.
+- Confirm while logged in, at phone width: publish the sample brief, see the banner with Handletur collapsed, expand it, hide it, republish, and confirm `Ny` returns. Confirm the share link has no banner.
 - Untracked `temp-delete-later/` drafts are not part of this change.
-- The already-running server on port 5176 has a separate Prisma error (`Unknown field extraMeals`) on the meal-plan loader.
+- The long-running dev server on port 5176 was started before this branch. Restart it if Handleliste errors on the new Prisma model.
 
 ## Next Step
 
-Review the pull request for #296.
+Review the pull request for #298, then check the banner on a logged-in Handleliste.

@@ -2,10 +2,11 @@
 
 The app exposes a [Model Context Protocol](https://modelcontextprotocol.io) server on the same process as the website (`GET`/`POST` `/mcp`). Production transport is **Streamable HTTP**, not stdio.
 
-Most tools are read-only. Two tools write family data:
+Most tools are read-only. Three tools write family data:
 
 - `create_meal_plan_proposal` stores a **proposal** for a week; it never approves a live meal plan.
 - `upsert_recipe` creates or updates a **family** recipe. It cannot create or change global recipes, and it cannot upload a cover image (use the website for photos).
+- `publish_store_offer_briefing` stores a weekly store-offer briefing (`title`, `subtitle`, `content`). Republishing the same week replaces it. It does not change shopping items or the selected store.
 
 ## Mint a token
 
@@ -50,6 +51,8 @@ Authenticated clients can call:
 - `get_recent_dinners` — recently used dinner recipes
 - `list_freezer_items` — freezer stock
 - `create_meal_plan_proposal` — create or replace a proposed dinner plan for a calendar week
+- `publish_store_offer_briefing` — store this week's store-offer briefing as title, subtitle, and plain text
+- `get_store_offer_briefing` — read the stored briefing for a calendar week
 - `upsert_recipe` — create a family recipe, or update one by `recipeId`
 
 `create_meal_plan_proposal` defaults to **next** Europe/Oslo week (Monday–Sunday) when `weekStart` / `weekEnd` are omitted. Re-running for the same week updates the existing proposal in place and returns the same URL. It fails if a live DRAFT or APPROVED plan already covers that week.
@@ -57,6 +60,14 @@ Authenticated clients can call:
 The tool returns `proposalUrl`. Put that in email as **Se forslaget i Mealplanner her**. Opening the link (after login) shows the proposal UI, where a family member can adjust dinners and approve. Approval turns the proposal into a live meal plan. MCP cannot approve or reopen plans.
 
 `upsert_recipe` without `recipeId` creates a family recipe (title and at least one ingredient required). With `recipeId`, it patches that family recipe: omitted fields stay unchanged. `tags`, `ingredients`, and `reminderSuggestions` **replace** the stored list when sent. Identify ingredient categories with `categoryKey` (preferred), `categoryId`, or category display name. If `defaultServings` or `prepMinutes` are omitted on create, the web-form defaults apply (2 servings, 45 minutes). Cover images stay in the web UI.
+
+`publish_store_offer_briefing` defaults to **next** Europe/Oslo week (Monday–Sunday) when `weekStart` / `weekEnd` are omitted. Send exactly three texts:
+
+- `title`: one short line that names the best main store. Example: `Rema 1000 er beste hovedbutikk`
+- `subtitle`: one line on when to shop and when offers expire. Example: `De fleste tilbudene går ut lørdag 17. okt (Kiwi søndag 18.). Handle i helgen.`
+- `content`: the full findings as plain text. Start with a short planning paragraph. Then one block per store: the store name on its own line, then one offer per line. End with one line for items that have no offer. Separate blocks with a blank line. Do not use HTML or Markdown.
+
+`get_store_offer_briefing` uses the same week default and returns the stored title, subtitle, and content, or an empty result when that week has no briefing.
 
 The token is scoped to one family.
 
