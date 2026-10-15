@@ -112,6 +112,19 @@ const mealPlanEntrySelect = Prisma.validator<Prisma.MealPlanEntrySelect>()({
   updatedAt: true,
 });
 
+const mealPlanExtraMealSelect = Prisma.validator<Prisma.MealPlanExtraMealSelect>()({
+  id: true,
+  note: true,
+  recipe: {
+    select: {
+      id: true,
+      title: true,
+    },
+  },
+  recipeId: true,
+  sortOrder: true,
+});
+
 const mealPlanPlanningDetailSelect = Prisma.validator<Prisma.MealPlanSelect>()({
   activeShoppingDate: true,
   approvedAt: true,
@@ -122,6 +135,10 @@ const mealPlanPlanningDetailSelect = Prisma.validator<Prisma.MealPlanSelect>()({
   entries: {
     orderBy: [{ date: "asc" }, { mealType: "asc" }],
     select: mealPlanEntrySelect,
+  },
+  extraMeals: {
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    select: mealPlanExtraMealSelect,
   },
   id: true,
   startDate: true,
@@ -1046,6 +1063,14 @@ export async function copyMealPlan(input: CopyMealPlanInput) {
             mealType: PLANNING_MEAL_TYPE,
           },
         },
+        extraMeals: {
+          orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+          select: {
+            note: true,
+            recipeId: true,
+            sortOrder: true,
+          },
+        },
         id: true,
         startDate: true,
       },
@@ -1107,6 +1132,19 @@ export async function copyMealPlan(input: CopyMealPlanInput) {
       });
     }
 
+    const copiedExtraMeals = (sourceMealPlan.extraMeals ?? []).map((extraMeal) => ({
+      mealPlanId: mealPlan.id,
+      note: extraMeal.note,
+      recipeId: extraMeal.recipeId,
+      sortOrder: extraMeal.sortOrder,
+    }));
+
+    if (copiedExtraMeals.length > 0) {
+      await tx.mealPlanExtraMeal.createMany({
+        data: copiedExtraMeals,
+      });
+    }
+
     return {
       mealPlan,
       status: "CREATED" as const,
@@ -1124,6 +1162,263 @@ export async function copyMealPlan(input: CopyMealPlanInput) {
     },
     mealPlan: result.mealPlan,
     status: "CREATED" as const,
+  };
+}
+
+function normalizeExtraMealNote(note: string | null | undefined) {
+  const trimmed = note?.trim() ?? "";
+
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+async function findFamilyMealPlanId({
+  familyId,
+  mealPlanId,
+}: {
+  familyId: string;
+  mealPlanId: string;
+}) {
+  return db.mealPlan.findFirst({
+    select: {
+      id: true,
+    },
+    where: {
+      familyId,
+      id: mealPlanId,
+    },
+  });
+}
+
+export async function addMealPlanExtraMeal({
+  familyId,
+  mealPlanId,
+  note,
+  recipeId,
+  userId,
+}: {
+  familyId: string;
+  mealPlanId: string;
+  note?: string | null;
+  recipeId: string;
+  userId: string;
+}) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const mealPlan = await findFamilyMealPlanId({
+    familyId,
+    mealPlanId,
+  });
+
+  if (!mealPlan) {
+    return {
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  const trimmedRecipeId = recipeId.trim();
+
+  if (!trimmedRecipeId) {
+    logCollaborationWrite({
+      action: "add-extra-meal",
+      domain: "meal-plan",
+      entityType: "meal-plan-extra-meal",
+      familyId,
+      mealPlanId,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    return {
+      formError: "Velg en oppskrift.",
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
+  const recipe = await db.recipe.findFirst({
+    select: {
+      id: true,
+    },
+    where: {
+      id: trimmedRecipeId,
+      OR: [
+        { scope: RecipeScope.GLOBAL },
+        { familyId, scope: RecipeScope.FAMILY },
+      ],
+    },
+  });
+
+  if (!recipe) {
+    logCollaborationWrite({
+      action: "add-extra-meal",
+      domain: "meal-plan",
+      entityType: "meal-plan-extra-meal",
+      familyId,
+      mealPlanId,
+      outcome: "VALIDATION_ERROR",
+      userId,
+    });
+
+    return {
+      formError: "Fant ikke oppskriften.",
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
+  const lastExtraMeal = await db.mealPlanExtraMeal.findFirst({
+    orderBy: [{ sortOrder: "desc" }, { id: "desc" }],
+    select: {
+      sortOrder: true,
+    },
+    where: {
+      mealPlanId,
+    },
+  });
+
+  await db.mealPlanExtraMeal.create({
+    data: {
+      mealPlanId,
+      note: normalizeExtraMealNote(note),
+      recipeId: recipe.id,
+      sortOrder: (lastExtraMeal?.sortOrder ?? -1) + 1,
+    },
+  });
+
+  logCollaborationWrite({
+    action: "add-extra-meal",
+    domain: "meal-plan",
+    entityType: "meal-plan-extra-meal",
+    familyId,
+    mealPlanId,
+    outcome: "CREATED",
+    userId,
+  });
+
+  return {
+    status: "CREATED" as const,
+  };
+}
+
+export async function updateMealPlanExtraMealNote({
+  extraMealId,
+  familyId,
+  mealPlanId,
+  note,
+  userId,
+}: {
+  extraMealId: string;
+  familyId: string;
+  mealPlanId: string;
+  note: string;
+  userId: string;
+}) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const extraMeal = await db.mealPlanExtraMeal.findFirst({
+    select: {
+      id: true,
+    },
+    where: {
+      id: extraMealId,
+      mealPlan: {
+        familyId,
+        id: mealPlanId,
+      },
+    },
+  });
+
+  if (!extraMeal) {
+    return {
+      formError: "Fant ikke måltidet.",
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  await db.mealPlanExtraMeal.update({
+    data: {
+      note: normalizeExtraMealNote(note),
+    },
+    where: {
+      id: extraMeal.id,
+    },
+  });
+
+  logCollaborationWrite({
+    action: "update-extra-meal-note",
+    domain: "meal-plan",
+    entityType: "meal-plan-extra-meal",
+    entityId: extraMeal.id,
+    familyId,
+    mealPlanId,
+    outcome: "UPDATED",
+    userId,
+  });
+
+  return {
+    status: "UPDATED" as const,
+  };
+}
+
+export async function removeMealPlanExtraMeal({
+  extraMealId,
+  familyId,
+  mealPlanId,
+  userId,
+}: {
+  extraMealId: string;
+  familyId: string;
+  mealPlanId: string;
+  userId: string;
+}) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  const extraMeal = await db.mealPlanExtraMeal.findFirst({
+    select: {
+      id: true,
+    },
+    where: {
+      id: extraMealId,
+      mealPlan: {
+        familyId,
+        id: mealPlanId,
+      },
+    },
+  });
+
+  if (!extraMeal) {
+    return {
+      formError: "Fant ikke måltidet.",
+      status: "NOT_FOUND" as const,
+    };
+  }
+
+  await db.mealPlanExtraMeal.delete({
+    where: {
+      id: extraMeal.id,
+    },
+  });
+
+  logCollaborationWrite({
+    action: "remove-extra-meal",
+    domain: "meal-plan",
+    entityType: "meal-plan-extra-meal",
+    entityId: extraMeal.id,
+    familyId,
+    mealPlanId,
+    outcome: "DELETED",
+    userId,
+  });
+
+  return {
+    status: "DELETED" as const,
   };
 }
 

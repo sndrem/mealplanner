@@ -19,11 +19,12 @@ export function formatGeneratedQuantityBadge(item: {
 }
 
 export function formatGeneratedOccurrenceAttribution(
-  occurrences: Array<{ date: string; recipeTitle: string }>,
+  occurrences: Array<{ date: string | null; recipeTitle: string }>,
 ) {
-  const labels = occurrences.map(
-    (occurrence) =>
-      `${occurrence.recipeTitle} ${formatDateLabelInSummary(occurrence.date)}`,
+  const labels = occurrences.map((occurrence) =>
+    occurrence.date
+      ? `${occurrence.recipeTitle} ${formatDateLabelInSummary(occurrence.date)}`
+      : `${occurrence.recipeTitle} (denne uken)`,
   );
 
   return formatNorwegianList(labels);
@@ -46,10 +47,10 @@ function formatNorwegianList(items: string[]) {
 }
 
 export function formatGeneratedItemSummary(item: {
-  firstDate: string;
-  lastDate: string;
+  firstDate: string | null;
+  lastDate: string | null;
   occurrenceCount: number;
-  occurrences: Array<{ date: string; recipeTitle: string }>;
+  occurrences: Array<{ date: string | null; recipeTitle: string }>;
   sourceType: string;
 }) {
   if (item.sourceType !== "GENERATED") {
@@ -57,28 +58,44 @@ export function formatGeneratedItemSummary(item: {
   }
 
   if (item.occurrenceCount === 1) {
-    const recipeTitle = item.occurrences[0]?.recipeTitle;
+    const occurrence = item.occurrences[0];
+    const recipeTitle = occurrence?.recipeTitle;
 
-    return recipeTitle
-      ? `Fra ${recipeTitle}. Planlagt ${formatDateLabelInSummary(item.firstDate)}.`
-      : null;
+    if (!recipeTitle) {
+      return null;
+    }
+
+    if (!occurrence.date) {
+      return `Fra ${recipeTitle}. Denne uken.`;
+    }
+
+    return `Fra ${recipeTitle}. Planlagt ${formatDateLabelInSummary(occurrence.date)}.`;
   }
 
   const occurrenceAttribution = formatGeneratedOccurrenceAttribution(
     item.occurrences,
   );
 
-  return occurrenceAttribution
-    ? `Brukt i ${occurrenceAttribution}. Planlagt ${formatDateLabelInSummary(item.firstDate)}–${formatDateLabelInSummary(item.lastDate)}.`
-    : null;
+  if (!occurrenceAttribution) {
+    return null;
+  }
+
+  if (!item.firstDate || !item.lastDate) {
+    return `Brukt i ${occurrenceAttribution}. Denne uken.`;
+  }
+
+  return `Brukt i ${occurrenceAttribution}. Planlagt ${formatDateLabelInSummary(item.firstDate)}–${formatDateLabelInSummary(item.lastDate)}.`;
 }
 
 export function formatOccurrenceSourceLine(occurrence: {
-  date: string;
+  date: string | null;
   quantityLabel: string | null;
   recipeTitle: string;
 }) {
-  const base = `${formatDateLabelInSummary(occurrence.date)}: ${occurrence.recipeTitle}`;
+  const when = occurrence.date
+    ? formatDateLabelInSummary(occurrence.date)
+    : "Denne uken";
+  const base = `${when}: ${occurrence.recipeTitle}`;
 
   return occurrence.quantityLabel
     ? `${base} · ${occurrence.quantityLabel}`
@@ -88,7 +105,7 @@ export function formatOccurrenceSourceLine(occurrence: {
 export function formatCompactShoppingSourceLine(item: {
   buyOnDate?: string | null;
   occurrenceCount?: number;
-  occurrences?: Array<{ date: string; recipeTitle: string }>;
+  occurrences?: Array<{ date: string | null; recipeTitle: string }>;
   sourceType: string;
 }) {
   if (item.sourceType === "GENERATED") {

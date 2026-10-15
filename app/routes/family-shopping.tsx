@@ -1050,6 +1050,14 @@ function getFamilyShoppingNotice(
   return null;
 }
 
+function formatShoppingDate(value: Date | string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  return typeof value === "string" ? value : formatDateOnly(value);
+}
+
 function formatCompactShoppingSourceLineForItem(
   item: SerializedProjectedShoppingItem,
 ) {
@@ -1057,10 +1065,7 @@ function formatCompactShoppingSourceLineForItem(
     return formatCompactShoppingSourceLine({
       occurrenceCount: item.occurrenceCount,
       occurrences: item.occurrences.map((occurrence) => ({
-        date:
-          typeof occurrence.date === "string"
-            ? occurrence.date
-            : formatDateOnly(occurrence.date),
+        date: formatShoppingDate(occurrence.date),
         recipeTitle: occurrence.recipeTitle,
       })),
       sourceType: item.sourceType,
@@ -1264,20 +1269,11 @@ function renderFamilyShoppingListItem({
       {item.sourceType === "GENERATED" ? (
         <p className="mt-2 text-sm leading-6 text-muted">
           {formatGeneratedItemSummary({
-            firstDate:
-              typeof item.firstDate === "string"
-                ? item.firstDate
-                : formatDateOnly(item.firstDate),
-            lastDate:
-              typeof item.lastDate === "string"
-                ? item.lastDate
-                : formatDateOnly(item.lastDate),
+            firstDate: formatShoppingDate(item.firstDate),
+            lastDate: formatShoppingDate(item.lastDate),
             occurrenceCount: item.occurrenceCount,
             occurrences: item.occurrences.map((occurrence) => ({
-              date:
-                typeof occurrence.date === "string"
-                  ? occurrence.date
-                  : formatDateOnly(occurrence.date),
+              date: formatShoppingDate(occurrence.date),
               recipeTitle: occurrence.recipeTitle,
             })),
             sourceType: item.sourceType,

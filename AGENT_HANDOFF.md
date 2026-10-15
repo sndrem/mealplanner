@@ -2,33 +2,35 @@
 
 ## Current Objective
 
-Ship [#293](https://github.com/sndrem/mealplanner/issues/293) on `issue/293-multi-recipe-metadata`: grouped store-mode items should show each recipe use once, as date, recipe, and amount.
+Ship [#295](https://github.com/sndrem/mealplanner/issues/295) on `issue/295-extra-meals`: undated extra meals on the weekly plan, included in the shopping list.
 
 ## Completed
 
-- Grouped generated store-mode cards no longer render the `Ukeplan:` / `Brukt i` sentence when the occurrence list is already visible.
-- Single-recipe, family, and manual source lines are unchanged. The week title, quantity badge, and recipe-count badge stay.
-- Frontend standards now require `wrap-break-word` instead of `break-words`.
+- Added `MealPlanExtraMeal` and applied migration `20261015120000_add_meal_plan_extra_meal` to the local database.
+- The meal plan page has **Ekstra denne uken**: add a recipe, optional note, and remove. Dinner days are unchanged.
+- Copying a plan copies extra meals without a day shift. Recipes outside the family are rejected.
+- Extra-meal ingredients join the generated shopping list and merge with dinner ingredients. Undated items stay in store mode after earlier dinners are past, and attribution says **Denne uken** instead of a weekday.
 
 ## Files To Read First
 
-- `app/components/store-mode-shopping-item-card.tsx` — source paragraph is skipped when `showGroupedMeasurements` is true
-- `app/components/store-mode-shopping-item-card.test.tsx` — grouped card asserts occurrence lines and the absent summary
-- `.cursor/rules/frontend-standards.mdc` — `wrap-break-word` convention
+- `app/components/meal-plan-extra-meals.tsx` — the week-plan section
+- `app/lib/meal-plan.server.ts` — add, note, remove, and copy
+- `app/lib/shopping.server.ts` — `listGeneratedMealSources` and the store-mode trip window
+- `app/lib/shopping-display.ts` — undated attribution
 
 ## Validation
 
-- `npm run prisma:generate` — passed
-- `npm run lint` — passed
-- `npm run test:run` — 702 tests passed
-- `npm run typecheck` — passed
-- Live store mode was not opened. No dev server was running.
+- `npm run test:run` — 709 tests passed
+- `npx tsc --noEmit` — passed
+- `npx eslint` on the touched files — passed
+- `npm run prisma:migrate:deploy` — applied the new migration locally
+- Live meal-plan UI was not exercised. The app at `http://localhost:5176/` is logged out.
 
 ## Open Items
 
-- `temp-delete-later/` mockups stay untracked.
-- Existing `break-words` classes were not rewritten to `wrap-break-word`.
+- Not committed or pushed.
+- Confirm in the browser: add kyllingsalat under Ekstra denne uken, check the shopping list and store mode, then copy the week.
 
 ## Next Step
 
-Review and merge the pull request for [#293](https://github.com/sndrem/mealplanner/issues/293).
+Log in locally and walk through add, shopping attribution, and copy-week before opening a pull request.

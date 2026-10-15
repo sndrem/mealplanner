@@ -11,7 +11,7 @@ export interface StoreModeStockIngredientReminderItem {
   name: string;
   occurrenceCount: number;
   occurrences: Array<{
-    date: Date | string;
+    date: Date | string | null;
     mealPlanEntryId: string;
     quantityLabel: string | null;
     recipeIngredientId: string;

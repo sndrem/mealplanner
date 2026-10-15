@@ -147,6 +147,15 @@ export const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()(
       mealType: MealType.DINNER,
     },
   },
+  extraMeals: {
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      recipe: {
+        select: generatedShoppingRecipeSelect,
+      },
+    },
+  },
   id: true,
   manualShoppingItems: {
     orderBy: [{ buyOnDate: "asc" }, { id: "asc" }],
@@ -216,7 +225,7 @@ interface GeneratedProjectionBucket {
   preferredStore: StoreSummary;
   preferredStoreConflict: boolean;
   sortAnchor: {
-    date: Date;
+    date: Date | null;
     ingredientSortOrder: number;
     recipeTitle: string;
   };
@@ -258,7 +267,7 @@ export type ProjectedShoppingItemSource = ShoppingItemSource | "FAMILY";
 
 export interface ProjectedShoppingOccurrence {
   amount: string | null;
-  date: Date;
+  date: Date | null;
   mealPlanEntryId: string;
   quantityLabel: string | null;
   recipeId: string;
@@ -269,7 +278,7 @@ export interface ProjectedShoppingOccurrence {
 
 export interface ProjectedGeneratedShoppingItem extends ProjectedShoppingItemBase {
   amount: string | null;
-  firstDate: Date;
+  firstDate: Date | null;
   groupingMembers?: Array<{
     checked: boolean;
     collaborationVersion: string;
@@ -279,7 +288,7 @@ export interface ProjectedGeneratedShoppingItem extends ProjectedShoppingItemBas
     sourceKey: string;
   }>;
   isStockItem: boolean;
-  lastDate: Date;
+  lastDate: Date | null;
   occurrenceCount: number;
   recipeCount: number;
   occurrences: ProjectedShoppingOccurrence[];
@@ -1117,15 +1126,18 @@ function mapGeneratedProjectionBucketToItem({
     storeSectionsByStoreId,
   });
   const occurrences = [...bucket.occurrences].sort(compareProjectedOccurrences);
+  const scheduledDates = occurrences.flatMap((occurrence) =>
+    occurrence.date ? [occurrence.date] : [],
+  );
   const recipeIds = new Set(occurrences.map((occurrence) => occurrence.recipeId));
 
   return {
     amount: bucket.amount,
     category: bucket.category,
     checked: override?.checked ?? false,
-    firstDate: occurrences[0]!.date,
+    firstDate: scheduledDates[0] ?? null,
     isStockItem: override?.includeDespiteStock ?? false,
-    lastDate: occurrences[occurrences.length - 1]!.date,
+    lastDate: scheduledDates.at(-1) ?? null,
     mealPlanId: mealPlan.id,
     mealPlanTitle: mealPlan.title,
     name: bucket.name,
@@ -1149,21 +1161,48 @@ function mapGeneratedProjectionBucketToItem({
   } satisfies ProjectedGeneratedShoppingItem;
 }
 
+function listGeneratedMealSources(mealPlan: ShoppingMealPlan) {
+  const dinners = mealPlan.entries.flatMap((entry) => {
+    if (!entry.recipe) {
+      return [];
+    }
+
+    return [
+      {
+        date: entry.date,
+        id: entry.id,
+        recipe: entry.recipe,
+      },
+    ];
+  });
+  const extraMeals = (mealPlan.extraMeals ?? []).flatMap((extraMeal) => {
+    if (!extraMeal.recipe) {
+      return [];
+    }
+
+    return [
+      {
+        date: null,
+        id: extraMeal.id,
+        recipe: extraMeal.recipe,
+      },
+    ];
+  });
+
+  return [...dinners, ...extraMeals];
+}
+
 function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {
   const buckets = new Map<string, GeneratedProjectionBucket>();
 
-  for (const entry of mealPlan.entries) {
-    const recipe = entry.recipe;
-
-    if (!recipe) {
-      continue;
-    }
+  for (const source of listGeneratedMealSources(mealPlan)) {
+    const recipe = source.recipe;
 
     for (const ingredient of recipe.ingredients) {
       const occurrence: ProjectedShoppingOccurrence = {
         amount: ingredient.amount,
-        date: entry.date,
-        mealPlanEntryId: entry.id,
+        date: source.date,
+        mealPlanEntryId: source.id,
         quantityLabel: buildQuantityLabel(ingredient.amount, ingredient.unit),
         recipeId: recipe.id,
         recipeIngredientId: ingredient.id,
@@ -1171,7 +1210,7 @@ function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {
         unit: ingredient.unit,
       };
       const occurrenceKey = buildGeneratedOccurrenceKey({
-        mealPlanEntryId: entry.id,
+        mealPlanEntryId: source.id,
         recipeIngredientId: ingredient.id,
       });
       const mergeKey = buildGeneratedMergeKey({
@@ -1181,6 +1220,11 @@ function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {
       });
       const existingBucket = buckets.get(mergeKey);
       const incomingStoreId = ingredient.preferredStoreId ?? null;
+      const incomingAnchor = {
+        date: source.date,
+        ingredientSortOrder: ingredient.sortOrder,
+        recipeTitle: recipe.title,
+      };
 
       if (existingBucket) {
         existingBucket.occurrenceKeys.push(occurrenceKey);
@@ -1192,18 +1236,8 @@ function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {
           existingBucket.preferredStoreConflict = true;
         }
 
-        if (
-          compareProjectionAnchors(existingBucket.sortAnchor, {
-            date: entry.date,
-            ingredientSortOrder: ingredient.sortOrder,
-            recipeTitle: recipe.title,
-          }) > 0
-        ) {
-          existingBucket.sortAnchor = {
-            date: entry.date,
-            ingredientSortOrder: ingredient.sortOrder,
-            recipeTitle: recipe.title,
-          };
+        if (compareProjectionAnchors(existingBucket.sortAnchor, incomingAnchor) > 0) {
+          existingBucket.sortAnchor = incomingAnchor;
         }
 
         continue;
@@ -1222,11 +1256,7 @@ function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {
         occurrenceKeys: [occurrenceKey],
         preferredStore: ingredient.preferredStore,
         preferredStoreConflict: false,
-        sortAnchor: {
-          date: entry.date,
-          ingredientSortOrder: ingredient.sortOrder,
-          recipeTitle: recipe.title,
-        },
+        sortAnchor: incomingAnchor,
         unit: ingredient.unit,
       });
     }
@@ -1832,7 +1862,9 @@ function getGeneratedEffectiveDates(item: ProjectedGeneratedShoppingItem) {
     return [item.postponedUntilDate];
   }
 
-  return item.occurrences.map((occurrence) => occurrence.date);
+  return item.occurrences.flatMap((occurrence) =>
+    occurrence.date ? [occurrence.date] : [],
+  );
 }
 
 function isDateOnOrAfterToday(date: Date, todayAtUtcMidnight: Date) {
@@ -1843,10 +1875,15 @@ function isGeneratedItemFullyPast(
   item: ProjectedGeneratedShoppingItem,
   todayAtUtcMidnight: Date,
 ) {
+  if (item.occurrences.some((occurrence) => occurrence.date == null)) {
+    return false;
+  }
+
   const effectiveDates = getGeneratedEffectiveDates(item);
 
-  return effectiveDates.every(
-    (date) => date.getTime() < todayAtUtcMidnight.getTime(),
+  return (
+    effectiveDates.length > 0 &&
+    effectiveDates.every((date) => date.getTime() < todayAtUtcMidnight.getTime())
   );
 }
 
@@ -1855,11 +1892,33 @@ function isGeneratedItemInTripWindow(
   endDate: Date,
   todayAtUtcMidnight: Date,
 ) {
-  return getGeneratedEffectiveDates(item).some(
-    (date) =>
-      isDateOnOrAfterToday(date, todayAtUtcMidnight) &&
-      date.getTime() <= endDate.getTime(),
-  );
+  if (item.postponedUntilDate) {
+    return (
+      isDateOnOrAfterToday(item.postponedUntilDate, todayAtUtcMidnight) &&
+      item.postponedUntilDate.getTime() <= endDate.getTime()
+    );
+  }
+
+  const scheduledInWindow = item.occurrences.some((occurrence) => {
+    if (!occurrence.date) {
+      return false;
+    }
+
+    return (
+      isDateOnOrAfterToday(occurrence.date, todayAtUtcMidnight) &&
+      occurrence.date.getTime() <= endDate.getTime()
+    );
+  });
+
+  if (scheduledInWindow) {
+    return true;
+  }
+
+  if (item.occurrences.some((occurrence) => occurrence.date == null)) {
+    return endDate.getTime() >= todayAtUtcMidnight.getTime();
+  }
+
+  return false;
 }
 
 function isProjectedItemPast(
@@ -1930,12 +1989,30 @@ function buildManualQuantityLabel(quantity: string | null) {
   return trimmedQuantity.length > 0 ? trimmedQuantity : null;
 }
 
+function compareNullableDates(left: Date | null, right: Date | null) {
+  if (left && right && left.getTime() !== right.getTime()) {
+    return left.getTime() - right.getTime();
+  }
+
+  if (left && !right) {
+    return -1;
+  }
+
+  if (!left && right) {
+    return 1;
+  }
+
+  return 0;
+}
+
 function compareProjectedOccurrences(
   left: ProjectedShoppingOccurrence,
   right: ProjectedShoppingOccurrence,
 ) {
-  if (left.date.getTime() !== right.date.getTime()) {
-    return left.date.getTime() - right.date.getTime();
+  const dateComparison = compareNullableDates(left.date, right.date);
+
+  if (dateComparison !== 0) {
+    return dateComparison;
   }
 
   const recipeTitleComparison = left.recipeTitle.localeCompare(
@@ -1951,11 +2028,13 @@ function compareProjectedOccurrences(
 }
 
 function compareProjectionAnchors(
-  left: { date: Date; ingredientSortOrder: number; recipeTitle: string },
-  right: { date: Date; ingredientSortOrder: number; recipeTitle: string },
+  left: { date: Date | null; ingredientSortOrder: number; recipeTitle: string },
+  right: { date: Date | null; ingredientSortOrder: number; recipeTitle: string },
 ) {
-  if (left.date.getTime() !== right.date.getTime()) {
-    return left.date.getTime() - right.date.getTime();
+  const dateComparison = compareNullableDates(left.date, right.date);
+
+  if (dateComparison !== 0) {
+    return dateComparison;
   }
 
   if (left.ingredientSortOrder !== right.ingredientSortOrder) {
@@ -2080,7 +2159,7 @@ function compareProjectedItemsForStoreMode(
 
 function getProjectedItemSortTimestamp(item: ProjectedShoppingItem) {
   if (item.sourceType === "GENERATED") {
-    return item.firstDate.getTime();
+    return item.firstDate?.getTime() ?? Number.MAX_SAFE_INTEGER;
   }
 
   if (item.sourceType === "MANUAL") {

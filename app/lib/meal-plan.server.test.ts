@@ -25,6 +25,13 @@ const {
         findMany: vi.fn(),
         upsert: vi.fn(),
       },
+      mealPlanExtraMeal: {
+        create: vi.fn(),
+        createMany: vi.fn(),
+        delete: vi.fn(),
+        findFirst: vi.fn(),
+        update: vi.fn(),
+      },
       manualShoppingItem: {
         updateMany: vi.fn(),
       },
@@ -36,6 +43,7 @@ const {
         updateMany: vi.fn(),
       },
       recipe: {
+        findFirst: vi.fn(),
         findMany: vi.fn(),
       },
     },
@@ -73,6 +81,7 @@ vi.mock("./freezer.server", () => {
 });
 
 import {
+  addMealPlanExtraMeal,
   approveMealPlan,
   autoFillMealPlanEntries,
   copyMealPlan,
@@ -87,6 +96,7 @@ import {
   getRecentlyUsedRecipeIds,
   listMealPlansForFamily,
   MEAL_PLAN_MAX_SPAN_DAYS,
+  removeMealPlanExtraMeal,
   reopenMealPlan,
   saveMealPlanEntries,
   updateMealPlan,
@@ -503,6 +513,14 @@ describe("meal-plan.server", () => {
             mealType: "DINNER",
           },
         },
+        extraMeals: {
+          orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+          select: {
+            note: true,
+            recipeId: true,
+            sortOrder: true,
+          },
+        },
         id: true,
         startDate: true,
       },
@@ -645,6 +663,135 @@ describe("meal-plan.server", () => {
     });
     expect(dbMock.mealPlan.create).not.toHaveBeenCalled();
     expect(dbMock.mealPlanEntry.createMany).not.toHaveBeenCalled();
+    expect(dbMock.mealPlanExtraMeal.createMany).not.toHaveBeenCalled();
+  });
+
+  it("copies extra meals without shifting them onto a day", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      entries: [
+        {
+          date: new Date("2026-05-15T00:00:00.000Z"),
+          note: null,
+          recipeId: "taco",
+          responsibleUserId: null,
+        },
+      ],
+      extraMeals: [
+        {
+          note: "lunsj",
+          recipeId: "kyllingsalat",
+          sortOrder: 0,
+        },
+      ],
+      id: "meal-plan-source",
+      startDate: new Date("2026-05-15T00:00:00.000Z"),
+    });
+    dbMock.mealPlan.create.mockResolvedValue({
+      approvedAt: null,
+      approvedByUserId: null,
+      copiedFromMealPlanId: "meal-plan-source",
+      createdAt: new Date("2026-05-01T12:00:00.000Z"),
+      endDate: new Date("2026-05-22T00:00:00.000Z"),
+      id: "meal-plan-copy",
+      startDate: new Date("2026-05-20T00:00:00.000Z"),
+      status: "DRAFT",
+      title: "Neste uke",
+      updatedAt: new Date("2026-05-01T12:00:00.000Z"),
+    });
+
+    const result = await copyMealPlan({
+      endDate: "2026-05-22",
+      familyId: "family-1",
+      sourceMealPlanId: "meal-plan-source",
+      startDate: "2026-05-20",
+      title: "Neste uke",
+      userId: "user-1",
+    });
+
+    expect(result.status).toBe("CREATED");
+    expect(dbMock.mealPlanEntry.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          date: new Date("2026-05-20T00:00:00.000Z"),
+          mealPlanId: "meal-plan-copy",
+          mealType: "DINNER",
+          note: null,
+          recipeId: "taco",
+          responsibleUserId: null,
+        },
+      ],
+    });
+    expect(dbMock.mealPlanExtraMeal.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          mealPlanId: "meal-plan-copy",
+          note: "lunsj",
+          recipeId: "kyllingsalat",
+          sortOrder: 0,
+        },
+      ],
+    });
+  });
+
+  it("rejects an extra meal recipe that is not available to the family", async () => {
+    dbMock.mealPlan.findFirst.mockResolvedValue({
+      id: "meal-plan-1",
+    });
+    dbMock.recipe.findFirst.mockResolvedValue(null);
+
+    const result = await addMealPlanExtraMeal({
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      recipeId: "other-family-recipe",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      formError: "Fant ikke oppskriften.",
+      status: "VALIDATION_ERROR",
+    });
+    expect(dbMock.recipe.findFirst).toHaveBeenCalledWith({
+      select: {
+        id: true,
+      },
+      where: {
+        OR: [
+          { scope: "GLOBAL" },
+          { familyId: "family-1", scope: "FAMILY" },
+        ],
+        id: "other-family-recipe",
+      },
+    });
+    expect(dbMock.mealPlanExtraMeal.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects removing an extra meal from another family's plan", async () => {
+    dbMock.mealPlanExtraMeal.findFirst.mockResolvedValue(null);
+
+    const result = await removeMealPlanExtraMeal({
+      extraMealId: "extra-1",
+      familyId: "family-1",
+      mealPlanId: "meal-plan-1",
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({
+      formError: "Fant ikke måltidet.",
+      status: "NOT_FOUND",
+    });
+    expect(dbMock.mealPlanExtraMeal.findFirst).toHaveBeenCalledWith({
+      select: {
+        id: true,
+      },
+      where: {
+        id: "extra-1",
+        mealPlan: {
+          familyId: "family-1",
+          id: "meal-plan-1",
+        },
+      },
+    });
+    expect(dbMock.mealPlanExtraMeal.delete).not.toHaveBeenCalled();
   });
 
   it("throws a not-found response when a meal plan is outside the family scope", async () => {

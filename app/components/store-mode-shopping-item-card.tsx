@@ -42,10 +42,10 @@ interface StoreModeShoppingItemCardGenerated extends StoreModeShoppingItemCardBa
     sourceKey: string;
   }>;
   isStockItem: boolean;
-  lastDate: string;
+  lastDate: string | null;
   occurrenceCount: number;
   occurrences: Array<{
-    date: string;
+    date: string | null;
     quantityLabel: string | null;
     recipeTitle: string;
   }>;
@@ -412,7 +412,7 @@ export function StoreModeShoppingItemCard({
               onKeyDown={(event) => event.stopPropagation()}
             >
               {showGroupedMeasurements ? null : (
-                <p className="break-words text-xs leading-4 text-store-muted">
+                <p className="wrap-break-word text-xs leading-4 text-store-muted">
                   {formatStoreModeItemSourceLine(item)}
                 </p>
               )}
@@ -602,9 +602,17 @@ function formatStoreModeItemSourceLine(item: StoreModeShoppingItemCardItem) {
         ? (item.occurrences[0]?.recipeTitle ?? null)
         : formatGeneratedOccurrenceAttribution(item.occurrences);
 
-    return item.occurrenceCount === 1
-      ? `${mealPlanAttribution}Fra ${recipeAttribution} fram til ${formatDateWithWeekdayLabel(item.lastDate)}.`
-      : `${mealPlanAttribution}Brukt i ${recipeAttribution}.`;
+    if (item.occurrenceCount === 1) {
+      if (!item.lastDate) {
+        return recipeAttribution
+          ? `${mealPlanAttribution}Fra ${recipeAttribution}. Denne uken.`
+          : mealPlanAttribution.trim();
+      }
+
+      return `${mealPlanAttribution}Fra ${recipeAttribution} fram til ${formatDateWithWeekdayLabel(item.lastDate)}.`;
+    }
+
+    return `${mealPlanAttribution}Brukt i ${recipeAttribution}.`;
   }
 
   return item.buyOnDate

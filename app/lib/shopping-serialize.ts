@@ -11,11 +11,11 @@ export function serializeProjectedShoppingItem(item: ProjectedShoppingItem) {
   if (item.sourceType === ShoppingItemSource.GENERATED) {
     return {
       ...item,
-      firstDate: formatDateOnly(item.firstDate),
-      lastDate: formatDateOnly(item.lastDate),
+      firstDate: item.firstDate ? formatDateOnly(item.firstDate) : null,
+      lastDate: item.lastDate ? formatDateOnly(item.lastDate) : null,
       occurrences: item.occurrences.map((occurrence) => ({
         ...occurrence,
-        date: formatDateOnly(occurrence.date),
+        date: occurrence.date ? formatDateOnly(occurrence.date) : null,
       })),
       postponedUntilDate: item.postponedUntilDate
         ? formatDateOnly(item.postponedUntilDate)

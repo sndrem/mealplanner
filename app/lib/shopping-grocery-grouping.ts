@@ -45,16 +45,16 @@ export interface GroupableGeneratedShoppingItem {
   category: { id: string };
   checked: boolean;
   collaborationVersion: string;
-  firstDate: Date | string;
+  firstDate: Date | string | null;
   groupingMembers?: ShoppingGroceryGroupingMember[];
   isStockItem?: boolean;
-  lastDate: Date | string;
+  lastDate: Date | string | null;
   mealPlanId?: string | null;
   name: string;
   note: string | null;
   occurrenceCount: number;
   occurrences: Array<{
-    date: Date | string;
+    date: Date | string | null;
     quantityLabel: string | null;
     recipeId?: string;
     recipeTitle: string;
@@ -164,19 +164,13 @@ function foldGeneratedShoppingItems<T extends GroupableGeneratedShoppingItem>(
     ...first,
     checked: members.every((member) => member.checked),
     firstDate: members.reduce(
-      (earliest, member) =>
-        toOccurrenceTime(member.firstDate) < toOccurrenceTime(earliest)
-          ? member.firstDate
-          : earliest,
+      (earliest, member) => earlierScheduledDate(earliest, member.firstDate),
       first.firstDate,
     ),
     groupingMembers,
     isStockItem: members.some((member) => member.isStockItem),
     lastDate: members.reduce(
-      (latest, member) =>
-        toOccurrenceTime(member.lastDate) > toOccurrenceTime(latest)
-          ? member.lastDate
-          : latest,
+      (latest, member) => laterScheduledDate(latest, member.lastDate),
       first.lastDate,
     ),
     note: members.find((member) => member.note)?.note ?? null,
@@ -217,10 +211,11 @@ function buildGroupedQuantityLabel(
 }
 
 function compareGroupableOccurrences(
-  left: { date: Date | string; recipeTitle: string },
-  right: { date: Date | string; recipeTitle: string },
+  left: { date: Date | string | null; recipeTitle: string },
+  right: { date: Date | string | null; recipeTitle: string },
 ) {
-  const dateComparison = toOccurrenceTime(left.date) - toOccurrenceTime(right.date);
+  const dateComparison =
+    scheduledOccurrenceSortTime(left.date) - scheduledOccurrenceSortTime(right.date);
 
   if (dateComparison !== 0) {
     return dateComparison;
@@ -229,6 +224,52 @@ function compareGroupableOccurrences(
   return left.recipeTitle.localeCompare(right.recipeTitle, "nb");
 }
 
-function toOccurrenceTime(value: Date | string) {
-  return value instanceof Date ? value.getTime() : new Date(value).getTime();
+function earlierScheduledDate<T extends Date | string | null>(
+  current: T,
+  candidate: T,
+): T {
+  const currentTime = toScheduledOccurrenceTime(current);
+  const candidateTime = toScheduledOccurrenceTime(candidate);
+
+  if (candidateTime == null) {
+    return current;
+  }
+
+  if (currentTime == null || candidateTime < currentTime) {
+    return candidate;
+  }
+
+  return current;
+}
+
+function laterScheduledDate<T extends Date | string | null>(
+  current: T,
+  candidate: T,
+): T {
+  const currentTime = toScheduledOccurrenceTime(current);
+  const candidateTime = toScheduledOccurrenceTime(candidate);
+
+  if (candidateTime == null) {
+    return current;
+  }
+
+  if (currentTime == null || candidateTime > currentTime) {
+    return candidate;
+  }
+
+  return current;
+}
+
+function scheduledOccurrenceSortTime(value: Date | string | null) {
+  return toScheduledOccurrenceTime(value) ?? Number.POSITIVE_INFINITY;
+}
+
+function toScheduledOccurrenceTime(value: Date | string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const time = value instanceof Date ? value.getTime() : new Date(value).getTime();
+
+  return Number.isNaN(time) ? null : time;
 }

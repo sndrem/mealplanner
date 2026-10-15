@@ -9,6 +9,7 @@ import {
 } from "react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { MealPlanExtraMeals } from "../components/meal-plan-extra-meals";
 import { MealPlanWeekEntriesForm } from "../components/meal-plan-week-entries-form";
 import { RecipePickerMedia } from "../components/recipe-picker-card";
 import { requireUser } from "../lib/auth.server";
@@ -34,13 +35,16 @@ import {
   hasActiveRecipeSearch,
 } from "../lib/recipe-list-search";
 import {
+  addMealPlanExtraMeal,
   approveMealPlan,
   autoFillMealPlanEntries,
   getMealPlanPlanningData,
+  removeMealPlanExtraMeal,
   reopenMealPlan,
   saveMealPlanEntries,
   type MealPlanEntryValues,
   updateMealPlan,
+  updateMealPlanExtraMealNote,
 } from "../lib/meal-plan.server";
 
 type MealPlanNotice =
@@ -53,12 +57,15 @@ type MealPlanNotice =
   | "meal-plan-updated"
   | "recipe-created";
 type MealPlanIntent =
+  | "add-extra-meal"
   | "approve-meal-plan"
   | "auto-fill-meal-plan-entries"
   | "autosave-meal-plan-entries"
+  | "remove-extra-meal"
   | "reopen-meal-plan"
   | "reset-meal-plan-entries"
   | "save-meal-plan-entries"
+  | "update-extra-meal-note"
   | "update-meal-plan";
 
 interface MealPlanNoticeMeta {
@@ -82,6 +89,7 @@ interface MealPlanEntryFormState {
 interface MealPlanActionData {
   autoFillFormError?: string;
   entryFormError?: string;
+  extraFormError?: string;
   entryValues?: Record<string, MealPlanEntryFormState>;
   fieldErrors?: {
     endDate?: string;
@@ -183,10 +191,18 @@ export async function loader({
         : null,
       endDate: formatDateOnly(result.mealPlan.endDate),
       entries: undefined,
+      extraMeals: undefined,
       startDate: formatDateOnly(result.mealPlan.startDate),
       updatedAt: result.mealPlan.updatedAt.toISOString(),
     },
     entriesSnapshot,
+    extraMeals: (result.mealPlan.extraMeals ?? []).map((extraMeal) => ({
+      id: extraMeal.id,
+      note: extraMeal.note ?? "",
+      recipeId: extraMeal.recipeId,
+      recipeTitle: extraMeal.recipe.title,
+      sortOrder: extraMeal.sortOrder,
+    })),
     familyMembers,
     notice: getMealPlanNotice(request),
     noticeMeta: getMealPlanNoticeMeta(request),
@@ -390,6 +406,56 @@ export async function action({
           : "meal-plan-reopened",
       request,
     });
+  }
+
+  if (
+    intent === "add-extra-meal" ||
+    intent === "update-extra-meal-note" ||
+    intent === "remove-extra-meal"
+  ) {
+    const result =
+      intent === "add-extra-meal"
+        ? await addMealPlanExtraMeal({
+            familyId,
+            mealPlanId,
+            note: String(formData.get("note") ?? ""),
+            recipeId: String(formData.get("recipeId") ?? ""),
+            userId: user.id,
+          })
+        : intent === "update-extra-meal-note"
+          ? await updateMealPlanExtraMealNote({
+              extraMealId: String(formData.get("extraMealId") ?? ""),
+              familyId,
+              mealPlanId,
+              note: String(formData.get("note") ?? ""),
+              userId: user.id,
+            })
+          : await removeMealPlanExtraMeal({
+              extraMealId: String(formData.get("extraMealId") ?? ""),
+              familyId,
+              mealPlanId,
+              userId: user.id,
+            });
+
+    if (result.status === "NOT_FOUND" && !("formError" in result)) {
+      throw new Response("Fant ikke ukeplanen.", {
+        status: 404,
+        statusText: "Not Found",
+      });
+    }
+
+    if (result.status === "VALIDATION_ERROR" || result.status === "NOT_FOUND") {
+      return {
+        extraFormError:
+          "formError" in result ? result.formError : "Fant ikke måltidet.",
+        intent,
+      } satisfies MealPlanActionData;
+    }
+
+    return {
+      intent,
+      ok: true,
+    } satisfies MealPlanActionData;
   }
 
   if (intent !== "update-meal-plan") {
@@ -880,6 +946,13 @@ export default function FamilyMealPlanRoute({
               recentlyUsedRecipeIds={loaderData.recentlyUsedRecipeIds}
               recipes={loaderData.recipes}
               visibleDates={loaderData.visibleDates}
+            />
+
+            <MealPlanExtraMeals
+              entriesByDate={loaderData.entriesByDate}
+              extraMeals={loaderData.extraMeals}
+              recentlyUsedRecipeIds={loaderData.recentlyUsedRecipeIds}
+              recipes={loaderData.recipes}
             />
 
             <Form className="mt-4 space-y-3" method="post">
