@@ -2,19 +2,19 @@
 
 ## Current Objective
 
-Remove the unused store-mode shopping date on `issue/157-remove-shopping-date` for [#157](https://github.com/sndrem/mealplanner/issues/157).
+Ship [#293](https://github.com/sndrem/mealplanner/issues/293) on `issue/293-multi-recipe-metadata`: grouped store-mode items should show each recipe use once, as date, recipe, and amount.
 
 ## Completed
 
-- Store mode no longer shows a Handledato control or a **Før handledato** section.
-- Due items are those from today through the end of the meal plans chosen by trip focus. A saved `MealPlan.activeShoppingDate` no longer hides items.
-- The database column, `updateActiveShoppingDate`, and per-item buy/postpone dates stay. The check queue still keys off `activeShoppingDate`.
+- Grouped generated store-mode cards no longer render the `Ukeplan:` / `Brukt i` sentence when the occurrence list is already visible.
+- Single-recipe, family, and manual source lines are unchanged. The week title, quantity badge, and recipe-count badge stay.
+- Frontend standards now require `wrap-break-word` instead of `break-words`.
 
 ## Files To Read First
 
-- `app/lib/shopping.server.ts` — store-mode window is today through plan end
-- `app/routes/family-meal-plan-store-mode.tsx` — Tilpass no longer posts a shopping date
-- `app/lib/shopping.server.test.ts` — window expectations
+- `app/components/store-mode-shopping-item-card.tsx` — source paragraph is skipped when `showGroupedMeasurements` is true
+- `app/components/store-mode-shopping-item-card.test.tsx` — grouped card asserts occurrence lines and the absent summary
+- `.cursor/rules/frontend-standards.mdc` — `wrap-break-word` convention
 
 ## Validation
 
@@ -22,14 +22,13 @@ Remove the unused store-mode shopping date on `issue/157-remove-shopping-date` f
 - `npm run lint` — passed
 - `npm run test:run` — 702 tests passed
 - `npm run typecheck` — passed
-- Browser on `http://localhost:5177/families/cms77vj9m0002nk3e9xnzl9cj/store-mode`. Tilpass has Fokus and Butikk, and no Handledato. No **Før handledato** section. Trip focus switched to Denne uken and back to Alle åpne. Checking Kyllingbuljong moved the scan line to 0 igjen, then unchecking restored 1 igjen · 26/27.
+- Live store mode was not opened. No dev server was running.
 
 ## Open Items
 
-- `MealPlan.activeShoppingDate` is still written and still part of the toggle queue key. Dropping the column is a later migration.
-- `ShoppingDateSelect` is no longer imported by store mode. Per-item dates still live on the item cards.
 - `temp-delete-later/` mockups stay untracked.
+- Existing `break-words` classes were not rewritten to `wrap-break-word`.
 
 ## Next Step
 
-Review and merge the pull request for [#157](https://github.com/sndrem/mealplanner/issues/157).
+Review and merge the pull request for [#293](https://github.com/sndrem/mealplanner/issues/293).

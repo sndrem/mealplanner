@@ -116,14 +116,22 @@ describe("StoreModeShoppingItemCard", () => {
               quantityLabel: "2 stk",
               sourceKey: "entry-2:ingredient-2",
             },
+            {
+              checked: false,
+              collaborationVersion: "v3",
+              mealPlanId: "meal-plan-1",
+              quantity: null,
+              quantityLabel: null,
+              sourceKey: "entry-3:ingredient-3",
+            },
           ],
           isStockItem: false,
-          lastDate: "2026-05-16",
+          lastDate: "2026-05-17",
           mealPlanId: "meal-plan-1",
           mealPlanTitle: "Helgehandel",
           name: "Hvitlok",
           note: null,
-          occurrenceCount: 2,
+          occurrenceCount: 3,
           occurrences: [
             {
               date: "2026-05-15",
@@ -135,13 +143,18 @@ describe("StoreModeShoppingItemCard", () => {
               quantityLabel: "2 stk",
               recipeTitle: "Taco",
             },
+            {
+              date: "2026-05-17",
+              quantityLabel: null,
+              recipeTitle: "Salat",
+            },
           ],
           postponedUntilDate: null,
           preferredStore: null,
           preferredStoreConflict: false,
           quantity: null,
           quantityLabel: null,
-          recipeCount: 2,
+          recipeCount: 3,
           sourceKey: "entry-1:ingredient-1|entry-2:ingredient-2",
           sourceType: "GENERATED",
         }}
@@ -153,12 +166,17 @@ describe("StoreModeShoppingItemCard", () => {
 
     expect(screen.queryByText("Sett mengde")).not.toBeInTheDocument();
     expect(screen.getByText("Varierende mengder")).toBeInTheDocument();
+    expect(screen.getByText("Helgehandel")).toBeInTheDocument();
+    expect(screen.getByText("3 oppskrifter")).toBeInTheDocument();
+    expect(screen.queryByText(/Ukeplan:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Brukt i/)).not.toBeInTheDocument();
     expect(
       screen.getByText("fredag 15. mai: Pasta · 1 fedd"),
     ).toBeInTheDocument();
     expect(
       screen.getByText("lørdag 16. mai: Taco · 2 stk"),
     ).toBeInTheDocument();
+    expect(screen.getByText("søndag 17. mai: Salat")).toBeInTheDocument();
   });
 
   it("lets an admin mark a generated item as a basisvare", () => {
