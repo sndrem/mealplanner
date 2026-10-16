@@ -126,3 +126,62 @@ export async function updateShoppingGroceryGrouping({
     status: "UPDATED" as const,
   };
 }
+
+export function parseShowCategoryHeadings(
+  value: FormDataEntryValue | null,
+): boolean | null {
+  const normalized = String(value ?? "").trim();
+
+  if (normalized === "true") {
+    return true;
+  }
+
+  if (normalized === "false") {
+    return false;
+  }
+
+  return null;
+}
+
+export async function updateShowCategoryHeadings({
+  familyId,
+  showCategoryHeadings,
+  userId,
+}: {
+  familyId: string;
+  showCategoryHeadings: boolean;
+  userId: string;
+}) {
+  await requireFamilyMembership({
+    familyId,
+    userId,
+  });
+
+  if (typeof showCategoryHeadings !== "boolean") {
+    return {
+      formError: "Ugyldig visning for kategorier.",
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
+  await db.userFamilyShoppingPreference.upsert({
+    create: {
+      familyId,
+      showCategoryHeadings,
+      userId,
+    },
+    update: {
+      showCategoryHeadings,
+    },
+    where: {
+      userId_familyId: {
+        familyId,
+        userId,
+      },
+    },
+  });
+
+  return {
+    status: "UPDATED" as const,
+  };
+}

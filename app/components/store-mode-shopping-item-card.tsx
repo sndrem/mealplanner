@@ -125,6 +125,7 @@ interface StoreModeShoppingItemCardProps {
   readOnly?: boolean;
   selectedStoreId: string | undefined;
   showRecipeUrgency?: boolean;
+  solidSurface?: boolean;
 }
 
 const badgeClass = "rounded-full px-2 py-0.5 text-[11px] font-medium leading-4";
@@ -146,6 +147,7 @@ export function StoreModeShoppingItemCard({
   readOnly = false,
   selectedStoreId,
   showRecipeUrgency = false,
+  solidSurface = false,
 }: StoreModeShoppingItemCardProps) {
   const quantityBadge = formatGeneratedQuantityBadge(item);
   const shouldAutoOpenDetails = shouldAutoOpenStoreModeDetails(item);
@@ -293,7 +295,9 @@ export function StoreModeShoppingItemCard({
     ? "border-notice-success-line bg-notice-success"
     : item.checked
       ? "border-red-200 bg-red-50"
-      : "border-store-line bg-store-bg";
+      : solidSurface
+        ? "border-store-line bg-store-surface"
+        : "border-store-line bg-store-bg";
   const cardShellClass = `relative flex min-h-[44px] flex-col rounded-2xl border p-2.5 transition-colors duration-250 ${cardStateClass}${recipeUrgencyEdgeClass ? ` ${recipeUrgencyEdgeClass}` : ""}`;
 
   const toggleOverlayClass = item.checked

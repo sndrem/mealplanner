@@ -20,8 +20,10 @@ vi.mock("./family.server", () => ({
 import {
   parseFamilyShoppingListMode,
   parseShoppingGroceryGrouping,
+  parseShowCategoryHeadings,
   updateFamilyShoppingListMode,
   updateShoppingGroceryGrouping,
+  updateShowCategoryHeadings,
 } from "./shopping-preference-write.server";
 
 describe("shopping-preference-write.server", () => {
@@ -93,6 +95,44 @@ describe("shopping-preference-write.server", () => {
       },
       update: {
         groceryGrouping: "GROUPED",
+      },
+      where: {
+        userId_familyId: {
+          familyId: "family-1",
+          userId: "user-1",
+        },
+      },
+    });
+  });
+
+  it("parses category heading visibility", () => {
+    expect(parseShowCategoryHeadings("true")).toBe(true);
+    expect(parseShowCategoryHeadings("false")).toBe(false);
+    expect(parseShowCategoryHeadings("yes")).toBeNull();
+    expect(parseShowCategoryHeadings(null)).toBeNull();
+  });
+
+  it("upserts category heading visibility for the user and family", async () => {
+    requireFamilyMembershipMock.mockResolvedValue({
+      family: { id: "family-1", name: "Solberg" },
+      role: "ADMIN",
+    });
+
+    const result = await updateShowCategoryHeadings({
+      familyId: "family-1",
+      showCategoryHeadings: false,
+      userId: "user-1",
+    });
+
+    expect(result).toEqual({ status: "UPDATED" });
+    expect(dbMock.userFamilyShoppingPreference.upsert).toHaveBeenCalledWith({
+      create: {
+        familyId: "family-1",
+        showCategoryHeadings: false,
+        userId: "user-1",
+      },
+      update: {
+        showCategoryHeadings: false,
       },
       where: {
         userId_familyId: {

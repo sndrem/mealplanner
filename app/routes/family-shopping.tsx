@@ -5,10 +5,13 @@ import {
   Link,
   isRouteErrorResponse,
   redirect,
+  useFetcher,
   useNavigation,
   useRevalidator,
   type MetaFunction,
 } from "react-router";
+
+import { HideCategoryHeadingsToggle } from "../components/hide-category-headings-toggle";
 
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
 import { MarkGeneratedItemAsStockForm } from "../components/mark-generated-item-as-stock-form";
@@ -34,9 +37,14 @@ import {
 } from "../lib/shopping-display";
 import {
   parseFamilyShoppingListMode,
+  parseShowCategoryHeadings,
   updateFamilyShoppingListMode,
+  updateShowCategoryHeadings,
 } from "../lib/shopping-preference-write.server";
-import { getToggleExpectedVersion } from "../lib/shopping-store-mode-client";
+import {
+  getToggleExpectedVersion,
+  splitShoppingItemsByChecked,
+} from "../lib/shopping-store-mode-client";
 import {
   applyOptimisticShoppingListFormOverlay,
   buildOptimisticManualShoppingItem,
@@ -80,6 +88,7 @@ type FamilyShoppingIntent =
   | "mark-family-shopping-item-as-stock"
   | "mark-generated-shopping-item-as-stock"
   | "set-family-shopping-list-mode"
+  | "update-show-category-headings"
   | "toggle-family-shopping-item-checked"
   | "toggle-meal-plan-shopping-item-checked"
   | "update-family-shopping-item";
@@ -140,6 +149,7 @@ export async function loader({
     mealPlanItemCount: result.mealPlanItemCount,
     notice: getFamilyShoppingNotice(request),
     savedListMode: result.savedListMode,
+    showCategoryHeadings: result.showCategoryHeadings,
     storeGroups: result.storeGroups.map((group) => ({
       sections: group.sections.map((section) => ({
         ...section,
@@ -195,6 +205,37 @@ export async function action({
       notice: "family-shopping-list-mode-updated",
       request,
     });
+  }
+
+  if (intent === "update-show-category-headings") {
+    const showCategoryHeadings = parseShowCategoryHeadings(
+      formData.get("showCategoryHeadings"),
+    );
+
+    if (showCategoryHeadings === null) {
+      return {
+        formError: "Ugyldig visning for kategorier.",
+        intent,
+      } satisfies FamilyShoppingActionData;
+    }
+
+    const result = await updateShowCategoryHeadings({
+      familyId,
+      showCategoryHeadings,
+      userId: user.id,
+    });
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies FamilyShoppingActionData;
+    }
+
+    return {
+      intent,
+      ok: true,
+    } satisfies FamilyShoppingActionData;
   }
 
   if (intent === "toggle-meal-plan-shopping-item-checked") {
@@ -501,6 +542,7 @@ export default function FamilyShoppingRoute({
 }) {
   const navigation = useNavigation();
   const revalidator = useRevalidator();
+  const categoryHeadingsFetcher = useFetcher<FamilyShoppingActionData>();
   const scheduleRevalidate = useDebouncedRevalidate(revalidator.revalidate);
   const isLg = useIsLgViewport();
   const [storeGroups, setStoreGroups] = useState(loaderData.storeGroups);
@@ -522,10 +564,31 @@ export default function FamilyShoppingRoute({
       : loaderData.activeListMode;
   const ingredientSearchPath = `/families/${loaderData.family.id}/shopping/ingredient-search`;
   const generalFormError =
-    actionData?.formError &&
+    (categoryHeadingsFetcher.data?.intent === "update-show-category-headings"
+      ? categoryHeadingsFetcher.data.formError
+      : undefined) ??
+    (actionData?.formError &&
     actionData.intent !== "quick-add-family-shopping-item"
       ? actionData.formError
-      : undefined;
+      : undefined);
+  const pendingCategoryHeadings = categoryHeadingsFetcher.formData;
+  const showCategoryHeadings =
+    categoryHeadingsFetcher.state !== "idle" &&
+    pendingCategoryHeadings?.get("intent") === "update-show-category-headings"
+      ? pendingCategoryHeadings.get("showCategoryHeadings") !== "false"
+      : loaderData.showCategoryHeadings;
+  const handleShowCategoryHeadingsChange = useCallback(
+    (nextShowCategoryHeadings: boolean) => {
+      const formData = new FormData();
+      formData.set("intent", "update-show-category-headings");
+      formData.set(
+        "showCategoryHeadings",
+        nextShowCategoryHeadings ? "true" : "false",
+      );
+      categoryHeadingsFetcher.submit(formData, { method: "post" });
+    },
+    [categoryHeadingsFetcher],
+  );
 
   useEffect(() => {
     setStoreGroups(
@@ -905,9 +968,37 @@ export default function FamilyShoppingRoute({
           </article>
         </section>
 
+        <HideCategoryHeadingsToggle
+          hidden={!showCategoryHeadings}
+          onChange={handleShowCategoryHeadingsChange}
+          variant="surface"
+        />
+
         {visibleStoreGroups.length ? (
           <section className="grid gap-6">
-            {visibleStoreGroups.map((group) => (
+            {visibleStoreGroups.map((group) => {
+              const flatItems = showCategoryHeadings
+                ? null
+                : splitShoppingItemsByChecked(
+                    group.sections.flatMap((section) => section.items),
+                  );
+              const renderItem = (
+                item: (typeof group.sections)[number]["items"][number],
+              ) =>
+                renderFamilyShoppingListItem({
+                  actionData,
+                  canMarkAsStock: loaderData.userRole === "ADMIN",
+                  categories: loaderData.categories,
+                  item,
+                  navigation,
+                  pendingIntent,
+                  pendingSourceKey,
+                  recentlyAddedSourceKey,
+                  stores: loaderData.stores,
+                  todayMealPlanId: loaderData.todayMealPlan?.id ?? null,
+                });
+
+              return (
               <article
                 key={group.store?.id ?? "no-store"}
                 className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line"
@@ -916,7 +1007,24 @@ export default function FamilyShoppingRoute({
                   {group.store?.name ?? "Ingen valgt butikk"}
                 </h2>
                 <div className="mt-6 grid gap-5">
-                  {group.sections.map((section) => (
+                  {flatItems ? (
+                    <>
+                      {flatItems.openItems.length > 0 ? (
+                        <div className="grid gap-2">
+                          {flatItems.openItems.map((item) => renderItem(item))}
+                        </div>
+                      ) : null}
+                      {flatItems.boughtItems.length > 0 ? (
+                        <div className="grid gap-2">
+                          <h3 className="text-sm font-semibold text-muted">
+                            Handlet
+                          </h3>
+                          {flatItems.boughtItems.map((item) => renderItem(item))}
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                  group.sections.map((section) => (
                     <section
                       key={`${group.store?.id ?? "no-store"}:${section.category.id}`}
                     >
@@ -924,27 +1032,15 @@ export default function FamilyShoppingRoute({
                         {section.displayName}
                       </h3>
                       <div className="mt-3 grid gap-2">
-                        {section.items.map((item) =>
-                          renderFamilyShoppingListItem({
-                            actionData,
-                            canMarkAsStock: loaderData.userRole === "ADMIN",
-                            categories: loaderData.categories,
-                            item,
-                            navigation,
-                            pendingIntent,
-                            pendingSourceKey,
-                            recentlyAddedSourceKey,
-                            stores: loaderData.stores,
-                            todayMealPlanId:
-                              loaderData.todayMealPlan?.id ?? null,
-                          }),
-                        )}
+                        {section.items.map((item) => renderItem(item))}
                       </div>
                     </section>
-                  ))}
+                  ))
+                  )}
                 </div>
               </article>
-            ))}
+              );
+            })}
           </section>
         ) : (
           <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">

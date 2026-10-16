@@ -15,6 +15,7 @@ import {
 
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
 import { ShoppingListCompleteCelebration } from "../components/shopping-list-complete-celebration";
+import { HideCategoryHeadingsToggle } from "../components/hide-category-headings-toggle";
 import { StoreModeDeprioritizeBoughtToggle } from "../components/store-mode-deprioritize-bought-toggle";
 import { StoreModeRecipeUrgencyToggle } from "../components/store-mode-recipe-urgency-toggle";
 import { StoreOfferBriefingBanner } from "../components/store-offer-briefing-banner";
@@ -44,6 +45,7 @@ import {
   computeStoreModeProgress,
   getStoreModeTripFocusScanLabel,
   isStoreModeTripFocusScanValue,
+  flattenStoreModeSectionsForHiddenHeadings,
   partitionStoreModeSections,
   readStoreModeDeprioritizeBought,
   readStoreModeRecipeUrgency,
@@ -97,7 +99,9 @@ import { listIngredientCategories } from "../lib/store.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
 import {
   parseShoppingGroceryGrouping,
+  parseShowCategoryHeadings,
   updateShoppingGroceryGrouping,
+  updateShowCategoryHeadings,
 } from "../lib/shopping-preference-write.server";
 import {
   parseStoreModeTripFocus,
@@ -155,6 +159,7 @@ type StoreModeIntent =
   | "toggle-shopping-item-checked"
   | "update-selected-store"
   | "update-shopping-grocery-grouping"
+  | "update-show-category-headings"
   | "update-store-mode-trip-focus";
 
 interface StoreModeActionData {
@@ -229,6 +234,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     effectiveTripFocus: result.effectiveTripFocus,
     family: result.family,
     groceryGrouping: result.groceryGrouping,
+    showCategoryHeadings: result.showCategoryHeadings,
     includedMealPlans: result.includedMealPlans,
     mealPlan: {
       ...result.mealPlan,
@@ -361,6 +367,37 @@ export async function action({ params, request }: Route.ActionArgs) {
       notice: "shopping-grocery-grouping-updated",
       request,
     });
+  }
+
+  if (intent === "update-show-category-headings") {
+    const showCategoryHeadings = parseShowCategoryHeadings(
+      formData.get("showCategoryHeadings"),
+    );
+
+    if (showCategoryHeadings === null) {
+      return {
+        formError: "Ugyldig visning for kategorier.",
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    const result = await updateShowCategoryHeadings({
+      familyId,
+      showCategoryHeadings,
+      userId: user.id,
+    });
+
+    if (result.status === "VALIDATION_ERROR") {
+      return {
+        formError: result.formError,
+        intent,
+      } satisfies StoreModeActionData;
+    }
+
+    return {
+      intent,
+      ok: true,
+    } satisfies StoreModeActionData;
   }
 
   if (intent === "quick-add-family-shopping-item") {
@@ -764,12 +801,14 @@ export default function FamilyMealPlanStoreModeRoute({
   const toggleFetcher = useFetcher<StoreModeActionData>();
   const quantityFetcher = useFetcher<StoreModeActionData>();
   const categoryFetcher = useFetcher<StoreModeActionData>();
+  const categoryHeadingsFetcher = useFetcher<StoreModeActionData>();
   const isLiveRevalidatePaused =
     navigation.state !== "idle" ||
     revalidator.state !== "idle" ||
     toggleFetcher.state !== "idle" ||
     quantityFetcher.state !== "idle" ||
-    categoryFetcher.state !== "idle";
+    categoryFetcher.state !== "idle" ||
+    categoryHeadingsFetcher.state !== "idle";
 
   useVisibleIntervalRevalidate({
     paused: isLiveRevalidatePaused,
@@ -1212,6 +1251,31 @@ export default function FamilyMealPlanStoreModeRoute({
     () => partitionStoreModeSections(displaySectionGroups, deprioritizeBought),
     [deprioritizeBought, displaySectionGroups],
   );
+  const pendingCategoryHeadings = categoryHeadingsFetcher.formData;
+  const showCategoryHeadings =
+    categoryHeadingsFetcher.state !== "idle" &&
+    pendingCategoryHeadings?.get("intent") === "update-show-category-headings"
+      ? pendingCategoryHeadings.get("showCategoryHeadings") !== "false"
+      : loaderData.showCategoryHeadings;
+  const hiddenHeadingLists = useMemo(
+    () =>
+      showCategoryHeadings
+        ? null
+        : flattenStoreModeSectionsForHiddenHeadings(activeSections),
+    [activeSections, showCategoryHeadings],
+  );
+  const handleShowCategoryHeadingsChange = useCallback(
+    (nextShowCategoryHeadings: boolean) => {
+      const formData = new FormData();
+      formData.set("intent", "update-show-category-headings");
+      formData.set(
+        "showCategoryHeadings",
+        nextShowCategoryHeadings ? "true" : "false",
+      );
+      categoryHeadingsFetcher.submit(formData, { method: "post" });
+    },
+    [categoryHeadingsFetcher],
+  );
   const hasUncheckedDueItems = useMemo(
     () => activeSections.some((section) => section.items.length > 0),
     [activeSections],
@@ -1323,13 +1387,39 @@ export default function FamilyMealPlanStoreModeRoute({
         "update-generated-shopping-item-quantity")
       ? quantityFetcher.data.formError
       : null;
+  const categoryHeadingsError =
+    categoryHeadingsFetcher.data?.intent === "update-show-category-headings"
+      ? categoryHeadingsFetcher.data.formError
+      : undefined;
   const generalFormError =
     categoryFetcherError ??
     quantityFetcherError ??
+    categoryHeadingsError ??
     (actionData?.formError &&
     actionData.intent !== "quick-add-family-shopping-item"
       ? actionData.formError
       : undefined);
+
+  const renderFlatStoreModeItems = (items: StoreModeDisplayItem[]) => (
+    <StoreModeItemGrid
+      canMarkAsStock={loaderData.userRole === "ADMIN"}
+      categories={loaderData.categories}
+      categoryFetcherError={categoryFetcherError}
+      categoryInteractionSourceKey={categoryInteractionSourceKey}
+      isSavingCategorySourceKey={isSavingCategorySourceKey}
+      items={items}
+      layout={shoppingView}
+      onQuickAddFromCard={handleQuickAddFromCard}
+      onUpdateCategory={handleUpdateCategory}
+      onUpdateQuantity={handleUpdateQuantity}
+      onToggleItem={handleToggleWithUndoFeedback}
+      pendingMarkAsStockSourceKey={pendingMarkAsStockSourceKey}
+      preserveOrder
+      recentlyAddedSourceKey={recentlyAddedSourceKey}
+      selectedStoreId={loaderData.selectedStore?.id}
+      showRecipeUrgency={showRecipeUrgency}
+    />
+  );
 
   return (
     <main className={pageClass}>
@@ -1442,6 +1532,10 @@ export default function FamilyMealPlanStoreModeRoute({
                   <ShoppingGroceryGroupingToggle
                     grouping={loaderData.groceryGrouping}
                   />
+                  <HideCategoryHeadingsToggle
+                    hidden={!showCategoryHeadings}
+                    onChange={handleShowCategoryHeadingsChange}
+                  />
                   <StoreModeDeprioritizeBoughtToggle
                     enabled={deprioritizeBought}
                     onChange={handleDeprioritizeBoughtChange}
@@ -1503,6 +1597,7 @@ export default function FamilyMealPlanStoreModeRoute({
               />
             ) : null}
             {activeSections.length > 0 ? (
+              showCategoryHeadings ? (
               activeSections.map((section) => (
                 <details
                   key={`${loaderData.selectedStore?.id ?? "no-store"}:${section.category.id}`}
@@ -1577,6 +1672,30 @@ export default function FamilyMealPlanStoreModeRoute({
                   ) : null}
                 </details>
               ))
+              ) : hiddenHeadingLists ? (
+                <>
+                  {hiddenHeadingLists.openItems.length > 0
+                    ? renderFlatStoreModeItems(hiddenHeadingLists.openItems)
+                    : null}
+                  {hiddenHeadingLists.boughtItems.length > 0 ? (
+                    deprioritizeBought ? (
+                      <details className={`${storeModeHandletFoldClass} mt-4`}>
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
+                          <span className="text-sm font-semibold text-store-muted">
+                            Handlet
+                          </span>
+                          <span className={storeModeCountChipClass}>
+                            {hiddenHeadingLists.boughtItems.length} varer
+                          </span>
+                        </summary>
+                        {renderFlatStoreModeItems(hiddenHeadingLists.boughtItems)}
+                      </details>
+                    ) : (
+                      renderFlatStoreModeItems(hiddenHeadingLists.boughtItems)
+                    )
+                  ) : null}
+                </>
+              ) : null
             ) : null}
             {deprioritizeBought &&
             activeSections.length > 0 &&
@@ -1592,8 +1711,9 @@ export default function FamilyMealPlanStoreModeRoute({
                   Alt er krysset av
                 </h3>
                 <p className="mt-3 text-sm leading-6 text-store-muted">
-                  Du har handlet alle varene for denne turen. Åpne Handlet i
-                  hver seksjon hvis du vil se eller endre dem.
+                  {showCategoryHeadings
+                    ? "Du har handlet alle varene for denne turen. Åpne Handlet i hver seksjon hvis du vil se eller endre dem."
+                    : "Du har handlet alle varene for denne turen. Åpne Handlet hvis du vil se eller endre dem."}
                 </p>
               </article>
             ) : null}
@@ -1909,6 +2029,7 @@ function StoreModeItemGrid<
   onUpdateQuantity,
   onToggleItem,
   pendingMarkAsStockSourceKey = "",
+  preserveOrder = false,
   recentlyAddedSourceKey,
   selectedStoreId,
   showRecipeUrgency = false,
@@ -1931,13 +2052,14 @@ function StoreModeItemGrid<
   }) => void;
   onToggleItem: (item: TItem) => void;
   pendingMarkAsStockSourceKey?: string;
+  preserveOrder?: boolean;
   recentlyAddedSourceKey: string | null;
   selectedStoreId?: string;
   showRecipeUrgency?: boolean;
 }) {
   const sortedItems = useMemo(
-    () => sortStoreModeItemsByName(items),
-    [items],
+    () => (preserveOrder ? items : sortStoreModeItemsByName(items)),
+    [items, preserveOrder],
   );
 
   return (
@@ -1969,6 +2091,7 @@ function StoreModeItemGrid<
           onToggle={() => onToggleItem(item)}
           selectedStoreId={selectedStoreId}
           showRecipeUrgency={showRecipeUrgency}
+          solidSurface={preserveOrder}
         />
       ))}
     </div>

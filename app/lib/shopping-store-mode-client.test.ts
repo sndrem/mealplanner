@@ -18,6 +18,8 @@ import {
   getStoreModeTripFocusScanLabel,
   getToggleExpectedVersion,
   partitionStoreModeSections,
+  flattenStoreModeSectionsForHiddenHeadings,
+  splitShoppingItemsByChecked,
   readStoreModeDeprioritizeBought,
   readStoreModeRecipeUrgency,
   readStoreModeShoppingView,
@@ -686,6 +688,57 @@ describe("shopping-store-mode-client", () => {
           boughtItems: [{ checked: true, id: "c" }],
           items: [],
         },
+      ],
+    });
+  });
+
+  it("keeps section order and collects bought items once when headings are hidden", () => {
+    const sections = [
+      {
+        boughtItems: [{ checked: true, id: "milk", name: "Melk", sourceKey: "milk" }],
+        items: [
+          { checked: false, id: "yogurt", name: "Yoghurt", sourceKey: "yogurt" },
+          { checked: false, id: "butter", name: "Smør", sourceKey: "butter" },
+        ],
+      },
+      {
+        boughtItems: [],
+        items: [
+          { checked: true, id: "apple", name: "Eple", sourceKey: "apple" },
+          { checked: false, id: "pear", name: "Pære", sourceKey: "pear" },
+        ],
+      },
+    ];
+
+    expect(flattenStoreModeSectionsForHiddenHeadings(sections)).toEqual({
+      boughtItems: [
+        { checked: true, id: "milk", name: "Melk", sourceKey: "milk" },
+        { checked: true, id: "apple", name: "Eple", sourceKey: "apple" },
+      ],
+      openItems: [
+        { checked: false, id: "butter", name: "Smør", sourceKey: "butter" },
+        { checked: false, id: "yogurt", name: "Yoghurt", sourceKey: "yogurt" },
+        { checked: false, id: "pear", name: "Pære", sourceKey: "pear" },
+      ],
+    });
+  });
+
+  it("moves checked items to the end while keeping their relative order", () => {
+    expect(
+      splitShoppingItemsByChecked([
+        { checked: false, id: "a" },
+        { checked: true, id: "b" },
+        { checked: false, id: "c" },
+        { checked: true, id: "d" },
+      ]),
+    ).toEqual({
+      boughtItems: [
+        { checked: true, id: "b" },
+        { checked: true, id: "d" },
+      ],
+      openItems: [
+        { checked: false, id: "a" },
+        { checked: false, id: "c" },
       ],
     });
   });

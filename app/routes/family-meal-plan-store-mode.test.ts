@@ -75,7 +75,9 @@ vi.mock("../lib/store-mode-trip-focus-write.server", () => {
 vi.mock("../lib/shopping-preference-write.server", () => {
   return {
     parseShoppingGroceryGrouping: vi.fn(),
+    parseShowCategoryHeadings: vi.fn(),
     updateShoppingGroceryGrouping: vi.fn(),
+    updateShowCategoryHeadings: vi.fn(),
   };
 });
 
@@ -109,7 +111,9 @@ import {
 } from "../lib/store-mode-trip-focus-write.server";
 import {
   parseShoppingGroceryGrouping,
+  parseShowCategoryHeadings,
   updateShoppingGroceryGrouping,
+  updateShowCategoryHeadings,
 } from "../lib/shopping-preference-write.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
 import { action, loader } from "./family-meal-plan-store-mode";
@@ -214,6 +218,7 @@ describe("family store mode route", () => {
         name: "Solberg",
       },
       groceryGrouping: "GROUPED" as const,
+      showCategoryHeadings: true,
       includedMealPlans: [
         {
           id: "meal-plan-1",
@@ -318,6 +323,7 @@ describe("family store mode route", () => {
         name: "Solberg",
       },
       groceryGrouping: "GROUPED" as const,
+      showCategoryHeadings: true,
       includedMealPlans: [
         {
           id: "meal-plan-1",
@@ -403,6 +409,7 @@ describe("family store mode route", () => {
         name: "Solberg",
       },
       groceryGrouping: "GROUPED" as const,
+      showCategoryHeadings: true,
       includedMealPlans: [
         {
           id: "meal-plan-1",
@@ -1306,5 +1313,57 @@ describe("family store mode route", () => {
     expect((result as Response).headers.get("Location")).toBe(
       "/families/family-1/store-mode?notice=shopping-grocery-grouping-updated",
     );
+  });
+
+  it("saves hidden category headings without redirecting", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseShowCategoryHeadings).mockReturnValue(false);
+    vi.mocked(updateShowCategoryHeadings).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-show-category-headings");
+    formData.set("showCategoryHeadings", "false");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(undefined, formData),
+    } as never);
+
+    expect(parseShowCategoryHeadings).toHaveBeenCalledWith("false");
+    expect(updateShowCategoryHeadings).toHaveBeenCalledWith({
+      familyId: "family-1",
+      showCategoryHeadings: false,
+      userId: "user-1",
+    });
+    expect(result).toEqual({
+      intent: "update-show-category-headings",
+      ok: true,
+    });
+  });
+
+  it("rejects an invalid category heading preference", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseShowCategoryHeadings).mockReturnValue(null);
+
+    const formData = new FormData();
+    formData.set("intent", "update-show-category-headings");
+    formData.set("showCategoryHeadings", "maybe");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(undefined, formData),
+    } as never);
+
+    expect(updateShowCategoryHeadings).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      formError: "Ugyldig visning for kategorier.",
+      intent: "update-show-category-headings",
+    });
   });
 });
