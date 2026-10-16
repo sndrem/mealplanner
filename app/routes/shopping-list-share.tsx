@@ -310,6 +310,7 @@ function GuestItemGrid({
           item={{
             category: {
               id: item.categoryId,
+              ...(item.categoryKey ? { key: item.categoryKey } : {}),
               name: item.categoryName,
             },
             checked: item.checked,
