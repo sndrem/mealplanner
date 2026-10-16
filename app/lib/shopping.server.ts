@@ -19,6 +19,7 @@ import { groupGeneratedShoppingItemsForDisplay } from "./shopping-grocery-groupi
 import {
   getFamilyShoppingListMode,
   getShoppingGroceryGrouping,
+  getShowCategoryHeadings,
 } from "./shopping-preference.server";
 import {
   getFamilyStockMatchSet,
@@ -687,8 +688,14 @@ export async function getFamilyShoppingData({
     userId,
   });
 
-  const [stores, categories, familyItems, savedListMode, todayMealPlan] =
-    await Promise.all([
+  const [
+    stores,
+    categories,
+    familyItems,
+    savedListMode,
+    todayMealPlan,
+    showCategoryHeadings,
+  ] = await Promise.all([
       db.store.findMany({
         orderBy: [{ name: "asc" }],
         select: shoppingStoreSelect,
@@ -708,6 +715,10 @@ export async function getFamilyShoppingData({
       findMealPlanCoveringDate({
         familyId,
         referenceDate,
+      }),
+      getShowCategoryHeadings({
+        familyId,
+        userId,
       }),
     ]);
 
@@ -751,6 +762,7 @@ export async function getFamilyShoppingData({
     mealPlanItemCount: mealPlanProjectedItems.length,
     projectedItems,
     savedListMode,
+    showCategoryHeadings,
     storeGroups: buildProjectedStoreGroups(projectedItems),
     stores: stores.map((store) => ({
       id: store.id,
@@ -815,6 +827,7 @@ export async function getMealPlanStoreModeData({
     coveringMealPlan,
     nextMealPlan,
     groceryGrouping,
+    showCategoryHeadings,
   ] = await Promise.all([
     db.mealPlan.findFirst({
       select: shoppingMealPlanSelect,
@@ -863,6 +876,10 @@ export async function getMealPlanStoreModeData({
       referenceDate: todayAtUtcMidnight,
     }),
     getShoppingGroceryGrouping({
+      familyId,
+      userId,
+    }),
+    getShowCategoryHeadings({
       familyId,
       userId,
     }),
@@ -988,6 +1005,7 @@ export async function getMealPlanStoreModeData({
       title: plan.title,
     })),
     groceryGrouping,
+    showCategoryHeadings,
     mealPlan: shoppingDateOwnerPlan,
     progress: buildStoreModeProgress(mergedDueItems),
     selectedStore,

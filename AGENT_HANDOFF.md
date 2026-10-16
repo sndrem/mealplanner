@@ -2,34 +2,36 @@
 
 ## Current Objective
 
-Add `get_active_shopping_list` so the newspaper agent reads the Handleliste trip instead of the full family shopping projection. Branch `get-active-shopping-list` is cut from current `origin/main` after #300 merged.
+Ship the per-member option to hide shopping-list category headings. Branch `issue/302-hide-category-headings` was cut from current `origin/main`.
 
 ## Completed
 
-- The new read tool returns unchecked items still due for the MCP user's saved trip focus (this week, next week, or all open plans).
-- Bought rows, past days, and postponed items stay out of that payload.
-- `get_shopping_list` still returns the full projection. Its description points agents at `get_active_shopping_list` for flyer matching.
-- `docs/mcp.md` documents both tools.
+- Each family member can turn on **Skjul kategorier** in store mode and on the family shopping list. The choice is stored on `UserFamilyShoppingPreference.showCategoryHeadings` and defaults to headings visible.
+- Items stay in store-section order. Section titles and category cards are omitted.
+- Bought items collect into one group at the bottom. In store mode, **Skjul kjøpte varer** folds that group into a single **Handlet** section.
+- Unchecked store-mode cards use a white surface when headings are hidden, so they do not blend into the page.
+- Public share, catalog, recipes, and store setup still show categories.
 
 ## Files To Read First
 
-- `app/lib/mcp-tools.server.ts` — `getActiveShoppingListForMcp`
-- `app/lib/mcp-handler.server.ts` — the tool description
-- `docs/mcp.md` — what to tell the agent
+- `app/routes/family-meal-plan-store-mode.tsx` — Visning toggle and the flat list
+- `app/routes/family-shopping.tsx` — same preference on the family list
+- `app/lib/shopping-store-mode-client.ts` — flatten helper that keeps section order and sinks bought items
+- `prisma/schema.prisma` — `showCategoryHeadings`
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 743 tests passed
+- `npm run test:run` — 753 tests passed
 - `npm run typecheck` — passed
-- Handleliste was not clicked through. This change is an MCP read tool.
+- Browser: toggled **Skjul kategorier** in store mode, confirmed one continuous list, one Handlet fold, and white cards. Reloaded and the choice stuck. The family shopping list used the same preference and kept the store name. The preference was turned back off after the check.
 
 ## Open Items
 
-- Refresh the agent's MCP tool list after deploy, or it will keep calling `get_shopping_list`.
+- Apply `20261016120000_add_show_category_headings` on deploy. It is already applied to the local database.
 - Untracked `temp-delete-later/` drafts are not part of this change.
 
 ## Next Step
 
-Review the pull request, then confirm a flyer run uses `get_active_shopping_list` and returns the short trip.
+Review the pull request for issue #302, then merge.

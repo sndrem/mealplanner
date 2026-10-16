@@ -27,7 +27,9 @@ vi.mock("../lib/family-shopping-write.server", () => ({
 
 vi.mock("../lib/shopping-preference-write.server", () => ({
   parseFamilyShoppingListMode: vi.fn(),
+  parseShowCategoryHeadings: vi.fn(),
   updateFamilyShoppingListMode: vi.fn(),
+  updateShowCategoryHeadings: vi.fn(),
 }));
 
 vi.mock("../lib/shopping-write.server", () => ({
@@ -42,7 +44,9 @@ import {
 } from "../lib/family-shopping-write.server";
 import {
   parseFamilyShoppingListMode,
+  parseShowCategoryHeadings,
   updateFamilyShoppingListMode,
+  updateShowCategoryHeadings,
 } from "../lib/shopping-preference-write.server";
 import { toggleShoppingItemChecked } from "../lib/shopping-write.server";
 import { getFamilyShoppingData } from "../lib/shopping.server";
@@ -77,6 +81,7 @@ describe("family shopping route", () => {
       mealPlanItemCount: 0,
       projectedItems: [],
       savedListMode: "GLOBAL",
+      showCategoryHeadings: true,
       todayMealPlan: null,
       storeGroups: [
         {
@@ -304,6 +309,59 @@ describe("family shopping route", () => {
     expect((response as Response).headers.get("Location")).toBe(
       "http://localhost/families/family-1/shopping?notice=family-shopping-list-mode-updated",
     );
+  });
+
+  it("saves hidden category headings for the acting member", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseShowCategoryHeadings).mockReturnValue(false);
+    vi.mocked(updateShowCategoryHeadings).mockResolvedValue({
+      status: "UPDATED",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "update-show-category-headings");
+    formData.set("showCategoryHeadings", "false");
+
+    const result = await action({
+      params: { familyId: "family-1" },
+      request: new Request("http://localhost/families/family-1/shopping", {
+        body: formData,
+        method: "POST",
+      }),
+    });
+
+    expect(updateShowCategoryHeadings).toHaveBeenCalledWith({
+      familyId: "family-1",
+      showCategoryHeadings: false,
+      userId: "user-1",
+    });
+    expect(result).toEqual({
+      intent: "update-show-category-headings",
+      ok: true,
+    });
+  });
+
+  it("rejects an invalid category heading preference", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(parseShowCategoryHeadings).mockReturnValue(null);
+
+    const formData = new FormData();
+    formData.set("intent", "update-show-category-headings");
+    formData.set("showCategoryHeadings", "maybe");
+
+    const result = await action({
+      params: { familyId: "family-1" },
+      request: new Request("http://localhost/families/family-1/shopping", {
+        body: formData,
+        method: "POST",
+      }),
+    });
+
+    expect(updateShowCategoryHeadings).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      formError: "Ugyldig visning for kategorier.",
+      intent: "update-show-category-headings",
+    });
   });
 
   it("toggles a meal-plan shopping item from the route action", async () => {

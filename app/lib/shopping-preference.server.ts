@@ -48,3 +48,25 @@ export async function getShoppingGroceryGrouping({
 
   return preference?.groceryGrouping ?? DEFAULT_SHOPPING_GROCERY_GROUPING;
 }
+
+export async function getShowCategoryHeadings({
+  familyId,
+  userId,
+}: {
+  familyId: string;
+  userId: string;
+}): Promise<boolean> {
+  const preference = await db.userFamilyShoppingPreference.findUnique({
+    select: {
+      showCategoryHeadings: true,
+    },
+    where: {
+      userId_familyId: {
+        familyId,
+        userId,
+      },
+    },
+  });
+
+  return preference?.showCategoryHeadings ?? true;
+}

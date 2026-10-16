@@ -598,9 +598,10 @@ model UserFamilyShoppingPreference {
   id              String                   @id @default(cuid())
   userId          String
   familyId        String
-  listMode        FamilyShoppingListMode   @default(GLOBAL)
-  groceryGrouping ShoppingGroceryGrouping  @default(GROUPED)
-  createdAt       DateTime                 @default(now())
+  listMode             FamilyShoppingListMode   @default(GLOBAL)
+  groceryGrouping      ShoppingGroceryGrouping  @default(GROUPED)
+  showCategoryHeadings Boolean                  @default(true)
+  createdAt            DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   family    Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)

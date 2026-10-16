@@ -4,12 +4,14 @@ const {
   dbMock,
   getFamilyShoppingListModeMock,
   getShoppingGroceryGroupingMock,
+  getShowCategoryHeadingsMock,
   getFamilyStockMatchSetMock,
   requireFamilyMembershipMock,
 } = vi.hoisted(() => {
     return {
       getFamilyShoppingListModeMock: vi.fn(),
       getShoppingGroceryGroupingMock: vi.fn(),
+      getShowCategoryHeadingsMock: vi.fn(),
       dbMock: {
         familyShoppingItem: {
           findMany: vi.fn(),
@@ -63,6 +65,7 @@ vi.mock("./stock.server", async (importOriginal) => {
 vi.mock("./shopping-preference.server", () => ({
   getFamilyShoppingListMode: getFamilyShoppingListModeMock,
   getShoppingGroceryGrouping: getShoppingGroceryGroupingMock,
+  getShowCategoryHeadings: getShowCategoryHeadingsMock,
 }));
 
 import {
@@ -90,6 +93,7 @@ describe("shopping.server", () => {
     vi.clearAllMocks();
     requireFamilyMembershipMock.mockResolvedValue(mockMembership);
     getShoppingGroceryGroupingMock.mockResolvedValue("GROUPED");
+    getShowCategoryHeadingsMock.mockResolvedValue(true);
     getFamilyStockMatchSetMock.mockResolvedValue({
       displayNameNormalized: new Set(),
       ingredientIds: new Set(),
