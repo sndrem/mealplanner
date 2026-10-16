@@ -92,6 +92,26 @@ describe("StoreModeShoppingItemCard", () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
+  it("shows a decorative icon and keeps the check name", () => {
+    renderWithRouter(
+      <StoreModeShoppingItemCard
+        item={familyItem}
+        layout="grid"
+        onToggle={vi.fn()}
+        readOnly
+        selectedStoreId="store-1"
+      />,
+    );
+
+    const icon = document.querySelector("[data-shopping-item-icon]");
+
+    expect(icon).toHaveAttribute("aria-hidden", "true");
+    expect(icon).toHaveAttribute("data-shopping-item-icon", "milk");
+    expect(
+      screen.getByRole("button", { name: "Marker Melk som handlet" }),
+    ).toBeInTheDocument();
+  });
+
   it("shows quick-add when not read-only", () => {
     renderWithRouter(
       <StoreModeShoppingItemCard

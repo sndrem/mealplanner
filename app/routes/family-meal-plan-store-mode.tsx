@@ -856,6 +856,7 @@ export default function FamilyMealPlanStoreModeRoute({
       loaderData.categories[0] ?? {
         displayName: "Annet",
         id: "uncategorized",
+        key: "other",
       },
     [loaderData.categories],
   );
@@ -1029,6 +1030,7 @@ export default function FamilyMealPlanStoreModeRoute({
             ...currentItem,
             category: {
               id: nextCategory.id,
+              ...(nextCategory.key ? { key: nextCategory.key } : {}),
               name: nextCategory.displayName,
             },
             note: trimmedNote,

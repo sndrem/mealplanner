@@ -35,6 +35,7 @@ const categorySummarySelect =
   Prisma.validator<Prisma.IngredientCategorySelect>()({
     displayName: true,
     id: true,
+    key: true,
   });
 
 const generatedShoppingRecipeIngredientSelect =
@@ -190,6 +191,7 @@ const shoppingCategorySelect =
   Prisma.validator<Prisma.IngredientCategorySelect>()({
     displayName: true,
     id: true,
+    key: true,
   });
 
 type ShoppingMealPlan = Prisma.MealPlanGetPayload<{
@@ -212,12 +214,27 @@ type StoreSectionSummary = {
   sortOrder: number;
 };
 
+interface ShoppingCategorySummary {
+  id: string;
+  key?: string;
+  name: string;
+}
+
+function toShoppingCategory(category: {
+  displayName: string;
+  id: string;
+  key?: string | null;
+}): ShoppingCategorySummary {
+  return {
+    id: category.id,
+    ...(category.key ? { key: category.key } : {}),
+    name: category.displayName,
+  };
+}
+
 interface GeneratedProjectionBucket {
   amount: string | null;
-  category: {
-    id: string;
-    name: string;
-  };
+  category: ShoppingCategorySummary;
   displayName: string;
   ingredientId: string | null;
   name: string;
@@ -234,10 +251,7 @@ interface GeneratedProjectionBucket {
 }
 
 export interface ProjectedStockIngredientSummary {
-  category: {
-    id: string;
-    name: string;
-  };
+  category: ShoppingCategorySummary;
   isOptedIn: boolean;
   name: string;
   occurrenceCount: number;
@@ -247,10 +261,7 @@ export interface ProjectedStockIngredientSummary {
 }
 
 interface ProjectedShoppingItemBase {
-  category: {
-    id: string;
-    name: string;
-  };
+  category: ShoppingCategorySummary;
   checked: boolean;
   collaborationVersion: string;
   mealPlanId: string | null;
@@ -318,10 +329,7 @@ export type ProjectedShoppingItem =
   | ProjectedFamilyShoppingItem;
 
 export interface ProjectedShoppingSectionGroup {
-  category: {
-    id: string;
-    name: string;
-  };
+  category: ShoppingCategorySummary;
   displayName: string;
   items: ProjectedShoppingItem[];
 }
@@ -1263,10 +1271,7 @@ function buildGeneratedProjectionBuckets(mealPlan: ShoppingMealPlan) {
 
       buckets.set(mergeKey, {
         amount: ingredient.amount,
-        category: {
-          id: ingredient.category.id,
-          name: ingredient.category.displayName,
-        },
+        category: toShoppingCategory(ingredient.category),
         displayName: ingredient.displayName,
         ingredientId: ingredient.ingredientId,
         name: ingredient.displayName,
@@ -1303,20 +1308,15 @@ function projectSingleFamilyShoppingItemRow({
   storeSectionsByStoreId: Map<string, Map<string, StoreSectionSummary>>;
 }) {
   const preferredStore = item.preferredStore;
+  const category = toShoppingCategory(item.category);
   const section = resolveStoreSection({
-    category: {
-      id: item.category.id,
-      name: item.category.displayName,
-    },
+    category,
     preferredStore,
     storeSectionsByStoreId,
   });
 
   return {
-    category: {
-      id: item.category.id,
-      name: item.category.displayName,
-    },
+    category,
     checked: item.checked,
     collaborationVersion: item.updatedAt.toISOString(),
     mealPlanId: null,
@@ -1345,21 +1345,16 @@ function projectSingleManualShoppingItemRow({
 }) {
   const storeSectionsByStoreId = buildStoreSectionsByStoreId(stores);
   const preferredStore = item.preferredStore;
+  const category = toShoppingCategory(item.category);
   const section = resolveStoreSection({
-    category: {
-      id: item.category.id,
-      name: item.category.displayName,
-    },
+    category,
     preferredStore,
     storeSectionsByStoreId,
   });
 
   return {
     buyOnDate: item.buyOnDate,
-    category: {
-      id: item.category.id,
-      name: item.category.displayName,
-    },
+    category,
     checked: override?.checked ?? false,
     collaborationVersion: item.updatedAt?.toISOString() ?? "",
     mealPlanId: mealPlan.id,

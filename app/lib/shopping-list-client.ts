@@ -326,9 +326,9 @@ export function resolveQuickAddPlaceholderPlacement({
   fallbackCategory,
   sections,
 }: {
-  categories: ReadonlyArray<{ displayName: string; id: string }>;
+  categories: ReadonlyArray<{ displayName: string; id: string; key?: string }>;
   categoryId?: string | null;
-  fallbackCategory: { displayName: string; id: string };
+  fallbackCategory: { displayName: string; id: string; key?: string };
   sections: ReadonlyArray<{ category: { id: string }; displayName: string }>;
 }) {
   const matchedCategory = categoryId
@@ -342,6 +342,7 @@ export function resolveQuickAddPlaceholderPlacement({
   return {
     category: {
       id: category.id,
+      ...(category.key ? { key: category.key } : {}),
       name: category.displayName,
     },
     section: {
@@ -365,7 +366,7 @@ export function buildOptimisticManualShoppingItem({
   sourceType,
 }: {
   buyOnDate?: string | null;
-  category: { id: string; name: string };
+  category: { id: string; key?: string; name: string };
   mealPlanId?: string | null;
   mealPlanTitle?: string | null;
   name: string;

@@ -16,11 +16,13 @@ import {
 } from "../lib/store-mode-theme";
 import type { StoreCategory } from "../lib/store.server";
 import { ShoppingQuantityEditModal } from "./shopping-quantity-edit-modal";
+import { ShoppingItemIcon } from "./shopping-item-icon";
 import { MarkGeneratedItemAsStockForm } from "./mark-generated-item-as-stock-form";
 
 interface StoreModeShoppingItemCardBase {
   category: {
     id: string;
+    key?: string;
     name: string;
   };
   checked: boolean;
@@ -340,8 +342,14 @@ export function StoreModeShoppingItemCard({
         type="button"
       />
 
-      <div className="relative z-10 flex min-h-[36px] min-w-0 flex-col pointer-events-none">
-        <div className="min-w-0 flex-1">
+      <div className="relative z-10 flex min-h-9 min-w-0 gap-2 pointer-events-none">
+        <ShoppingItemIcon
+          categoryKey={item.category.key}
+          checked={item.checked}
+          name={item.name}
+          size="store"
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="min-w-0">
               <span className={nameClass}>{item.name}</span>
@@ -423,7 +431,6 @@ export function StoreModeShoppingItemCard({
               {item.note}
             </p>
           ) : null}
-        </div>
 
         {readOnly ? null : (
           <details
@@ -537,6 +544,7 @@ export function StoreModeShoppingItemCard({
             </div>
           </details>
         )}
+        </div>
       </div>
 
       {isQuantityModalOpen &&

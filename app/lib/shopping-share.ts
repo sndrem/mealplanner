@@ -4,6 +4,7 @@ import type { SharedShoppingSnapshot } from "./shopping-section-groups";
 
 const sharedShoppingSnapshotItemSchema = z.object({
   categoryId: z.string().min(1),
+  categoryKey: z.string().min(1).optional(),
   categoryName: z.string().min(1),
   id: z.string().min(1),
   name: z.string().min(1),

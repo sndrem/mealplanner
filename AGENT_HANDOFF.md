@@ -2,36 +2,36 @@
 
 ## Current Objective
 
-Ship the per-member option to hide shopping-list category headings. Branch `issue/302-hide-category-headings` was cut from current `origin/main`.
+Ship line icons on shopping rows. Branch `issue/304-shopping-item-icons` was cut from current `origin/main`.
 
 ## Completed
 
-- Each family member can turn on **Skjul kategorier** in store mode and on the family shopping list. The choice is stored on `UserFamilyShoppingPreference.showCategoryHeadings` and defaults to headings visible.
-- Items stay in store-section order. Section titles and category cards are omitted.
-- Bought items collect into one group at the bottom. In store mode, **Skjul kjøpte varer** folds that group into a single **Handlet** section.
-- Unchecked store-mode cards use a white surface when headings are hidden, so they do not blend into the page.
-- Public share, catalog, recipes, and store setup still show categories.
+- Store mode, the family shopping list, and the public share each show a decorative mint chip left of the item name.
+- Known names in `namesByIcon` use a line drawing (milk carton, whole chicken, cheese wheel, one strawberry, and the rest).
+- Any other name uses a thick letter from the first letter of the item, including Æ, Ø, and Å.
+- Icons are resolved on the client from the normalized name. `category.key` is optional on projected items and share snapshots so older snapshots still parse.
+- Checked rows keep the icon and fade it.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan-store-mode.tsx` — Visning toggle and the flat list
-- `app/routes/family-shopping.tsx` — same preference on the family list
-- `app/lib/shopping-store-mode-client.ts` — flatten helper that keeps section order and sinks bought items
-- `prisma/schema.prisma` — `showCategoryHeadings`
+- `app/lib/shopping-item-icons.ts` — name-to-drawing map and letter fallback
+- `app/components/shopping-item-icon.tsx` — chip and SVG drawings
+- `app/components/store-mode-shopping-item-card.tsx` — icon on the store-mode row
+- `app/routes/family-shopping.tsx` — icon on the family list
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 753 tests passed
+- `npm run test:run` — 757 tests passed
 - `npm run typecheck` — passed
-- Browser: toggled **Skjul kategorier** in store mode, confirmed one continuous list, one Handlet fold, and white cards. Reloaded and the choice stuck. The family shopping list used the same preference and kept the store name. The preference was turned back off after the check.
+- Static render of `ShoppingItemIcon`: drawings for milk, tomato, chicken, cheese, strawberry, and bread; letters for Tacolefser, Grillmat, Potetgull, Cola, Salt, Tunfisk, Ørret, Æ, and Å; faded checked milk; dark chip. Logged-in store mode and the family list were not clicked through.
 
 ## Open Items
 
-- Apply `20261016120000_add_show_category_headings` on deploy. It is already applied to the local database.
+- Flour, sugar, oats, and cereal still share the rice-bowl drawing because those names are listed under `rice`.
 - Untracked `temp-delete-later/` drafts are not part of this change.
 
 ## Next Step
 
-Review the pull request for issue #302, then merge.
+Review the pull request for issue #304, then merge.

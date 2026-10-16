@@ -16,6 +16,7 @@ import { HideCategoryHeadingsToggle } from "../components/hide-category-headings
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
 import { MarkGeneratedItemAsStockForm } from "../components/mark-generated-item-as-stock-form";
 import { ShoppingListItemExpanded } from "../components/shopping-list-item-expanded";
+import { ShoppingItemIcon } from "../components/shopping-item-icon";
 import { requireUser } from "../lib/auth.server";
 import { formatDateOnly } from "../lib/meal-plan-dates";
 import { useIsLgViewport } from "../lib/use-lg-viewport";
@@ -606,6 +607,7 @@ export default function FamilyShoppingRoute({
       loaderData.categories[0] ?? {
         displayName: "Annet",
         id: "uncategorized",
+        key: "other",
       },
     [loaderData.categories],
   );
@@ -722,6 +724,7 @@ export default function FamilyShoppingRoute({
       buildOptimisticManualShoppingItem({
         category: {
           id: category.id,
+          ...(category.key ? { key: category.key } : {}),
           name: category.displayName,
         },
         name,
@@ -1343,6 +1346,12 @@ function renderFamilyShoppingListItem({
       data-shopping-source-key={item.sourceKey}
     >
       <div className="flex flex-wrap items-center gap-2">
+        <ShoppingItemIcon
+          categoryKey={item.category.key}
+          checked={displayChecked}
+          name={item.name}
+          size="list"
+        />
         <h4
           className={`text-base font-semibold ${
             displayChecked ? "text-muted line-through" : "text-ink"

@@ -18,6 +18,7 @@ import { listScopedStores } from "./store.server";
 export interface ShoppingShareCurationItem {
   category: {
     id: string;
+    key?: string;
     name: string;
   };
   checked: boolean;
@@ -146,6 +147,7 @@ export async function createShoppingListShare({
   const snapshot: SharedShoppingSnapshot = {
     items: selectedItems.map((item) => ({
       categoryId: item.category.id,
+      ...(item.category.key ? { categoryKey: item.category.key } : {}),
       categoryName: item.category.name,
       id: buildShoppingShareItemSelectionKey({
         sourceKey: item.sourceKey,
@@ -262,7 +264,7 @@ function mapProjectedItemToCurationItem(
 }
 
 function mapFamilyRowToCurationItem(item: {
-  category: { displayName: string; id: string };
+  category: { displayName: string; id: string; key?: string };
   checked: boolean;
   id: string;
   name: string;
@@ -274,6 +276,7 @@ function mapFamilyRowToCurationItem(item: {
   return {
     category: {
       id: item.category.id,
+      ...(item.category.key ? { key: item.category.key } : {}),
       name: item.category.displayName,
     },
     checked: item.checked,

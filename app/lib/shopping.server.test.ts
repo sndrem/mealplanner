@@ -376,6 +376,7 @@ describe("shopping.server", () => {
       select: {
         displayName: true,
         id: true,
+        key: true,
       },
     });
     expect(result.categories.map((category) => category.displayName)).toEqual(["Brod", "Frukt og gront", "Meieri"]);
