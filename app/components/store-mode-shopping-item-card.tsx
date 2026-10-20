@@ -342,14 +342,14 @@ export function StoreModeShoppingItemCard({
         type="button"
       />
 
-      <div className="relative z-10 flex min-h-9 min-w-0 gap-2 pointer-events-none">
+      <div className="relative z-10 grid min-h-9 min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 pointer-events-none">
         <ShoppingItemIcon
           categoryKey={item.category.key}
           checked={item.checked}
           name={item.name}
           size="store"
         />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="min-w-0">
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="min-w-0">
               <span className={nameClass}>{item.name}</span>
@@ -431,10 +431,11 @@ export function StoreModeShoppingItemCard({
               {item.note}
             </p>
           ) : null}
+        </div>
 
         {readOnly ? null : (
           <details
-            className="group mt-auto flex w-7 min-w-7 flex-col-reverse items-stretch self-start pointer-events-auto open:w-1/2 open:min-w-[50%] open:max-w-full"
+            className="group col-start-2 flex w-7 min-w-7 flex-col-reverse items-stretch self-start pointer-events-auto open:col-span-2 open:col-start-1 open:w-full open:min-w-0 open:max-w-full open:justify-self-stretch"
             onToggle={(event) => {
               setIsDetailsOpen(event.currentTarget.open);
             }}
@@ -479,7 +480,7 @@ export function StoreModeShoppingItemCard({
                     Endre seksjon
                     <select
                       aria-busy={isSavingCategory}
-                      className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-sm text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:opacity-70"
+                      className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-base text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:opacity-70"
                       disabled={isSavingCategory}
                       onChange={(event) =>
                         handleCategoryChange(event.currentTarget.value)
@@ -497,7 +498,7 @@ export function StoreModeShoppingItemCard({
                     Notat
                     <input
                       aria-busy={isSavingCategory}
-                      className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-sm text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
+                      className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-base text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
                       onChange={(event) =>
                         setNoteDraft(event.currentTarget.value)
                       }
@@ -544,7 +545,6 @@ export function StoreModeShoppingItemCard({
             </div>
           </details>
         )}
-        </div>
       </div>
 
       {isQuantityModalOpen &&
