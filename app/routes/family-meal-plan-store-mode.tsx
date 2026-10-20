@@ -115,6 +115,7 @@ import {
   storeModeBottomChromeShellClass,
   storeModeCountChipClass,
   storeModeHandletFoldClass,
+  storeModeItemGridClass,
   storeModeMutedPanelClass,
   storeModePageClass,
   storeModeQuickAddDockClass,
@@ -2067,9 +2068,7 @@ function StoreModeItemGrid<
   return (
     <div
       className={
-        layout === "grid"
-          ? "mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 [&>*]:min-w-0"
-          : "mt-4 flex flex-col gap-2"
+        layout === "grid" ? storeModeItemGridClass : "mt-4 flex flex-col gap-2"
       }
     >
       {sortedItems.map((item) => (

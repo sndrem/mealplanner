@@ -29,6 +29,7 @@ import {
   storeModeHandletFoldClass,
   storeModeMetaStoreSelectClass,
   storeModeMetaStripClass,
+  storeModeItemGridClass,
   storeModePageClass,
   storeModeProgressDotClass,
   storeModeProgressPillClass,
@@ -303,7 +304,7 @@ function GuestItemGrid({
   );
 
   return (
-    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 [&>*]:min-w-0">
+    <div className={storeModeItemGridClass}>
       {sortedItems.map((item) => (
         <StoreModeShoppingItemCard
           key={item.id}

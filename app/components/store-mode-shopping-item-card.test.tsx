@@ -123,9 +123,12 @@ describe("StoreModeShoppingItemCard", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: "Hurtiglegg til" }),
-    ).toBeInTheDocument();
+    const quickAdd = screen.getByRole("button", { name: "Hurtiglegg til" });
+    const details = quickAdd.closest("details");
+
+    expect(quickAdd).toBeInTheDocument();
+    expect(details).toHaveClass("open:w-full", "open:col-span-2");
+    expect(details).not.toHaveClass("open:w-1/2");
   });
 
   it("shows grouped recipe measurements and hides quantity edit", () => {
