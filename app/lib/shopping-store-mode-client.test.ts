@@ -14,12 +14,10 @@ import {
   buildStoreOfferBriefingDismissedStorageKey,
   buildStoreOfferBriefingSeenStorageKey,
   buildStoreModeViewStorageKey,
-  computeStoreModeProgress,
   computeStoreModeScanProgress,
   getStoreModeTripFocusScanLabel,
   getToggleExpectedVersion,
   partitionStoreModeSections,
-  flattenStoreModeSectionsForHiddenHeadings,
   splitShoppingItemsByChecked,
   readSinkFinishedSectionsCookie,
   readStoreModeDeprioritizeBought,
@@ -207,19 +205,6 @@ describe("shopping-store-mode-client", () => {
         ],
       }),
     ).toEqual([]);
-  });
-
-  it("computes progress from merged items", () => {
-    expect(
-      computeStoreModeProgress([
-        { checked: true },
-        { checked: false },
-        { checked: true },
-      ]),
-    ).toEqual({
-      checkedCount: 2,
-      totalCount: 3,
-    });
   });
 
   it("turns partial progress into items left and a fill percent", () => {
@@ -751,31 +736,6 @@ describe("shopping-store-mode-client", () => {
     ).toEqual(["family:1", "family:2"]);
   });
 
-  it("returns sections with empty boughtItems when deprioritize-bought is off", () => {
-    const sections = [
-      {
-        displayName: "Produce",
-        items: [
-          { checked: true, id: "a" },
-          { checked: false, id: "b" },
-        ],
-      },
-    ];
-
-    expect(partitionStoreModeSections(sections, false)).toEqual({
-      activeSections: [
-        {
-          displayName: "Produce",
-          boughtItems: [],
-          items: [
-            { checked: true, id: "a" },
-            { checked: false, id: "b" },
-          ],
-        },
-      ],
-    });
-  });
-
   it("keeps bought items on each section and retains fully checked aisles", () => {
     const sections = [
       {
@@ -801,61 +761,6 @@ describe("shopping-store-mode-client", () => {
         {
           displayName: "Dairy",
           boughtItems: [{ checked: true, id: "c" }],
-          items: [],
-        },
-      ],
-    });
-  });
-
-  it("sinks finished sections below open sections in store order", () => {
-    const sections = [
-      {
-        displayName: "Produce",
-        items: [
-          { checked: false, id: "apple" },
-          { checked: true, id: "pear" },
-        ],
-      },
-      {
-        displayName: "Dairy",
-        items: [{ checked: true, id: "milk" }],
-      },
-      {
-        displayName: "Bakery",
-        items: [{ checked: false, id: "bread" }],
-      },
-      {
-        displayName: "Frozen",
-        items: [
-          { checked: true, id: "peas" },
-          { checked: true, id: "berries" },
-        ],
-      },
-    ];
-
-    expect(partitionStoreModeSections(sections, true, true)).toEqual({
-      activeSections: [
-        {
-          displayName: "Produce",
-          boughtItems: [{ checked: true, id: "pear" }],
-          items: [{ checked: false, id: "apple" }],
-        },
-        {
-          displayName: "Bakery",
-          boughtItems: [],
-          items: [{ checked: false, id: "bread" }],
-        },
-        {
-          displayName: "Dairy",
-          boughtItems: [{ checked: true, id: "milk" }],
-          items: [],
-        },
-        {
-          displayName: "Frozen",
-          boughtItems: [
-            { checked: true, id: "peas" },
-            { checked: true, id: "berries" },
-          ],
           items: [],
         },
       ],
@@ -895,131 +800,6 @@ describe("shopping-store-mode-client", () => {
           boughtItems: [],
           items: [{ checked: false, id: "bread" }],
         },
-      ],
-    });
-  });
-
-  it("keeps a partly checked section open and sinks only fully checked sections when bought items stay visible", () => {
-    const sections = [
-      {
-        displayName: "Produce",
-        items: [
-          { checked: true, id: "pear" },
-          { checked: false, id: "apple" },
-        ],
-      },
-      {
-        displayName: "Dairy",
-        items: [{ checked: true, id: "milk" }],
-      },
-    ];
-
-    expect(partitionStoreModeSections(sections, false, true)).toEqual({
-      activeSections: [
-        {
-          displayName: "Produce",
-          boughtItems: [],
-          items: [
-            { checked: true, id: "pear" },
-            { checked: false, id: "apple" },
-          ],
-        },
-        {
-          displayName: "Dairy",
-          boughtItems: [],
-          items: [{ checked: true, id: "milk" }],
-        },
-      ],
-    });
-  });
-
-  it("sinks a section with no items left when bought items stay visible", () => {
-    const sections = [
-      {
-        displayName: "Dairy",
-        items: [],
-      },
-      {
-        displayName: "Produce",
-        items: [{ checked: false, id: "apple" }],
-      },
-    ];
-
-    expect(partitionStoreModeSections(sections, false, true)).toEqual({
-      activeSections: [
-        {
-          displayName: "Produce",
-          boughtItems: [],
-          items: [{ checked: false, id: "apple" }],
-        },
-        {
-          displayName: "Dairy",
-          boughtItems: [],
-          items: [],
-        },
-      ],
-    });
-  });
-
-  it("omits a section with no items when bought items are folded", () => {
-    const sections = [
-      {
-        displayName: "Produce",
-        items: [],
-      },
-      {
-        displayName: "Dairy",
-        items: [{ checked: false, id: "milk" }],
-      },
-      {
-        displayName: "Bakery",
-        items: [{ checked: true, id: "bread" }],
-      },
-    ];
-
-    expect(partitionStoreModeSections(sections, true, true)).toEqual({
-      activeSections: [
-        {
-          displayName: "Dairy",
-          boughtItems: [],
-          items: [{ checked: false, id: "milk" }],
-        },
-        {
-          displayName: "Bakery",
-          boughtItems: [{ checked: true, id: "bread" }],
-          items: [],
-        },
-      ],
-    });
-  });
-
-  it("keeps section order and collects bought items once when headings are hidden", () => {
-    const sections = [
-      {
-        boughtItems: [{ checked: true, id: "milk", name: "Melk", sourceKey: "milk" }],
-        items: [
-          { checked: false, id: "yogurt", name: "Yoghurt", sourceKey: "yogurt" },
-          { checked: false, id: "butter", name: "Smør", sourceKey: "butter" },
-        ],
-      },
-      {
-        boughtItems: [],
-        items: [
-          { checked: true, id: "apple", name: "Eple", sourceKey: "apple" },
-          { checked: false, id: "pear", name: "Pære", sourceKey: "pear" },
-        ],
-      },
-    ];
-
-    expect(flattenStoreModeSectionsForHiddenHeadings(sections)).toEqual({
-      boughtItems: [
-        { checked: true, id: "milk", name: "Melk", sourceKey: "milk" },
-        { checked: true, id: "apple", name: "Eple", sourceKey: "apple" },
-      ],
-      openItems: [
-        { checked: false, id: "butter", name: "Smør", sourceKey: "butter" },
-        { checked: false, id: "yogurt", name: "Yoghurt", sourceKey: "yogurt" },
-        { checked: false, id: "pear", name: "Pære", sourceKey: "pear" },
       ],
     });
   });

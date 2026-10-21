@@ -459,39 +459,6 @@ export function splitShoppingItemsByChecked<TItem extends { checked: boolean }>(
   };
 }
 
-export function flattenStoreModeSectionsForHiddenHeadings<
-  TItem extends { checked: boolean; name: string; sourceKey: string },
->(sections: Array<{ boughtItems: TItem[]; items: TItem[] }>) {
-  const openItems: TItem[] = [];
-  const boughtItems: TItem[] = [];
-
-  for (const section of sections) {
-    const sectionOpenItems: TItem[] = [];
-    const sectionBoughtItems: TItem[] = [];
-
-    for (const item of section.items) {
-      if (item.checked) {
-        sectionBoughtItems.push(item);
-      } else {
-        sectionOpenItems.push(item);
-      }
-    }
-
-    openItems.push(...sortStoreModeItemsByName(sectionOpenItems));
-    boughtItems.push(
-      ...sortStoreModeItemsByName([
-        ...sectionBoughtItems,
-        ...section.boughtItems,
-      ]),
-    );
-  }
-
-  return {
-    boughtItems,
-    openItems,
-  };
-}
-
 export function buildStoreModeQueueStorageKey({
   activeShoppingDate,
   familyId,
@@ -601,15 +568,6 @@ export function applyToggleOpsToItems<T extends StoreModeToggleItem>(
       checked: op.checked,
     };
   });
-}
-
-export function computeStoreModeProgress(
-  items: Pick<StoreModeToggleItem, "checked">[],
-): StoreModeProgress {
-  return {
-    checkedCount: items.filter((item) => item.checked).length,
-    totalCount: items.length,
-  };
 }
 
 export function computeStoreModeScanProgress(
