@@ -73,7 +73,7 @@ interface StoreModeShoppingItemCardFamily extends StoreModeShoppingItemCardBase 
   sourceType: "FAMILY";
 }
 
-export type StoreModeShoppingItemCardItem =
+type StoreModeShoppingItemCardItem =
   | StoreModeShoppingItemCardGenerated
   | StoreModeShoppingItemCardManual
   | StoreModeShoppingItemCardFamily;

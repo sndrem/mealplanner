@@ -5,7 +5,7 @@ function escapeAttributeValue(value: string) {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-export function buildShoppingItemSourceSelector(sourceKey: string) {
+function buildShoppingItemSourceSelector(sourceKey: string) {
   return `[${QUICK_ADD_ITEM_SELECTOR_ATTRIBUTE}="${escapeAttributeValue(sourceKey)}"]`;
 }
 

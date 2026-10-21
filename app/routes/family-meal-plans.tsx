@@ -1,7 +1,12 @@
 import { useState } from "react";
-import { Form, Link, useNavigation, type MetaFunction } from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 
-import { requireUser } from "../lib/auth.server";
+import {
+  FamilyNoticeBanner,
+  FamilyPageHeader,
+  familyBandLinkClassName,
+  familyPageMeta,
+} from "../components/family-page";
 import {
   copyMealPlan,
   createMealPlan,
@@ -17,6 +22,11 @@ import {
   resolveAutoMealPlanTitle,
   type MealPlanTimeStatus,
 } from "../lib/meal-plan-week";
+import {
+  readFamilyRouteForm,
+  requireFamilyRouteUser,
+  type FamilyRouteArgs,
+} from "../lib/family-route.server";
 
 const PAST_MEAL_PLANS_VISIBLE_COUNT = 3;
 
@@ -47,27 +57,13 @@ interface MealPlanListRouteProps {
   loaderData: Awaited<ReturnType<typeof loader>>;
 }
 
-export const meta: MetaFunction = () => {
-  return [
-    { title: "Ukeplaner | Mealplanner" },
-    {
-      name: "description",
-      content: "Administrer familieukeplaner i Mealplanner.",
-    },
-  ];
-};
+export const meta = familyPageMeta(
+  "Ukeplaner | Mealplanner",
+  "Administrer familieukeplaner i Mealplanner.",
+);
 
-export async function loader({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
+export async function loader({ params, request }: FamilyRouteArgs) {
+  const { familyId, user } = await requireFamilyRouteUser({ params, request });
   const result = await listMealPlansForFamily({
     familyId,
     userId: user.id,
@@ -87,19 +83,11 @@ export async function loader({
   };
 }
 
-export async function action({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
-  const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+export async function action({ params, request }: FamilyRouteArgs) {
+  const { familyId, formData, intent, user } = await readFamilyRouteForm({
+    params,
+    request,
+  });
 
   if (intent === "create-meal-plan") {
     const values = {
@@ -228,39 +216,25 @@ export default function FamilyMealPlansRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
-                Ukeplaner
-              </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-                {loaderData.family.name}
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
-                Opprett og administrer familieukeplaner med lagrede start- og
-                sluttdatoer.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
-                to={`/families/${loaderData.family.id}`}
-              >
-                Tilbake til familie
-              </Link>
-            </div>
-          </div>
-        </section>
+        <FamilyPageHeader
+          actions={
+            <Link
+              className={familyBandLinkClassName}
+              to={`/families/${loaderData.family.id}`}
+            >
+              Tilbake til familie
+            </Link>
+          }
+          description="Opprett og administrer familieukeplaner med lagrede start- og sluttdatoer."
+          kicker="Ukeplaner"
+          title={loaderData.family.name}
+        />
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
-            <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-accent-strong">
-              {noticeContent.description}
-            </p>
-          </section>
+          <FamilyNoticeBanner
+            description={noticeContent.description}
+            title={noticeContent.title}
+          />
         ) : null}
 
         <section className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
@@ -722,17 +696,6 @@ function MealPlanListCard({
       ) : null}
     </article>
   );
-}
-
-function requireFamilyId(familyId: string | undefined) {
-  if (!familyId) {
-    throw new Response("Fant ikke familien.", {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  return familyId;
 }
 
 function getMealPlanNotice(request: Request): MealPlanNotice | null {

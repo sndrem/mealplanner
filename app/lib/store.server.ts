@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "./db.server";
 import { requireFamilyMembership } from "./family.server";
 
-export const storeCategorySelect =
+const storeCategorySelect =
   Prisma.validator<Prisma.IngredientCategorySelect>()({
     displayName: true,
     familyId: true,
@@ -11,7 +11,7 @@ export const storeCategorySelect =
     key: true,
   });
 
-export const managedStoreSectionSelect =
+const managedStoreSectionSelect =
   Prisma.validator<Prisma.StoreSectionSelect>()({
     categoryId: true,
     displayName: true,
@@ -19,7 +19,7 @@ export const managedStoreSectionSelect =
     sortOrder: true,
   });
 
-export const managedStoreSelect = Prisma.validator<Prisma.StoreSelect>()({
+const managedStoreSelect = Prisma.validator<Prisma.StoreSelect>()({
   familyId: true,
   id: true,
   key: true,
@@ -32,10 +32,6 @@ export const managedStoreSelect = Prisma.validator<Prisma.StoreSelect>()({
 
 export type StoreCategory = Prisma.IngredientCategoryGetPayload<{
   select: typeof storeCategorySelect;
-}>;
-
-export type ManagedStore = Prisma.StoreGetPayload<{
-  select: typeof managedStoreSelect;
 }>;
 
 export async function listIngredientCategories(familyId?: string) {

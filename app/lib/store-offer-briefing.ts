@@ -1,3 +1,4 @@
+import { parseDateOnly } from "./meal-plan-dates";
 import {
   dateRangesOverlap,
   getCalendarWeekBounds,
@@ -268,19 +269,5 @@ function getFocusedSpan(focusedDates: string[]): FocusedSpan | null {
 }
 
 function isValidDateOnly(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-
-  const [yearValue, monthValue, dayValue] = value.split("-");
-  const year = Number(yearValue);
-  const month = Number(monthValue);
-  const day = Number(dayValue);
-  const parsedDate = new Date(Date.UTC(year, month - 1, day));
-
-  return (
-    parsedDate.getUTCFullYear() === year &&
-    parsedDate.getUTCMonth() === month - 1 &&
-    parsedDate.getUTCDate() === day
-  );
+  return parseDateOnly(value) !== null;
 }

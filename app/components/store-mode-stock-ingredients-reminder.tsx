@@ -7,7 +7,7 @@ import {
   storeModeStockReminderClass,
 } from "../lib/store-mode-theme";
 
-export interface StoreModeStockIngredientReminderItem {
+interface StoreModeStockIngredientReminderItem {
   name: string;
   occurrenceCount: number;
   occurrences: Array<{

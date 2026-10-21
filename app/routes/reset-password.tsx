@@ -5,7 +5,7 @@ import { AuthScreen, authInputClassName, authSubmitButtonClassName } from "../fe
 import { PASSWORD_MIN_LENGTH, requireAnonymous, signInUser } from "../lib/auth.server";
 import { getValidPasswordResetToken, resetPasswordWithToken } from "../lib/password-reset.server";
 
-export interface ResetPasswordActionData {
+interface ResetPasswordActionData {
   fieldErrors?: {
     password?: string;
   };

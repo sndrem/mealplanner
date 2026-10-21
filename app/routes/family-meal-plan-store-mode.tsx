@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Form,
   Link,
-  isRouteErrorResponse,
   useFetcher,
   useNavigation,
   useRevalidator,
@@ -13,6 +12,7 @@ import {
   type MetaFunction,
 } from "react-router";
 
+import { FamilyUnexpectedError } from "../components/family-page";
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
 import { ShoppingListCompleteCelebration } from "../components/shopping-list-complete-celebration";
 import { HideCategoryHeadingsToggle } from "../components/hide-category-headings-toggle";
@@ -179,6 +179,34 @@ interface StoreModeActionData {
     tripFocus?: string;
   };
   tripFocusValue?: string;
+}
+
+function missingStoreModeItem(intent: StoreModeIntent): StoreModeActionData {
+  return {
+    formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
+    intent,
+  };
+}
+
+function completeStoreModeItemUpdate(
+  intent: StoreModeIntent,
+  result: { formError?: string; status: string },
+): StoreModeActionData {
+  if (result.status === "NOT_FOUND") {
+    throw buildMealPlanNotFoundResponse();
+  }
+
+  if (result.status === "CONFLICT") {
+    return {
+      formError: result.formError,
+      intent,
+    };
+  }
+
+  return {
+    intent,
+    ok: true,
+  };
 }
 
 interface FamilyMealPlanStoreModeRouteProps {
@@ -460,10 +488,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     const checked = String(formData.get("checked") ?? "") === "true";
 
     if (!familyItemId) {
-      return {
-        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
-        intent,
-      } satisfies StoreModeActionData;
+      return missingStoreModeItem(intent);
     }
 
     const result = await toggleFamilyShoppingItemChecked({
@@ -474,21 +499,7 @@ export async function action({ params, request }: Route.ActionArgs) {
       userId: user.id,
     });
 
-    if (result.status === "NOT_FOUND") {
-      throw buildMealPlanNotFoundResponse();
-    }
-
-    if (result.status === "CONFLICT") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return {
-      intent,
-      ok: true,
-    } satisfies StoreModeActionData;
+    return completeStoreModeItemUpdate(intent, result);
   }
 
   if (intent === "update-family-shopping-item-quantity") {
@@ -496,10 +507,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     const quantity = String(formData.get("quantity") ?? "");
 
     if (!familyItemId) {
-      return {
-        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
-        intent,
-      } satisfies StoreModeActionData;
+      return missingStoreModeItem(intent);
     }
 
     const result = await updateFamilyShoppingItemQuantity({
@@ -510,21 +518,7 @@ export async function action({ params, request }: Route.ActionArgs) {
       userId: user.id,
     });
 
-    if (result.status === "NOT_FOUND") {
-      throw buildMealPlanNotFoundResponse();
-    }
-
-    if (result.status === "CONFLICT") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return {
-      intent,
-      ok: true,
-    } satisfies StoreModeActionData;
+    return completeStoreModeItemUpdate(intent, result);
   }
 
   if (intent === "update-generated-shopping-item-quantity") {
@@ -532,10 +526,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     const quantity = String(formData.get("quantity") ?? "");
 
     if (!sourceKey) {
-      return {
-        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
-        intent,
-      } satisfies StoreModeActionData;
+      return missingStoreModeItem(intent);
     }
 
     const itemMealPlanId = resolveItemMealPlanId(formData, anchorMealPlanId);
@@ -548,31 +539,14 @@ export async function action({ params, request }: Route.ActionArgs) {
       userId: user.id,
     });
 
-    if (result.status === "NOT_FOUND") {
-      throw buildMealPlanNotFoundResponse();
-    }
-
-    if (result.status === "CONFLICT") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return {
-      intent,
-      ok: true,
-    } satisfies StoreModeActionData;
+    return completeStoreModeItemUpdate(intent, result);
   }
 
   if (intent === "update-family-shopping-item-category") {
     const familyItemId = String(formData.get("sourceKey") ?? "").trim();
 
     if (!familyItemId) {
-      return {
-        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
-        intent,
-      } satisfies StoreModeActionData;
+      return missingStoreModeItem(intent);
     }
 
     const result = await updateFamilyShoppingItem({
@@ -628,10 +602,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     const manualItemId = String(formData.get("sourceKey") ?? "").trim();
 
     if (!manualItemId) {
-      return {
-        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
-        intent,
-      } satisfies StoreModeActionData;
+      return missingStoreModeItem(intent);
     }
 
     const itemMealPlanId = resolveItemMealPlanId(formData, anchorMealPlanId);
@@ -689,10 +660,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     const checked = String(formData.get("checked") ?? "") === "true";
 
     if (!sourceKey || !sourceType) {
-      return {
-        formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
-        intent,
-      } satisfies StoreModeActionData;
+      return missingStoreModeItem(intent);
     }
 
     const itemMealPlanId = resolveItemMealPlanId(formData, anchorMealPlanId);
@@ -706,21 +674,7 @@ export async function action({ params, request }: Route.ActionArgs) {
       userId: user.id,
     });
 
-    if (result.status === "NOT_FOUND") {
-      throw buildMealPlanNotFoundResponse();
-    }
-
-    if (result.status === "CONFLICT") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return {
-      intent,
-      ok: true,
-    } satisfies StoreModeActionData;
+    return completeStoreModeItemUpdate(intent, result);
   }
 
   if (intent === "mark-generated-shopping-item-as-stock") {
@@ -1871,32 +1825,16 @@ export default function FamilyMealPlanStoreModeRoute({
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {
-  let title = "Noe gikk galt";
-  let message = "Vi klarte ikke å laste butikkmodus akkurat nå.";
-
-  if (isRouteErrorResponse(error)) {
-    title = error.status === 404 ? "Fant ikke ukeplanen" : title;
-    message =
-      typeof error.data === "string" && error.data.length > 0
-        ? error.data
-        : error.statusText || message;
-  } else if (error instanceof Error) {
-    message = error.message;
-  }
-
   return (
-    <main className={`${storeModePageClass} py-16`}>
-      <div className={`mx-auto max-w-2xl ${storeModeSurfaceCardClass} p-8`}>
-        <h1 className="text-2xl font-semibold text-store-ink">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-store-muted">{message}</p>
-        <Link
-          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
-          to="/app"
-        >
-          Til appen
-        </Link>
-      </div>
-    </main>
+    <FamilyUnexpectedError
+      cardClassName={`mx-auto max-w-2xl ${storeModeSurfaceCardClass} p-8`}
+      error={error}
+      fallbackMessage="Vi klarte ikke å laste butikkmodus akkurat nå."
+      messageClassName="mt-3 text-sm leading-6 text-store-muted"
+      notFoundTitle="Fant ikke ukeplanen"
+      pageClassName={`${storeModePageClass} py-16`}
+      titleClassName="text-2xl font-semibold text-store-ink"
+    />
   );
 }
 

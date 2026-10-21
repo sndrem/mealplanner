@@ -47,7 +47,7 @@ export function hashShoppingListShareToken(rawToken: string) {
   return createHash("sha256").update(rawToken).digest("hex");
 }
 
-export function createShoppingListShareRawToken() {
+function createShoppingListShareRawToken() {
   return randomBytes(32).toString("hex");
 }
 

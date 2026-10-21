@@ -1,14 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../lib/auth.server", async () => {
-  const actual = await vi.importActual<typeof import("../lib/auth.server")>(
-    "../lib/auth.server",
-  );
+  const { mockAuthWithRequireUser } = await import("../test/mock-require-user");
 
-  return {
-    ...actual,
-    requireUser: vi.fn(),
-  };
+  return mockAuthWithRequireUser();
 });
 
 vi.mock("../lib/shopping-catalog.server", () => {

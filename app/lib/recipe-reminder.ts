@@ -1,7 +1,7 @@
 export const RECIPE_REMINDER_SHORTCUT_NAME = "Create Recipe Reminder";
 
-export const RECIPE_REMINDER_TITLE_MAX_LENGTH = 80;
-export const RECIPE_REMINDER_NOTE_MAX_LENGTH = 280;
+const RECIPE_REMINDER_TITLE_MAX_LENGTH = 80;
+const RECIPE_REMINDER_NOTE_MAX_LENGTH = 280;
 export const RECIPE_REMINDER_MAX_COUNT = 10;
 
 export const RECIPE_REMINDER_TIMING_KINDS = [
@@ -46,7 +46,7 @@ export interface RecipeReminderSuggestionFieldErrors {
   timingKinds?: Record<number, string>;
 }
 
-export function isRecipeReminderTimingKind(
+function isRecipeReminderTimingKind(
   value: string,
 ): value is RecipeReminderTimingKind {
   return (RECIPE_REMINDER_TIMING_KINDS as readonly string[]).includes(value);
@@ -394,7 +394,7 @@ export function createRecipeReminder(
   return { ok: true, payload, url };
 }
 
-export function openShortcutUrl(url: string) {
+function openShortcutUrl(url: string) {
   window.location.assign(url);
 }
 

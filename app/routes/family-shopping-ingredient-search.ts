@@ -1,20 +1,14 @@
-import { requireUser } from "../lib/auth.server";
 import { requireFamilyMembership } from "../lib/family.server";
+import {
+  requireFamilyRouteUser,
+  type FamilyRouteArgs,
+} from "../lib/family-route.server";
 import { searchShoppingQuickAddSuggestions } from "../lib/shopping-catalog.server";
 
 const MIN_SEARCH_LENGTH = 2;
 
-export async function loader({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
+export async function loader({ params, request }: FamilyRouteArgs) {
+  const { familyId, user } = await requireFamilyRouteUser({ params, request });
 
   await requireFamilyMembership({
     familyId,
@@ -37,13 +31,3 @@ export async function loader({
   };
 }
 
-function requireFamilyId(familyId: string | undefined) {
-  if (!familyId) {
-    throw new Response("Fant ikke familien.", {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  return familyId;
-}

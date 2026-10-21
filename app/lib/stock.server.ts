@@ -18,7 +18,7 @@ const familyStockIngredientSelect =
     note: true,
   });
 
-export type FamilyStockIngredientRow = Prisma.FamilyStockIngredientGetPayload<{
+type FamilyStockIngredientRow = Prisma.FamilyStockIngredientGetPayload<{
   select: typeof familyStockIngredientSelect;
 }>;
 

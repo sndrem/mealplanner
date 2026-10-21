@@ -11,10 +11,6 @@ const familyFreezerItemSelect =
     quantity: true,
   });
 
-export type FamilyFreezerItemRow = Prisma.FamilyFreezerItemGetPayload<{
-  select: typeof familyFreezerItemSelect;
-}>;
-
 export async function listFamilyFreezerItems({
   familyId,
   userId,

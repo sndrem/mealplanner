@@ -1,85 +1,12 @@
 import { Form } from "react-router";
-import type { ChangeEventHandler } from "react";
 
 import type {
   FamilyShoppingItemFieldErrors,
   FamilyShoppingItemValues,
 } from "../lib/family-shopping-write.server";
 
-export const shoppingDateInputClassName =
-  "mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft";
-
 const familyFieldClassName =
   "mt-2 box-border w-full max-w-full min-w-0 rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft";
-
-function buildShoppingDateSelectOptions(
-  selectableShoppingDates: string[],
-  selectedDate: string,
-) {
-  const dates = new Set(selectableShoppingDates);
-
-  if (selectedDate) {
-    dates.add(selectedDate);
-  }
-
-  return [...dates].sort();
-}
-
-function formatShoppingDateOptionLabel(value: string) {
-  return new Intl.DateTimeFormat("nb-NO", {
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00.000Z`));
-}
-
-export function ShoppingDateSelect({
-  "aria-busy": ariaBusy,
-  "aria-label": ariaLabel,
-  className = shoppingDateInputClassName,
-  defaultValue,
-  disabled = false,
-  emptyOptionLabel = "Ingen dato valgt",
-  name,
-  onChange,
-  selectableShoppingDates,
-  showEmptyOption = true,
-}: {
-  "aria-busy"?: boolean;
-  "aria-label"?: string;
-  className?: string;
-  defaultValue: string;
-  disabled?: boolean;
-  emptyOptionLabel?: string;
-  name: string;
-  onChange?: ChangeEventHandler<HTMLSelectElement>;
-  selectableShoppingDates: string[];
-  showEmptyOption?: boolean;
-}) {
-  const options = buildShoppingDateSelectOptions(
-    selectableShoppingDates,
-    defaultValue,
-  );
-
-  return (
-    <select
-      aria-busy={ariaBusy}
-      aria-label={ariaLabel}
-      className={className}
-      defaultValue={defaultValue}
-      disabled={disabled}
-      name={name}
-      onChange={onChange}
-    >
-      {showEmptyOption ? <option value="">{emptyOptionLabel}</option> : null}
-      {options.map((date) => (
-        <option key={date} value={date}>
-          {formatShoppingDateOptionLabel(date)}
-        </option>
-      ))}
-    </select>
-  );
-}
 
 type ShoppingListItemExpandedProps = {
   actionData?: {

@@ -1,52 +1,5 @@
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 
-export const shoppingItemIconKeys = [
-  "apple",
-  "avocado",
-  "banana",
-  "bread",
-  "broccoli",
-  "butter",
-  "carrot",
-  "cheese",
-  "chicken",
-  "chocolate",
-  "citrus",
-  "coffee",
-  "corn",
-  "cream",
-  "cucumber",
-  "diaper",
-  "egg",
-  "eggplant",
-  "fish",
-  "flower",
-  "garlic",
-  "ginger",
-  "grapes",
-  "ice-cream",
-  "leafy",
-  "meat",
-  "milk",
-  "mushroom",
-  "onion",
-  "pasta",
-  "pear",
-  "pepper",
-  "pizza",
-  "potato",
-  "rice",
-  "roll",
-  "sausage",
-  "shrimp",
-  "strawberry",
-  "toilet-paper",
-  "tomato",
-  "yogurt",
-] as const;
-
-export type ShoppingItemIconKey = (typeof shoppingItemIconKeys)[number];
-
 const namesByIcon = {
   apple: ["Eple"],
   avocado: ["Avokado"],
@@ -133,7 +86,9 @@ const namesByIcon = {
   "toilet-paper": ["Toalettpapir", "Tørkepapir", "Servietter", "Våtservietter"],
   tomato: ["Tomat", "Cherrytomat"],
   yogurt: ["Yoghurt", "Gresk yoghurt"],
-} as const satisfies Record<ShoppingItemIconKey, readonly string[]>;
+} as const;
+
+export type ShoppingItemIconKey = keyof typeof namesByIcon;
 
 const shoppingItemIconByName = buildShoppingItemIconByName(namesByIcon);
 

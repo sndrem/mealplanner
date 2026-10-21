@@ -24,10 +24,6 @@ const familyShoppingCatalogItemSelect =
     nameNormalized: true,
   });
 
-export type FamilyShoppingCatalogItemRow = Prisma.FamilyShoppingCatalogItemGetPayload<{
-  select: typeof familyShoppingCatalogItemSelect;
-}>;
-
 export type ShoppingQuickAddSuggestionSource = "catalog" | "register";
 
 export interface ShoppingQuickAddSuggestion {
@@ -68,7 +64,7 @@ export async function listFamilyShoppingCatalogItems({
   };
 }
 
-export async function searchFamilyShoppingCatalogItems({
+async function searchFamilyShoppingCatalogItems({
   familyId,
   query,
 }: {

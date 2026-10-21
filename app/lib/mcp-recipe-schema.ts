@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { RECIPE_REMINDER_TIMING_KINDS } from "./recipe-reminder";
 
-export const UPSERT_RECIPE_WRITABLE_KEYS = [
+const UPSERT_RECIPE_WRITABLE_KEYS = [
   "defaultServings",
   "description",
   "ingredients",
@@ -12,10 +12,7 @@ export const UPSERT_RECIPE_WRITABLE_KEYS = [
   "title",
 ] as const;
 
-export type UpsertRecipeWritableKey =
-  (typeof UPSERT_RECIPE_WRITABLE_KEYS)[number];
-
-export const mcpRecipeIngredientInputSchema = z
+const mcpRecipeIngredientInputSchema = z
   .object({
     amount: z.string().optional().describe("Quantity amount, e.g. 500"),
     category: z
@@ -44,7 +41,7 @@ export const mcpRecipeIngredientInputSchema = z
     }
   });
 
-export const mcpRecipeReminderInputSchema = z
+const mcpRecipeReminderInputSchema = z
   .object({
     note: z.string().optional(),
     timingKind: z.enum(RECIPE_REMINDER_TIMING_KINDS).optional(),

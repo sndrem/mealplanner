@@ -1,4 +1,4 @@
-export const DEFAULT_SHARED_STORE_NAME = "Rema 1000";
+const DEFAULT_SHARED_STORE_NAME = "Rema 1000";
 
 export interface SharedShoppingSnapshotItem {
   categoryId: string;
