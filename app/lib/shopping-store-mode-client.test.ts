@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { ShoppingItemSource } from "@prisma/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   applyToggleOpsToItems,
@@ -9,6 +9,7 @@ import {
   buildStoreModeDeprioritizeBoughtStorageKey,
   buildStoreModeQueueStorageKey,
   buildStoreModeRecipeUrgencyStorageKey,
+  buildStoreModeSinkFinishedSectionsStorageKey,
   buildStoreModeStockReminderDismissedStorageKey,
   buildStoreOfferBriefingDismissedStorageKey,
   buildStoreOfferBriefingSeenStorageKey,
@@ -20,17 +21,21 @@ import {
   partitionStoreModeSections,
   flattenStoreModeSectionsForHiddenHeadings,
   splitShoppingItemsByChecked,
+  readSinkFinishedSectionsCookie,
   readStoreModeDeprioritizeBought,
   readStoreModeRecipeUrgency,
+  readStoreModeSinkFinishedSections,
   readStoreModeShoppingView,
   readStoreModeStockReminderDismissed,
   readStoreModeToggleQueue,
   reconcileToggleQueue,
   removeToggleOp,
+  serializeSinkFinishedSectionsCookie,
   sortStoreModeItemsByName,
   upsertToggleOp,
   writeStoreModeDeprioritizeBought,
   writeStoreModeRecipeUrgency,
+  writeStoreModeSinkFinishedSections,
   writeStoreModeShoppingView,
   writeStoreModeStockReminderDismissed,
   writeStoreModeToggleQueue,
@@ -519,6 +524,116 @@ describe("shopping-store-mode-client", () => {
     expect(readStoreModeRecipeUrgency(storageKey)).toBe(false);
   });
 
+  it("builds isolated sink-finished-sections storage keys per family", () => {
+    expect(
+      buildStoreModeSinkFinishedSectionsStorageKey({
+        familyId: "family-1",
+      }),
+    ).not.toBe(
+      buildStoreModeSinkFinishedSectionsStorageKey({
+        familyId: "family-2",
+      }),
+    );
+  });
+
+  it("reads sink-finished-sections as off when nothing is stored", () => {
+    const storageKey = buildStoreModeSinkFinishedSectionsStorageKey({
+      familyId: "family-1",
+    });
+
+    expect(readStoreModeSinkFinishedSections(storageKey)).toBe(false);
+  });
+
+  it("reads a stored sink-finished-sections choice back on", () => {
+    const storageKey = buildStoreModeSinkFinishedSectionsStorageKey({
+      familyId: "family-1",
+    });
+
+    writeStoreModeSinkFinishedSections(storageKey, true);
+
+    expect(readStoreModeSinkFinishedSections(storageKey)).toBe(true);
+  });
+
+  it("keeps another family's sink-finished-sections choice off", () => {
+    const familyOneKey = buildStoreModeSinkFinishedSectionsStorageKey({
+      familyId: "family-1",
+    });
+    const familyTwoKey = buildStoreModeSinkFinishedSectionsStorageKey({
+      familyId: "family-2",
+    });
+
+    writeStoreModeSinkFinishedSections(familyOneKey, true);
+
+    expect(readStoreModeSinkFinishedSections(familyOneKey)).toBe(true);
+    expect(readStoreModeSinkFinishedSections(familyTwoKey)).toBe(false);
+  });
+
+  it("reads sink-finished-sections as off for an unrecognized stored value", () => {
+    const storageKey = buildStoreModeSinkFinishedSectionsStorageKey({
+      familyId: "family-1",
+    });
+
+    window.localStorage.setItem(storageKey, "yes");
+
+    expect(readStoreModeSinkFinishedSections(storageKey)).toBe(false);
+  });
+
+  it("reads sink-finished-sections as off when storage throws", () => {
+    const storageKey = buildStoreModeSinkFinishedSectionsStorageKey({
+      familyId: "family-1",
+    });
+    const getItem = vi
+      .spyOn(window.localStorage, "getItem")
+      .mockImplementation(() => {
+        throw new Error("blocked");
+      });
+
+    try {
+      expect(readStoreModeSinkFinishedSections(storageKey)).toBe(false);
+    } finally {
+      getItem.mockRestore();
+    }
+  });
+
+  it("keeps each family's sink-finished choice in the request cookie", () => {
+    const familyOneOn = serializeSinkFinishedSectionsCookie(
+      null,
+      "family-1",
+      true,
+    );
+
+    expect(readSinkFinishedSectionsCookie(familyOneOn, "family-1")).toBe(true);
+    expect(readSinkFinishedSectionsCookie(familyOneOn, "family-2")).toBe(false);
+
+    const familyTwoOn = serializeSinkFinishedSectionsCookie(
+      familyOneOn,
+      "family-2",
+      true,
+    );
+
+    expect(readSinkFinishedSectionsCookie(familyTwoOn, "family-1")).toBe(true);
+    expect(readSinkFinishedSectionsCookie(familyTwoOn, "family-2")).toBe(true);
+
+    const familyOneOff = serializeSinkFinishedSectionsCookie(
+      familyTwoOn,
+      "family-1",
+      false,
+    );
+
+    expect(readSinkFinishedSectionsCookie(familyOneOff, "family-1")).toBe(false);
+    expect(readSinkFinishedSectionsCookie(familyOneOff, "family-2")).toBe(true);
+  });
+
+  it("reads the sink-finished cookie as off when the value is unreadable", () => {
+    expect(
+      readSinkFinishedSectionsCookie(
+        "mealplanner-sink-finished-sections=not-json",
+        "family-1",
+      ),
+    ).toBe(false);
+    expect(readSinkFinishedSectionsCookie(null, "family-1")).toBe(false);
+  });
+
   it("falls back to off for invalid stored recipe-urgency values", () => {
     const storageKey = buildStoreModeRecipeUrgencyStorageKey({
       familyId: "family-1",
@@ -686,6 +801,192 @@ describe("shopping-store-mode-client", () => {
         {
           displayName: "Dairy",
           boughtItems: [{ checked: true, id: "c" }],
+          items: [],
+        },
+      ],
+    });
+  });
+
+  it("sinks finished sections below open sections in store order", () => {
+    const sections = [
+      {
+        displayName: "Produce",
+        items: [
+          { checked: false, id: "apple" },
+          { checked: true, id: "pear" },
+        ],
+      },
+      {
+        displayName: "Dairy",
+        items: [{ checked: true, id: "milk" }],
+      },
+      {
+        displayName: "Bakery",
+        items: [{ checked: false, id: "bread" }],
+      },
+      {
+        displayName: "Frozen",
+        items: [
+          { checked: true, id: "peas" },
+          { checked: true, id: "berries" },
+        ],
+      },
+    ];
+
+    expect(partitionStoreModeSections(sections, true, true)).toEqual({
+      activeSections: [
+        {
+          displayName: "Produce",
+          boughtItems: [{ checked: true, id: "pear" }],
+          items: [{ checked: false, id: "apple" }],
+        },
+        {
+          displayName: "Bakery",
+          boughtItems: [],
+          items: [{ checked: false, id: "bread" }],
+        },
+        {
+          displayName: "Dairy",
+          boughtItems: [{ checked: true, id: "milk" }],
+          items: [],
+        },
+        {
+          displayName: "Frozen",
+          boughtItems: [
+            { checked: true, id: "peas" },
+            { checked: true, id: "berries" },
+          ],
+          items: [],
+        },
+      ],
+    });
+  });
+
+  it("keeps finished sections in store order when sinking is off", () => {
+    const sections = [
+      {
+        displayName: "Produce",
+        items: [{ checked: false, id: "apple" }],
+      },
+      {
+        displayName: "Dairy",
+        items: [{ checked: true, id: "milk" }],
+      },
+      {
+        displayName: "Bakery",
+        items: [{ checked: false, id: "bread" }],
+      },
+    ];
+
+    expect(partitionStoreModeSections(sections, true, false)).toEqual({
+      activeSections: [
+        {
+          displayName: "Produce",
+          boughtItems: [],
+          items: [{ checked: false, id: "apple" }],
+        },
+        {
+          displayName: "Dairy",
+          boughtItems: [{ checked: true, id: "milk" }],
+          items: [],
+        },
+        {
+          displayName: "Bakery",
+          boughtItems: [],
+          items: [{ checked: false, id: "bread" }],
+        },
+      ],
+    });
+  });
+
+  it("keeps a partly checked section open and sinks only fully checked sections when bought items stay visible", () => {
+    const sections = [
+      {
+        displayName: "Produce",
+        items: [
+          { checked: true, id: "pear" },
+          { checked: false, id: "apple" },
+        ],
+      },
+      {
+        displayName: "Dairy",
+        items: [{ checked: true, id: "milk" }],
+      },
+    ];
+
+    expect(partitionStoreModeSections(sections, false, true)).toEqual({
+      activeSections: [
+        {
+          displayName: "Produce",
+          boughtItems: [],
+          items: [
+            { checked: true, id: "pear" },
+            { checked: false, id: "apple" },
+          ],
+        },
+        {
+          displayName: "Dairy",
+          boughtItems: [],
+          items: [{ checked: true, id: "milk" }],
+        },
+      ],
+    });
+  });
+
+  it("sinks a section with no items left when bought items stay visible", () => {
+    const sections = [
+      {
+        displayName: "Dairy",
+        items: [],
+      },
+      {
+        displayName: "Produce",
+        items: [{ checked: false, id: "apple" }],
+      },
+    ];
+
+    expect(partitionStoreModeSections(sections, false, true)).toEqual({
+      activeSections: [
+        {
+          displayName: "Produce",
+          boughtItems: [],
+          items: [{ checked: false, id: "apple" }],
+        },
+        {
+          displayName: "Dairy",
+          boughtItems: [],
+          items: [],
+        },
+      ],
+    });
+  });
+
+  it("omits a section with no items when bought items are folded", () => {
+    const sections = [
+      {
+        displayName: "Produce",
+        items: [],
+      },
+      {
+        displayName: "Dairy",
+        items: [{ checked: false, id: "milk" }],
+      },
+      {
+        displayName: "Bakery",
+        items: [{ checked: true, id: "bread" }],
+      },
+    ];
+
+    expect(partitionStoreModeSections(sections, true, true)).toEqual({
+      activeSections: [
+        {
+          displayName: "Dairy",
+          boughtItems: [],
+          items: [{ checked: false, id: "milk" }],
+        },
+        {
+          displayName: "Bakery",
+          boughtItems: [{ checked: true, id: "bread" }],
           items: [],
         },
       ],
