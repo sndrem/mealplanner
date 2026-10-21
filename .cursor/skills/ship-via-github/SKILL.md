@@ -83,7 +83,7 @@ git diff
 git log -5 --oneline
 ```
 
-Stage only files relevant to the task. Draft a 1–2 sentence commit message focused on **why**, matching recent repo style.
+Stage only files relevant to the task. Stage `GLOSSARY.md` when the issue names domain terms and this work created or updated that file. Draft a 1–2 sentence commit message focused on **why**, matching recent repo style.
 
 Commit with a HEREDOC:
 
@@ -121,7 +121,7 @@ If push fails due to remote updates, pull/rebase per team convention, re-run val
 
 ### Step 5: Create pull request
 
-Use `gh` for all GitHub operations. Include `Closes #<n>` in the body so GitHub auto-closes the issue when the PR merges.
+Use `gh` for all GitHub operations. The body shape is the `pr` skill. Inside that body, include `Closes #<n>` once so GitHub closes the issue when the PR merges, and a Validation list of the Step 1 commands that passed.
 
 Before creating, confirm the branch is ahead of the base branch and no open PR already exists for it:
 
@@ -129,25 +129,11 @@ Before creating, confirm the branch is ahead of the base branch and no open PR a
 gh pr list --head "$(git branch --show-current)" --state open
 ```
 
-Create the PR:
+Create the PR with that body:
 
 ```bash
 gh pr create --title "Short outcome-focused title" --body "$(cat <<'EOF'
-## Summary
-- Bullet: what changed and why
-
-## Related issue
-Closes #<issue-number>
-
-## Test plan
-- [ ] Validation run locally: lint, test:run, typecheck
-- [ ] Manual checks (list any UI/flow checks performed)
-
-## Validation
-- npm run prisma:generate
-- npm run lint
-- npm run test:run
-- npm run typecheck
+<body from the pr skill, including Closes #<n> and Validation>
 EOF
 )"
 ```

@@ -24,7 +24,7 @@ import { requireFamilyId } from "../lib/require-family-id";
 import { listShoppingCheckHistoryForStoreMode } from "../lib/shopping-check-history.server";
 import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
 import { getFamilyStoreModeData } from "../lib/shopping.server";
-import { getStoreModeTripFocusScanLabel } from "../lib/shopping-store-mode-client";
+import { getStoreModeTripFocusScanLabel, readSinkFinishedSectionsCookie } from "../lib/shopping-store-mode-client";
 import type { StoreModeActionData } from "../lib/store-mode-action-data";
 import { runStoreModeAction } from "../lib/store-mode-action.server";
 import {
@@ -126,6 +126,10 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     progress: result.progress,
     selectedStore: result.selectedStore,
     shoppingHistory,
+    sinkFinishedSections: readSinkFinishedSectionsCookie(
+      request.headers.get("Cookie"),
+      familyId,
+    ),
     stockIngredientsForStoreMode: result.stockIngredientsForStoreMode,
     storeOfferBriefing: selectStoreOfferBriefing({
       briefings: storeOfferBriefings,
@@ -165,6 +169,7 @@ export default function FamilyMealPlanStoreModeRoute({
   });
   const preferences = useStoreModePreferences({
     familyId: loaderData.family.id,
+    initialSinkFinishedSections: loaderData.sinkFinishedSections,
     mealPlanId: loaderData.mealPlan.id,
   });
   const { displayItemsBySourceKey, handleToggle, syncBannerMessage } =
@@ -183,6 +188,7 @@ export default function FamilyMealPlanStoreModeRoute({
     loaderDueItems: dueList.loaderDueItems,
     pendingMarkAsStockSourceKey: pending.pendingMarkAsStockSourceKey,
     showCategoryHeadings: loaderData.showCategoryHeadings,
+    sinkFinishedSections: preferences.sinkFinishedSections,
   });
   const undo = useStoreModeUndoCheck({
     displayItemsBySourceKey,
@@ -242,6 +248,9 @@ export default function FamilyMealPlanStoreModeRoute({
             onDeprioritizeBoughtChange={preferences.handleDeprioritizeBoughtChange}
             onRecipeUrgencyChange={preferences.handleRecipeUrgencyChange}
             onShoppingViewChange={preferences.handleShoppingViewChange}
+            onSinkFinishedSectionsChange={
+              preferences.handleSinkFinishedSectionsChange
+            }
             onShowCategoryHeadingsChange={
               shoppingView.handleShowCategoryHeadingsChange
             }
@@ -252,6 +261,7 @@ export default function FamilyMealPlanStoreModeRoute({
             showCategoryHeadings={shoppingView.showCategoryHeadings}
             showRecipeUrgency={preferences.showRecipeUrgency}
             showViewControls={shoppingView.displaySectionGroups.length > 0}
+            sinkFinishedSections={preferences.sinkFinishedSections}
             stores={loaderData.stores}
             tripFocusFieldError={scan.tripFocusFieldError}
             tripFocusValue={scan.tripFocusValue}

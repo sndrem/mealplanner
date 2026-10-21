@@ -26,11 +26,23 @@ git checkout -b issue/<number>-<short-slug>
 
 Branch naming: `issue/<number>-<short-slug>` (lowercase, hyphens, ~40 chars max).
 
+## When local main has diverged
+
+If `git pull --ff-only` fails because local `main` is ahead or behind, leave local `main` as it is. Branch from the fetched remote:
+
+```bash
+git fetch origin
+git switch -c issue/<number>-<short-slug> --no-track origin/main
+```
+
+`--no-track` keeps the branch from tracking `origin/main`. The first push is `git push -u origin HEAD`.
+
 ## Do not
 
 - Create a feature branch from a stale local `main`
 - Start new issue work while still on another issue's branch without syncing `main` first
 - Implement on `main` / `master` directly
+- `git checkout -b <name> origin/main` — that sets upstream to `origin/main`, so a plain `git push` updates `main`
 
 ## Resuming existing issue work
 

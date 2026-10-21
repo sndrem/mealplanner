@@ -21,6 +21,7 @@ export function useStoreModeShoppingView<
   loaderDueItems,
   pendingMarkAsStockSourceKey,
   showCategoryHeadings: savedShowCategoryHeadings,
+  sinkFinishedSections,
 }: {
   categoryHeadingsFetcher: FetcherWithComponents<StoreModeActionData>;
   deprioritizeBought: boolean;
@@ -29,6 +30,7 @@ export function useStoreModeShoppingView<
   loaderDueItems: TItem[];
   pendingMarkAsStockSourceKey: string;
   showCategoryHeadings: boolean;
+  sinkFinishedSections: boolean;
 }) {
   const displayDueItems = useMemo(
     () =>
@@ -56,14 +58,24 @@ export function useStoreModeShoppingView<
       })),
     [displayItemsBySourceKey, dueSectionGroups, pendingMarkAsStockSourceKey],
   );
-  const { activeSections } = useMemo(
-    () => partitionStoreModeSections(displaySectionGroups, deprioritizeBought),
-    [deprioritizeBought, displaySectionGroups],
-  );
   const showCategoryHeadings = resolveShowCategoryHeadings({
     categoryHeadingsFetcher,
     showCategoryHeadings: savedShowCategoryHeadings,
   });
+  const { activeSections } = useMemo(
+    () =>
+      partitionStoreModeSections(
+        displaySectionGroups,
+        deprioritizeBought,
+        showCategoryHeadings && sinkFinishedSections,
+      ),
+    [
+      deprioritizeBought,
+      displaySectionGroups,
+      showCategoryHeadings,
+      sinkFinishedSections,
+    ],
+  );
   const hiddenHeadingLists = useMemo(
     () =>
       showCategoryHeadings
