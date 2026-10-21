@@ -111,32 +111,29 @@ export function buildStoreModeDeprioritizeBoughtStorageKey({
   return `${STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX}:${familyId}`;
 }
 
-export function readStoreModeDeprioritizeBought(storageKey: string): boolean {
+function readStoredFlag(storageKey: string, fallback: boolean) {
   if (typeof window === "undefined") {
-    return true;
+    return fallback;
   }
 
   try {
     const raw = window.localStorage.getItem(storageKey);
 
-    if (raw === "false") {
-      return false;
-    }
-
     if (raw === "true") {
       return true;
     }
 
-    return true;
+    if (raw === "false") {
+      return false;
+    }
+
+    return fallback;
   } catch {
-    return true;
+    return fallback;
   }
 }
 
-export function writeStoreModeDeprioritizeBought(
-  storageKey: string,
-  enabled: boolean,
-) {
+function writeStoredFlag(storageKey: string, enabled: boolean) {
   if (typeof window === "undefined") {
     return;
   }
@@ -146,6 +143,17 @@ export function writeStoreModeDeprioritizeBought(
   } catch {
     // Private mode or quota exceeded — in-session state still works.
   }
+}
+
+export function readStoreModeDeprioritizeBought(storageKey: string): boolean {
+  return readStoredFlag(storageKey, true);
+}
+
+export function writeStoreModeDeprioritizeBought(
+  storageKey: string,
+  enabled: boolean,
+) {
+  writeStoredFlag(storageKey, enabled);
 }
 
 export function buildStoreModeRecipeUrgencyStorageKey({
@@ -157,30 +165,14 @@ export function buildStoreModeRecipeUrgencyStorageKey({
 }
 
 export function readStoreModeRecipeUrgency(storageKey: string): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  try {
-    return window.localStorage.getItem(storageKey) === "true";
-  } catch {
-    return false;
-  }
+  return readStoredFlag(storageKey, false);
 }
 
 export function writeStoreModeRecipeUrgency(
   storageKey: string,
   enabled: boolean,
 ) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.localStorage.setItem(storageKey, enabled ? "true" : "false");
-  } catch {
-    // Private mode or quota exceeded — in-session state still works.
-  }
+  writeStoredFlag(storageKey, enabled);
 }
 
 export function buildStoreModeSinkFinishedSectionsStorageKey({
@@ -191,31 +183,123 @@ export function buildStoreModeSinkFinishedSectionsStorageKey({
   return `${STORE_MODE_SINK_FINISHED_SECTIONS_KEY_PREFIX}:${familyId}`;
 }
 
-export function readStoreModeSinkFinishedSections(storageKey: string): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
+const SINK_FINISHED_SECTIONS_COOKIE = "mealplanner-sink-finished-sections";
 
-  try {
-    return window.localStorage.getItem(storageKey) === "true";
-  } catch {
-    return false;
-  }
+export function readStoreModeSinkFinishedSections(storageKey: string): boolean {
+  return readStoredFlag(storageKey, false);
 }
 
 export function writeStoreModeSinkFinishedSections(
   storageKey: string,
   enabled: boolean,
 ) {
-  if (typeof window === "undefined") {
+  writeStoredFlag(storageKey, enabled);
+}
+
+export function readSinkFinishedSectionsCookie(
+  cookieHeader: string | null,
+  familyId: string,
+) {
+  const raw = readCookiePair(cookieHeader, SINK_FINISHED_SECTIONS_COOKIE);
+
+  if (!raw) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(raw)) as unknown;
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return false;
+    }
+
+    return (parsed as Record<string, unknown>)[familyId] === true;
+  } catch {
+    return false;
+  }
+}
+
+export function writeSinkFinishedSectionsCookie(
+  familyId: string,
+  enabled: boolean,
+) {
+  if (typeof document === "undefined") {
     return;
   }
 
   try {
-    window.localStorage.setItem(storageKey, enabled ? "true" : "false");
+    document.cookie = serializeSinkFinishedSectionsCookie(
+      document.cookie,
+      familyId,
+      enabled,
+    );
   } catch {
-    // Private mode or quota exceeded — in-session state still works.
+    // Private mode can block cookies — in-session state still works.
   }
+}
+
+export function serializeSinkFinishedSectionsCookie(
+  cookieHeader: string | null,
+  familyId: string,
+  enabled: boolean,
+) {
+  const choices = readSinkFinishedSectionsCookieMap(cookieHeader);
+
+  if (enabled) {
+    choices[familyId] = true;
+  } else {
+    delete choices[familyId];
+  }
+
+  const secure =
+    typeof process !== "undefined" && process.env.NODE_ENV === "production"
+      ? "; Secure"
+      : "";
+
+  return `${SINK_FINISHED_SECTIONS_COOKIE}=${encodeURIComponent(JSON.stringify(choices))}; Path=/; Max-Age=34560000; SameSite=Lax${secure}`;
+}
+
+function readSinkFinishedSectionsCookieMap(cookieHeader: string | null) {
+  const raw = readCookiePair(cookieHeader, SINK_FINISHED_SECTIONS_COOKIE);
+
+  if (!raw) {
+    return {} as Record<string, true>;
+  }
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(raw)) as unknown;
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {} as Record<string, true>;
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter((entry) => entry[1] === true),
+    ) as Record<string, true>;
+  } catch {
+    return {} as Record<string, true>;
+  }
+}
+
+function readCookiePair(cookieHeader: string | null, name: string) {
+  if (!cookieHeader) {
+    return null;
+  }
+
+  for (const part of cookieHeader.split(";")) {
+    const trimmed = part.trim();
+    const separator = trimmed.indexOf("=");
+
+    if (separator === -1) {
+      continue;
+    }
+
+    if (trimmed.slice(0, separator) === name) {
+      return trimmed.slice(separator + 1);
+    }
+  }
+
+  return null;
 }
 
 export function buildStoreModeStockReminderDismissedStorageKey({
@@ -253,30 +337,14 @@ export function buildStoreOfferBriefingDismissedStorageKey({
 }
 
 export function readStoreModeStockReminderDismissed(storageKey: string): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  try {
-    return window.localStorage.getItem(storageKey) === "true";
-  } catch {
-    return false;
-  }
+  return readStoredFlag(storageKey, false);
 }
 
 export function writeStoreModeStockReminderDismissed(
   storageKey: string,
   dismissed: boolean,
 ) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.localStorage.setItem(storageKey, dismissed ? "true" : "false");
-  } catch {
-    // Private mode or quota exceeded — in-session state still works.
-  }
+  writeStoredFlag(storageKey, dismissed);
 }
 
 function compareStoreModeItemsByName(
@@ -312,85 +380,62 @@ export function partitionStoreModeSections<
   deprioritizeBought: boolean,
   sinkFinishedSections = false,
 ): { activeSections: Array<StoreModePartitionedSection<TSection>> } {
-  const activeSections = deprioritizeBought
-    ? partitionFoldedStoreModeSections(sections)
-    : sections.map((section) => ({
-        ...section,
-        boughtItems: [] as TSection["items"],
-        items: section.items,
-      }));
-
-  if (!sinkFinishedSections) {
-    return { activeSections };
-  }
-
-  return {
-    activeSections: sinkFinishedStoreModeSections(
-      activeSections,
-      deprioritizeBought,
-    ),
-  };
-}
-
-function partitionFoldedStoreModeSections<
-  TSection extends { items: Array<{ checked: boolean }> },
->(sections: TSection[]) {
-  const activeSections: Array<StoreModePartitionedSection<TSection>> = [];
-
-  for (const section of sections) {
-    const uncheckedItems = [] as TSection["items"];
-    const checkedItems = [] as TSection["items"];
-
-    for (const item of section.items) {
-      if (item.checked) {
-        checkedItems.push(item);
-      } else {
-        uncheckedItems.push(item);
-      }
-    }
-
-    if (uncheckedItems.length === 0 && checkedItems.length === 0) {
-      continue;
-    }
-
-    activeSections.push({
-      ...section,
-      boughtItems: checkedItems,
-      items: uncheckedItems,
-    });
-  }
-
-  return activeSections;
-}
-
-function sinkFinishedStoreModeSections<
-  TSection extends { items: Array<{ checked: boolean }> },
->(
-  sections: Array<StoreModePartitionedSection<TSection>>,
-  deprioritizeBought: boolean,
-) {
   const openSections: Array<StoreModePartitionedSection<TSection>> = [];
   const finishedSections: Array<StoreModePartitionedSection<TSection>> = [];
 
   for (const section of sections) {
-    if (isFinishedStoreModeSection(section, deprioritizeBought)) {
-      finishedSections.push(section);
+    const partitioned = deprioritizeBought
+      ? separateBoughtItems(section)
+      : {
+          ...section,
+          boughtItems: [] as TSection["items"],
+          items: section.items,
+        };
+
+    if (!partitioned) {
+      continue;
+    }
+
+    if (sinkFinishedSections && sectionHasNothingLeftToBuy(section)) {
+      finishedSections.push(partitioned);
     } else {
-      openSections.push(section);
+      openSections.push(partitioned);
     }
   }
 
-  return [...openSections, ...finishedSections];
+  return {
+    activeSections: [...openSections, ...finishedSections],
+  };
 }
 
-function isFinishedStoreModeSection(
-  section: { boughtItems: Array<{ checked: boolean }>; items: Array<{ checked: boolean }> },
-  deprioritizeBought: boolean,
-) {
-  if (deprioritizeBought) {
-    return section.items.length === 0 && section.boughtItems.length > 0;
+function separateBoughtItems<
+  TSection extends { items: Array<{ checked: boolean }> },
+>(section: TSection): StoreModePartitionedSection<TSection> | null {
+  const uncheckedItems = [] as TSection["items"];
+  const checkedItems = [] as TSection["items"];
+
+  for (const item of section.items) {
+    if (item.checked) {
+      checkedItems.push(item);
+    } else {
+      uncheckedItems.push(item);
+    }
   }
 
+  if (uncheckedItems.length === 0 && checkedItems.length === 0) {
+    return null;
+  }
+
+  return {
+    ...section,
+    boughtItems: checkedItems,
+    items: uncheckedItems,
+  };
+}
+
+function sectionHasNothingLeftToBuy(section: {
+  items: Array<{ checked: boolean }>;
+}) {
   return section.items.every((item) => item.checked);
 }
 

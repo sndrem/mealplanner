@@ -113,6 +113,7 @@ import {
   updateShowCategoryHeadings,
 } from "../lib/shopping-preference-write.server";
 import { updateSelectedStorePreference } from "../lib/store-write.server";
+import { serializeSinkFinishedSectionsCookie } from "../lib/shopping-store-mode-client";
 import { action, loader } from "./family-meal-plan-store-mode";
 
 const mockUser = {
@@ -296,6 +297,21 @@ describe("family store mode route", () => {
     expect(result.effectiveTripFocus).toBe("CURRENT");
     expect(result.canFocusNext).toBe(true);
     expect(result.storeOfferBriefing).toEqual({ kind: "hidden" });
+    expect(result.sinkFinishedSections).toBe(false);
+    const remembered = await loader({
+      params: {
+        familyId: "family-1",
+      },
+      request: new Request("http://localhost/families/family-1/store-mode", {
+        headers: {
+          Cookie: serializeSinkFinishedSectionsCookie(null, "family-1", true).split(
+            ";",
+          )[0],
+        },
+      }),
+    } as never);
+
+    expect(remembered.sinkFinishedSections).toBe(true);
     expect(result.dueSectionGroups[0]?.items[0]).toEqual(
       expect.objectContaining({
         firstDate: "2026-05-15",

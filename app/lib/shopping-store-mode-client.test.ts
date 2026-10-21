@@ -21,6 +21,7 @@ import {
   partitionStoreModeSections,
   flattenStoreModeSectionsForHiddenHeadings,
   splitShoppingItemsByChecked,
+  readSinkFinishedSectionsCookie,
   readStoreModeDeprioritizeBought,
   readStoreModeRecipeUrgency,
   readStoreModeSinkFinishedSections,
@@ -29,6 +30,7 @@ import {
   readStoreModeToggleQueue,
   reconcileToggleQueue,
   removeToggleOp,
+  serializeSinkFinishedSectionsCookie,
   sortStoreModeItemsByName,
   upsertToggleOp,
   writeStoreModeDeprioritizeBought,
@@ -591,6 +593,45 @@ describe("shopping-store-mode-client", () => {
     } finally {
       getItem.mockRestore();
     }
+  });
+
+  it("keeps each family's sink-finished choice in the request cookie", () => {
+    const familyOneOn = serializeSinkFinishedSectionsCookie(
+      null,
+      "family-1",
+      true,
+    );
+
+    expect(readSinkFinishedSectionsCookie(familyOneOn, "family-1")).toBe(true);
+    expect(readSinkFinishedSectionsCookie(familyOneOn, "family-2")).toBe(false);
+
+    const familyTwoOn = serializeSinkFinishedSectionsCookie(
+      familyOneOn,
+      "family-2",
+      true,
+    );
+
+    expect(readSinkFinishedSectionsCookie(familyTwoOn, "family-1")).toBe(true);
+    expect(readSinkFinishedSectionsCookie(familyTwoOn, "family-2")).toBe(true);
+
+    const familyOneOff = serializeSinkFinishedSectionsCookie(
+      familyTwoOn,
+      "family-1",
+      false,
+    );
+
+    expect(readSinkFinishedSectionsCookie(familyOneOff, "family-1")).toBe(false);
+    expect(readSinkFinishedSectionsCookie(familyOneOff, "family-2")).toBe(true);
+  });
+
+  it("reads the sink-finished cookie as off when the value is unreadable", () => {
+    expect(
+      readSinkFinishedSectionsCookie(
+        "mealplanner-sink-finished-sections=not-json",
+        "family-1",
+      ),
+    ).toBe(false);
+    expect(readSinkFinishedSectionsCookie(null, "family-1")).toBe(false);
   });
 
   it("falls back to off for invalid stored recipe-urgency values", () => {
