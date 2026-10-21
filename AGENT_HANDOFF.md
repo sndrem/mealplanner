@@ -32,4 +32,4 @@ Agent steering from the #314 retrospective is on `agent-steering-retro`, cut wit
 
 ## Next Step
 
-Review and merge the pull request for `agent-steering-retro`.
+Review and merge https://github.com/sndrem/mealplanner/pull/316.
