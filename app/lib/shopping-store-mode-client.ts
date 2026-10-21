@@ -51,6 +51,8 @@ const STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX =
   "mealplanner:store-mode-deprioritize-bought:v1";
 const STORE_MODE_RECIPE_URGENCY_KEY_PREFIX =
   "mealplanner:store-mode-recipe-urgency:v1";
+const STORE_MODE_SINK_FINISHED_SECTIONS_KEY_PREFIX =
+  "mealplanner:store-mode-sink-finished-sections:v1";
 const STORE_MODE_STOCK_REMINDER_DISMISSED_KEY_PREFIX =
   "mealplanner:store-mode-stock-reminder-dismissed:v1";
 const STORE_OFFER_BRIEFING_SEEN_KEY_PREFIX =
@@ -181,6 +183,41 @@ export function writeStoreModeRecipeUrgency(
   }
 }
 
+export function buildStoreModeSinkFinishedSectionsStorageKey({
+  familyId,
+}: {
+  familyId: string;
+}) {
+  return `${STORE_MODE_SINK_FINISHED_SECTIONS_KEY_PREFIX}:${familyId}`;
+}
+
+export function readStoreModeSinkFinishedSections(storageKey: string): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    return window.localStorage.getItem(storageKey) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function writeStoreModeSinkFinishedSections(
+  storageKey: string,
+  enabled: boolean,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(storageKey, enabled ? "true" : "false");
+  } catch {
+    // Private mode or quota exceeded — in-session state still works.
+  }
+}
+
 export function buildStoreModeStockReminderDismissedStorageKey({
   familyId,
   mealPlanId,
@@ -273,17 +310,31 @@ export function partitionStoreModeSections<
 >(
   sections: TSection[],
   deprioritizeBought: boolean,
+  sinkFinishedSections = false,
 ): { activeSections: Array<StoreModePartitionedSection<TSection>> } {
-  if (!deprioritizeBought) {
-    return {
-      activeSections: sections.map((section) => ({
+  const activeSections = deprioritizeBought
+    ? partitionFoldedStoreModeSections(sections)
+    : sections.map((section) => ({
         ...section,
         boughtItems: [] as TSection["items"],
         items: section.items,
-      })),
-    };
+      }));
+
+  if (!sinkFinishedSections) {
+    return { activeSections };
   }
 
+  return {
+    activeSections: sinkFinishedStoreModeSections(
+      activeSections,
+      deprioritizeBought,
+    ),
+  };
+}
+
+function partitionFoldedStoreModeSections<
+  TSection extends { items: Array<{ checked: boolean }> },
+>(sections: TSection[]) {
   const activeSections: Array<StoreModePartitionedSection<TSection>> = [];
 
   for (const section of sections) {
@@ -309,9 +360,40 @@ export function partitionStoreModeSections<
     });
   }
 
-  return {
-    activeSections,
-  };
+  return activeSections;
+}
+
+function sinkFinishedStoreModeSections<
+  TSection extends { items: Array<{ checked: boolean }> },
+>(
+  sections: Array<StoreModePartitionedSection<TSection>>,
+  deprioritizeBought: boolean,
+) {
+  const openSections: Array<StoreModePartitionedSection<TSection>> = [];
+  const finishedSections: Array<StoreModePartitionedSection<TSection>> = [];
+
+  for (const section of sections) {
+    if (isFinishedStoreModeSection(section, deprioritizeBought)) {
+      finishedSections.push(section);
+    } else {
+      openSections.push(section);
+    }
+  }
+
+  return [...openSections, ...finishedSections];
+}
+
+function isFinishedStoreModeSection(
+  section: { boughtItems: Array<{ checked: boolean }>; items: Array<{ checked: boolean }> },
+  deprioritizeBought: boolean,
+) {
+  if (deprioritizeBought) {
+    return section.items.length === 0 && section.boughtItems.length > 0;
+  }
+
+  return (
+    section.items.length > 0 && section.items.every((item) => item.checked)
+  );
 }
 
 export function splitShoppingItemsByChecked<TItem extends { checked: boolean }>(

@@ -2,36 +2,34 @@
 
 ## Current Objective
 
-Ship the store-mode complexity split for issue #311. Branch `issue/311-store-mode-complexity` was cut from current `origin/main` (`8150fd5`) after `git pull --ff-only`.
+Sink finished store-mode sections below open ones for issue #314. Branch `issue/314-sink-finished-sections` was cut from current `origin/main` (`c279d1e`). Local `main` had diverged (ahead 1, behind 1), so this branch was not fast-forwarded from local `main`.
 
 ## Completed
 
-- Opened GitHub issue #311.
-- Split the store-mode `action` into one handler per intent in `app/lib/store-mode-action.server.ts`. The route action only dispatches.
-- Moved screen state into hooks and the page JSX into store-mode components. Optimistic updates are unchanged.
-- Fallow no longer flags `FamilyMealPlanStoreModeRoute` or the store-mode `action`. Functions above the default complexity threshold went from 95 to 92.
-- Added `docs/agents/` so agents know how this repo uses GitHub issues, triage labels, and domain docs. `AGENTS.md` points at those files.
+- Store mode has a Visning chip, **Ferdige seksjoner nederst**, immediately after Skjul kjøpte varer. It starts off and is remembered per family in local storage.
+- With the choice on and section headings shown, open sections stay in store order and finished sections follow in store order. A section is finished only when this trip has nothing left to buy.
+- Hidden headings still use today's flat order. The shared list and the family shopping page are unchanged.
+- Checked Wraps in the live store-mode trip to confirm the section sank, then undid it. The item is unchecked again. That check and undo are in the family's handlehistorikk.
 
 ## Files To Read First
 
-- `app/routes/family-meal-plan-store-mode.tsx` — thin route: loader, action dispatch, composition
-- `app/lib/store-mode-action.server.ts` — intent handlers
-- `docs/agents/issue-tracker.md` — GitHub issue conventions for this repo
+- `app/lib/shopping-store-mode-client.ts` — partition flag and the remembered boolean
+- `app/lib/use-store-mode-shopping-view.ts` — applies the flag only while headings are shown
+- `app/components/store-mode-trip-panel.tsx` — chip placement in Visning
 
 ## Validation
 
-- `npm run prisma:generate` — passed
-- `npm run lint` — passed
-- `npm run test:run` — 763 tests passed
+- `npx vitest run app/lib/shopping-store-mode-client.test.ts` — 52 tests passed
+- `npx eslint` on the touched store-mode files — passed
 - `npm run typecheck` — passed
-- `npm run build` — passed earlier in this branch
-- Logged-in store mode was not clicked through. This browser had no session.
+- `npm run test:run` — 773 tests passed
+- Logged-in store mode: chip sits after Skjul kjøpte varer, starts off, shows pressed when on, survives reload, and sinks Bakst og brød after its last item is checked. Undo puts that section back. The choice was turned off again afterward.
 
 ## Open Items
 
-- `StoreModeShoppingItemCard` is still the next complexity hotspot and is out of scope for #311.
-- Untracked `temp-delete-later/` drafts are not part of this change.
+- The live trip's handlehistorikk now includes a Wraps check and uncheck from that verification.
+- Hidden headings, fold off, and a second family were covered by the client tests, not in the browser.
 
 ## Next Step
 
-Review the pull request for issue #311, then merge. GitHub will close the issue from `Closes #311`.
+Review and open a pull request for issue #314.

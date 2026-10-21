@@ -11,6 +11,7 @@ import { ShoppingGroceryGroupingToggle } from "./shopping-grocery-grouping-toggl
 import { StoreModeDeprioritizeBoughtToggle } from "./store-mode-deprioritize-bought-toggle";
 import { StoreModeRecipeUrgencyToggle } from "./store-mode-recipe-urgency-toggle";
 import { StoreModeShoppingViewToggle } from "./store-mode-shopping-view-toggle";
+import { StoreModeSinkFinishedSectionsToggle } from "./store-mode-sink-finished-sections-toggle";
 
 interface StoreModeTripPanelProps {
   canFocusNext: boolean;
@@ -23,6 +24,7 @@ interface StoreModeTripPanelProps {
   mealPlanTitle: string;
   onDeprioritizeBoughtChange: (enabled: boolean) => void;
   onRecipeUrgencyChange: (enabled: boolean) => void;
+  onSinkFinishedSectionsChange: (enabled: boolean) => void;
   onShoppingViewChange: (view: StoreModeShoppingView) => void;
   onShowCategoryHeadingsChange: (showCategoryHeadings: boolean) => void;
   scanTripFocus: StoreModeTripFocusScanValue;
@@ -32,6 +34,7 @@ interface StoreModeTripPanelProps {
   showCategoryHeadings: boolean;
   showRecipeUrgency: boolean;
   showViewControls: boolean;
+  sinkFinishedSections: boolean;
   stores: Array<{ id: string; name: string }>;
   tripFocusFieldError?: string;
   tripFocusValue: string;
@@ -48,6 +51,7 @@ export function StoreModeTripPanel({
   mealPlanTitle,
   onDeprioritizeBoughtChange,
   onRecipeUrgencyChange,
+  onSinkFinishedSectionsChange,
   onShoppingViewChange,
   onShowCategoryHeadingsChange,
   scanTripFocus,
@@ -57,6 +61,7 @@ export function StoreModeTripPanel({
   showCategoryHeadings,
   showRecipeUrgency,
   showViewControls,
+  sinkFinishedSections,
   stores,
   tripFocusFieldError,
   tripFocusValue,
@@ -151,6 +156,10 @@ export function StoreModeTripPanel({
             <StoreModeDeprioritizeBoughtToggle
               enabled={deprioritizeBought}
               onChange={onDeprioritizeBoughtChange}
+            />
+            <StoreModeSinkFinishedSectionsToggle
+              enabled={sinkFinishedSections}
+              onChange={onSinkFinishedSectionsChange}
             />
             <StoreModeRecipeUrgencyToggle
               enabled={showRecipeUrgency}

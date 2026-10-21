@@ -183,6 +183,7 @@ export default function FamilyMealPlanStoreModeRoute({
     loaderDueItems: dueList.loaderDueItems,
     pendingMarkAsStockSourceKey: pending.pendingMarkAsStockSourceKey,
     showCategoryHeadings: loaderData.showCategoryHeadings,
+    sinkFinishedSections: preferences.sinkFinishedSections,
   });
   const undo = useStoreModeUndoCheck({
     displayItemsBySourceKey,
@@ -242,6 +243,9 @@ export default function FamilyMealPlanStoreModeRoute({
             onDeprioritizeBoughtChange={preferences.handleDeprioritizeBoughtChange}
             onRecipeUrgencyChange={preferences.handleRecipeUrgencyChange}
             onShoppingViewChange={preferences.handleShoppingViewChange}
+            onSinkFinishedSectionsChange={
+              preferences.handleSinkFinishedSectionsChange
+            }
             onShowCategoryHeadingsChange={
               shoppingView.handleShowCategoryHeadingsChange
             }
@@ -252,6 +256,7 @@ export default function FamilyMealPlanStoreModeRoute({
             showCategoryHeadings={shoppingView.showCategoryHeadings}
             showRecipeUrgency={preferences.showRecipeUrgency}
             showViewControls={shoppingView.displaySectionGroups.length > 0}
+            sinkFinishedSections={preferences.sinkFinishedSections}
             stores={loaderData.stores}
             tripFocusFieldError={scan.tripFocusFieldError}
             tripFocusValue={scan.tripFocusValue}

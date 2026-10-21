@@ -3,15 +3,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildStoreModeDeprioritizeBoughtStorageKey,
   buildStoreModeRecipeUrgencyStorageKey,
+  buildStoreModeSinkFinishedSectionsStorageKey,
   buildStoreModeStockReminderDismissedStorageKey,
   buildStoreModeViewStorageKey,
   readStoreModeDeprioritizeBought,
   readStoreModeRecipeUrgency,
   readStoreModeShoppingView,
+  readStoreModeSinkFinishedSections,
   readStoreModeStockReminderDismissed,
   writeStoreModeDeprioritizeBought,
   writeStoreModeRecipeUrgency,
   writeStoreModeShoppingView,
+  writeStoreModeSinkFinishedSections,
   writeStoreModeStockReminderDismissed,
   type StoreModeShoppingView,
 } from "./shopping-store-mode-client";
@@ -35,6 +38,10 @@ export function useStoreModePreferences({
     () => buildStoreModeRecipeUrgencyStorageKey({ familyId }),
     [familyId],
   );
+  const sinkFinishedSectionsStorageKey = useMemo(
+    () => buildStoreModeSinkFinishedSectionsStorageKey({ familyId }),
+    [familyId],
+  );
   const stockReminderDismissedStorageKey = useMemo(
     () =>
       buildStoreModeStockReminderDismissedStorageKey({
@@ -51,6 +58,9 @@ export function useStoreModePreferences({
   );
   const [showRecipeUrgency, setShowRecipeUrgency] = useState(() =>
     readStoreModeRecipeUrgency(recipeUrgencyStorageKey),
+  );
+  const [sinkFinishedSections, setSinkFinishedSections] = useState(() =>
+    readStoreModeSinkFinishedSections(sinkFinishedSectionsStorageKey),
   );
   const [stockReminderDismissed, setStockReminderDismissed] = useState(() =>
     readStoreModeStockReminderDismissed(stockReminderDismissedStorageKey),
@@ -76,6 +86,16 @@ export function useStoreModePreferences({
     },
     [recipeUrgencyStorageKey],
   );
+  const handleSinkFinishedSectionsChange = useCallback(
+    (enabled: boolean) => {
+      setSinkFinishedSections(enabled);
+      writeStoreModeSinkFinishedSections(
+        sinkFinishedSectionsStorageKey,
+        enabled,
+      );
+    },
+    [sinkFinishedSectionsStorageKey],
+  );
   const handleDismissStockReminder = useCallback(() => {
     setStockReminderDismissed(true);
     writeStoreModeStockReminderDismissed(stockReminderDismissedStorageKey, true);
@@ -100,6 +120,11 @@ export function useStoreModePreferences({
     setShowRecipeUrgency(readStoreModeRecipeUrgency(recipeUrgencyStorageKey));
   }, [recipeUrgencyStorageKey]);
   useEffect(() => {
+    setSinkFinishedSections(
+      readStoreModeSinkFinishedSections(sinkFinishedSectionsStorageKey),
+    );
+  }, [sinkFinishedSectionsStorageKey]);
+  useEffect(() => {
     setStockReminderDismissed(
       readStoreModeStockReminderDismissed(stockReminderDismissedStorageKey),
     );
@@ -112,8 +137,10 @@ export function useStoreModePreferences({
     handleRecipeUrgencyChange,
     handleRestoreStockReminder,
     handleShoppingViewChange,
+    handleSinkFinishedSectionsChange,
     shoppingView,
     showRecipeUrgency,
+    sinkFinishedSections,
     stockReminderDismissed,
   };
 }
