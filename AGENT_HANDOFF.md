@@ -35,4 +35,4 @@ Issue #314 is implemented on `issue/314-sink-finished-sections`, cut from `origi
 
 ## Next Step
 
-Open the pull request for issue #314. It closes when that pull request merges.
+Review and merge https://github.com/sndrem/mealplanner/pull/315. Issue #314 closes when that pull request merges.
