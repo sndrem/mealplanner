@@ -31,3 +31,7 @@ _Avoid_: open category, lifted category
 **Finished section**:
 A section whose items on the current trip are all checked.
 _Avoid_: empty category, empty section
+
+**Tag**:
+A word on a recipe, such as middag or rask. The same word on a family recipe and a standard recipe is the same tag.
+_Avoid_: keyword, category, label
