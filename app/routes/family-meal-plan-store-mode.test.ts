@@ -237,10 +237,6 @@ describe("family store mode route", () => {
         title: "Langhelg",
         updatedAt: new Date("2026-05-01T12:00:00.000Z"),
       },
-      progress: {
-        checkedCount: 0,
-        totalCount: 1,
-      },
       selectedStore: {
         id: "store-1",
         name: "Meny",
@@ -357,10 +353,6 @@ describe("family store mode route", () => {
         title: "Langhelg",
         updatedAt: new Date("2026-05-01T12:00:00.000Z"),
       },
-      progress: {
-        checkedCount: 0,
-        totalCount: 0,
-      },
       selectedStore: {
         id: "store-1",
         name: "Meny",
@@ -442,10 +434,6 @@ describe("family store mode route", () => {
         status: "DRAFT",
         title: "Langhelg",
         updatedAt: new Date("2026-05-01T12:00:00.000Z"),
-      },
-      progress: {
-        checkedCount: 0,
-        totalCount: 0,
       },
       selectedStore: {
         id: "store-1",

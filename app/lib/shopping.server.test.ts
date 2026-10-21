@@ -1750,10 +1750,6 @@ describe("shopping.server", () => {
       "Paprika",
       "Yoghurt",
     ]);
-    expect(result.progress).toEqual({
-      checkedCount: 0,
-      totalCount: 3,
-    });
     expect(result.includedMealPlans).toEqual([
       {
         id: "meal-plan-1",
@@ -1891,10 +1887,6 @@ describe("shopping.server", () => {
     expect(
       result.dueSectionGroups.flatMap((section) => section.items.map((item) => item.name)),
     ).toEqual(["Wraps", "Paprika", "Yoghurt"]);
-    expect(result.progress).toEqual({
-      checkedCount: 0,
-      totalCount: 3,
-    });
   });
 
   it("excludes past meals from the trip list", async () => {
@@ -2713,7 +2705,7 @@ describe("shopping.server", () => {
       "meal-plan-1",
       "meal-plan-2",
     ]);
-    expect(result.progress.totalCount).toBe(2);
+    expect(result.dueSectionGroups.flatMap((section) => section.items)).toHaveLength(2);
   });
 
   it("limits store mode to the covering meal plan for CURRENT trip focus", async () => {

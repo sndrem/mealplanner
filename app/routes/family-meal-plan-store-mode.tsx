@@ -123,7 +123,6 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       updatedAt: result.mealPlan.updatedAt.toISOString(),
     },
     notice: getStoreModeNotice(request),
-    progress: result.progress,
     selectedStore: result.selectedStore,
     shoppingHistory,
     sinkFinishedSections: readSinkFinishedSectionsCookie(
@@ -185,7 +184,6 @@ export default function FamilyMealPlanStoreModeRoute({
     deprioritizeBought: preferences.deprioritizeBought,
     displayItemsBySourceKey,
     dueSectionGroups: dueList.dueSectionGroups,
-    loaderDueItems: dueList.loaderDueItems,
     pendingMarkAsStockSourceKey: pending.pendingMarkAsStockSourceKey,
     showCategoryHeadings: loaderData.showCategoryHeadings,
     sinkFinishedSections: preferences.sinkFinishedSections,
@@ -230,11 +228,11 @@ export default function FamilyMealPlanStoreModeRoute({
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-5">
         <StoreModeScanBar
-          checkedCount={shoppingView.displayProgress.checkedCount}
+          checkedCount={shoppingView.progress.checkedCount}
           focusLabel={getStoreModeTripFocusScanLabel(scan.scanTripFocus)}
           isCelebrating={shoppingView.isCelebrating}
           storeName={scan.scanStoreName}
-          totalCount={shoppingView.displayProgress.totalCount}
+          totalCount={shoppingView.progress.totalCount}
         >
           <StoreModeTripPanel
             canFocusNext={loaderData.canFocusNext}
@@ -260,7 +258,7 @@ export default function FamilyMealPlanStoreModeRoute({
             shoppingView={preferences.shoppingView}
             showCategoryHeadings={shoppingView.showCategoryHeadings}
             showRecipeUrgency={preferences.showRecipeUrgency}
-            showViewControls={shoppingView.displaySectionGroups.length > 0}
+            showViewControls={shoppingView.sectionCount > 0}
             sinkFinishedSections={preferences.sinkFinishedSections}
             stores={loaderData.stores}
             tripFocusFieldError={scan.tripFocusFieldError}
@@ -280,7 +278,7 @@ export default function FamilyMealPlanStoreModeRoute({
           categoryFetcherError={formFeedback.categoryFetcherError}
           categoryInteractionSourceKey={formFeedback.categoryInteractionSourceKey}
           deprioritizeBought={preferences.deprioritizeBought}
-          displaySectionCount={shoppingView.displaySectionGroups.length}
+          displaySectionCount={shoppingView.sectionCount}
           hasUncheckedDueItems={shoppingView.hasUncheckedDueItems}
           hasUnusedStockIngredients={
             loaderData.stockIngredientsForStoreMode.length > 0

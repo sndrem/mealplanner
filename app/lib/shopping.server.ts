@@ -339,11 +339,6 @@ interface ProjectedShoppingStoreGroup {
   store: StoreSummary;
 }
 
-interface StoreModeProgress {
-  checkedCount: number;
-  totalCount: number;
-}
-
 export async function loadShoppingMealPlan({
   familyId,
   mealPlanId,
@@ -1015,7 +1010,6 @@ export async function getMealPlanStoreModeData({
     groceryGrouping,
     showCategoryHeadings,
     mealPlan: shoppingDateOwnerPlan,
-    progress: buildStoreModeProgress(mergedDueItems),
     selectedStore,
     stockIngredientsForStoreMode,
     stores: stores.map((store) => ({
@@ -1547,13 +1541,6 @@ function buildStoreModeSectionGroups({
       return left.displayName.localeCompare(right.displayName, "nb");
     })
     .map(({ sortOrder: _sortOrder, ...section }) => section);
-}
-
-function buildStoreModeProgress(items: ProjectedShoppingItem[]): StoreModeProgress {
-  return {
-    checkedCount: items.filter((item) => item.checked).length,
-    totalCount: items.length,
-  };
 }
 
 function buildStoreSectionsByStoreId(stores: ShoppingStore[]) {

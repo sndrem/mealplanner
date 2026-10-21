@@ -1,14 +1,10 @@
 import { useCallback, useMemo } from "react";
 import type { FetcherWithComponents } from "react-router";
 
-import { useShoppingListCompletionCelebration } from "./use-shopping-list-completion-celebration";
-import {
-  computeStoreModeProgress,
-  flattenStoreModeSectionsForHiddenHeadings,
-  partitionStoreModeSections,
-} from "./shopping-store-mode-client";
+import { presentStoreModeTrip } from "./present-store-mode-trip";
 import type { StoreModeActionData } from "./store-mode-action-data";
 import { resolveShowCategoryHeadings } from "./store-mode-route-state";
+import { useShoppingListCompletionCelebration } from "./use-shopping-list-completion-celebration";
 
 export function useStoreModeShoppingView<
   TItem extends { checked: boolean; name: string; sourceKey: string },
@@ -18,7 +14,6 @@ export function useStoreModeShoppingView<
   deprioritizeBought,
   displayItemsBySourceKey,
   dueSectionGroups,
-  loaderDueItems,
   pendingMarkAsStockSourceKey,
   showCategoryHeadings: savedShowCategoryHeadings,
   sinkFinishedSections,
@@ -27,61 +22,35 @@ export function useStoreModeShoppingView<
   deprioritizeBought: boolean;
   displayItemsBySourceKey: { get(sourceKey: string): TItem | undefined };
   dueSectionGroups: TSection[];
-  loaderDueItems: TItem[];
   pendingMarkAsStockSourceKey: string;
   showCategoryHeadings: boolean;
   sinkFinishedSections: boolean;
 }) {
-  const displayDueItems = useMemo(
-    () =>
-      overlayStoreModeItems(
-        loaderDueItems,
-        displayItemsBySourceKey,
-        pendingMarkAsStockSourceKey,
-      ),
-    [displayItemsBySourceKey, loaderDueItems, pendingMarkAsStockSourceKey],
-  );
-  const displayProgress = useMemo(
-    () => computeStoreModeProgress(displayDueItems),
-    [displayDueItems],
-  );
-  const { isCelebrating } = useShoppingListCompletionCelebration(displayProgress);
-  const displaySectionGroups = useMemo(
-    () =>
-      dueSectionGroups.map((section) => ({
-        ...section,
-        items: overlayStoreModeItems(
-          section.items,
-          displayItemsBySourceKey,
-          pendingMarkAsStockSourceKey,
-        ),
-      })),
-    [displayItemsBySourceKey, dueSectionGroups, pendingMarkAsStockSourceKey],
-  );
   const showCategoryHeadings = resolveShowCategoryHeadings({
     categoryHeadingsFetcher,
     showCategoryHeadings: savedShowCategoryHeadings,
   });
-  const { activeSections } = useMemo(
+  const presentedTrip = useMemo(
     () =>
-      partitionStoreModeSections(
-        displaySectionGroups,
+      presentStoreModeTrip({
+        checkedItemsBySourceKey: displayItemsBySourceKey,
         deprioritizeBought,
-        showCategoryHeadings && sinkFinishedSections,
-      ),
+        pendingMarkAsStockSourceKey,
+        sections: dueSectionGroups,
+        showCategoryHeadings,
+        sinkFinishedSections,
+      }),
     [
       deprioritizeBought,
-      displaySectionGroups,
+      displayItemsBySourceKey,
+      dueSectionGroups,
+      pendingMarkAsStockSourceKey,
       showCategoryHeadings,
       sinkFinishedSections,
     ],
   );
-  const hiddenHeadingLists = useMemo(
-    () =>
-      showCategoryHeadings
-        ? null
-        : flattenStoreModeSectionsForHiddenHeadings(activeSections),
-    [activeSections, showCategoryHeadings],
+  const { isCelebrating } = useShoppingListCompletionCelebration(
+    presentedTrip.progress,
   );
   const handleShowCategoryHeadingsChange = useCallback(
     (nextShowCategoryHeadings: boolean) => {
@@ -95,36 +64,18 @@ export function useStoreModeShoppingView<
     },
     [categoryHeadingsFetcher],
   );
-  const hasUncheckedDueItems = activeSections.some(
+  const hasUncheckedDueItems = presentedTrip.activeSections.some(
     (section) => section.items.length > 0,
   );
 
   return {
-    activeSections,
-    displayProgress,
-    displaySectionGroups,
+    activeSections: presentedTrip.activeSections,
     handleShowCategoryHeadingsChange,
     hasUncheckedDueItems,
-    hiddenHeadingLists,
+    hiddenHeadingLists: presentedTrip.hiddenHeadingLists,
     isCelebrating,
+    progress: presentedTrip.progress,
+    sectionCount: presentedTrip.sectionCount,
     showCategoryHeadings,
   };
-}
-
-function overlayStoreModeItems<TItem extends { sourceKey: string }>(
-  items: TItem[],
-  displayItemsBySourceKey: { get(sourceKey: string): TItem | undefined },
-  pendingMarkAsStockSourceKey: string,
-) {
-  const displayItems = items.map(
-    (item) => displayItemsBySourceKey.get(item.sourceKey) ?? item,
-  );
-
-  if (!pendingMarkAsStockSourceKey) {
-    return displayItems;
-  }
-
-  return displayItems.filter(
-    (item) => item.sourceKey !== pendingMarkAsStockSourceKey,
-  );
 }
