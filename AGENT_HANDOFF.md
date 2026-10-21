@@ -8,6 +8,7 @@ Sink finished store-mode sections below open ones for issue #314. Branch `issue/
 
 - Store mode has a Visning chip, **Ferdige seksjoner nederst**, immediately after Skjul kjøpte varer. It starts off and is remembered per family in local storage.
 - With the choice on and section headings shown, open sections stay in store order and finished sections follow in store order. A section is finished when this trip has nothing left to buy, including a section whose last item was removed while bought items stay visible.
+- The saved choice is read in a layout effect so it is applied before the hydrated list paints.
 - Hidden headings still use today's flat order. The shared list and the family shopping page are unchanged.
 - Checked Wraps in the live store-mode trip to confirm the section sank, then undid it. The item is unchecked again. That check and undo are in the family's handlehistorikk.
 
@@ -22,13 +23,13 @@ Sink finished store-mode sections below open ones for issue #314. Branch `issue/
 - `npx vitest run app/lib/shopping-store-mode-client.test.ts` — 53 tests passed
 - `npx eslint` on the touched store-mode files — passed
 - `npm run typecheck` — passed
-- `npm run test:run` — 773 tests passed
+- `npm run test:run` — 774 tests passed
 - Logged-in store mode: chip sits after Skjul kjøpte varer, starts off, shows pressed when on, survives reload, and sinks Bakst og brød after its last item is checked. Undo puts that section back. The choice was turned off again afterward.
 
 ## Open Items
 
 - The live trip's handlehistorikk now includes a Wraps check and uncheck from that verification.
-- A full reload still paints store order first when the choice is on, then applies the stored value. Local storage is not available during server render. The other view chips work the same way.
+- Server HTML still renders the choice off, because local storage is not available during the server render. The layout effect applies the saved choice before the hydrated list paints.
 - Hidden headings, fold off, and a second family were covered by the client tests, not in the browser.
 
 ## Next Step

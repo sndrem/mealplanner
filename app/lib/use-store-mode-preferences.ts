@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 import {
   buildStoreModeDeprioritizeBoughtStorageKey,
@@ -119,7 +119,8 @@ export function useStoreModePreferences({
   useEffect(() => {
     setShowRecipeUrgency(readStoreModeRecipeUrgency(recipeUrgencyStorageKey));
   }, [recipeUrgencyStorageKey]);
-  useEffect(() => {
+  useLayoutEffect(() => {
+    // Read before paint so a reload does not leave finished sections in the walk.
     setSinkFinishedSections(
       readStoreModeSinkFinishedSections(sinkFinishedSectionsStorageKey),
     );
