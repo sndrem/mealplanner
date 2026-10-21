@@ -9,7 +9,11 @@ import {
   hasActiveRecipeSearch,
   normalizeRecipeSearchQuery,
   recipeMatchesSearch,
+  recipeCatalogReloadSkipped,
   recipeMatchesTags,
+  resolveRecipeListFilter,
+  visibleFamilyRecipes,
+  withRecipeListFilter,
 } from "./recipe-list-search";
 
 const sampleRecipe = {
@@ -110,6 +114,125 @@ describe("deriveRecipeTagOptions", () => {
     expect(
       deriveRecipeTagOptions([{ tags: ["  ", "fisk", "fisk"] }]),
     ).toEqual([{ count: 2, tag: "fisk" }]);
+  });
+});
+
+describe("resolveRecipeListFilter", () => {
+  it("drops a tag that no recipe has and keeps the rest of the address", () => {
+    expect(
+      resolveRecipeListFilter("?notice=recipe-created&tag=middag&tag=borte", [
+        { tags: ["middag"] },
+        { tags: ["rask"] },
+      ]),
+    ).toEqual({
+      query: "",
+      search: "?notice=recipe-created&tag=middag",
+      selectedTags: ["middag"],
+    });
+  });
+
+  it("treats Middag and middag as different tags", () => {
+    expect(
+      resolveRecipeListFilter("?tag=Middag&tag=middag", [{ tags: ["Middag"] }]),
+    ).toEqual({
+      query: "",
+      search: "?tag=Middag",
+      selectedTags: ["Middag"],
+    });
+  });
+
+  it("keeps one copy of a repeated tag", () => {
+    expect(
+      resolveRecipeListFilter("?tag=middag&tag=middag", [{ tags: ["middag"] }]),
+    ).toEqual({
+      query: "",
+      search: "?tag=middag",
+      selectedTags: ["middag"],
+    });
+  });
+});
+
+describe("withRecipeListFilter", () => {
+  it("replaces the text and selected tags and keeps other params", () => {
+    expect(
+      withRecipeListFilter("?notice=recipe-created&q=suppe&tag=ovn", {
+        query: "taco",
+        selectedTags: ["middag", "rask"],
+      }),
+    ).toBe("?notice=recipe-created&q=taco&tag=middag&tag=rask");
+  });
+
+  it("omits the text and tag params when the filter is empty", () => {
+    expect(
+      withRecipeListFilter("?q=taco&tag=middag", {
+        query: "",
+        selectedTags: [],
+      }),
+    ).toBe("");
+  });
+});
+
+describe("visibleFamilyRecipes", () => {
+  it("keeps a pending recipe that the tag filter would hide", () => {
+    const pending = {
+      description: null,
+      id: "optimistic:pending-add",
+      tags: [] as string[],
+      title: "Kyllingwok",
+    };
+
+    expect(
+      visibleFamilyRecipes(
+        [
+          {
+            description: "Pai",
+            id: "pie",
+            tags: ["middag"],
+            title: "Familiepai",
+          },
+          {
+            description: "Rask",
+            id: "taco",
+            tags: ["middag", "rask"],
+            title: "Kyllingtaco",
+          },
+        ],
+        { query: "", selectedTags: ["rask"] },
+        pending,
+      ).map((recipe) => recipe.title),
+    ).toEqual(["Kyllingwok", "Kyllingtaco"]);
+  });
+});
+
+describe("recipeCatalogReloadSkipped", () => {
+  it("skips a reload when only the text or tags change", () => {
+    expect(
+      recipeCatalogReloadSkipped(
+        new URL(
+          "http://localhost/families/family-1/recipes?notice=recipe-created",
+        ),
+        new URL(
+          "http://localhost/families/family-1/recipes?notice=recipe-created&q=taco&tag=middag",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("reloads when the address changes beyond the filter", () => {
+    expect(
+      recipeCatalogReloadSkipped(
+        new URL("http://localhost/families/family-1/recipes"),
+        new URL(
+          "http://localhost/families/family-1/recipes?notice=recipe-created",
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      recipeCatalogReloadSkipped(
+        new URL("http://localhost/families/family-1/recipes?q=taco"),
+        new URL("http://localhost/families/family-1/recipes/recipe-1?q=taco"),
+      ),
+    ).toBe(false);
   });
 });
 

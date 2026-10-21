@@ -1,5 +1,11 @@
-import { useMemo, useRef, useState } from "react";
-import { Form, Link, useNavigation } from "react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Form,
+  Link,
+  useNavigation,
+  useSearchParams,
+  type ShouldRevalidateFunctionArgs,
+} from "react-router";
 
 import {
   FamilyFormErrorBanner,
@@ -14,8 +20,13 @@ import { RecipePickerMedia } from "../components/recipe-picker-card";
 import { getSafeRedirectTo } from "../lib/auth.server";
 import { compressRecipeCoverImage } from "../lib/recipe-cover-image";
 import {
-  filterRecipeList,
+  deriveRecipeTagOptions,
+  filterRecipePickerList,
   hasActiveRecipeSearch,
+  recipeCatalogReloadSkipped,
+  resolveRecipeListFilter,
+  visibleFamilyRecipes,
+  withRecipeListFilter,
 } from "../lib/recipe-list-search";
 import { getRecipeManagementData } from "../lib/recipe.server";
 import {
@@ -134,12 +145,29 @@ export async function action({ params, request }: FamilyRouteArgs) {
   } satisfies RecipesActionData;
 }
 
+export function shouldRevalidate({
+  currentUrl,
+  defaultShouldRevalidate,
+  formMethod,
+  nextUrl,
+}: ShouldRevalidateFunctionArgs) {
+  if (formMethod && formMethod !== "GET") {
+    return defaultShouldRevalidate;
+  }
+
+  if (recipeCatalogReloadSkipped(currentUrl, nextUrl)) {
+    return false;
+  }
+
+  return defaultShouldRevalidate;
+}
+
 export default function FamilyRecipesRoute({
   actionData,
   loaderData,
 }: FamilyRecipesRouteProps) {
   const navigation = useNavigation();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [createCoverPreviewUrl, setCreateCoverPreviewUrl] = useState<
     string | null
   >(null);
@@ -151,22 +179,62 @@ export default function FamilyRecipesRoute({
     : null;
   const pendingIntent = navigation.formData?.get("intent");
   const canManageRecipes = loaderData.userRole === "ADMIN";
-  const isSearchActive = hasActiveRecipeSearch(searchQuery);
-  const filteredFamilyRecipes = useMemo(
-    () => filterRecipeList(loaderData.familyRecipes, searchQuery),
-    [loaderData.familyRecipes, searchQuery],
+  const catalog = useMemo(
+    () => [...loaderData.familyRecipes, ...loaderData.globalRecipes],
+    [loaderData.familyRecipes, loaderData.globalRecipes],
   );
+  const currentSearch = searchParams.toString();
+  const resolvedFilter = useMemo(
+    () => resolveRecipeListFilter(currentSearch, catalog),
+    [catalog, currentSearch],
+  );
+  const tagOptions = useMemo(() => deriveRecipeTagOptions(catalog), [catalog]);
+  const [query, setQuery] = useState(resolvedFilter.query);
+  const [selectedTags, setSelectedTags] = useState(resolvedFilter.selectedTags);
+  const isSearchActive =
+    hasActiveRecipeSearch(query) || selectedTags.length > 0;
   const filteredGlobalRecipes = useMemo(
-    () => filterRecipeList(loaderData.globalRecipes, searchQuery),
-    [loaderData.globalRecipes, searchQuery],
+    () =>
+      filterRecipePickerList(loaderData.globalRecipes, {
+        query,
+        selectedTags,
+      }),
+    [loaderData.globalRecipes, query, selectedTags],
   );
+
+  useEffect(() => {
+    const nextSearch = resolvedFilter.search.replace(/^\?/, "");
+
+    if (currentSearch === nextSearch) {
+      return;
+    }
+
+    setSearchParams(new URLSearchParams(nextSearch), {
+      preventScrollReset: true,
+      replace: true,
+    });
+  }, [currentSearch, resolvedFilter.search, setSearchParams]);
+
+  const applyFilter = (filter: { query: string; selectedTags: string[] }) => {
+    const nextSearch = withRecipeListFilter(currentSearch, filter).replace(
+      /^\?/,
+      "",
+    );
+
+    setSearchParams(new URLSearchParams(nextSearch), {
+      preventScrollReset: true,
+      replace: true,
+    });
+  };
   const pendingCreateTitle =
     navigation.state !== "idle" && pendingIntent === "create-recipe"
       ? String(navigation.formData?.get("title") ?? "").trim()
       : "";
-  const displayFamilyRecipes = pendingCreateTitle
-    ? [
-        {
+  const displayFamilyRecipes = visibleFamilyRecipes(
+    loaderData.familyRecipes,
+    { query, selectedTags },
+    pendingCreateTitle
+      ? {
           _count: {
             ingredients: 1,
             mealPlanEntries: 0,
@@ -177,10 +245,9 @@ export default function FamilyRecipesRoute({
           prepMinutes: null,
           tags: [] as string[],
           title: pendingCreateTitle,
-        },
-        ...filteredFamilyRecipes,
-      ]
-    : filteredFamilyRecipes;
+        }
+      : null,
+  );
   const createValues =
     actionData?.intent === "create-recipe" && actionData.createValues
       ? actionData.createValues
@@ -437,27 +504,71 @@ export default function FamilyRecipesRoute({
             htmlFor="recipe-search"
           >
             Søk oppskrifter
-            <div className="mt-2 flex gap-2">
-              <input
-                autoComplete="off"
-                className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/20"
-                id="recipe-search"
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="For eksempel tomatsuppe"
-                type="search"
-                value={searchQuery}
-              />
-              {isSearchActive ? (
-                <button
-                  className="shrink-0 rounded-2xl border border-line px-4 py-3 text-sm font-medium text-muted transition hover:bg-page"
-                  onClick={() => setSearchQuery("")}
-                  type="button"
-                >
-                  Nullstill
-                </button>
-              ) : null}
-            </div>
+            <input
+              autoComplete="off"
+              className="mt-2 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/20"
+              id="recipe-search"
+              onChange={(event) => {
+                const nextQuery = event.target.value;
+                setQuery(nextQuery);
+                applyFilter({
+                  query: nextQuery,
+                  selectedTags,
+                });
+              }}
+              placeholder="For eksempel tomatsuppe"
+              type="search"
+              value={query}
+            />
           </label>
+          {tagOptions.length > 0 ? (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-muted">Filtrer på tag</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {tagOptions.map(({ count, tag }) => {
+                  const isSelected = selectedTags.includes(tag);
+
+                  return (
+                    <button
+                      key={tag}
+                      aria-pressed={isSelected}
+                      className={
+                        isSelected
+                          ? "rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-white"
+                          : "rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted transition hover:bg-line"
+                      }
+                      onClick={() => {
+                        const nextTags = isSelected
+                          ? selectedTags.filter((value) => value !== tag)
+                          : [...selectedTags, tag];
+                        setSelectedTags(nextTags);
+                        applyFilter({
+                          query,
+                          selectedTags: nextTags,
+                        });
+                      }}
+                      type="button"
+                    >
+                      {tag} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+          {isSearchActive ? (
+            <button
+              className="mt-2 text-sm font-medium text-muted underline-offset-2 hover:underline"
+              onClick={() => {
+                setQuery("");
+                setSelectedTags([]);
+                applyFilter({ query: "", selectedTags: [] });
+              }}
+              type="button"
+            >
+              Nullstill filtre
+            </button>
+          ) : null}
         </section>
 
         <section className="min-w-0 rounded-[28px] border border-line bg-surface p-6 shadow-sm">
@@ -478,7 +589,7 @@ export default function FamilyRecipesRoute({
             </p>
           ) : displayFamilyRecipes.length === 0 && isSearchActive ? (
             <p className="mt-6 rounded-[24px] border border-dashed border-line bg-page px-5 py-8 text-center text-sm leading-6 text-muted">
-              Ingen familieoppskrifter matcher søket.
+              Ingen familieoppskrifter matcher filteret.
             </p>
           ) : (
             <div className="mt-6 grid min-w-0 gap-3">
@@ -516,7 +627,7 @@ export default function FamilyRecipesRoute({
           {loaderData.globalRecipes.length ===
           0 ? null : filteredGlobalRecipes.length === 0 && isSearchActive ? (
             <p className="mt-6 rounded-[24px] border border-dashed border-line bg-surface px-5 py-8 text-center text-sm leading-6 text-muted">
-              Ingen standardoppskrifter matcher søket.
+              Ingen standardoppskrifter matcher filteret.
             </p>
           ) : (
             <div className="mt-6 grid min-w-0 gap-3">
