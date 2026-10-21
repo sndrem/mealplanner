@@ -2,35 +2,36 @@
 
 ## Current Objective
 
-Ship the Fallow dead-code and duplication cleanup. Branch `issue/308-remove-unused-code` was cut from current `origin/main` and also covers issue #309.
+Ship the store-mode complexity split for issue #311. Branch `issue/311-store-mode-complexity` was cut from current `origin/main` (`8150fd5`) after `git pull --ff-only`.
 
 ## Completed
 
-- Removed the unused React Router welcome scaffold and stopped exporting symbols that nothing imports.
-- Left `entry.server.tsx` in place. `.fallowrc.json` adds that server entry, ignores `docs/**` for dead code, and ignores test files for duplication only.
-- Moved `parseDateOnly` into `app/lib/meal-plan-dates.ts` and shared family route auth, page chrome, and store-mode mutation results.
-- Fallow dead code is 0. With test files ignored, `fallow --summary` reports 51 clone groups and 4.4% duplicated lines.
+- Opened GitHub issue #311.
+- Split the store-mode `action` into one handler per intent in `app/lib/store-mode-action.server.ts`. The route action only dispatches.
+- Moved screen state into hooks and the page JSX into store-mode components. Optimistic updates are unchanged.
+- Fallow no longer flags `FamilyMealPlanStoreModeRoute` or the store-mode `action`. Functions above the default complexity threshold went from 95 to 92.
+- Added `docs/agents/` so agents know how this repo uses GitHub issues, triage labels, and domain docs. `AGENTS.md` points at those files.
 
 ## Files To Read First
 
-- `.fallowrc.json` — server entry, docs ignore, test-file duplication ignore
-- `app/components/family-page.tsx` — shared family page header, banners, and error shells
-- `app/lib/family-route.server.ts` — shared loader and action prelude
-- `app/lib/meal-plan-dates.ts` — shared `parseDateOnly`
+- `app/routes/family-meal-plan-store-mode.tsx` — thin route: loader, action dispatch, composition
+- `app/lib/store-mode-action.server.ts` — intent handlers
+- `docs/agents/issue-tracker.md` — GitHub issue conventions for this repo
 
 ## Validation
 
 - `npm run prisma:generate` — passed
 - `npm run lint` — passed
-- `npm run test:run` — 759 tests passed
+- `npm run test:run` — 763 tests passed
 - `npm run typecheck` — passed
-- Browser on the logged-in Moldeklev family: freezer, recipes, stores, shopping catalog, meal plans, always-on shopping list, and store mode loaded with the expected headings and actions. Did not submit a form.
+- `npm run build` — passed earlier in this branch
+- Logged-in store mode was not clicked through. This browser had no session.
 
 ## Open Items
 
-- Remaining production clones include a repeated family-shopping-item lookup in `app/lib/family-shopping-write.server.ts`. Optimistic list previews were left in each route.
+- `StoreModeShoppingItemCard` is still the next complexity hotspot and is out of scope for #311.
 - Untracked `temp-delete-later/` drafts are not part of this change.
 
 ## Next Step
 
-Review the pull request for issues #308 and #309, then merge.
+Review the pull request for issue #311, then merge. GitHub will close the issue from `Closes #311`.
