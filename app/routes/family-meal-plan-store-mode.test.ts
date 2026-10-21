@@ -1363,4 +1363,27 @@ describe("family store mode route", () => {
       intent: "update-show-category-headings",
     });
   });
+
+  it("rejects an unknown store-mode action", async () => {
+    vi.mocked(requireUser).mockResolvedValue(mockUser);
+    vi.mocked(resolveStoreModeAnchorMealPlan).mockResolvedValue({
+      id: "meal-plan-1",
+    });
+
+    const formData = new FormData();
+    formData.set("intent", "not-a-real-intent");
+
+    const result = await action({
+      params: {
+        familyId: "family-1",
+      },
+      request: buildRequest(undefined, formData),
+    } as never);
+
+    expect(result).toEqual({
+      formError: "Ukjent handling.",
+    });
+    expect(createQuickFamilyShoppingItem).not.toHaveBeenCalled();
+    expect(updateSelectedStorePreference).not.toHaveBeenCalled();
+  });
 });

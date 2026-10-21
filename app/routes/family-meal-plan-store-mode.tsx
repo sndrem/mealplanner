@@ -1,213 +1,58 @@
-import { ShoppingItemSource } from "@prisma/client";
-import type { ChangeEvent, ComponentProps } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Form,
-  Link,
+  redirect,
   useFetcher,
   useNavigation,
   useRevalidator,
-  redirect,
-  useSubmit,
   type MetaFunction,
 } from "react-router";
 
 import { FamilyUnexpectedError } from "../components/family-page";
-import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
-import { ShoppingListCompleteCelebration } from "../components/shopping-list-complete-celebration";
-import { HideCategoryHeadingsToggle } from "../components/hide-category-headings-toggle";
-import { StoreModeDeprioritizeBoughtToggle } from "../components/store-mode-deprioritize-bought-toggle";
-import { StoreModeRecipeUrgencyToggle } from "../components/store-mode-recipe-urgency-toggle";
-import { StoreOfferBriefingBanner } from "../components/store-offer-briefing-banner";
-import {
-  StoreModeShoppingItemCard,
-  type StoreModeCategoryUpdateRequest,
-} from "../components/store-mode-shopping-item-card";
+import { StoreModeBottomChrome } from "../components/store-mode-bottom-chrome";
+import { StoreModeDueList } from "../components/store-mode-due-list";
+import { StoreModeHistory } from "../components/store-mode-history";
 import { StoreModeScanBar } from "../components/store-mode-scan-bar";
-import { StoreModeShoppingViewToggle } from "../components/store-mode-shopping-view-toggle";
-import { StoreModeStockIngredientsReminder } from "../components/store-mode-stock-ingredients-reminder";
-import { ShoppingGroceryGroupingToggle } from "../components/shopping-grocery-grouping-toggle";
+import { StoreModeStatusBanners } from "../components/store-mode-status-banners";
+import { StoreModeSyncOverlay } from "../components/store-mode-sync-overlay";
+import { StoreModeTripPanel } from "../components/store-mode-trip-panel";
 import { requireUser } from "../lib/auth.server";
-import {
-  createQuickFamilyShoppingItem,
-  parseFamilyShoppingItemValues,
-  parseQuickAddFamilyShoppingItemInput,
-  toggleFamilyShoppingItemChecked,
-  updateFamilyShoppingItem,
-  updateFamilyShoppingItemQuantity,
-} from "../lib/family-shopping-write.server";
-import { useShoppingListCompletionCelebration } from "../lib/use-shopping-list-completion-celebration";
-import {
-  buildStoreModeDeprioritizeBoughtStorageKey,
-  buildStoreModeRecipeUrgencyStorageKey,
-  buildStoreModeStockReminderDismissedStorageKey,
-  buildStoreModeViewStorageKey,
-  computeStoreModeProgress,
-  getStoreModeTripFocusScanLabel,
-  isStoreModeTripFocusScanValue,
-  flattenStoreModeSectionsForHiddenHeadings,
-  partitionStoreModeSections,
-  readStoreModeDeprioritizeBought,
-  readStoreModeRecipeUrgency,
-  readStoreModeShoppingView,
-  readStoreModeStockReminderDismissed,
-  sortStoreModeItemsByName,
-  type StoreModeShoppingView,
-  writeStoreModeDeprioritizeBought,
-  writeStoreModeRecipeUrgency,
-  writeStoreModeShoppingView,
-  writeStoreModeStockReminderDismissed,
-} from "../lib/shopping-store-mode-client";
-import {
-  buildOptimisticManualShoppingItem,
-  dropResolvedOptimisticItemsFromSectionGroups,
-  resolveQuickAddPlaceholderPlacement,
-  insertProjectedItemIntoSectionGroups,
-  patchProjectedItemInSectionGroups,
-  relocateProjectedItemInSectionGroups,
-  removeProjectedItemFromSectionGroups,
-} from "../lib/shopping-list-client";
-import type {
-  OptimisticQuickAddDraft,
-  QuickAddShoppingSuccess,
-} from "../lib/shopping-quick-add";
-import { scrollToShoppingItem } from "../lib/shopping-quick-add-feedback.client";
-import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
-import { resolveStoreModeAnchorMealPlan } from "../lib/meal-plan-for-date.server";
-import { listShoppingCheckHistoryForStoreMode } from "../lib/shopping-check-history.server";
-import {
-  getFamilyStoreModeData,
-  projectCreatedFamilyShoppingItem,
-  projectCreatedManualShoppingItem,
-} from "../lib/shopping.server";
-import { listStoreOfferBriefingsForStoreMode } from "../lib/store-offer-briefing.server";
+import { formatDateOnly } from "../lib/meal-plan-dates";
 import {
   getNextCalendarWeekBounds,
   getTodayDateOnly,
 } from "../lib/meal-plan-week";
+import { requireFamilyId } from "../lib/require-family-id";
+import { listShoppingCheckHistoryForStoreMode } from "../lib/shopping-check-history.server";
+import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
+import { getFamilyStoreModeData } from "../lib/shopping.server";
+import { getStoreModeTripFocusScanLabel } from "../lib/shopping-store-mode-client";
+import type { StoreModeActionData } from "../lib/store-mode-action-data";
+import { runStoreModeAction } from "../lib/store-mode-action.server";
+import {
+  getStoreModeNotice,
+  readStoreModeNoticeContent,
+} from "../lib/store-mode-notice";
+import {
+  getStoreModePageClass,
+  isStoreModeRevalidatePaused,
+  resolveStoreModeFormFeedback,
+  resolveStoreModePendingNavigation,
+  resolveStoreModeScanState,
+} from "../lib/store-mode-route-state";
 import { selectStoreOfferBriefing } from "../lib/store-offer-briefing";
+import { listStoreOfferBriefingsForStoreMode } from "../lib/store-offer-briefing.server";
 import {
-  markFamilyShoppingItemAsStock,
-  markGeneratedShoppingItemsAsStock,
-  optInStockShoppingItems,
-  parseManualShoppingItemValues,
-  toggleShoppingItemChecked,
-  updateGeneratedShoppingItemQuantity,
-  updateManualShoppingItem,
-} from "../lib/shopping-write.server";
-import { listIngredientCategories } from "../lib/store.server";
-import { updateSelectedStorePreference } from "../lib/store-write.server";
-import {
-  parseShoppingGroceryGrouping,
-  parseShowCategoryHeadings,
-  updateShoppingGroceryGrouping,
-  updateShowCategoryHeadings,
-} from "../lib/shopping-preference-write.server";
-import {
-  parseStoreModeTripFocus,
-  updateStoreModeTripFocus,
-} from "../lib/store-mode-trip-focus-write.server";
-import {
-  getStoreModeBannerClass,
-  getStoreModeSyncOverlayClass,
-  storeModeAccentBarClass,
-  storeModeCelebrationHighlightClass,
-  storeModeBottomChromeShellClass,
-  storeModeCountChipClass,
-  storeModeHandletFoldClass,
-  storeModeItemGridClass,
-  storeModeMutedPanelClass,
   storeModePageClass,
-  storeModeQuickAddDockClass,
-  storeModeScanPanelClass,
-  storeModeSectionCardClass,
-  storeModeSelectClass,
   storeModeSurfaceCardClass,
-  storeModeSyncOverlayShellClass,
-  storeModeUndoBarActionClass,
-  storeModeUndoBarClass,
-  storeModeUndoBarDismissClass,
 } from "../lib/store-mode-theme";
-import {
-  STORE_MODE_SYNC_PROGRESS_MESSAGE,
-  useStoreModeToggleSync,
-} from "../lib/use-store-mode-toggle-sync";
+import { listIngredientCategories } from "../lib/store.server";
 import { useDebouncedRevalidate } from "../lib/use-debounced-revalidate";
-import { parseGeneratedStockMarkTargets } from "../lib/shopping-stock-mark";
+import { useStoreModeDueList } from "../lib/use-store-mode-due-list";
+import { useStoreModePreferences } from "../lib/use-store-mode-preferences";
+import { useStoreModeShoppingView } from "../lib/use-store-mode-shopping-view";
+import { useStoreModeToggleSync } from "../lib/use-store-mode-toggle-sync";
+import { useStoreModeUndoCheck } from "../lib/use-store-mode-undo-check";
 import { useVisibleIntervalRevalidate } from "../lib/use-visible-interval-revalidate";
 import type { Route } from "./+types/family-meal-plan-store-mode";
-
-type StoreModeNotice =
-  | "family-shopping-item-added"
-  | "generated-shopping-item-marked-as-stock"
-  | "selected-store-updated"
-  | "shopping-item-check-state-updated"
-  | "stock-shopping-items-opted-in"
-  | "store-mode-trip-focus-updated"
-  | "shopping-grocery-grouping-updated";
-
-type StoreModeIntent =
-  | "quick-add-family-shopping-item"
-  | "mark-family-shopping-item-as-stock"
-  | "mark-generated-shopping-item-as-stock"
-  | "opt-in-stock-shopping-item"
-  | "opt-in-stock-shopping-items"
-  | "update-family-shopping-item-category"
-  | "update-family-shopping-item-quantity"
-  | "update-generated-shopping-item-quantity"
-  | "update-manual-shopping-item-category"
-  | "toggle-family-shopping-item-checked"
-  | "toggle-shopping-item-checked"
-  | "update-selected-store"
-  | "update-shopping-grocery-grouping"
-  | "update-show-category-headings"
-  | "update-store-mode-trip-focus";
-
-interface StoreModeActionData {
-  categoryFieldErrors?: {
-    categoryId?: string;
-  };
-  formError?: string;
-  intent?: StoreModeIntent;
-  item?: QuickAddShoppingSuccess["item"];
-  ok?: boolean;
-  selectedStoreFieldErrors?: {
-    selectedStoreId?: string;
-  };
-  selectedStoreValue?: string;
-  tripFocusFieldErrors?: {
-    tripFocus?: string;
-  };
-  tripFocusValue?: string;
-}
-
-function missingStoreModeItem(intent: StoreModeIntent): StoreModeActionData {
-  return {
-    formError: "Vi fant ikke handlelinjen som skulle oppdateres.",
-    intent,
-  };
-}
-
-function completeStoreModeItemUpdate(
-  intent: StoreModeIntent,
-  result: { formError?: string; status: string },
-): StoreModeActionData {
-  if (result.status === "NOT_FOUND") {
-    throw buildMealPlanNotFoundResponse();
-  }
-
-  if (result.status === "CONFLICT") {
-    return {
-      formError: result.formError,
-      intent,
-    };
-  }
-
-  return {
-    intent,
-    ok: true,
-  };
-}
 
 interface FamilyMealPlanStoreModeRouteProps {
   actionData?: StoreModeActionData;
@@ -226,7 +71,7 @@ export const meta: MetaFunction = () => {
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   const user = await requireUser(request);
-  const familyId = requireRouteParam(params.familyId, "Fant ikke familien.");
+  const familyId = requireFamilyId(params.familyId);
   const storeModeDataPromise = getFamilyStoreModeData({
     familyId,
     userId: user.id,
@@ -296,453 +141,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export async function action({ params, request }: Route.ActionArgs) {
-  const user = await requireUser(request);
-  const familyId = requireRouteParam(params.familyId, "Fant ikke familien.");
-  const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
-  const anchorMealPlanId = await resolveStoreModeAnchorMealPlanId({
-    familyId,
-    formData,
-  });
-
-  if (intent === "update-selected-store") {
-    const selectedStoreId = String(formData.get("selectedStoreId") ?? "");
-    const result = await updateSelectedStorePreference({
-      familyId,
-      selectedStoreId,
-      userId: user.id,
-    });
-
-    if (result.status === "VALIDATION_ERROR") {
-      return {
-        intent,
-        selectedStoreFieldErrors: result.fieldErrors,
-        selectedStoreValue: result.values.selectedStoreId,
-      } satisfies StoreModeActionData;
-    }
-
-    return buildFamilyStoreModeRedirect({
-      familyId,
-      notice: "selected-store-updated",
-      request,
-    });
-  }
-
-  if (intent === "update-store-mode-trip-focus") {
-    const tripFocus = parseStoreModeTripFocus(formData.get("tripFocus"));
-
-    if (!tripFocus) {
-      return {
-        formError: "Ugyldig fokus for butikkmodus.",
-        intent,
-        tripFocusFieldErrors: {
-          tripFocus: "Velg et gyldig fokus.",
-        },
-        tripFocusValue: String(formData.get("tripFocus") ?? ""),
-      } satisfies StoreModeActionData;
-    }
-
-    const result = await updateStoreModeTripFocus({
-      familyId,
-      tripFocus,
-      userId: user.id,
-    });
-
-    if (result.status === "VALIDATION_ERROR") {
-      return {
-        formError: result.formError,
-        intent,
-        tripFocusFieldErrors: {
-          tripFocus: result.formError,
-        },
-        tripFocusValue: tripFocus,
-      } satisfies StoreModeActionData;
-    }
-
-    return buildFamilyStoreModeRedirect({
-      familyId,
-      notice: "store-mode-trip-focus-updated",
-      request,
-    });
-  }
-
-  if (intent === "update-shopping-grocery-grouping") {
-    const groceryGrouping = parseShoppingGroceryGrouping(
-      formData.get("groceryGrouping"),
-    );
-
-    if (!groceryGrouping) {
-      return {
-        formError: "Ugyldig gruppering for handlelisten.",
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    const result = await updateShoppingGroceryGrouping({
-      familyId,
-      groceryGrouping,
-      userId: user.id,
-    });
-
-    if (result.status === "VALIDATION_ERROR") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return buildFamilyStoreModeRedirect({
-      familyId,
-      notice: "shopping-grocery-grouping-updated",
-      request,
-    });
-  }
-
-  if (intent === "update-show-category-headings") {
-    const showCategoryHeadings = parseShowCategoryHeadings(
-      formData.get("showCategoryHeadings"),
-    );
-
-    if (showCategoryHeadings === null) {
-      return {
-        formError: "Ugyldig visning for kategorier.",
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    const result = await updateShowCategoryHeadings({
-      familyId,
-      showCategoryHeadings,
-      userId: user.id,
-    });
-
-    if (result.status === "VALIDATION_ERROR") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return {
-      intent,
-      ok: true,
-    } satisfies StoreModeActionData;
-  }
-
-  if (intent === "quick-add-family-shopping-item") {
-    const result = await createQuickFamilyShoppingItem({
-      familyId,
-      input: parseQuickAddFamilyShoppingItemInput(formData),
-      userId: user.id,
-    });
-
-    if (result.status === "VALIDATION_ERROR") {
-      return {
-        formError: "formError" in result ? result.formError : undefined,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return {
-      intent,
-      item: serializeProjectedShoppingItem(result.item),
-      ok: true,
-    } satisfies StoreModeActionData;
-  }
-
-  if (
-    intent === "opt-in-stock-shopping-item" ||
-    intent === "opt-in-stock-shopping-items"
-  ) {
-    const sourceKeys =
-      intent === "opt-in-stock-shopping-items"
-        ? formData.getAll("sourceKey").map(String)
-        : [String(formData.get("sourceKey") ?? "")];
-    const result = await optInStockShoppingItems({
-      familyId,
-      mealPlanId: anchorMealPlanId,
-      sourceKeys,
-      userId: user.id,
-    });
-
-    if (result.status === "VALIDATION_ERROR") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    if (result.status === "NOT_FOUND") {
-      throw buildMealPlanNotFoundResponse();
-    }
-
-    return buildFamilyStoreModeRedirect({
-      familyId,
-      notice: "stock-shopping-items-opted-in",
-      request,
-    });
-  }
-
-  if (intent === "toggle-family-shopping-item-checked") {
-    const familyItemId = String(formData.get("sourceKey") ?? "").trim();
-    const checked = String(formData.get("checked") ?? "") === "true";
-
-    if (!familyItemId) {
-      return missingStoreModeItem(intent);
-    }
-
-    const result = await toggleFamilyShoppingItemChecked({
-      checked,
-      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
-      familyId,
-      familyItemId,
-      userId: user.id,
-    });
-
-    return completeStoreModeItemUpdate(intent, result);
-  }
-
-  if (intent === "update-family-shopping-item-quantity") {
-    const familyItemId = String(formData.get("sourceKey") ?? "").trim();
-    const quantity = String(formData.get("quantity") ?? "");
-
-    if (!familyItemId) {
-      return missingStoreModeItem(intent);
-    }
-
-    const result = await updateFamilyShoppingItemQuantity({
-      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
-      familyId,
-      familyItemId,
-      quantity,
-      userId: user.id,
-    });
-
-    return completeStoreModeItemUpdate(intent, result);
-  }
-
-  if (intent === "update-generated-shopping-item-quantity") {
-    const sourceKey = String(formData.get("sourceKey") ?? "").trim();
-    const quantity = String(formData.get("quantity") ?? "");
-
-    if (!sourceKey) {
-      return missingStoreModeItem(intent);
-    }
-
-    const itemMealPlanId = resolveItemMealPlanId(formData, anchorMealPlanId);
-    const result = await updateGeneratedShoppingItemQuantity({
-      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
-      familyId,
-      mealPlanId: itemMealPlanId,
-      quantity,
-      sourceKey,
-      userId: user.id,
-    });
-
-    return completeStoreModeItemUpdate(intent, result);
-  }
-
-  if (intent === "update-family-shopping-item-category") {
-    const familyItemId = String(formData.get("sourceKey") ?? "").trim();
-
-    if (!familyItemId) {
-      return missingStoreModeItem(intent);
-    }
-
-    const result = await updateFamilyShoppingItem({
-      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
-      familyId,
-      familyItemId,
-      userId: user.id,
-      values: parseFamilyShoppingItemValues(formData),
-    });
-
-    if (result.status === "NOT_FOUND") {
-      return {
-        formError: "Fant ikke varelinjen som skulle oppdateres.",
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    if (result.status === "CONFLICT") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    if (result.status === "VALIDATION_ERROR") {
-      return {
-        categoryFieldErrors: result.fieldErrors,
-        formError: result.fieldErrors.categoryId,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    const item = await projectCreatedFamilyShoppingItem({
-      familyId,
-      familyItemId,
-    });
-
-    if (!item) {
-      return {
-        formError: "Fant ikke varelinjen etter oppdatering.",
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return {
-      intent,
-      item: serializeProjectedShoppingItem(item),
-      ok: true,
-    } satisfies StoreModeActionData;
-  }
-
-  if (intent === "update-manual-shopping-item-category") {
-    const manualItemId = String(formData.get("sourceKey") ?? "").trim();
-
-    if (!manualItemId) {
-      return missingStoreModeItem(intent);
-    }
-
-    const itemMealPlanId = resolveItemMealPlanId(formData, anchorMealPlanId);
-    const result = await updateManualShoppingItem({
-      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
-      familyId,
-      manualItemId,
-      mealPlanId: itemMealPlanId,
-      userId: user.id,
-      values: parseManualShoppingItemValues(formData),
-    });
-
-    if (result.status === "NOT_FOUND") {
-      throw buildMealPlanNotFoundResponse();
-    }
-
-    if (result.status === "CONFLICT") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    if (result.status === "VALIDATION_ERROR") {
-      return {
-        categoryFieldErrors: result.fieldErrors,
-        formError: result.fieldErrors.categoryId,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    const item = await projectCreatedManualShoppingItem({
-      familyId,
-      manualItemId,
-      mealPlanId: itemMealPlanId,
-    });
-
-    if (!item) {
-      return {
-        formError: "Fant ikke varelinjen etter oppdatering.",
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return {
-      intent,
-      item: serializeProjectedShoppingItem(item),
-      ok: true,
-    } satisfies StoreModeActionData;
-  }
-
-  if (intent === "toggle-shopping-item-checked") {
-    const sourceKey = String(formData.get("sourceKey") ?? "").trim();
-    const sourceType = parseShoppingItemSource(formData.get("sourceType"));
-    const checked = String(formData.get("checked") ?? "") === "true";
-
-    if (!sourceKey || !sourceType) {
-      return missingStoreModeItem(intent);
-    }
-
-    const itemMealPlanId = resolveItemMealPlanId(formData, anchorMealPlanId);
-    const result = await toggleShoppingItemChecked({
-      checked,
-      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
-      familyId,
-      mealPlanId: itemMealPlanId,
-      sourceKey,
-      sourceType,
-      userId: user.id,
-    });
-
-    return completeStoreModeItemUpdate(intent, result);
-  }
-
-  if (intent === "mark-generated-shopping-item-as-stock") {
-    const targets = parseGeneratedStockMarkTargets(formData);
-
-    if (targets.length === 0) {
-      return {
-        formError: "Vi fant ikke varelinjen som skulle merkes som basisvare.",
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    const result = await markGeneratedShoppingItemsAsStock({
-      familyId,
-      targets,
-      userId: user.id,
-    });
-
-    if (result.status === "NOT_FOUND") {
-      throw buildMealPlanNotFoundResponse();
-    }
-
-    if (result.status === "VALIDATION_ERROR") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return buildFamilyStoreModeRedirect({
-      familyId,
-      notice: "generated-shopping-item-marked-as-stock",
-      request,
-    });
-  }
-
-  if (intent === "mark-family-shopping-item-as-stock") {
-    const result = await markFamilyShoppingItemAsStock({
-      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
-      familyId,
-      familyItemId: String(formData.get("familyItemId") ?? "").trim(),
-      userId: user.id,
-    });
-
-    if (result.status === "NOT_FOUND") {
-      return {
-        formError: "Vi fant ikke varelinjen som skulle merkes som basisvare.",
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    if (result.status === "VALIDATION_ERROR" || result.status === "CONFLICT") {
-      return {
-        formError: result.formError,
-        intent,
-      } satisfies StoreModeActionData;
-    }
-
-    return buildFamilyStoreModeRedirect({
-      familyId,
-      notice: "generated-shopping-item-marked-as-stock",
-      request,
-    });
-  }
-
-  return {
-    formError: "Ukjent handling.",
-  } satisfies StoreModeActionData;
+  return runStoreModeAction({ params, request });
 }
 
 export default function FamilyMealPlanStoreModeRoute({
@@ -750,1076 +149,167 @@ export default function FamilyMealPlanStoreModeRoute({
   loaderData,
 }: FamilyMealPlanStoreModeRouteProps) {
   const navigation = useNavigation();
-  const submit = useSubmit();
   const revalidator = useRevalidator();
   const scheduleRevalidate = useDebouncedRevalidate(revalidator.revalidate);
   const toggleFetcher = useFetcher<StoreModeActionData>();
   const quantityFetcher = useFetcher<StoreModeActionData>();
   const categoryFetcher = useFetcher<StoreModeActionData>();
   const categoryHeadingsFetcher = useFetcher<StoreModeActionData>();
-  const isLiveRevalidatePaused =
-    navigation.state !== "idle" ||
-    revalidator.state !== "idle" ||
-    toggleFetcher.state !== "idle" ||
-    quantityFetcher.state !== "idle" ||
-    categoryFetcher.state !== "idle" ||
-    categoryHeadingsFetcher.state !== "idle";
-
-  useVisibleIntervalRevalidate({
-    paused: isLiveRevalidatePaused,
-    revalidate: revalidator.revalidate,
+  const pending = resolveStoreModePendingNavigation(navigation);
+  const dueList = useStoreModeDueList({
+    categories: loaderData.categories,
+    categoryFetcher,
+    initialSections: loaderData.dueSectionGroups,
+    quantityFetcher,
+    scheduleRevalidate,
   });
-
-  const pendingIntent = navigation.formData?.get("intent");
-  const pendingMarkAsStockSourceKey =
-    navigation.state !== "idle" &&
-    (pendingIntent === "mark-generated-shopping-item-as-stock" ||
-      pendingIntent === "mark-family-shopping-item-as-stock")
-      ? String(navigation.formData?.get("sourceKey") ?? "")
-      : "";
-  const [dueSectionGroups, setDueSectionGroups] = useState(
-    loaderData.dueSectionGroups,
-  );
-  const [quickAddPrefillRequest, setQuickAddPrefillRequest] = useState<{
-    id: string;
-    name: string;
-    quantity: string | null;
-  } | null>(null);
-  const [recentlyAddedSourceKey, setRecentlyAddedSourceKey] = useState<
-    string | null
-  >(null);
-  const quantityRollbackRef = useRef(loaderData.dueSectionGroups);
-  const categoryRollbackRef = useRef(loaderData.dueSectionGroups);
-  const isSavingStore =
-    navigation.state === "submitting" &&
-    pendingIntent === "update-selected-store";
-  const isSavingTripFocus =
-    navigation.state === "submitting" &&
-    pendingIntent === "update-store-mode-trip-focus";
-
-  useEffect(() => {
-    setDueSectionGroups(
-      dropResolvedOptimisticItemsFromSectionGroups(
-        loaderData.dueSectionGroups,
-        loaderData.dueSectionGroups.flatMap((section) => section.items),
-      ),
-    );
-  }, [loaderData.dueSectionGroups]);
-
-  const fallbackCategory = useMemo(
-    () =>
-      loaderData.categories[0] ?? {
-        displayName: "Annet",
-        id: "uncategorized",
-        key: "other",
-      },
-    [loaderData.categories],
-  );
-
-  const handleQuickAddSubmit = useCallback(
-    (draft: OptimisticQuickAddDraft) => {
-      setDueSectionGroups((currentSections) => {
-        const placement = resolveQuickAddPlaceholderPlacement({
-          categories: loaderData.categories,
-          categoryId: draft.categoryId,
-          fallbackCategory,
-          sections: currentSections,
-        });
-
-        return insertProjectedItemIntoSectionGroups(
-          currentSections,
-          buildOptimisticManualShoppingItem({
-            category: placement.category,
-            name: draft.name,
-            quantity: draft.quantity,
-            section: placement.section,
-            sourceKey: draft.sourceKey,
-            sourceType: "FAMILY",
-          }),
-        );
-      });
-      setRecentlyAddedSourceKey(draft.sourceKey);
-    },
-    [fallbackCategory, loaderData.categories],
-  );
-
-  const handleQuickAddSuccess = useCallback(
-    (payload: QuickAddShoppingSuccess) => {
-      setDueSectionGroups((currentSections) =>
-        insertProjectedItemIntoSectionGroups(
-          dropResolvedOptimisticItemsFromSectionGroups(currentSections, [
-            payload.item,
-          ]),
-          payload.item,
-        ),
-      );
-      setRecentlyAddedSourceKey(payload.item.sourceKey);
-      setQuickAddPrefillRequest(null);
-      scheduleRevalidate();
-    },
-    [scheduleRevalidate],
-  );
-
-  const handleQuickAddError = useCallback((sourceKey: string) => {
-    setDueSectionGroups((currentSections) =>
-      removeProjectedItemFromSectionGroups(currentSections, sourceKey),
-    );
-  }, []);
-
-  const handleQuickAddFromCard = useCallback(
-    (item: { name: string; quantityLabel: string | null }) => {
-      setQuickAddPrefillRequest({
-        id: `${Date.now()}-${item.name}`,
-        name: item.name,
-        quantity: item.quantityLabel,
-      });
-    },
-    [],
-  );
-
-  const handleUpdateQuantity = useCallback(
-    ({
-      expectedUpdatedAt,
-      mealPlanId,
-      quantity,
-      sourceKey,
-      sourceType,
-    }: {
-      expectedUpdatedAt: string;
-      mealPlanId?: string | null;
-      quantity: string;
-      sourceKey: string;
-      sourceType: "FAMILY" | "GENERATED";
-    }) => {
-      const formData = new FormData();
-      formData.set(
-        "intent",
-        sourceType === "GENERATED"
-          ? "update-generated-shopping-item-quantity"
-          : "update-family-shopping-item-quantity",
-      );
-      formData.set("sourceKey", sourceKey);
-      formData.set("expectedUpdatedAt", expectedUpdatedAt);
-      formData.set("quantity", quantity);
-
-      if (sourceType === "GENERATED" && mealPlanId) {
-        formData.set("itemMealPlanId", mealPlanId);
-      }
-
-      const trimmedQuantity = quantity.trim() || null;
-      setDueSectionGroups((currentSections) => {
-        quantityRollbackRef.current = currentSections;
-        return patchProjectedItemInSectionGroups(currentSections, sourceKey, {
-          quantity: trimmedQuantity,
-          quantityLabel: trimmedQuantity,
-        });
-      });
-      quantityFetcher.submit(formData, { method: "post" });
-    },
-    [quantityFetcher],
-  );
-
-  useEffect(() => {
-    if (quantityFetcher.state !== "idle") {
-      return;
-    }
-
-    const data = quantityFetcher.data;
-
-    if (
-      data?.intent !== "update-family-shopping-item-quantity" &&
-      data?.intent !== "update-generated-shopping-item-quantity"
-    ) {
-      return;
-    }
-
-    if (!data.ok) {
-      setDueSectionGroups(quantityRollbackRef.current);
-      return;
-    }
-
-    scheduleRevalidate();
-  }, [quantityFetcher.data, quantityFetcher.state, scheduleRevalidate]);
-
-  const handleUpdateCategory = useCallback(
-    (request: StoreModeCategoryUpdateRequest) => {
-      const formData = new FormData();
-      formData.set(
-        "intent",
-        request.sourceType === "FAMILY"
-          ? "update-family-shopping-item-category"
-          : "update-manual-shopping-item-category",
-      );
-      formData.set("sourceKey", request.sourceKey);
-      formData.set("expectedUpdatedAt", request.expectedUpdatedAt);
-      formData.set("categoryId", request.categoryId);
-      formData.set("name", request.name);
-      formData.set("note", request.note);
-      formData.set("preferredStoreId", request.preferredStoreId);
-      formData.set("quantity", request.quantity);
-
-      if (request.sourceType === "MANUAL") {
-        formData.set("buyOnDate", request.buyOnDate);
-        formData.set("itemMealPlanId", request.mealPlanId);
-      }
-
-      const nextCategory = loaderData.categories.find(
-        (category) => category.id === request.categoryId,
-      );
-      const trimmedNote = request.note.trim() || null;
-
-      setDueSectionGroups((currentSections) => {
-        categoryRollbackRef.current = currentSections;
-        const currentItem = currentSections
-          .flatMap((section) => section.items)
-          .find((item) => item.sourceKey === request.sourceKey);
-
-        if (!currentItem || !nextCategory) {
-          return currentSections;
-        }
-
-        return relocateProjectedItemInSectionGroups(
-          currentSections,
-          request.sourceKey,
-          {
-            ...currentItem,
-            category: {
-              id: nextCategory.id,
-              ...(nextCategory.key ? { key: nextCategory.key } : {}),
-              name: nextCategory.displayName,
-            },
-            note: trimmedNote,
-            section: {
-              ...currentItem.section,
-              displayName: nextCategory.displayName,
-            },
-          },
-        );
-      });
-      setRecentlyAddedSourceKey(request.sourceKey);
-      categoryFetcher.submit(formData, { method: "post" });
-    },
-    [categoryFetcher, loaderData.categories],
-  );
-
-  useEffect(() => {
-    if (categoryFetcher.state !== "idle") {
-      return;
-    }
-
-    const data = categoryFetcher.data;
-
-    if (
-      data?.intent !== "update-family-shopping-item-category" &&
-      data?.intent !== "update-manual-shopping-item-category"
-    ) {
-      return;
-    }
-
-    if (!data.ok) {
-      setDueSectionGroups(categoryRollbackRef.current);
-      return;
-    }
-
-    const updatedItem = data.item;
-
-    if (updatedItem) {
-      setDueSectionGroups((currentSections) =>
-        relocateProjectedItemInSectionGroups(
-          currentSections,
-          updatedItem.sourceKey,
-          updatedItem,
-        ),
-      );
-      setRecentlyAddedSourceKey(updatedItem.sourceKey);
-    }
-
-    scheduleRevalidate();
-  }, [categoryFetcher.data, categoryFetcher.state, scheduleRevalidate]);
-
-  const categoryInteractionSourceKey = categoryFetcher.formData
-    ? String(categoryFetcher.formData.get("sourceKey") ?? "")
-    : "";
-  const isSavingCategorySourceKey =
-    categoryFetcher.state !== "idle" ? categoryInteractionSourceKey : null;
-  const categoryFetcherError =
-    categoryFetcher.data?.formError &&
-    (categoryFetcher.data.intent === "update-family-shopping-item-category" ||
-      categoryFetcher.data.intent === "update-manual-shopping-item-category")
-      ? categoryFetcher.data.formError
-      : null;
-
-  useEffect(() => {
-    if (!recentlyAddedSourceKey) {
-      return;
-    }
-
-    scrollToShoppingItem(recentlyAddedSourceKey);
-
-    const clearHighlightTimeoutId = window.setTimeout(() => {
-      setRecentlyAddedSourceKey((current) =>
-        current === recentlyAddedSourceKey ? null : current,
-      );
-    }, 900);
-
-    return () => {
-      window.clearTimeout(clearHighlightTimeoutId);
-    };
-  }, [dueSectionGroups, recentlyAddedSourceKey]);
-
-  const loaderDueItems = useMemo(
-    () => dueSectionGroups.flatMap((section) => section.items),
-    [dueSectionGroups],
-  );
+  const preferences = useStoreModePreferences({
+    familyId: loaderData.family.id,
+    mealPlanId: loaderData.mealPlan.id,
+  });
   const { displayItemsBySourceKey, handleToggle, syncBannerMessage } =
     useStoreModeToggleSync({
       activeShoppingDate: loaderData.activeShoppingDate,
       familyId: loaderData.family.id,
-      loaderItems: loaderDueItems,
+      loaderItems: dueList.loaderDueItems,
       revalidate: revalidator.revalidate,
       toggleFetcher,
     });
-  const displayDueItems = useMemo(
-    () =>
-      loaderDueItems
-        .map((item) => displayItemsBySourceKey.get(item.sourceKey) ?? item)
-        .filter((item) =>
-          pendingMarkAsStockSourceKey
-            ? item.sourceKey !== pendingMarkAsStockSourceKey
-            : true,
-        ),
-    [displayItemsBySourceKey, loaderDueItems, pendingMarkAsStockSourceKey],
-  );
-  const displayProgress = useMemo(
-    () => computeStoreModeProgress(displayDueItems),
-    [displayDueItems],
-  );
-  const { isCelebrating } = useShoppingListCompletionCelebration(
-    displayProgress,
-  );
-  const displaySectionGroups = useMemo(
-    () =>
-      dueSectionGroups.map((section) => ({
-        ...section,
-        items: section.items
-          .map((item) => displayItemsBySourceKey.get(item.sourceKey) ?? item)
-          .filter((item) =>
-            pendingMarkAsStockSourceKey
-              ? item.sourceKey !== pendingMarkAsStockSourceKey
-              : true,
-          ),
-      })),
-    [displayItemsBySourceKey, dueSectionGroups, pendingMarkAsStockSourceKey],
-  );
-  const viewStorageKey = useMemo(
-    () =>
-      buildStoreModeViewStorageKey({
-        familyId: loaderData.family.id,
-      }),
-    [loaderData.family.id],
-  );
-  const deprioritizeBoughtStorageKey = useMemo(
-    () =>
-      buildStoreModeDeprioritizeBoughtStorageKey({
-        familyId: loaderData.family.id,
-      }),
-    [loaderData.family.id],
-  );
-  const recipeUrgencyStorageKey = useMemo(
-    () =>
-      buildStoreModeRecipeUrgencyStorageKey({
-        familyId: loaderData.family.id,
-      }),
-    [loaderData.family.id],
-  );
-  const stockReminderDismissedStorageKey = useMemo(
-    () =>
-      buildStoreModeStockReminderDismissedStorageKey({
-        familyId: loaderData.family.id,
-        mealPlanId: loaderData.mealPlan.id,
-      }),
-    [loaderData.family.id, loaderData.mealPlan.id],
-  );
-  const [shoppingView, setShoppingView] = useState<StoreModeShoppingView>(() =>
-    readStoreModeShoppingView(viewStorageKey),
-  );
-  const [deprioritizeBought, setDeprioritizeBought] = useState(() =>
-    readStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey),
-  );
-  const [showRecipeUrgency, setShowRecipeUrgency] = useState(() =>
-    readStoreModeRecipeUrgency(recipeUrgencyStorageKey),
-  );
-  const [stockReminderDismissed, setStockReminderDismissed] = useState(() =>
-    readStoreModeStockReminderDismissed(stockReminderDismissedStorageKey),
-  );
-  const handleShoppingViewChange = useCallback(
-    (nextView: StoreModeShoppingView) => {
-      setShoppingView(nextView);
-      writeStoreModeShoppingView(viewStorageKey, nextView);
-    },
-    [viewStorageKey],
-  );
-  const handleDeprioritizeBoughtChange = useCallback(
-    (enabled: boolean) => {
-      setDeprioritizeBought(enabled);
-      writeStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey, enabled);
-    },
-    [deprioritizeBoughtStorageKey],
-  );
-  const handleRecipeUrgencyChange = useCallback(
-    (enabled: boolean) => {
-      setShowRecipeUrgency(enabled);
-      writeStoreModeRecipeUrgency(recipeUrgencyStorageKey, enabled);
-    },
-    [recipeUrgencyStorageKey],
-  );
-  const handleDismissStockReminder = useCallback(() => {
-    setStockReminderDismissed(true);
-    writeStoreModeStockReminderDismissed(
-      stockReminderDismissedStorageKey,
-      true,
-    );
-  }, [stockReminderDismissedStorageKey]);
-  const handleRestoreStockReminder = useCallback(() => {
-    setStockReminderDismissed(false);
-    writeStoreModeStockReminderDismissed(
-      stockReminderDismissedStorageKey,
-      false,
-    );
-  }, [stockReminderDismissedStorageKey]);
-  useEffect(() => {
-    setShoppingView(readStoreModeShoppingView(viewStorageKey));
-  }, [viewStorageKey]);
-  useEffect(() => {
-    setDeprioritizeBought(
-      readStoreModeDeprioritizeBought(deprioritizeBoughtStorageKey),
-    );
-  }, [deprioritizeBoughtStorageKey]);
-  useEffect(() => {
-    setShowRecipeUrgency(readStoreModeRecipeUrgency(recipeUrgencyStorageKey));
-  }, [recipeUrgencyStorageKey]);
-  useEffect(() => {
-    setStockReminderDismissed(
-      readStoreModeStockReminderDismissed(stockReminderDismissedStorageKey),
-    );
-  }, [stockReminderDismissedStorageKey]);
-  type StoreModeDisplayItem = (typeof displayDueItems)[number];
-  const { activeSections } = useMemo(
-    () => partitionStoreModeSections(displaySectionGroups, deprioritizeBought),
-    [deprioritizeBought, displaySectionGroups],
-  );
-  const pendingCategoryHeadings = categoryHeadingsFetcher.formData;
-  const showCategoryHeadings =
-    categoryHeadingsFetcher.state !== "idle" &&
-    pendingCategoryHeadings?.get("intent") === "update-show-category-headings"
-      ? pendingCategoryHeadings.get("showCategoryHeadings") !== "false"
-      : loaderData.showCategoryHeadings;
-  const hiddenHeadingLists = useMemo(
-    () =>
-      showCategoryHeadings
-        ? null
-        : flattenStoreModeSectionsForHiddenHeadings(activeSections),
-    [activeSections, showCategoryHeadings],
-  );
-  const handleShowCategoryHeadingsChange = useCallback(
-    (nextShowCategoryHeadings: boolean) => {
-      const formData = new FormData();
-      formData.set("intent", "update-show-category-headings");
-      formData.set(
-        "showCategoryHeadings",
-        nextShowCategoryHeadings ? "true" : "false",
-      );
-      categoryHeadingsFetcher.submit(formData, { method: "post" });
-    },
-    [categoryHeadingsFetcher],
-  );
-  const hasUncheckedDueItems = useMemo(
-    () => activeSections.some((section) => section.items.length > 0),
-    [activeSections],
-  );
-  const hasUnusedStockIngredients =
-    loaderData.stockIngredientsForStoreMode.length > 0;
-  const isOptingInAllStockItems =
-    navigation.state !== "idle" &&
-    pendingIntent === "opt-in-stock-shopping-items";
-  const optingInStockSourceKey =
-    navigation.state !== "idle" &&
-    pendingIntent === "opt-in-stock-shopping-item"
-      ? String(navigation.formData?.get("sourceKey") ?? "")
-      : null;
-  const [lastCheckedAction, setLastCheckedAction] =
-    useState<StoreModeDisplayItem | null>(null);
-
-  const handleToggleWithUndoFeedback = useCallback(
-    (item: StoreModeDisplayItem) => {
-      const displayItem = displayItemsBySourceKey.get(item.sourceKey) ?? item;
-      const nextChecked = !displayItem.checked;
-      handleToggle(item);
-
-      if (nextChecked) {
-        setLastCheckedAction({
-          ...displayItem,
-          checked: true,
-        });
-        return;
-      }
-
-      setLastCheckedAction((current) =>
-        current?.sourceKey === item.sourceKey ? null : current,
-      );
-    },
-    [displayItemsBySourceKey, handleToggle],
-  );
-
-  const handleUndoLastCheck = useCallback(() => {
-    if (!lastCheckedAction) {
-      return;
-    }
-
-    handleToggle(lastCheckedAction);
-    setLastCheckedAction(null);
-  }, [handleToggle, lastCheckedAction]);
-
-  const handleDismissLastCheck = useCallback(() => {
-    setLastCheckedAction(null);
-  }, []);
-  const pageBottomPaddingClass =
-    lastCheckedAction && isCelebrating
-      ? "pb-64"
-      : lastCheckedAction || isCelebrating
-        ? "pb-52"
-        : null;
-  const pageClass = pageBottomPaddingClass
-    ? storeModePageClass.replace("pb-36", pageBottomPaddingClass)
-    : storeModePageClass;
-  const noticeContent = loaderData.notice
-    ? getStoreModeNoticeContent(loaderData.notice)
-    : null;
-  const selectedStoreValue =
-    actionData?.intent === "update-selected-store" &&
-    actionData.selectedStoreValue !== undefined
-      ? actionData.selectedStoreValue
-      : (loaderData.selectedStore?.id ?? "");
-  const tripFocusValue =
-    actionData?.intent === "update-store-mode-trip-focus" &&
-    actionData.tripFocusValue
-      ? actionData.tripFocusValue
-      : loaderData.effectiveTripFocus;
-  const pendingTripFocusValue = navigation.formData?.get("tripFocus");
-  const inFlightTripFocus =
-    navigation.state !== "idle" &&
-    navigation.formData?.get("intent") === "update-store-mode-trip-focus" &&
-    isStoreModeTripFocusScanValue(pendingTripFocusValue)
-      ? pendingTripFocusValue
-      : null;
-  const scanTripFocus = inFlightTripFocus
-    ? inFlightTripFocus
-    : isStoreModeTripFocusScanValue(tripFocusValue)
-      ? tripFocusValue
-      : loaderData.effectiveTripFocus;
-  const inFlightStoreId =
-    navigation.state !== "idle" &&
-    navigation.formData?.get("intent") === "update-selected-store"
-      ? String(navigation.formData.get("selectedStoreId") ?? "")
-      : null;
-  const scanStoreId = inFlightStoreId ?? selectedStoreValue;
-  const matchingScanStore = loaderData.stores.find(
-    (store) => store.id === scanStoreId,
-  );
-  const scanStoreName =
-    matchingScanStore?.name ??
-    (loaderData.selectedStore?.id === scanStoreId
-      ? loaderData.selectedStore.name
-      : "Ingen butikk");
-  const tripFocusSubtitle = getStoreModeTripFocusSubtitle({
-    effectiveTripFocus: scanTripFocus,
-    includedMealPlans: loaderData.includedMealPlans,
-    mealPlanTitle: loaderData.mealPlan.title,
+  const shoppingView = useStoreModeShoppingView({
+    categoryHeadingsFetcher,
+    deprioritizeBought: preferences.deprioritizeBought,
+    displayItemsBySourceKey,
+    dueSectionGroups: dueList.dueSectionGroups,
+    loaderDueItems: dueList.loaderDueItems,
+    pendingMarkAsStockSourceKey: pending.pendingMarkAsStockSourceKey,
+    showCategoryHeadings: loaderData.showCategoryHeadings,
   });
-  const ingredientSearchPath = `/families/${loaderData.family.id}/shopping/ingredient-search`;
-  const quantityFetcherError =
-    quantityFetcher.data?.formError &&
-    (quantityFetcher.data.intent === "update-family-shopping-item-quantity" ||
-      quantityFetcher.data.intent ===
-        "update-generated-shopping-item-quantity")
-      ? quantityFetcher.data.formError
-      : null;
-  const categoryHeadingsError =
-    categoryHeadingsFetcher.data?.intent === "update-show-category-headings"
-      ? categoryHeadingsFetcher.data.formError
-      : undefined;
-  const generalFormError =
-    categoryFetcherError ??
-    quantityFetcherError ??
-    categoryHeadingsError ??
-    (actionData?.formError &&
-    actionData.intent !== "quick-add-family-shopping-item"
-      ? actionData.formError
-      : undefined);
+  const undo = useStoreModeUndoCheck({
+    displayItemsBySourceKey,
+    handleToggle,
+  });
 
-  const renderFlatStoreModeItems = (items: StoreModeDisplayItem[]) => (
-    <StoreModeItemGrid
-      canMarkAsStock={loaderData.userRole === "ADMIN"}
-      categories={loaderData.categories}
-      categoryFetcherError={categoryFetcherError}
-      categoryInteractionSourceKey={categoryInteractionSourceKey}
-      isSavingCategorySourceKey={isSavingCategorySourceKey}
-      items={items}
-      layout={shoppingView}
-      onQuickAddFromCard={handleQuickAddFromCard}
-      onUpdateCategory={handleUpdateCategory}
-      onUpdateQuantity={handleUpdateQuantity}
-      onToggleItem={handleToggleWithUndoFeedback}
-      pendingMarkAsStockSourceKey={pendingMarkAsStockSourceKey}
-      preserveOrder
-      recentlyAddedSourceKey={recentlyAddedSourceKey}
-      selectedStoreId={loaderData.selectedStore?.id}
-      showRecipeUrgency={showRecipeUrgency}
-    />
-  );
+  useVisibleIntervalRevalidate({
+    paused: isStoreModeRevalidatePaused({
+      categoryFetcher,
+      categoryHeadingsFetcher,
+      navigation,
+      quantityFetcher,
+      revalidator,
+      toggleFetcher,
+    }),
+    revalidate: revalidator.revalidate,
+  });
+
+  const scan = resolveStoreModeScanState({
+    actionData,
+    effectiveTripFocus: loaderData.effectiveTripFocus,
+    navigation,
+    selectedStore: loaderData.selectedStore,
+    stores: loaderData.stores,
+  });
+  const formFeedback = resolveStoreModeFormFeedback({
+    actionData,
+    categoryFetcher,
+    categoryHeadingsFetcher,
+    quantityFetcher,
+  });
 
   return (
-    <main className={pageClass}>
+    <main
+      className={getStoreModePageClass({
+        isCelebrating: shoppingView.isCelebrating,
+        showUndoBar: undo.lastCheckedAction !== null,
+      })}
+    >
       <div className="mx-auto flex max-w-4xl flex-col gap-5">
         <StoreModeScanBar
-          checkedCount={displayProgress.checkedCount}
-          focusLabel={getStoreModeTripFocusScanLabel(scanTripFocus)}
-          isCelebrating={isCelebrating}
-          storeName={scanStoreName}
-          totalCount={displayProgress.totalCount}
+          checkedCount={shoppingView.displayProgress.checkedCount}
+          focusLabel={getStoreModeTripFocusScanLabel(scan.scanTripFocus)}
+          isCelebrating={shoppingView.isCelebrating}
+          storeName={scan.scanStoreName}
+          totalCount={shoppingView.displayProgress.totalCount}
         >
-          <div className={`${storeModeScanPanelClass} grid gap-6`}>
-            <div className="grid gap-3">
-              <div>
-                <h2 className="text-base font-semibold text-store-ink">
-                  Handletur
-                </h2>
-                <p className="mt-1 text-xs text-store-muted">
-                  {tripFocusSubtitle}
-                </p>
-              </div>
-              <Form className="grid gap-1" method="post">
-                <span className="text-xs font-semibold text-store-muted">
-                  Fokus
-                </span>
-                <input
-                  name="intent"
-                  type="hidden"
-                  value="update-store-mode-trip-focus"
-                />
-                <select
-                  aria-busy={isSavingTripFocus}
-                  aria-label="Velg handletur-fokus"
-                  className={storeModeSelectClass}
-                  defaultValue={tripFocusValue}
-                  disabled={isSavingTripFocus}
-                  key={tripFocusValue}
-                  name="tripFocus"
-                  onChange={(event) => {
-                    submitSelectForm(event, tripFocusValue, submit);
-                  }}
-                >
-                  <option value="CURRENT">Denne uken</option>
-                  <option disabled={!loaderData.canFocusNext} value="NEXT">
-                    Neste uke
-                  </option>
-                  <option value="ALL">Alle åpne</option>
-                </select>
-                {actionData?.intent === "update-store-mode-trip-focus" &&
-                actionData.tripFocusFieldErrors?.tripFocus ? (
-                  <p className="text-sm text-rose-600">
-                    {actionData.tripFocusFieldErrors.tripFocus}
-                  </p>
-                ) : null}
-              </Form>
-              <Form className="grid gap-1" method="post">
-                <span className="text-xs font-semibold text-store-muted">
-                  Butikk
-                </span>
-                <input
-                  name="intent"
-                  type="hidden"
-                  value="update-selected-store"
-                />
-                <select
-                  aria-busy={isSavingStore}
-                  aria-label="Velg butikk"
-                  className={storeModeSelectClass}
-                  defaultValue={selectedStoreValue}
-                  disabled={isSavingStore}
-                  name="selectedStoreId"
-                  onChange={(event) => {
-                    submitSelectForm(event, selectedStoreValue, submit);
-                  }}
-                >
-                  {loaderData.stores.map((store) => (
-                    <option key={store.id} value={store.id}>
-                      {store.name}
-                    </option>
-                  ))}
-                </select>
-                {actionData?.intent === "update-selected-store" &&
-                actionData.selectedStoreFieldErrors?.selectedStoreId ? (
-                  <p className="text-sm text-rose-600">
-                    {actionData.selectedStoreFieldErrors.selectedStoreId}
-                  </p>
-                ) : null}
-              </Form>
-              <div className="flex gap-4">
-                <Link
-                  className="text-sm text-store-muted underline-offset-2 hover:text-store-ink hover:underline"
-                  to={`/families/${loaderData.family.id}/store-mode/share`}
-                >
-                  Del liste
-                </Link>
-                <Link
-                  className="text-sm text-store-muted underline-offset-2 hover:text-store-ink hover:underline"
-                  to={`/families/${loaderData.family.id}/stores`}
-                >
-                  Butikker
-                </Link>
-              </div>
-            </div>
-            {displaySectionGroups.length > 0 ? (
-              <div className="grid gap-3">
-                <h2 className="text-base font-semibold text-store-ink">
-                  Visning
-                </h2>
-                <div className="flex flex-wrap items-center gap-2">
-                  <ShoppingGroceryGroupingToggle
-                    grouping={loaderData.groceryGrouping}
-                  />
-                  <HideCategoryHeadingsToggle
-                    hidden={!showCategoryHeadings}
-                    onChange={handleShowCategoryHeadingsChange}
-                  />
-                  <StoreModeDeprioritizeBoughtToggle
-                    enabled={deprioritizeBought}
-                    onChange={handleDeprioritizeBoughtChange}
-                  />
-                  <StoreModeRecipeUrgencyToggle
-                    enabled={showRecipeUrgency}
-                    onChange={handleRecipeUrgencyChange}
-                  />
-                  <StoreModeShoppingViewToggle
-                    onChange={handleShoppingViewChange}
-                    view={shoppingView}
-                  />
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </StoreModeScanBar>
-
-        {loaderData.storeOfferBriefing.kind === "hidden" ? null : (
-          <StoreOfferBriefingBanner
-            key={
-              loaderData.storeOfferBriefing.kind === "loud"
-                ? `${loaderData.storeOfferBriefing.briefing.id}:${loaderData.storeOfferBriefing.briefing.updatedAt}`
-                : "store-offer-briefing-quiet"
-            }
+          <StoreModeTripPanel
+            canFocusNext={loaderData.canFocusNext}
+            deprioritizeBought={preferences.deprioritizeBought}
             familyId={loaderData.family.id}
-            selection={loaderData.storeOfferBriefing}
+            groceryGrouping={loaderData.groceryGrouping}
+            includedMealPlans={loaderData.includedMealPlans}
+            isSavingStore={pending.isSavingStore}
+            isSavingTripFocus={pending.isSavingTripFocus}
+            mealPlanTitle={loaderData.mealPlan.title}
+            onDeprioritizeBoughtChange={preferences.handleDeprioritizeBoughtChange}
+            onRecipeUrgencyChange={preferences.handleRecipeUrgencyChange}
+            onShoppingViewChange={preferences.handleShoppingViewChange}
+            onShowCategoryHeadingsChange={
+              shoppingView.handleShowCategoryHeadingsChange
+            }
+            scanTripFocus={scan.scanTripFocus}
+            selectedStoreFieldError={scan.selectedStoreFieldError}
+            selectedStoreValue={scan.selectedStoreValue}
+            shoppingView={preferences.shoppingView}
+            showCategoryHeadings={shoppingView.showCategoryHeadings}
+            showRecipeUrgency={preferences.showRecipeUrgency}
+            showViewControls={shoppingView.displaySectionGroups.length > 0}
+            stores={loaderData.stores}
+            tripFocusFieldError={scan.tripFocusFieldError}
+            tripFocusValue={scan.tripFocusValue}
           />
-        )}
-
-        {noticeContent ? (
-          <section className={getStoreModeBannerClass("success")}>
-            <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-notice-success-muted">
-              {noticeContent.description}
-            </p>
-          </section>
-        ) : null}
-
-        {generalFormError ? (
-          <section className={getStoreModeBannerClass("error")}>
-            <h2 className="text-base font-semibold">
-              Kunne ikke oppdatere butikkmodus
-            </h2>
-            <p className="mt-2 text-sm leading-6">{generalFormError}</p>
-          </section>
-        ) : null}
-
-        {displaySectionGroups.length > 0 ||
-        (hasUnusedStockIngredients && !stockReminderDismissed) ? (
-          <section className="grid gap-4">
-            {hasUnusedStockIngredients && !stockReminderDismissed ? (
-              <StoreModeStockIngredientsReminder
-                ingredients={loaderData.stockIngredientsForStoreMode}
-                isSubmittingAll={isOptingInAllStockItems}
-                onDismiss={handleDismissStockReminder}
-                onRestore={handleRestoreStockReminder}
-                submittingSourceKey={optingInStockSourceKey}
-              />
-            ) : null}
-            {activeSections.length > 0 ? (
-              showCategoryHeadings ? (
-              activeSections.map((section) => (
-                <details
-                  key={`${loaderData.selectedStore?.id ?? "no-store"}:${section.category.id}`}
-                  className={storeModeSectionCardClass}
-                  open
-                >
-                  <div aria-hidden="true" className={storeModeAccentBarClass} />
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent [&::-webkit-details-marker]:hidden">
-                    <span className="text-lg font-semibold tracking-tight text-store-ink">
-                      {section.displayName}
-                    </span>
-                    <span className={storeModeCountChipClass}>
-                      {section.items.length > 0
-                        ? `${section.items.length} varer`
-                        : `${section.boughtItems.length} handlet`}
-                    </span>
-                  </summary>
-
-                  {section.items.length > 0 ? (
-                    <StoreModeItemGrid
-                      canMarkAsStock={loaderData.userRole === "ADMIN"}
-                      categories={loaderData.categories}
-                      categoryFetcherError={categoryFetcherError}
-                      categoryInteractionSourceKey={categoryInteractionSourceKey}
-                      isSavingCategorySourceKey={isSavingCategorySourceKey}
-                      items={section.items}
-                      layout={shoppingView}
-                      onQuickAddFromCard={handleQuickAddFromCard}
-                      onUpdateCategory={handleUpdateCategory}
-                      onUpdateQuantity={handleUpdateQuantity}
-                      onToggleItem={handleToggleWithUndoFeedback}
-                      pendingMarkAsStockSourceKey={pendingMarkAsStockSourceKey}
-                      recentlyAddedSourceKey={recentlyAddedSourceKey}
-                      selectedStoreId={loaderData.selectedStore?.id}
-                      showRecipeUrgency={showRecipeUrgency}
-                    />
-                  ) : null}
-
-                  {deprioritizeBought && section.boughtItems.length > 0 ? (
-                    <details
-                      className={`${storeModeHandletFoldClass}${section.items.length > 0 ? " mt-4" : " mt-3"}`}
-                    >
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
-                        <span className="text-sm font-semibold text-store-muted">
-                          Handlet
-                        </span>
-                        <span className={storeModeCountChipClass}>
-                          {section.boughtItems.length} varer
-                        </span>
-                      </summary>
-
-                      <StoreModeItemGrid
-                        canMarkAsStock={loaderData.userRole === "ADMIN"}
-                        categories={loaderData.categories}
-                        categoryFetcherError={categoryFetcherError}
-                        categoryInteractionSourceKey={
-                          categoryInteractionSourceKey
-                        }
-                        isSavingCategorySourceKey={isSavingCategorySourceKey}
-                        items={section.boughtItems}
-                        layout={shoppingView}
-                        onQuickAddFromCard={handleQuickAddFromCard}
-                        onUpdateCategory={handleUpdateCategory}
-                        onUpdateQuantity={handleUpdateQuantity}
-                        onToggleItem={handleToggleWithUndoFeedback}
-                        pendingMarkAsStockSourceKey={pendingMarkAsStockSourceKey}
-                        recentlyAddedSourceKey={recentlyAddedSourceKey}
-                        selectedStoreId={loaderData.selectedStore?.id}
-                        showRecipeUrgency={showRecipeUrgency}
-                      />
-                    </details>
-                  ) : null}
-                </details>
-              ))
-              ) : hiddenHeadingLists ? (
-                <>
-                  {hiddenHeadingLists.openItems.length > 0
-                    ? renderFlatStoreModeItems(hiddenHeadingLists.openItems)
-                    : null}
-                  {hiddenHeadingLists.boughtItems.length > 0 ? (
-                    deprioritizeBought ? (
-                      <details className={`${storeModeHandletFoldClass} mt-4`}>
-                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
-                          <span className="text-sm font-semibold text-store-muted">
-                            Handlet
-                          </span>
-                          <span className={storeModeCountChipClass}>
-                            {hiddenHeadingLists.boughtItems.length} varer
-                          </span>
-                        </summary>
-                        {renderFlatStoreModeItems(hiddenHeadingLists.boughtItems)}
-                      </details>
-                    ) : (
-                      renderFlatStoreModeItems(hiddenHeadingLists.boughtItems)
-                    )
-                  ) : null}
-                </>
-              ) : null
-            ) : null}
-            {deprioritizeBought &&
-            activeSections.length > 0 &&
-            !hasUncheckedDueItems ? (
-              <article
-                className={`${storeModeSurfaceCardClass} p-6${
-                  isCelebrating
-                    ? ` ${storeModeCelebrationHighlightClass}`
-                    : ""
-                }`}
-              >
-                <h3 className="text-base font-semibold text-store-ink">
-                  Alt er krysset av
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-store-muted">
-                  {showCategoryHeadings
-                    ? "Du har handlet alle varene for denne turen. Åpne Handlet i hver seksjon hvis du vil se eller endre dem."
-                    : "Du har handlet alle varene for denne turen. Åpne Handlet hvis du vil se eller endre dem."}
-                </p>
-              </article>
-            ) : null}
-            {displaySectionGroups.length === 0 ? (
-              <article className={`${storeModeSurfaceCardClass} p-6`}>
-                <h3 className="text-base font-semibold text-store-ink">
-                  Ingen varer må handles nå
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-store-muted">
-                  Alt er enten ferdig handlet, utenfor uken du handler for, eller
-                  allerede passert.
-                </p>
-              </article>
-            ) : null}
-          </section>
-        ) : (
-          <section className={`${storeModeSurfaceCardClass} p-6`}>
-            <h2 className="text-lg font-semibold tracking-tight text-store-ink">
-              Ingen varer må handles nå
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-store-muted">
-              Alt er enten ferdig handlet, utenfor uken du handler for, eller
-              allerede passert.
-            </p>
-          </section>
-        )}
-
-        {hasUnusedStockIngredients && stockReminderDismissed ? (
-          <StoreModeStockIngredientsReminder
-            dismissed
-            ingredients={loaderData.stockIngredientsForStoreMode}
-            isSubmittingAll={isOptingInAllStockItems}
-            onDismiss={handleDismissStockReminder}
-            onRestore={handleRestoreStockReminder}
-            submittingSourceKey={optingInStockSourceKey}
-          />
-        ) : null}
-
-        <details className={storeModeMutedPanelClass}>
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
-            <span className="text-lg font-semibold tracking-tight text-store-ink">
-              Handlehistorikk
-            </span>
-            <span className={storeModeCountChipClass}>
-              {loaderData.shoppingHistory.length} hendelser
-            </span>
-          </summary>
-
-          {loaderData.shoppingHistory.length > 0 ? (
-            <ul className="mt-4 space-y-3">
-              {loaderData.shoppingHistory.map((event) => (
-                <li
-                  key={event.id}
-                  className="border-t border-store-line/80 pt-3 first:border-t-0 first:pt-0"
-                >
-                  <p className="text-sm leading-6 text-store-ink">
-                    <span className="font-medium text-store-ink">
-                      {event.actorDisplayName}
-                    </span>
-                    {event.checked
-                      ? " krysset av "
-                      : " fjernet avkryssing for "}
-                    <span className="font-medium text-store-ink">
-                      {event.itemName}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-xs leading-5 text-store-muted">
-                    {formatHistoryTimestamp(event.occurredAt)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-4 text-sm leading-6 text-store-muted">
-              Ingen handlehistorikk for denne turen ennå.
-            </p>
-          )}
-        </details>
+        </StoreModeScanBar>
+        <StoreModeStatusBanners
+          familyId={loaderData.family.id}
+          formError={formFeedback.generalFormError}
+          notice={readStoreModeNoticeContent(loaderData.notice)}
+          storeOfferBriefing={loaderData.storeOfferBriefing}
+        />
+        <StoreModeDueList
+          activeSections={shoppingView.activeSections}
+          canMarkAsStock={loaderData.userRole === "ADMIN"}
+          categories={loaderData.categories}
+          categoryFetcherError={formFeedback.categoryFetcherError}
+          categoryInteractionSourceKey={formFeedback.categoryInteractionSourceKey}
+          deprioritizeBought={preferences.deprioritizeBought}
+          displaySectionCount={shoppingView.displaySectionGroups.length}
+          hasUncheckedDueItems={shoppingView.hasUncheckedDueItems}
+          hasUnusedStockIngredients={
+            loaderData.stockIngredientsForStoreMode.length > 0
+          }
+          hiddenHeadingLists={shoppingView.hiddenHeadingLists}
+          isCelebrating={shoppingView.isCelebrating}
+          isOptingInAllStockItems={pending.isOptingInAllStockItems}
+          isSavingCategorySourceKey={formFeedback.isSavingCategorySourceKey}
+          layout={preferences.shoppingView}
+          onDismissStockReminder={preferences.handleDismissStockReminder}
+          onQuickAddFromCard={dueList.handleQuickAddFromCard}
+          onRestoreStockReminder={preferences.handleRestoreStockReminder}
+          onToggleItem={undo.handleToggleWithUndoFeedback}
+          onUpdateCategory={dueList.handleUpdateCategory}
+          onUpdateQuantity={dueList.handleUpdateQuantity}
+          optingInStockSourceKey={pending.optingInStockSourceKey}
+          pendingMarkAsStockSourceKey={pending.pendingMarkAsStockSourceKey}
+          recentlyAddedSourceKey={dueList.recentlyAddedSourceKey}
+          selectedStoreId={loaderData.selectedStore?.id}
+          showCategoryHeadings={shoppingView.showCategoryHeadings}
+          showRecipeUrgency={preferences.showRecipeUrgency}
+          stockIngredients={loaderData.stockIngredientsForStoreMode}
+          stockReminderDismissed={preferences.stockReminderDismissed}
+        />
+        <StoreModeHistory events={loaderData.shoppingHistory} />
       </div>
-
-      {syncBannerMessage ? (
-        <div
-          aria-live="polite"
-          className={storeModeSyncOverlayShellClass}
-          role="status"
-        >
-          <div
-            className={getStoreModeSyncOverlayClass(
-              syncBannerMessage === STORE_MODE_SYNC_PROGRESS_MESSAGE
-                ? "sync"
-                : "error",
-            )}
-          >
-            <p className="font-semibold">
-              {syncBannerMessage === STORE_MODE_SYNC_PROGRESS_MESSAGE
-                ? "Synkroniserer"
-                : "Kunne ikke synkronisere"}
-            </p>
-            <p className="mt-0.5 leading-5">{syncBannerMessage}</p>
-          </div>
-        </div>
-      ) : null}
-
-      <div className={storeModeBottomChromeShellClass}>
-        <div className="pointer-events-auto mx-auto flex max-w-4xl min-w-0 flex-col gap-2">
-          {isCelebrating ? (
-            <ShoppingListCompleteCelebration variant="chrome" />
-          ) : null}
-          {lastCheckedAction ? (
-            <div
-              aria-live="polite"
-              className={storeModeUndoBarClass}
-              role="status"
-            >
-              <p className="min-w-0 flex-1 truncate leading-5">
-                Krysset av:{" "}
-                <span className="font-semibold">{lastCheckedAction.name}</span>
-              </p>
-              <button
-                className={storeModeUndoBarActionClass}
-                onClick={handleUndoLastCheck}
-                type="button"
-              >
-                Angre
-              </button>
-              <button
-                aria-label="Lukk"
-                className={storeModeUndoBarDismissClass}
-                onClick={handleDismissLastCheck}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-          ) : null}
-          <div className={storeModeQuickAddDockClass}>
-            <ManualShoppingQuickAdd
-              appearance="store-mode"
-              ingredientSearchPath={ingredientSearchPath}
-              onQuickAddError={handleQuickAddError}
-              onQuickAddSubmit={handleQuickAddSubmit}
-              onQuickAddSuccess={handleQuickAddSuccess}
-              prefillRequest={quickAddPrefillRequest}
-              quickAddIntent="quick-add-family-shopping-item"
-              revealOnFocus
-            />
-          </div>
-        </div>
-      </div>
+      <StoreModeSyncOverlay message={syncBannerMessage} />
+      <StoreModeBottomChrome
+        familyId={loaderData.family.id}
+        isCelebrating={shoppingView.isCelebrating}
+        lastCheckedName={undo.lastCheckedAction?.name}
+        onDismissLastCheck={undo.handleDismissLastCheck}
+        onQuickAddError={dueList.handleQuickAddError}
+        onQuickAddSubmit={dueList.handleQuickAddSubmit}
+        onQuickAddSuccess={dueList.handleQuickAddSuccess}
+        onUndoLastCheck={undo.handleUndoLastCheck}
+        prefillRequest={dueList.quickAddPrefillRequest}
+        showUndoBar={undo.lastCheckedAction !== null}
+      />
     </main>
   );
 }
@@ -1836,276 +326,4 @@ export function ErrorBoundary({ error }: { error: unknown }) {
       titleClassName="text-2xl font-semibold text-store-ink"
     />
   );
-}
-
-function getStoreModeNotice(request: Request): StoreModeNotice | null {
-  const notice = new URL(request.url).searchParams.get("notice");
-
-  if (
-    notice === "family-shopping-item-added" ||
-    notice === "generated-shopping-item-marked-as-stock" ||
-    notice === "selected-store-updated" ||
-    notice === "shopping-item-check-state-updated" ||
-    notice === "stock-shopping-items-opted-in" ||
-    notice === "store-mode-trip-focus-updated" ||
-    notice === "shopping-grocery-grouping-updated"
-  ) {
-    return notice;
-  }
-
-  return null;
-}
-
-function getStoreModeNoticeContent(notice: StoreModeNotice) {
-  switch (notice) {
-    case "selected-store-updated":
-      return {
-        description: "Butikkvalget ditt ble lagret for denne familien.",
-        title: "Butikkvalg lagret",
-      };
-    case "store-mode-trip-focus-updated":
-      return {
-        description: "Fokuset for handleturen ble oppdatert.",
-        title: "Fokus lagret",
-      };
-    case "shopping-grocery-grouping-updated":
-      return {
-        description: "Visningen av like varer ble oppdatert.",
-        title: "Gruppering lagret",
-      };
-    case "shopping-item-check-state-updated":
-      return {
-        description: "Avkryssingen for varelinjen ble oppdatert.",
-        title: "Vare oppdatert",
-      };
-    case "family-shopping-item-added":
-      return {
-        description: "Varen ble lagt til og vises i handlelisten.",
-        title: "Vare lagt til",
-      };
-    case "generated-shopping-item-marked-as-stock":
-      return {
-        description:
-          "Varen holdes utenfor handlelisten fremover. Du kan legge den til for denne turen, eller fjerne den fra Basisvarer.",
-        title: "Basisvare lagt til",
-      };
-    case "stock-shopping-items-opted-in":
-      return {
-        description:
-          "Basisvarene ble lagt til i handlelisten og vises i kategoriene.",
-        title: "Basisvarer lagt til",
-      };
-  }
-}
-
-function getStoreModeTripFocusSubtitle({
-  effectiveTripFocus,
-  includedMealPlans,
-  mealPlanTitle,
-}: {
-  effectiveTripFocus: "CURRENT" | "NEXT" | "ALL";
-  includedMealPlans: Array<{ title: string }>;
-  mealPlanTitle: string;
-}) {
-  if (effectiveTripFocus === "ALL") {
-    return `Alle åpne ukeplaner (${includedMealPlans.length})`;
-  }
-
-  if (effectiveTripFocus === "NEXT") {
-    return `Neste uke · ${mealPlanTitle}`;
-  }
-
-  return `Denne uken · ${mealPlanTitle}`;
-}
-
-function buildFamilyStoreModeRedirect({
-  familyId,
-  notice,
-}: {
-  familyId: string;
-  notice: StoreModeNotice;
-  request: Request;
-}) {
-  const params = new URLSearchParams({ notice });
-
-  return redirect(`/families/${familyId}/store-mode?${params}`);
-}
-
-async function resolveStoreModeAnchorMealPlanId({
-  familyId,
-  formData,
-}: {
-  familyId: string;
-  formData: FormData;
-}) {
-  const mealPlanIdFromForm = String(formData.get("mealPlanId") ?? "").trim();
-
-  if (mealPlanIdFromForm) {
-    return mealPlanIdFromForm;
-  }
-
-  const anchorMealPlan = await resolveStoreModeAnchorMealPlan({
-    familyId,
-  });
-
-  if (!anchorMealPlan) {
-    throw buildMealPlanNotFoundResponse();
-  }
-
-  return anchorMealPlan.id;
-}
-
-function StoreModeItemGrid<
-  TItem extends ComponentProps<typeof StoreModeShoppingItemCard>["item"],
->({
-  canMarkAsStock = false,
-  categories,
-  categoryFetcherError,
-  categoryInteractionSourceKey,
-  isSavingCategorySourceKey,
-  items,
-  layout,
-  onQuickAddFromCard,
-  onUpdateCategory,
-  onUpdateQuantity,
-  onToggleItem,
-  pendingMarkAsStockSourceKey = "",
-  preserveOrder = false,
-  recentlyAddedSourceKey,
-  selectedStoreId,
-  showRecipeUrgency = false,
-}: {
-  canMarkAsStock?: boolean;
-  categories: ComponentProps<typeof StoreModeShoppingItemCard>["categories"];
-  categoryFetcherError: string | null;
-  categoryInteractionSourceKey: string;
-  isSavingCategorySourceKey: string | null;
-  items: TItem[];
-  layout: StoreModeShoppingView;
-  onQuickAddFromCard: (item: { name: string; quantityLabel: string | null }) => void;
-  onUpdateCategory: (request: StoreModeCategoryUpdateRequest) => void;
-  onUpdateQuantity: (item: {
-    expectedUpdatedAt: string;
-    mealPlanId?: string | null;
-    quantity: string;
-    sourceKey: string;
-    sourceType: "FAMILY" | "GENERATED";
-  }) => void;
-  onToggleItem: (item: TItem) => void;
-  pendingMarkAsStockSourceKey?: string;
-  preserveOrder?: boolean;
-  recentlyAddedSourceKey: string | null;
-  selectedStoreId?: string;
-  showRecipeUrgency?: boolean;
-}) {
-  const sortedItems = useMemo(
-    () => (preserveOrder ? items : sortStoreModeItemsByName(items)),
-    [items, preserveOrder],
-  );
-
-  return (
-    <div
-      className={
-        layout === "grid" ? storeModeItemGridClass : "mt-4 flex flex-col gap-2"
-      }
-    >
-      {sortedItems.map((item) => (
-        <StoreModeShoppingItemCard
-          key={item.sourceKey}
-          canMarkAsStock={canMarkAsStock}
-          categories={categories}
-          categoryError={
-            categoryInteractionSourceKey === item.sourceKey
-              ? categoryFetcherError
-              : null
-          }
-          isPendingMarkAsStock={pendingMarkAsStockSourceKey === item.sourceKey}
-          isRecentlyAdded={recentlyAddedSourceKey === item.sourceKey}
-          isSavingCategory={isSavingCategorySourceKey === item.sourceKey}
-          item={item}
-          layout={layout}
-          onQuickAddFromCard={onQuickAddFromCard}
-          onUpdateCategory={onUpdateCategory}
-          onUpdateQuantity={onUpdateQuantity}
-          onToggle={() => onToggleItem(item)}
-          selectedStoreId={selectedStoreId}
-          showRecipeUrgency={showRecipeUrgency}
-          solidSurface={preserveOrder}
-        />
-      ))}
-    </div>
-  );
-}
-
-function submitSelectForm(
-  event: ChangeEvent<HTMLSelectElement>,
-  currentValue: string,
-  submit: ReturnType<typeof useSubmit>,
-) {
-  const nextValue = event.currentTarget.value;
-
-  if (nextValue === currentValue) {
-    return;
-  }
-
-  const form = event.currentTarget.form;
-
-  if (form) {
-    void submit(form);
-  }
-}
-
-function parseShoppingItemSource(value: FormDataEntryValue | null) {
-  if (
-    value === ShoppingItemSource.GENERATED ||
-    value === ShoppingItemSource.MANUAL
-  ) {
-    return value;
-  }
-
-  return null;
-}
-
-function buildMealPlanNotFoundResponse() {
-  return new Response("Fant ikke ukeplanen.", {
-    status: 404,
-    statusText: "Not Found",
-  });
-}
-
-function resolveItemMealPlanId(
-  formData: FormData,
-  fallbackMealPlanId: string,
-) {
-  const value = String(formData.get("itemMealPlanId") ?? "").trim();
-
-  return value || fallbackMealPlanId;
-}
-
-function requireRouteParam(value: string | undefined, message: string) {
-  if (!value) {
-    throw new Response(message, {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  return value;
-}
-
-function formatDateOnly(date: Date) {
-  return [
-    date.getUTCFullYear().toString().padStart(4, "0"),
-    (date.getUTCMonth() + 1).toString().padStart(2, "0"),
-    date.getUTCDate().toString().padStart(2, "0"),
-  ].join("-");
-}
-
-function formatHistoryTimestamp(value: string) {
-  return new Intl.DateTimeFormat("nb-NO", {
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short",
-  }).format(new Date(value));
 }
