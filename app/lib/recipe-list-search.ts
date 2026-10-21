@@ -98,6 +98,126 @@ export function deriveRecipeTagOptions(
     .sort((left, right) => left.tag.localeCompare(right.tag, "nb"));
 }
 
+const RECIPE_LIST_QUERY_PARAM = "q";
+const RECIPE_LIST_TAG_PARAM = "tag";
+
+export type RecipeListFilter = {
+  query: string;
+  selectedTags: string[];
+};
+
+function recipeListSearchParams(search: string): URLSearchParams {
+  const value = search.startsWith("?") ? search.slice(1) : search;
+
+  return new URLSearchParams(value);
+}
+
+function knownRecipeTags(recipes: Array<{ tags: string[] }>): Set<string> {
+  const tags = new Set<string>();
+
+  for (const recipe of recipes) {
+    for (const rawTag of recipe.tags) {
+      const tag = rawTag.trim();
+
+      if (tag) {
+        tags.add(tag);
+      }
+    }
+  }
+
+  return tags;
+}
+
+export function withRecipeListFilter(
+  search: string,
+  filter: RecipeListFilter,
+): string {
+  const params = recipeListSearchParams(search);
+
+  params.delete(RECIPE_LIST_QUERY_PARAM);
+  params.delete(RECIPE_LIST_TAG_PARAM);
+
+  if (filter.query.length > 0) {
+    params.set(RECIPE_LIST_QUERY_PARAM, filter.query);
+  }
+
+  const seen = new Set<string>();
+
+  for (const tag of filter.selectedTags) {
+    if (seen.has(tag)) {
+      continue;
+    }
+
+    seen.add(tag);
+    params.append(RECIPE_LIST_TAG_PARAM, tag);
+  }
+
+  const next = params.toString();
+
+  return next.length > 0 ? `?${next}` : "";
+}
+
+export function resolveRecipeListFilter(
+  search: string,
+  recipes: Array<{ tags: string[] }>,
+): RecipeListFilter & { search: string } {
+  const params = recipeListSearchParams(search);
+  const query = params.get(RECIPE_LIST_QUERY_PARAM) ?? "";
+  const knownTags = knownRecipeTags(recipes);
+  const selectedTags: string[] = [];
+  const seen = new Set<string>();
+
+  for (const tag of params.getAll(RECIPE_LIST_TAG_PARAM)) {
+    if (!knownTags.has(tag) || seen.has(tag)) {
+      continue;
+    }
+
+    seen.add(tag);
+    selectedTags.push(tag);
+  }
+
+  return {
+    query,
+    search: withRecipeListFilter(search, { query, selectedTags }),
+    selectedTags,
+  };
+}
+
+export function recipeCatalogReloadSkipped(current: URL, next: URL): boolean {
+  if (current.pathname !== next.pathname) {
+    return false;
+  }
+
+  const currentParams = new URLSearchParams(current.searchParams);
+  const nextParams = new URLSearchParams(next.searchParams);
+
+  currentParams.delete(RECIPE_LIST_QUERY_PARAM);
+  currentParams.delete(RECIPE_LIST_TAG_PARAM);
+  nextParams.delete(RECIPE_LIST_QUERY_PARAM);
+  nextParams.delete(RECIPE_LIST_TAG_PARAM);
+  currentParams.sort();
+  nextParams.sort();
+
+  return currentParams.toString() === nextParams.toString();
+}
+
+export function visibleFamilyRecipes<
+  T extends RecipePickerFields,
+  P extends RecipePickerFields,
+>(
+  recipes: T[],
+  filter: RecipeListFilter,
+  pending: P | null,
+): Array<T | P> {
+  const filtered = filterRecipePickerList(recipes, filter);
+
+  if (!pending) {
+    return filtered;
+  }
+
+  return [pending, ...filtered];
+}
+
 export function groupRecipePickerResults<T extends { id: string }>(
   recipes: T[],
   {
