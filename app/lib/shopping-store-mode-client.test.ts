@@ -892,6 +892,34 @@ describe("shopping-store-mode-client", () => {
     });
   });
 
+  it("sinks a section with no items left when bought items stay visible", () => {
+    const sections = [
+      {
+        displayName: "Dairy",
+        items: [],
+      },
+      {
+        displayName: "Produce",
+        items: [{ checked: false, id: "apple" }],
+      },
+    ];
+
+    expect(partitionStoreModeSections(sections, false, true)).toEqual({
+      activeSections: [
+        {
+          displayName: "Produce",
+          boughtItems: [],
+          items: [{ checked: false, id: "apple" }],
+        },
+        {
+          displayName: "Dairy",
+          boughtItems: [],
+          items: [],
+        },
+      ],
+    });
+  });
+
   it("omits a section with no items when bought items are folded", () => {
     const sections = [
       {

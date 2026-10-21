@@ -391,9 +391,7 @@ function isFinishedStoreModeSection(
     return section.items.length === 0 && section.boughtItems.length > 0;
   }
 
-  return (
-    section.items.length > 0 && section.items.every((item) => item.checked)
-  );
+  return section.items.every((item) => item.checked);
 }
 
 export function splitShoppingItemsByChecked<TItem extends { checked: boolean }>(
