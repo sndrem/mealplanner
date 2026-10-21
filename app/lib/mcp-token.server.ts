@@ -8,7 +8,7 @@ export function hashFamilyMcpToken(rawToken: string) {
   return createHash("sha256").update(rawToken).digest("hex");
 }
 
-export function createFamilyMcpRawToken() {
+function createFamilyMcpRawToken() {
   return randomBytes(32).toString("hex");
 }
 

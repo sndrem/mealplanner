@@ -22,7 +22,7 @@ export function hashCalendarSubscriptionToken(rawToken: string) {
   return createHash("sha256").update(rawToken).digest("hex");
 }
 
-export function createCalendarSubscriptionRawToken() {
+function createCalendarSubscriptionRawToken() {
   return randomBytes(32).toString("hex");
 }
 

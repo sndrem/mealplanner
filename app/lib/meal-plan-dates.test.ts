@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { differenceInUtcDateOnlyDays, isPlanDateToday } from "./meal-plan-dates";
+import {
+  differenceInUtcDateOnlyDays,
+  isPlanDateToday,
+  parseDateOnly,
+} from "./meal-plan-dates";
 
 describe("isPlanDateToday", () => {
   it("returns true when plan date matches the reference UTC calendar day", () => {
@@ -23,6 +27,20 @@ describe("isPlanDateToday", () => {
     expect(isPlanDateToday("2026-05-26", lateUtcEvening)).toBe(true);
     expect(isPlanDateToday("2026-05-26", nextUtcDay)).toBe(false);
     expect(isPlanDateToday("2026-05-27", nextUtcDay)).toBe(true);
+  });
+});
+
+describe("parseDateOnly", () => {
+  it("returns a UTC date for a real calendar day", () => {
+    expect(parseDateOnly("2026-02-28")?.toISOString()).toBe(
+      "2026-02-28T00:00:00.000Z",
+    );
+  });
+
+  it("rejects dates that are not a real calendar day", () => {
+    expect(parseDateOnly("2026-02-31")).toBeNull();
+    expect(parseDateOnly("2026-13-01")).toBeNull();
+    expect(parseDateOnly("26-02-28")).toBeNull();
   });
 });
 

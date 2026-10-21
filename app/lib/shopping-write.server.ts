@@ -7,6 +7,7 @@ import {
 } from "./collaboration.server";
 import { db } from "./db.server";
 import { requireFamilyAdmin, requireFamilyMembership } from "./family.server";
+import { parseDateOnly } from "./meal-plan-dates";
 import { LIVE_MEAL_PLAN_STATUS_FILTER } from "./meal-plan-status.server";
 import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import {
@@ -65,10 +66,6 @@ export function parseManualShoppingItemValues(
 
 const OTHER_INGREDIENT_CATEGORY_KEY = "other";
 const QUICK_ADD_DEFAULT_QUANTITY = "1";
-
-export interface ActiveShoppingDateFieldErrors {
-  activeShoppingDate?: string;
-}
 
 export async function updateManualShoppingItem({
   expectedUpdatedAt,
@@ -1256,7 +1253,7 @@ function buildQuickAddManualShoppingItemValues({
   };
 }
 
-export async function resolveOtherCategoryId() {
+async function resolveOtherCategoryId() {
   const category = await db.ingredientCategory.findUnique({
     select: {
       id: true,
@@ -1616,29 +1613,6 @@ async function validateOptionalDateInFamilyMealPlans({
     date: parsedDate,
     ok: true as const,
   };
-}
-
-function parseDateOnly(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return null;
-  }
-
-  const [yearValue, monthValue, dayValue] = value.split("-");
-  const year = Number(yearValue);
-  const month = Number(monthValue);
-  const day = Number(dayValue);
-  const parsedDate = new Date(Date.UTC(year, month - 1, day));
-
-  if (
-    Number.isNaN(parsedDate.getTime()) ||
-    parsedDate.getUTCFullYear() !== year ||
-    parsedDate.getUTCMonth() !== month - 1 ||
-    parsedDate.getUTCDate() !== day
-  ) {
-    return null;
-  }
-
-  return parsedDate;
 }
 
 function shouldDeleteOverrideAfterUnchecked(existingOverride: {

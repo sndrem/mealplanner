@@ -177,13 +177,5 @@ export function selectMealPlansForTripFocus<
   return [currentPlan];
 }
 
-export function serializeMealPlanForDateSummary(plan: MealPlanForDateSummary) {
-  return {
-    id: plan.id,
-    status: plan.status,
-    title: plan.title,
-  };
-}
-
 export type FamilyShoppingListModeValue =
   (typeof FAMILY_SHOPPING_LIST_MODES)[number];

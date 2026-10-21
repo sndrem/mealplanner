@@ -1,12 +1,14 @@
-import {
-  Form,
-  Link,
-  isRouteErrorResponse,
-  useNavigation,
-  type MetaFunction,
-} from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 
-import { requireUser } from "../lib/auth.server";
+import {
+  FamilyFormErrorBanner,
+  FamilyLoadError,
+  FamilyNoticeBanner,
+  FamilyPageHeader,
+  familyBandLinkClassName,
+  familyBandPrimaryLinkClassName,
+  familyPageMeta,
+} from "../components/family-page";
 import { listFamilyShoppingCatalogItems } from "../lib/shopping-catalog.server";
 import {
   addFamilyShoppingCatalogItem,
@@ -16,6 +18,11 @@ import {
   type FamilyShoppingCatalogItemValues,
 } from "../lib/shopping-catalog-write.server";
 import { listIngredientCategories } from "../lib/store.server";
+import {
+  readFamilyRouteForm,
+  requireFamilyRouteUser,
+  type FamilyRouteArgs,
+} from "../lib/family-route.server";
 
 type CatalogNotice =
   | "catalog-item-added"
@@ -42,28 +49,13 @@ interface FamilyShoppingCatalogRouteProps {
   loaderData: Awaited<ReturnType<typeof loader>>;
 }
 
-export const meta: MetaFunction = () => {
-  return [
-    { title: "Handlevarer | Mealplanner" },
-    {
-      name: "description",
-      content:
-        "Administrer familiens gjenbrukbare varenavn for hurtig utfylling i handlelisten.",
-    },
-  ];
-};
+export const meta = familyPageMeta(
+  "Handlevarer | Mealplanner",
+  "Administrer familiens gjenbrukbare varenavn for hurtig utfylling i handlelisten.",
+);
 
-export async function loader({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
+export async function loader({ params, request }: FamilyRouteArgs) {
+  const { familyId, user } = await requireFamilyRouteUser({ params, request });
   const [result, categories] = await Promise.all([
     listFamilyShoppingCatalogItems({
       familyId,
@@ -81,19 +73,11 @@ export async function loader({
   };
 }
 
-export async function action({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
-  const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+export async function action({ params, request }: FamilyRouteArgs) {
+  const { familyId, formData, intent, user } = await readFamilyRouteForm({
+    params,
+    request,
+  });
 
   if (intent === "add-catalog-item") {
     const result = await addFamilyShoppingCatalogItem({
@@ -286,56 +270,40 @@ export default function FamilyShoppingCatalogRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
-                Handlevarer
-              </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-                {loaderData.family.name}
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
-                Gjenbrukbare varenavn som ikke kommer fra oppskrifter, for
-                eksempel husholdningsvarer. Når dere legger til et nytt navn i
-                handlelisten, lagres det her så det kan søkes opp neste uke.
-                Dette er ikke det samme som basisvarer, som holdes utenfor
-                handlelisten fordi dere vanligvis har dem hjemme.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
+        <FamilyPageHeader
+          actions={
+            <>
               <Link
-                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
+                className={familyBandPrimaryLinkClassName}
                 to={`/families/${loaderData.family.id}/store-mode`}
               >
                 Åpne handleliste
               </Link>
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
+                className={familyBandLinkClassName}
                 to={`/families/${loaderData.family.id}/stock-ingredients`}
               >
                 Basisvarer
               </Link>
-            </div>
-          </div>
-        </section>
+            </>
+          }
+          description="Gjenbrukbare varenavn som ikke kommer fra oppskrifter, for eksempel husholdningsvarer. Når dere legger til et nytt navn i handlelisten, lagres det her så det kan søkes opp neste uke. Dette er ikke det samme som basisvarer, som holdes utenfor handlelisten fordi dere vanligvis har dem hjemme."
+          kicker="Handlevarer"
+          title={loaderData.family.name}
+        />
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
-            <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-accent-strong">
-              {noticeContent.description}
-            </p>
-          </section>
+          <FamilyNoticeBanner
+            description={noticeContent.description}
+            title={noticeContent.title}
+          />
         ) : null}
 
         {actionData?.formError ? (
-          <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
-            <h2 className="text-base font-semibold">
-              Kunne ikke oppdatere handlevarene
-            </h2>
-            <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
-          </section>
+          <FamilyFormErrorBanner
+            message={actionData.formError}
+            title="Kunne ikke oppdatere handlevarene"
+          />
         ) : null}
 
         <section className="rounded-[28px] bg-surface p-6 shadow-sm ring-1 ring-line">
@@ -553,44 +521,12 @@ export default function FamilyShoppingCatalogRoute({
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {
-  if (isRouteErrorResponse(error)) {
-    return (
-      <main className="min-h-screen bg-page px-4 py-12 text-ink">
-        <div className="mx-auto max-w-3xl rounded-[28px] bg-surface p-8 shadow-sm ring-1 ring-line">
-          <h1 className="text-2xl font-semibold text-ink">
-            {error.status} {error.statusText}
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-muted">
-            {typeof error.data === "string"
-              ? error.data
-              : "Noe gikk galt under lasting av handlevarene."}
-          </p>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-page px-4 py-12 text-ink">
-      <div className="mx-auto max-w-3xl rounded-[28px] bg-surface p-8 shadow-sm ring-1 ring-line">
-        <h1 className="text-2xl font-semibold text-ink">Uventet feil</h1>
-        <p className="mt-3 text-sm leading-6 text-muted">
-          Noe gikk galt under lasting av handlevarene.
-        </p>
-      </div>
-    </main>
+    <FamilyLoadError
+      error={error}
+      fallbackMessage="Noe gikk galt under lasting av handlevarene."
+    />
   );
-}
-
-function requireFamilyId(familyId: string | undefined) {
-  if (!familyId) {
-    throw new Response("Fant ikke familien.", {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  return familyId;
 }
 
 function parseCatalogItemValues(

@@ -1,5 +1,7 @@
 import { Prisma } from "@prisma/client";
 
+import { parseDateOnly } from "./meal-plan-dates";
+
 const CALENDAR_TIME_ZONE = "Europe/Oslo";
 const DINNER_END_HOUR = 17;
 const DINNER_START_HOUR = 16;
@@ -236,29 +238,6 @@ function formatCalendarIngredientLine(ingredient: CalendarRecipeIngredient) {
 
 export function getFamilyCalendarName(familyName: string) {
   return `Mealplanner - ${familyName}`;
-}
-
-function parseDateOnly(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return null;
-  }
-
-  const [yearValue, monthValue, dayValue] = value.split("-");
-  const year = Number(yearValue);
-  const month = Number(monthValue);
-  const day = Number(dayValue);
-  const parsedDate = new Date(Date.UTC(year, month - 1, day));
-
-  if (
-    Number.isNaN(parsedDate.getTime()) ||
-    parsedDate.getUTCFullYear() !== year ||
-    parsedDate.getUTCMonth() !== month - 1 ||
-    parsedDate.getUTCDate() !== day
-  ) {
-    return null;
-  }
-
-  return parsedDate;
 }
 
 function formatIcsDate(value: string) {

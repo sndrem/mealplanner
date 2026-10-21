@@ -43,7 +43,7 @@ const storeModeTripFocusScanLabels: Record<StoreModeTripFocusScanValue, string> 
 
 export type StoreModeShoppingView = "list" | "grid";
 
-export const DEFAULT_STORE_MODE_SHOPPING_VIEW: StoreModeShoppingView = "grid";
+const DEFAULT_STORE_MODE_SHOPPING_VIEW: StoreModeShoppingView = "grid";
 
 const STORE_MODE_QUEUE_KEY_PREFIX = "mealplanner:store-mode-queue:v1";
 const STORE_MODE_VIEW_KEY_PREFIX = "mealplanner:store-mode-view:v1";
@@ -242,7 +242,7 @@ export function writeStoreModeStockReminderDismissed(
   }
 }
 
-export function compareStoreModeItemsByName(
+function compareStoreModeItemsByName(
   left: { name: string; sourceKey: string },
   right: { name: string; sourceKey: string },
 ) {
@@ -569,7 +569,7 @@ export function reconcileToggleQueue({
   });
 }
 
-export function flattenStoreModeToggleItems(
+function flattenStoreModeToggleItems(
   items: StoreModeToggleItem[],
 ): StoreModeToggleItem[] {
   return items.flatMap((item) => {

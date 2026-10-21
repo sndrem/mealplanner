@@ -12,9 +12,9 @@ import {
   getCalendarWeekDates,
 } from "./meal-plan-week";
 
-export const WEEKEND_REMINDER_TIME_ZONE = "Europe/Oslo";
-export const WEEKEND_REMINDER_WEEKDAY = "Thu";
-export const WEEKEND_REMINDER_HOUR = 12;
+const WEEKEND_REMINDER_TIME_ZONE = "Europe/Oslo";
+const WEEKEND_REMINDER_WEEKDAY = "Thu";
+const WEEKEND_REMINDER_HOUR = 12;
 
 type DinnerEntryFields = {
   date: Date;

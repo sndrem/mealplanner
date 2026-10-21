@@ -41,7 +41,7 @@ export function buildShoppingGroceryGroupKey(item: {
   });
 }
 
-export interface GroupableGeneratedShoppingItem {
+interface GroupableGeneratedShoppingItem {
   category: { id: string };
   checked: boolean;
   collaborationVersion: string;

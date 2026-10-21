@@ -15,7 +15,7 @@ import {
 } from "./meal-plan-week";
 import { getRecipeImageUrl } from "./r2.server";
 
-export type FamilyWeekDayMenu = {
+type FamilyWeekDayMenu = {
   date: string;
   dateLabel: string;
   imageUrl: string | null;

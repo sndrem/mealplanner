@@ -1,14 +1,16 @@
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import {
-  Form,
-  Link,
-  isRouteErrorResponse,
-  useNavigation,
-  type MetaFunction,
-} from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 
-import { requireUser } from "../lib/auth.server";
+import {
+  FamilyFormErrorBanner,
+  FamilyNoticeBanner,
+  FamilyPageHeader,
+  FamilyUnexpectedError,
+  familyBandLinkClassName,
+  familyBandPrimaryLinkClassName,
+  familyPageMeta,
+} from "../components/family-page";
 import { FamilyStoreEditorCard } from "../components/family-store-editor-card";
 import { getStoreManagementData } from "../lib/store.server";
 import {
@@ -20,6 +22,11 @@ import {
   type FamilyStoreFieldErrors,
   type FamilyStoreValues,
 } from "../lib/store-write.server";
+import {
+  readFamilyRouteForm,
+  requireFamilyRouteUser,
+  type FamilyRouteArgs,
+} from "../lib/family-route.server";
 
 type StoresNotice =
   | "store-created"
@@ -54,28 +61,13 @@ interface FamilyStoresRouteProps {
   loaderData: Awaited<ReturnType<typeof loader>>;
 }
 
-export const meta: MetaFunction = () => {
-  return [
-    { title: "Butikker | Mealplanner" },
-    {
-      name: "description",
-      content:
-        "Administrer familiebutikker og seksjonsrekkefølge i Mealplanner.",
-    },
-  ];
-};
+export const meta = familyPageMeta(
+  "Butikker | Mealplanner",
+  "Administrer familiebutikker og seksjonsrekkefølge i Mealplanner.",
+);
 
-export async function loader({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
+export async function loader({ params, request }: FamilyRouteArgs) {
+  const { familyId, user } = await requireFamilyRouteUser({ params, request });
   const result = await getStoreManagementData({
     familyId,
     userId: user.id,
@@ -91,19 +83,11 @@ export async function loader({
   };
 }
 
-export async function action({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
-  const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+export async function action({ params, request }: FamilyRouteArgs) {
+  const { familyId, formData, intent, user } = await readFamilyRouteForm({
+    params,
+    request,
+  });
 
   if (intent === "create-store") {
     const name = String(formData.get("name") ?? "");
@@ -327,54 +311,40 @@ export default function FamilyStoresRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
-                Butikker
-              </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-                {loaderData.family.name}
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
-                Administrer familiebutikker og bestem seksjonsrekkefølgen slik
-                at butikkmodus følger handleturen deres.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
+        <FamilyPageHeader
+          actions={
+            <>
               <Link
-                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
+                className={familyBandPrimaryLinkClassName}
                 to={`/families/${loaderData.family.id}/meal-plans`}
               >
                 Åpne ukeplaner
               </Link>
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
+                className={familyBandLinkClassName}
                 to={`/families/${loaderData.family.id}`}
               >
                 Tilbake til familie
               </Link>
-            </div>
-          </div>
-        </section>
+            </>
+          }
+          description="Administrer familiebutikker og bestem seksjonsrekkefølgen slik at butikkmodus følger handleturen deres."
+          kicker="Butikker"
+          title={loaderData.family.name}
+        />
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
-            <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-accent-strong">
-              {noticeContent.description}
-            </p>
-          </section>
+          <FamilyNoticeBanner
+            description={noticeContent.description}
+            title={noticeContent.title}
+          />
         ) : null}
 
         {actionData?.formError ? (
-          <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
-            <h2 className="text-base font-semibold">
-              Kunne ikke oppdatere butikkene
-            </h2>
-            <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
-          </section>
+          <FamilyFormErrorBanner
+            message={actionData.formError}
+            title="Kunne ikke oppdatere butikkene"
+          />
         ) : null}
 
         {canManageStores ? (
@@ -566,32 +536,12 @@ export default function FamilyStoresRoute({
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {
-  let title = "Noe gikk galt";
-  let message = "Vi klarte ikke å laste butikkoppsettet akkurat nå.";
-
-  if (isRouteErrorResponse(error)) {
-    title = error.status === 404 ? "Fant ikke familien" : title;
-    message =
-      typeof error.data === "string" && error.data.length > 0
-        ? error.data
-        : error.statusText || message;
-  } else if (error instanceof Error) {
-    message = error.message;
-  }
-
   return (
-    <main className="min-h-screen bg-page px-4 py-16 text-ink">
-      <div className="mx-auto max-w-2xl rounded-[32px] bg-surface p-8 shadow-sm ring-1 ring-line">
-        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
-        <Link
-          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
-          to="/app"
-        >
-          Til appen
-        </Link>
-      </div>
-    </main>
+    <FamilyUnexpectedError
+      error={error}
+      fallbackMessage="Vi klarte ikke å laste butikkoppsettet akkurat nå."
+      notFoundTitle="Fant ikke familien"
+    />
   );
 }
 
@@ -676,13 +626,3 @@ function parseFamilyStoreValues(formData: FormData): FamilyStoreValues {
   };
 }
 
-function requireFamilyId(familyId: string | undefined) {
-  if (!familyId) {
-    throw new Response("Fant ikke familien.", {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  return familyId;
-}

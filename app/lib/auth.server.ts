@@ -71,7 +71,7 @@ export async function verifyPassword(password: string, passwordHash: string | nu
   return timingSafeEqual(derivedKey, storedKeyBuffer);
 }
 
-export async function getCurrentUser(request: Request) {
+async function getCurrentUser(request: Request) {
   const userId = await getUserId(request);
 
   if (!userId) {

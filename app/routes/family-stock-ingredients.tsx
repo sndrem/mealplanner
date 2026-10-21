@@ -3,10 +3,16 @@ import {
   Link,
   isRouteErrorResponse,
   useNavigation,
-  type MetaFunction,
 } from "react-router";
 
-import { requireUser } from "../lib/auth.server";
+import {
+  FamilyFormErrorBanner,
+  FamilyNoticeBanner,
+  FamilyPageHeader,
+  familyBandLinkClassName,
+  familyBandPrimaryLinkClassName,
+  familyPageMeta,
+} from "../components/family-page";
 import {
   listFamilyStockIngredients,
   searchCanonicalIngredients,
@@ -17,6 +23,11 @@ import {
   type AddFamilyStockIngredientFieldErrors,
   type AddFamilyStockIngredientValues,
 } from "../lib/stock-write.server";
+import {
+  readFamilyRouteForm,
+  requireFamilyRouteUser,
+  type FamilyRouteArgs,
+} from "../lib/family-route.server";
 
 type StockNotice = "stock-ingredient-added" | "stock-ingredient-removed";
 
@@ -35,28 +46,13 @@ interface FamilyStockIngredientsRouteProps {
   loaderData: Awaited<ReturnType<typeof loader>>;
 }
 
-export const meta: MetaFunction = () => {
-  return [
-    { title: "Basisvarer | Mealplanner" },
-    {
-      name: "description",
-      content:
-        "Administrer basisvarer som vanligvis er på lager og holdes utenfor handlelisten.",
-    },
-  ];
-};
+export const meta = familyPageMeta(
+  "Basisvarer | Mealplanner",
+  "Administrer basisvarer som vanligvis er på lager og holdes utenfor handlelisten.",
+);
 
-export async function loader({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
+export async function loader({ params, request }: FamilyRouteArgs) {
+  const { familyId, user } = await requireFamilyRouteUser({ params, request });
   const searchQuery = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   const result = await listFamilyStockIngredients({
     familyId,
@@ -77,19 +73,11 @@ export async function loader({
   };
 }
 
-export async function action({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
-  const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+export async function action({ params, request }: FamilyRouteArgs) {
+  const { familyId, formData, intent, user } = await readFamilyRouteForm({
+    params,
+    request,
+  });
 
   if (intent === "add-stock-ingredient") {
     const result = await addFamilyStockIngredient({
@@ -219,54 +207,40 @@ export default function FamilyStockIngredientsRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
-                Basisvarer
-              </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-                {loaderData.family.name}
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
-                Vanligvis på lager. Basisvarer vises fortsatt i oppskrifter, men
-                holdes utenfor den automatiske handlelisten med mindre dere
-                velger å ta dem med for uken.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
+        <FamilyPageHeader
+          actions={
+            <>
               <Link
-                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
+                className={familyBandPrimaryLinkClassName}
                 to={`/families/${loaderData.family.id}/meal-plans`}
               >
                 Åpne ukeplaner
               </Link>
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
+                className={familyBandLinkClassName}
                 to={`/families/${loaderData.family.id}`}
               >
                 Tilbake til familie
               </Link>
-            </div>
-          </div>
-        </section>
+            </>
+          }
+          description="Vanligvis på lager. Basisvarer vises fortsatt i oppskrifter, men holdes utenfor den automatiske handlelisten med mindre dere velger å ta dem med for uken."
+          kicker="Basisvarer"
+          title={loaderData.family.name}
+        />
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
-            <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-accent-strong">
-              {noticeContent.description}
-            </p>
-          </section>
+          <FamilyNoticeBanner
+            description={noticeContent.description}
+            title={noticeContent.title}
+          />
         ) : null}
 
         {actionData?.formError ? (
-          <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
-            <h2 className="text-base font-semibold">
-              Kunne ikke oppdatere basisvarene
-            </h2>
-            <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
-          </section>
+          <FamilyFormErrorBanner
+            message={actionData.formError}
+            title="Kunne ikke oppdatere basisvarene"
+          />
         ) : null}
 
         {canManageStock ? (
@@ -458,17 +432,6 @@ export function ErrorBoundary({ error }: { error: unknown }) {
   }
 
   throw error;
-}
-
-function requireFamilyId(familyId: string | undefined) {
-  if (!familyId) {
-    throw new Response("Fant ikke familien.", {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  return familyId;
 }
 
 function getStockNotice(request: Request): StockNotice | null {

@@ -1,8 +1,17 @@
 import { useMemo, useRef, useState } from "react";
-import { Form, Link, isRouteErrorResponse, useNavigation } from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 
+import {
+  FamilyFormErrorBanner,
+  FamilyNoticeBanner,
+  FamilyPageHeader,
+  FamilyUnexpectedError,
+  familyBandLinkClassName,
+  familyBandPrimaryLinkClassName,
+  familyPageMeta,
+} from "../components/family-page";
 import { RecipePickerMedia } from "../components/recipe-picker-card";
-import { requireUser, getSafeRedirectTo } from "../lib/auth.server";
+import { getSafeRedirectTo } from "../lib/auth.server";
 import { compressRecipeCoverImage } from "../lib/recipe-cover-image";
 import {
   filterRecipeList,
@@ -17,6 +26,11 @@ import {
   type FamilyRecipeValues,
 } from "../lib/recipe-write.server";
 import { isR2Configured } from "../lib/r2.server";
+import {
+  readFamilyRouteForm,
+  requireFamilyRouteUser,
+  type FamilyRouteArgs,
+} from "../lib/family-route.server";
 
 type RecipesNotice = "recipe-created" | "recipe-deleted";
 
@@ -34,27 +48,13 @@ interface FamilyRecipesRouteProps {
   loaderData: Awaited<ReturnType<typeof loader>>;
 }
 
-export const meta = () => {
-  return [
-    { title: "Oppskrifter | Mealplanner" },
-    {
-      name: "description",
-      content: "Administrer familieoppskrifter og se standardoppskrifter.",
-    },
-  ];
-};
+export const meta = familyPageMeta(
+  "Oppskrifter | Mealplanner",
+  "Administrer familieoppskrifter og se standardoppskrifter.",
+);
 
-export async function loader({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
+export async function loader({ params, request }: FamilyRouteArgs) {
+  const { familyId, user } = await requireFamilyRouteUser({ params, request });
   const result = await getRecipeManagementData({
     familyId,
     userId: user.id,
@@ -75,19 +75,11 @@ export async function loader({
   };
 }
 
-export async function action({
-  params,
-  request,
-}: {
-  params: {
-    familyId?: string;
-  };
-  request: Request;
-}) {
-  const user = await requireUser(request);
-  const familyId = requireFamilyId(params.familyId);
-  const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+export async function action({ params, request }: FamilyRouteArgs) {
+  const { familyId, formData, intent, user } = await readFamilyRouteForm({
+    params,
+    request,
+  });
 
   if (intent === "create-recipe") {
     const values = parseFamilyRecipeValues(formData);
@@ -213,62 +205,50 @@ export default function FamilyRecipesRoute({
   return (
     <main className="min-h-screen bg-page px-4 py-12 text-ink">
       <div className="mx-auto flex min-w-0 max-w-6xl flex-col gap-6">
-        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
-                Oppskrifter
-              </span>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-                {loaderData.family.name}
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
-                Familieoppskrifter kan redigeres her. Standardoppskrifter er
-                felles for alle familier og kan bare leses i appen.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
+        <FamilyPageHeader
+          actions={
+            <>
               {loaderData.returnTo ? (
                 <Link
-                  className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
+                  className={familyBandLinkClassName}
                   to={loaderData.returnTo}
                 >
                   Tilbake til ukeplan
                 </Link>
               ) : null}
               <Link
-                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
+                className={familyBandPrimaryLinkClassName}
                 to={`/families/${loaderData.family.id}/meal-plans`}
               >
                 Åpne ukeplaner
               </Link>
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
+                className={familyBandLinkClassName}
                 to={`/families/${loaderData.family.id}`}
               >
                 Tilbake til familie
               </Link>
-            </div>
-          </div>
-        </section>
+            </>
+          }
+          description="Familieoppskrifter kan redigeres her. Standardoppskrifter er felles for alle familier og kan bare leses i appen."
+          kicker="Oppskrifter"
+          title={loaderData.family.name}
+        />
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-notice-success-line bg-notice-success px-6 py-5 text-notice-success-ink shadow-sm">
-            <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-notice-success-muted">
-              {noticeContent.description}
-            </p>
-          </section>
+          <FamilyNoticeBanner
+            description={noticeContent.description}
+            title={noticeContent.title}
+            tone="success"
+          />
         ) : null}
 
         {actionData?.formError ? (
-          <section className="rounded-[28px] border border-notice-danger-line bg-notice-danger px-6 py-5 text-notice-danger-ink shadow-sm">
-            <h2 className="text-base font-semibold">
-              Kunne ikke oppdatere oppskriftene
-            </h2>
-            <p className="mt-2 text-sm leading-6">{actionData.formError}</p>
-          </section>
+          <FamilyFormErrorBanner
+            message={actionData.formError}
+            title="Kunne ikke oppdatere oppskriftene"
+            tone="danger"
+          />
         ) : null}
 
         {canManageRecipes ? (
@@ -667,32 +647,12 @@ function RecipeListCard({
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {
-  let title = "Noe gikk galt";
-  let message = "Vi kunne ikke laste oppskriftene akkurat nå.";
-
-  if (isRouteErrorResponse(error)) {
-    title = error.status === 404 ? "Fant ikke siden" : title;
-    message =
-      typeof error.data === "string" && error.data.length > 0
-        ? error.data
-        : error.statusText || message;
-  } else if (error instanceof Error) {
-    message = error.message;
-  }
-
   return (
-    <main className="min-h-screen bg-page px-4 py-16 text-ink">
-      <div className="mx-auto max-w-2xl rounded-[32px] bg-surface p-8 shadow-sm ring-1 ring-line">
-        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
-        <Link
-          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
-          to="/app"
-        >
-          Til appen
-        </Link>
-      </div>
-    </main>
+    <FamilyUnexpectedError
+      error={error}
+      fallbackMessage="Vi kunne ikke laste oppskriftene akkurat nå."
+      notFoundTitle="Fant ikke siden"
+    />
   );
 }
 
@@ -722,13 +682,3 @@ function getRecipesNoticeContent(notice: RecipesNotice) {
   }
 }
 
-function requireFamilyId(familyId: string | undefined) {
-  if (!familyId) {
-    throw new Response("Fant ikke familien.", {
-      status: 404,
-      statusText: "Not Found",
-    });
-  }
-
-  return familyId;
-}

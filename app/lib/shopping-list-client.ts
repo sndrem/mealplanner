@@ -176,7 +176,7 @@ export function mergeQuickAddedItemsIntoList<T extends { sourceKey: string }>(
   return mergedItems;
 }
 
-export const OPTIMISTIC_SOURCE_KEY_PREFIX = "optimistic:";
+const OPTIMISTIC_SOURCE_KEY_PREFIX = "optimistic:";
 
 export type ShoppingItemDisplayPatch = {
   checked?: boolean;
@@ -195,7 +195,7 @@ export function createOptimisticSourceKey() {
   return `${OPTIMISTIC_SOURCE_KEY_PREFIX}${id}`;
 }
 
-export function isOptimisticSourceKey(sourceKey: string) {
+function isOptimisticSourceKey(sourceKey: string) {
   return sourceKey.startsWith(OPTIMISTIC_SOURCE_KEY_PREFIX);
 }
 
@@ -412,7 +412,7 @@ export function buildOptimisticManualShoppingItem({
   };
 }
 
-export function findProjectedItemInStoreGroups(
+function findProjectedItemInStoreGroups(
   groups: SerializedProjectedShoppingStoreGroup[],
   sourceKey: string,
 ) {

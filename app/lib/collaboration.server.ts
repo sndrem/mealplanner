@@ -12,10 +12,6 @@ export function buildActorUpdate(userId: string) {
   };
 }
 
-export function serializeUpdatedAt(date: Date) {
-  return date.toISOString();
-}
-
 export function matchesExpectedUpdatedAt(
   expectedUpdatedAt: string | undefined | null,
   actualUpdatedAt: Date | null | undefined,

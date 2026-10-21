@@ -24,7 +24,7 @@ const sharedShoppingSnapshotStoreSchema = z.object({
   ),
 });
 
-export const shoppingListShareSnapshotSchema = z.object({
+const shoppingListShareSnapshotSchema = z.object({
   items: z.array(sharedShoppingSnapshotItemSchema),
   stores: z.array(sharedShoppingSnapshotStoreSchema),
 });

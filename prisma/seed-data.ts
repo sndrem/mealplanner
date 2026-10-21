@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export interface IngredientCategorySeed {
+interface IngredientCategorySeed {
   key: string;
   displayName: string;
 }
@@ -76,7 +76,7 @@ export function normalizeIngredientCanonicalName(displayName: string) {
   return displayName.trim().toLowerCase();
 }
 
-export function loadCatalogIngredientSeeds(
+function loadCatalogIngredientSeeds(
   csvPath: string = catalogCsvPath,
 ): CatalogIngredientSeed[] {
   return parseCatalogIngredientCsv(readFileSync(csvPath, "utf8"));

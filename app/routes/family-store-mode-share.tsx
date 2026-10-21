@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import {
   Form,
   Link,
-  isRouteErrorResponse,
   redirect,
   useNavigation,
   type MetaFunction,
 } from "react-router";
+
+import { FamilyUnexpectedError } from "../components/family-page";
 
 import { requireUser } from "../lib/auth.server";
 import {
@@ -169,32 +170,16 @@ export default function FamilyStoreModeShareRoute({
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {
-  let title = "Noe gikk galt";
-  let message = "Vi klarte ikke å laste deling av handlelisten.";
-
-  if (isRouteErrorResponse(error)) {
-    title = error.status === 404 ? "Fant ikke listen" : title;
-    message =
-      typeof error.data === "string" && error.data.length > 0
-        ? error.data
-        : error.statusText || message;
-  } else if (error instanceof Error) {
-    message = error.message;
-  }
-
   return (
-    <main className={`${storeModePageClass} py-16`}>
-      <div className={`mx-auto max-w-2xl ${storeModeSurfaceCardClass} p-8`}>
-        <h1 className="text-2xl font-semibold text-store-ink">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-store-muted">{message}</p>
-        <Link
-          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
-          to="/app"
-        >
-          Til appen
-        </Link>
-      </div>
-    </main>
+    <FamilyUnexpectedError
+      cardClassName={`mx-auto max-w-2xl ${storeModeSurfaceCardClass} p-8`}
+      error={error}
+      fallbackMessage="Vi klarte ikke å laste deling av handlelisten."
+      messageClassName="mt-3 text-sm leading-6 text-store-muted"
+      notFoundTitle="Fant ikke listen"
+      pageClassName={`${storeModePageClass} py-16`}
+      titleClassName="text-2xl font-semibold text-store-ink"
+    />
   );
 }
 

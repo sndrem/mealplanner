@@ -5,7 +5,7 @@ import { requireFamilyMembership } from "./family.server";
 import { getRecipeImageUrl } from "./r2.server";
 import { listIngredientCategories } from "./store.server";
 
-export const recipeIngredientSelect =
+const recipeIngredientSelect =
   Prisma.validator<Prisma.RecipeIngredientSelect>()({
     amount: true,
     category: {
@@ -30,7 +30,7 @@ export const recipeIngredientSelect =
     unit: true,
   });
 
-export const recipeReminderSuggestionSelect =
+const recipeReminderSuggestionSelect =
   Prisma.validator<Prisma.RecipeReminderSuggestionSelect>()({
     id: true,
     note: true,
@@ -39,7 +39,7 @@ export const recipeReminderSuggestionSelect =
     title: true,
   });
 
-export const managedRecipeSelect = Prisma.validator<Prisma.RecipeSelect>()({
+const managedRecipeSelect = Prisma.validator<Prisma.RecipeSelect>()({
   createdAt: true,
   defaultServings: true,
   description: true,
@@ -61,7 +61,7 @@ export const managedRecipeSelect = Prisma.validator<Prisma.RecipeSelect>()({
   updatedAt: true,
 });
 
-export const recipeListSummarySelect = Prisma.validator<Prisma.RecipeSelect>()({
+const recipeListSummarySelect = Prisma.validator<Prisma.RecipeSelect>()({
   defaultServings: true,
   description: true,
   familyId: true,
@@ -80,15 +80,7 @@ export const recipeListSummarySelect = Prisma.validator<Prisma.RecipeSelect>()({
   },
 });
 
-export type ManagedRecipe = Prisma.RecipeGetPayload<{
-  select: typeof managedRecipeSelect;
-}>;
-
-export type RecipeListSummary = Prisma.RecipeGetPayload<{
-  select: typeof recipeListSummarySelect;
-}>;
-
-export async function listFamilyStoresForRecipes(familyId: string) {
+async function listFamilyStoresForRecipes(familyId: string) {
   return db.store.findMany({
     orderBy: [{ name: "asc" }],
     select: {

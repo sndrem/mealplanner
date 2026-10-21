@@ -107,10 +107,6 @@ export async function listFamilyMembers(familyId: string) {
   });
 }
 
-export async function listFamilyMembersForCollaboration(familyId: string) {
-  return listFamilyMembers(familyId);
-}
-
 export async function createFamilyForUser({
   userId,
   name,
@@ -264,7 +260,7 @@ export async function getFamilyReminderEmail(familyId: string) {
   return family?.reminderEmail ?? null;
 }
 
-export function isFamilyReminderEmailValid(email: string) {
+function isFamilyReminderEmailValid(email: string) {
   return FAMILY_REMINDER_EMAIL_PATTERN.test(email);
 }
 

@@ -4,18 +4,18 @@ import { hashPassword, normalizeEmail } from "./auth.server";
 import { db } from "./db.server";
 import { sendEmail } from "./mailer.server";
 
-export const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
-export const PASSWORD_RESET_THROTTLE_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+const PASSWORD_RESET_THROTTLE_MS = 15 * 60 * 1000;
 
 export function hashPasswordResetToken(rawToken: string) {
   return createHash("sha256").update(rawToken).digest("hex");
 }
 
-export function createPasswordResetRawToken() {
+function createPasswordResetRawToken() {
   return randomBytes(32).toString("hex");
 }
 
-export function buildPasswordResetEmail({
+function buildPasswordResetEmail({
   displayName,
   resetUrl,
 }: {

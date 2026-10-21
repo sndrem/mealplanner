@@ -20,7 +20,7 @@ import {
 import { SHOPPING_QUICK_ADD_ROOT_ATTRIBUTE } from "../lib/shopping-quick-add-feedback.client";
 import { createOptimisticSourceKey } from "../lib/shopping-list-client";
 
-export interface IngredientSearchResult {
+interface IngredientSearchResult {
   canonicalName: string;
   defaultCategoryId: string | null;
   defaultQuantity?: string | null;

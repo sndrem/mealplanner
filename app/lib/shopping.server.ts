@@ -138,7 +138,7 @@ type ManualShoppingItemRow = Prisma.ManualShoppingItemGetPayload<{
   select: typeof manualShoppingItemSelect;
 }>;
 
-export const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
+const shoppingMealPlanSelect = Prisma.validator<Prisma.MealPlanSelect>()({
   activeShoppingDate: true,
   endDate: true,
   updatedAt: true,
@@ -250,7 +250,7 @@ interface GeneratedProjectionBucket {
   unit: string | null;
 }
 
-export interface ProjectedStockIngredientSummary {
+interface ProjectedStockIngredientSummary {
   category: ShoppingCategorySummary;
   isOptedIn: boolean;
   name: string;
@@ -275,7 +275,7 @@ interface ProjectedShoppingItemBase {
   sourceType: ProjectedShoppingItemSource;
 }
 
-export type ProjectedShoppingItemSource = ShoppingItemSource | "FAMILY";
+type ProjectedShoppingItemSource = ShoppingItemSource | "FAMILY";
 
 export interface ProjectedShoppingOccurrence {
   amount: string | null;
@@ -328,18 +328,18 @@ export type ProjectedShoppingItem =
   | ProjectedManualShoppingItem
   | ProjectedFamilyShoppingItem;
 
-export interface ProjectedShoppingSectionGroup {
+interface ProjectedShoppingSectionGroup {
   category: ShoppingCategorySummary;
   displayName: string;
   items: ProjectedShoppingItem[];
 }
 
-export interface ProjectedShoppingStoreGroup {
+interface ProjectedShoppingStoreGroup {
   sections: ProjectedShoppingSectionGroup[];
   store: StoreSummary;
 }
 
-export interface StoreModeProgress {
+interface StoreModeProgress {
   checkedCount: number;
   totalCount: number;
 }
@@ -503,7 +503,7 @@ export async function loadFamilyShoppingItems({
   });
 }
 
-export function projectFamilyShoppingItems({
+function projectFamilyShoppingItems({
   items,
   stores,
 }: {
@@ -611,7 +611,7 @@ export async function projectCreatedFamilyShoppingItem({
   });
 }
 
-export function buildFamilyShoppingCrossSourceDedupKey(item: {
+function buildFamilyShoppingCrossSourceDedupKey(item: {
   category: { id: string };
   name: string;
 }) {

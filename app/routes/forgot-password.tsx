@@ -5,7 +5,7 @@ import { AuthScreen, authInputClassName, authSubmitButtonClassName } from "../fe
 import { requireAnonymous } from "../lib/auth.server";
 import { requestPasswordReset } from "../lib/password-reset.server";
 
-export interface ForgotPasswordActionData {
+interface ForgotPasswordActionData {
   fieldErrors?: {
     email?: string;
   };

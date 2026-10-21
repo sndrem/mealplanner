@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Form,
   Link,
-  isRouteErrorResponse,
   redirect,
   useFetcher,
   useNavigation,
@@ -11,6 +10,14 @@ import {
   type MetaFunction,
 } from "react-router";
 
+import {
+  FamilyFormErrorBanner,
+  FamilyNoticeBanner,
+  FamilyPageHeader,
+  FamilyUnexpectedError,
+  familyBandLinkClassName,
+  familyBandPrimaryLinkClassName,
+} from "../components/family-page";
 import { HideCategoryHeadingsToggle } from "../components/hide-category-headings-toggle";
 
 import { ManualShoppingQuickAdd } from "../components/manual-shopping-quick-add";
@@ -751,53 +758,42 @@ export default function FamilyShoppingRoute({
   return (
     <main className="min-h-screen bg-page px-4 pb-44 pt-8 text-ink lg:pb-12 lg:py-12">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <section className="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8 lg:py-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div>
-              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-kicker">
-                Alltid på listen
-              </span>
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight lg:text-4xl">
-                {loaderData.family.name}
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-on-band-muted">
-                Varer her følger familien på tvers av ukeplaner og vises i
-                handlelisten når dere handler for en uke.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
+        <FamilyPageHeader
+          actions={
+            <>
               <Link
-                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-strong"
+                className={familyBandPrimaryLinkClassName}
                 to={`/families/${loaderData.family.id}/meal-plans`}
               >
                 Åpne ukeplaner
               </Link>
               <Link
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-medium text-on-band transition hover:bg-white/15"
+                className={familyBandLinkClassName}
                 to={`/families/${loaderData.family.id}`}
               >
                 Tilbake til familie
               </Link>
-            </div>
-          </div>
-        </section>
+            </>
+          }
+          description="Varer her følger familien på tvers av ukeplaner og vises i handlelisten når dere handler for en uke."
+          kicker="Alltid på listen"
+          sectionClassName="rounded-[32px] bg-band px-6 py-8 text-white shadow-xl sm:px-8 lg:py-8"
+          title={loaderData.family.name}
+          titleClassName="mt-4 text-3xl font-semibold tracking-tight lg:text-4xl"
+        />
 
         {noticeContent ? (
-          <section className="rounded-[28px] border border-accent/30 bg-accent-soft px-6 py-5 text-ink shadow-sm">
-            <h2 className="text-base font-semibold">{noticeContent.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-accent-strong">
-              {noticeContent.description}
-            </p>
-          </section>
+          <FamilyNoticeBanner
+            description={noticeContent.description}
+            title={noticeContent.title}
+          />
         ) : null}
 
         {generalFormError ? (
-          <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 shadow-sm">
-            <h2 className="text-base font-semibold">
-              Kunne ikke oppdatere listen
-            </h2>
-            <p className="mt-2 text-sm leading-6">{generalFormError}</p>
-          </section>
+          <FamilyFormErrorBanner
+            message={generalFormError}
+            title="Kunne ikke oppdatere listen"
+          />
         ) : null}
 
         {loaderData.canOfferCombined ? (
@@ -1075,32 +1071,12 @@ export default function FamilyShoppingRoute({
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {
-  let title = "Noe gikk galt";
-  let message = "Vi klarte ikke å laste familiens handleliste akkurat nå.";
-
-  if (isRouteErrorResponse(error)) {
-    title = error.status === 404 ? "Fant ikke familien" : title;
-    message =
-      typeof error.data === "string" && error.data.length > 0
-        ? error.data
-        : error.statusText || message;
-  } else if (error instanceof Error) {
-    message = error.message;
-  }
-
   return (
-    <main className="min-h-screen bg-page px-4 py-16 text-ink">
-      <div className="mx-auto max-w-2xl rounded-[32px] bg-surface p-8 shadow-sm ring-1 ring-line">
-        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-muted">{message}</p>
-        <Link
-          className="mt-6 inline-flex rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white"
-          to="/app"
-        >
-          Til appen
-        </Link>
-      </div>
-    </main>
+    <FamilyUnexpectedError
+      error={error}
+      fallbackMessage="Vi klarte ikke å laste familiens handleliste akkurat nå."
+      notFoundTitle="Fant ikke familien"
+    />
   );
 }
 
