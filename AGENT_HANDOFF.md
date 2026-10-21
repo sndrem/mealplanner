@@ -27,7 +27,7 @@ Agent steering from the #314 retrospective is on `agent-steering-retro`, cut wit
 
 ## Open Items
 
-- `GLOSSARY.md` is still untracked. It was written for #314 and was left out of that pull request. This branch does not add it.
+- `GLOSSARY.md` is on this branch. It was written for #314 and missed that pull request.
 - No GitHub issue is tied to this branch.
 
 ## Next Step
