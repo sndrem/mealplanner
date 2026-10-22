@@ -5,9 +5,11 @@ import { RECIPE_REMINDER_TIMING_KINDS } from "./recipe-reminder";
 const UPSERT_RECIPE_WRITABLE_KEYS = [
   "defaultServings",
   "description",
+  "imageUrl",
   "ingredients",
   "prepMinutes",
   "reminderSuggestions",
+  "removeCoverImage",
   "tags",
   "title",
 ] as const;
@@ -53,6 +55,13 @@ export const upsertRecipeInputSchema = z
   .object({
     defaultServings: z.number().int().positive().optional(),
     description: z.string().optional(),
+    imageUrl: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "HTTPS URL of a JPEG, PNG, or WebP cover image, max 2 MB. The server copies it into storage.",
+      ),
     ingredients: z.array(mcpRecipeIngredientInputSchema).optional(),
     prepMinutes: z.number().int().positive().optional(),
     recipeId: z
@@ -61,6 +70,10 @@ export const upsertRecipeInputSchema = z
       .optional()
       .describe("When set, update this family recipe"),
     reminderSuggestions: z.array(mcpRecipeReminderInputSchema).optional(),
+    removeCoverImage: z
+      .literal(true)
+      .optional()
+      .describe("When true on update, clear the stored cover image"),
     tags: z.array(z.string()).optional(),
     title: z.string().optional(),
   })
@@ -69,6 +82,29 @@ export const upsertRecipeInputSchema = z
     const hasWritableField = UPSERT_RECIPE_WRITABLE_KEYS.some(
       (key) => value[key] !== undefined,
     );
+
+    if (value.imageUrl !== undefined && !isHttpsUrlWithoutUserinfo(value.imageUrl)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "imageUrl must be an https URL without userinfo.",
+        path: ["imageUrl"],
+      });
+    }
+
+    if (value.removeCoverImage && !value.recipeId) {
+      ctx.addIssue({
+        code: "custom",
+        message: "removeCoverImage is only valid when updating a recipe.",
+        path: ["removeCoverImage"],
+      });
+    }
+
+    if (value.imageUrl !== undefined && value.removeCoverImage) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Provide imageUrl or removeCoverImage, not both.",
+      });
+    }
 
     if (value.recipeId) {
       if (!hasWritableField) {
@@ -98,3 +134,12 @@ export const upsertRecipeInputSchema = z
   });
 
 export type UpsertRecipeInput = z.infer<typeof upsertRecipeInputSchema>;
+
+function isHttpsUrlWithoutUserinfo(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}

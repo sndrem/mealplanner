@@ -372,7 +372,7 @@ export const mcpHttpHandler = createMcpHandler(
       "upsert_recipe",
       {
         description:
-          "Create a family recipe, or update one by recipeId. Omitted fields stay unchanged on update. tags, ingredients, and reminderSuggestions replace the stored list when sent. FAMILY recipes only; cover images stay in the web UI. Omit servings/prep on create to use the same defaults as the web form (2 servings, 45 minutes).",
+          "Create a family recipe, or update one by recipeId. Omitted fields stay unchanged on update, including the cover. tags, ingredients, and reminderSuggestions replace the stored list when sent. FAMILY recipes only. Optional imageUrl is an https JPEG, PNG, or WebP URL (max 2 MB) copied into storage as the cover. removeCoverImage clears the cover on update. Omit servings/prep on create to use the same defaults as the web form (2 servings, 45 minutes).",
         inputSchema: upsertRecipeInputSchema,
       },
       async (input) => {
