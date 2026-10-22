@@ -31,6 +31,10 @@ export default [
     ),
     route("families/:familyId/store-mode", "routes/family-meal-plan-store-mode.tsx"),
     route(
+      "families/:familyId/store-mode/revision",
+      "routes/family-store-mode-revision.ts",
+    ),
+    route(
       "families/:familyId/store-mode/share",
       "routes/family-store-mode-share.tsx",
     ),

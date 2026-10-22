@@ -4,6 +4,7 @@ import { AppMobileBottomNav } from "../components/app-mobile-bottom-nav";
 import { AppTopNav } from "../components/app-top-nav";
 import { requireUser } from "../lib/auth.server";
 import { getFamilyMembershipsForUser } from "../lib/family.server";
+import { shouldRevalidateStoreModeParent } from "../lib/store-mode-revalidation";
 import type { Route } from "./+types/app-layout";
 
 export async function loader({ params, request }: Route.LoaderArgs) {
@@ -26,13 +27,38 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   return { familyId: null };
 }
 
+export function shouldRevalidate({
+  currentUrl,
+  defaultShouldRevalidate,
+  formMethod,
+  nextUrl,
+}: {
+  currentUrl: URL;
+  defaultShouldRevalidate: boolean;
+  formMethod?: string;
+  nextUrl: URL;
+}) {
+  return shouldRevalidateStoreModeParent({
+    currentPathname: currentUrl.pathname,
+    defaultShouldRevalidate,
+    formMethod,
+    nextPathname: nextUrl.pathname,
+  });
+}
+
 export default function AppLayoutRoute({ loaderData }: Route.ComponentProps) {
   const hasMobileBottomNav = Boolean(loaderData.familyId);
 
   return (
     <>
       <AppTopNav familyId={loaderData.familyId} />
-      <div className={hasMobileBottomNav ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0" : undefined}>
+      <div
+        className={
+          hasMobileBottomNav
+            ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0"
+            : undefined
+        }
+      >
         <Outlet />
       </div>
       <AppMobileBottomNav familyId={loaderData.familyId} />

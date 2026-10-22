@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export const STORE_MODE_LIVE_REVALIDATE_INTERVAL_MS = 4000;
+export const STORE_MODE_LIVE_REVALIDATE_INTERVAL_MS = 15_000;
 
 function isDocumentVisible() {
   if (typeof document === "undefined") {

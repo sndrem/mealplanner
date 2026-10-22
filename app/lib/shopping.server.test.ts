@@ -5,6 +5,7 @@ const {
   getFamilyShoppingListModeMock,
   getShoppingGroceryGroupingMock,
   getShowCategoryHeadingsMock,
+  getStoreModeShoppingDisplayPreferencesMock,
   getFamilyStockMatchSetMock,
   requireFamilyMembershipMock,
 } = vi.hoisted(() => {
@@ -12,6 +13,7 @@ const {
       getFamilyShoppingListModeMock: vi.fn(),
       getShoppingGroceryGroupingMock: vi.fn(),
       getShowCategoryHeadingsMock: vi.fn(),
+      getStoreModeShoppingDisplayPreferencesMock: vi.fn(),
       dbMock: {
         familyShoppingItem: {
           findMany: vi.fn(),
@@ -66,6 +68,7 @@ vi.mock("./shopping-preference.server", () => ({
   getFamilyShoppingListMode: getFamilyShoppingListModeMock,
   getShoppingGroceryGrouping: getShoppingGroceryGroupingMock,
   getShowCategoryHeadings: getShowCategoryHeadingsMock,
+  getStoreModeShoppingDisplayPreferences: getStoreModeShoppingDisplayPreferencesMock,
 }));
 
 import {
@@ -94,6 +97,10 @@ describe("shopping.server", () => {
     requireFamilyMembershipMock.mockResolvedValue(mockMembership);
     getShoppingGroceryGroupingMock.mockResolvedValue("GROUPED");
     getShowCategoryHeadingsMock.mockResolvedValue(true);
+    getStoreModeShoppingDisplayPreferencesMock.mockResolvedValue({
+      groceryGrouping: "GROUPED",
+      showCategoryHeadings: true,
+    });
     getFamilyStockMatchSetMock.mockResolvedValue({
       displayNameNormalized: new Set(),
       ingredientIds: new Set(),
@@ -2595,7 +2602,10 @@ describe("shopping.server", () => {
   });
 
   it("keeps the same grocery on two meal plans as separate cards when grocery grouping is on", async () => {
-    getShoppingGroceryGroupingMock.mockResolvedValue("GROUPED");
+    getStoreModeShoppingDisplayPreferencesMock.mockResolvedValue({
+      groceryGrouping: "GROUPED",
+      showCategoryHeadings: true,
+    });
 
     const garlicIngredient = {
       amount: "1",

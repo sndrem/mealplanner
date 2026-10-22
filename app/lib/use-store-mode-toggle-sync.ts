@@ -50,10 +50,13 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
     [activeShoppingDate, familyId],
   );
   const [queue, setQueue] = useState<StoreModeToggleOp[]>([]);
+  const [confirmedOps, setConfirmedOps] = useState<StoreModeToggleOp[]>([]);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [showSyncProgressBanner, setShowSyncProgressBanner] = useState(false);
   const queueRef = useRef(queue);
+  const confirmedOpsRef = useRef(confirmedOps);
   const inFlightSourceKeyRef = useRef<string | null>(null);
+  const inFlightOpRef = useRef<StoreModeToggleOp | null>(null);
   const retryTimeoutRef = useRef<number | null>(null);
   const lastProcessedFetcherStateRef = useRef(toggleFetcher.state);
   const toggleFetcherRef = useRef(toggleFetcher);
@@ -66,6 +69,7 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
   storageKeyRef.current = storageKey;
   loaderItemsRef.current = loaderItems;
   queueRef.current = queue;
+  confirmedOpsRef.current = confirmedOps;
 
   const persistQueue = useCallback((nextQueue: StoreModeToggleOp[]) => {
     queueRef.current = nextQueue;
@@ -86,6 +90,7 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
 
     const [nextOp] = queueRef.current;
     inFlightSourceKeyRef.current = nextOp.sourceKey;
+    inFlightOpRef.current = nextOp;
     const formData = new FormData();
     formData.set(
       "intent",
@@ -145,11 +150,23 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
       queue: queueRef.current,
     });
     applyReconciledQueue(reconciledQueue);
+
+    const reconciledConfirmedOps = reconcileToggleQueue({
+      loaderItems,
+      queue: confirmedOpsRef.current,
+    });
+
+    if (
+      !areToggleQueuesEqual(reconciledConfirmedOps, confirmedOpsRef.current)
+    ) {
+      confirmedOpsRef.current = reconciledConfirmedOps;
+      setConfirmedOps(reconciledConfirmedOps);
+    }
   }, [applyReconciledQueue, loaderItems]);
 
   const displayItems = useMemo(
-    () => applyToggleOpsToItems(loaderItems, queue),
-    [loaderItems, queue],
+    () => applyToggleOpsToItems(loaderItems, [...confirmedOps, ...queue]),
+    [confirmedOps, loaderItems, queue],
   );
 
   const displayItemsBySourceKey = useMemo(
@@ -179,7 +196,9 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
       return;
     }
 
+    const submittedOp = inFlightOpRef.current;
     inFlightSourceKeyRef.current = null;
+    inFlightOpRef.current = null;
 
     if (toggleFetcher.data?.ok) {
       const nextQueue = removeToggleOp(
@@ -188,6 +207,15 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
       );
       persistQueue(nextQueue);
       setSyncError(null);
+
+      if (submittedOp) {
+        const heldOps = reconcileToggleQueue({
+          loaderItems: loaderItemsRef.current,
+          queue: upsertToggleOp(confirmedOpsRef.current, submittedOp),
+        });
+        confirmedOpsRef.current = heldOps;
+        setConfirmedOps(heldOps);
+      }
 
       if (nextQueue.length === 0) {
         revalidateRef.current();
@@ -212,7 +240,9 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
 
     const nextQueue = removeToggleOp(queueRef.current, submittedSourceKeyValue);
     persistQueue(nextQueue);
-    setSyncError("Kunne ikke synkronisere. Prøver igjen når nettet er tilbake.");
+    setSyncError(
+      "Kunne ikke synkronisere. Prøver igjen når nettet er tilbake.",
+    );
     scheduleRetry();
   }, [
     persistQueue,
@@ -260,8 +290,10 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
               },
             ];
       let nextQueue = queueRef.current;
+      let nextConfirmedOps = confirmedOpsRef.current;
 
       for (const target of targets) {
+        nextConfirmedOps = removeToggleOp(nextConfirmedOps, target.sourceKey);
         nextQueue = upsertToggleOp(nextQueue, {
           checked,
           expectedUpdatedAt: target.collaborationVersion,
@@ -269,6 +301,11 @@ export function useStoreModeToggleSync<T extends StoreModeToggleItem>({
           sourceKey: target.sourceKey,
           sourceType: item.sourceType,
         });
+      }
+
+      if (!areToggleQueuesEqual(nextConfirmedOps, confirmedOpsRef.current)) {
+        confirmedOpsRef.current = nextConfirmedOps;
+        setConfirmedOps(nextConfirmedOps);
       }
 
       persistQueue(nextQueue);

@@ -10,6 +10,7 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { shouldRevalidateStoreModeParent } from "./lib/store-mode-revalidation";
 import { getThemeHtmlClass } from "./lib/theme-preference";
 import { getRequestThemePreference } from "./lib/theme-preference-write.server";
 
@@ -30,6 +31,25 @@ export async function loader({ request }: Route.LoaderArgs) {
   return {
     themePreference: await getRequestThemePreference(request),
   };
+}
+
+export function shouldRevalidate({
+  currentUrl,
+  defaultShouldRevalidate,
+  formMethod,
+  nextUrl,
+}: {
+  currentUrl: URL;
+  defaultShouldRevalidate: boolean;
+  formMethod?: string;
+  nextUrl: URL;
+}) {
+  return shouldRevalidateStoreModeParent({
+    currentPathname: currentUrl.pathname,
+    defaultShouldRevalidate,
+    formMethod,
+    nextPathname: nextUrl.pathname,
+  });
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
