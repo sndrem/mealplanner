@@ -49,6 +49,36 @@ export async function getShoppingGroceryGrouping({
   return preference?.groceryGrouping ?? DEFAULT_SHOPPING_GROCERY_GROUPING;
 }
 
+export async function getStoreModeShoppingDisplayPreferences({
+  familyId,
+  userId,
+}: {
+  familyId: string;
+  userId: string;
+}): Promise<{
+  groceryGrouping: ShoppingGroceryGroupingValue;
+  showCategoryHeadings: boolean;
+}> {
+  const preference = await db.userFamilyShoppingPreference.findUnique({
+    select: {
+      groceryGrouping: true,
+      showCategoryHeadings: true,
+    },
+    where: {
+      userId_familyId: {
+        familyId,
+        userId,
+      },
+    },
+  });
+
+  return {
+    groceryGrouping:
+      preference?.groceryGrouping ?? DEFAULT_SHOPPING_GROCERY_GROUPING,
+    showCategoryHeadings: preference?.showCategoryHeadings ?? true,
+  };
+}
+
 export async function getShowCategoryHeadings({
   familyId,
   userId,

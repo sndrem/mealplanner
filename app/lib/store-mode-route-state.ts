@@ -22,6 +22,7 @@ export function isStoreModeRevalidatePaused({
   navigation,
   quantityFetcher,
   revalidator,
+  revisionFetcher,
   toggleFetcher,
 }: {
   categoryFetcher: { state: string };
@@ -29,6 +30,7 @@ export function isStoreModeRevalidatePaused({
   navigation: { state: string };
   quantityFetcher: { state: string };
   revalidator: { state: string };
+  revisionFetcher: { state: string };
   toggleFetcher: { state: string };
 }) {
   return (
@@ -37,11 +39,14 @@ export function isStoreModeRevalidatePaused({
     toggleFetcher.state !== "idle" ||
     quantityFetcher.state !== "idle" ||
     categoryFetcher.state !== "idle" ||
-    categoryHeadingsFetcher.state !== "idle"
+    categoryHeadingsFetcher.state !== "idle" ||
+    revisionFetcher.state !== "idle"
   );
 }
 
-export function resolveStoreModePendingNavigation(navigation: NavigationSnapshot) {
+export function resolveStoreModePendingNavigation(
+  navigation: NavigationSnapshot,
+) {
   const pendingIntent = navigation.formData?.get("intent");
   const isActive = navigation.state !== "idle";
   const isMarkAsStock =
@@ -83,7 +88,10 @@ export function resolveStoreModeScanState({
 }) {
   const pendingIntent = navigation.formData?.get("intent");
   const isActive = navigation.state !== "idle";
-  const selectedStoreValue = resolveSelectedStoreValue(actionData, selectedStore);
+  const selectedStoreValue = resolveSelectedStoreValue(
+    actionData,
+    selectedStore,
+  );
   const tripFocusValue = resolveTripFocusValue(actionData, effectiveTripFocus);
   const scanTripFocus = resolveScanTripFocus({
     effectiveTripFocus,
@@ -247,8 +255,7 @@ export function resolveStoreModeFormFeedback({
   const quantityFetcherError =
     quantityFetcher.data?.formError &&
     (quantityFetcher.data.intent === "update-family-shopping-item-quantity" ||
-      quantityFetcher.data.intent ===
-        "update-generated-shopping-item-quantity")
+      quantityFetcher.data.intent === "update-generated-shopping-item-quantity")
       ? quantityFetcher.data.formError
       : null;
   const categoryHeadingsError =

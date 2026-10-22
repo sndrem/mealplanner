@@ -12,7 +12,10 @@ vi.mock("./db.server", () => ({
   db: dbMock,
 }));
 
-import { getShowCategoryHeadings } from "./shopping-preference.server";
+import {
+  getShowCategoryHeadings,
+  getStoreModeShoppingDisplayPreferences,
+} from "./shopping-preference.server";
 
 describe("getShowCategoryHeadings", () => {
   afterEach(() => {
@@ -41,5 +44,25 @@ describe("getShowCategoryHeadings", () => {
         userId: "user-1",
       }),
     ).resolves.toBe(false);
+  });
+
+  it("reads grocery grouping and heading visibility in one preference row", async () => {
+    dbMock.userFamilyShoppingPreference.findUnique.mockResolvedValue({
+      groceryGrouping: "SPLIT",
+      showCategoryHeadings: false,
+    });
+
+    await expect(
+      getStoreModeShoppingDisplayPreferences({
+        familyId: "family-1",
+        userId: "user-1",
+      }),
+    ).resolves.toEqual({
+      groceryGrouping: "SPLIT",
+      showCategoryHeadings: false,
+    });
+    expect(
+      dbMock.userFamilyShoppingPreference.findUnique,
+    ).toHaveBeenCalledOnce();
   });
 });

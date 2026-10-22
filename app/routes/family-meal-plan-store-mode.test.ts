@@ -56,6 +56,12 @@ vi.mock("../lib/store.server", () => {
   };
 });
 
+vi.mock("../lib/store-mode-trip-revision.server", () => {
+  return {
+    getStoreModeTripRevision: vi.fn(),
+  };
+});
+
 vi.mock("../lib/store-write.server", () => {
   return {
     updateSelectedStorePreference: vi.fn(),
@@ -90,6 +96,7 @@ import { resolveStoreModeAnchorMealPlan } from "../lib/meal-plan-for-date.server
 import { listShoppingCheckHistoryForStoreMode } from "../lib/shopping-check-history.server";
 import { getNextCalendarWeekBounds } from "../lib/meal-plan-week";
 import { listStoreOfferBriefingsForStoreMode } from "../lib/store-offer-briefing.server";
+import { getStoreModeTripRevision } from "../lib/store-mode-trip-revision.server";
 import {
   getFamilyStoreModeData,
   projectCreatedFamilyShoppingItem,
@@ -135,6 +142,7 @@ function buildRequest(
 
 describe("family store mode route", () => {
   beforeEach(() => {
+    vi.mocked(getStoreModeTripRevision).mockResolvedValue("rev-1");
     vi.mocked(listStoreOfferBriefingsForStoreMode).mockResolvedValue([]);
   });
 
@@ -205,7 +213,7 @@ describe("family store mode route", () => {
               mealPlanId: "meal-plan-1",
               mealPlanTitle: "Langhelg",
               preferredStoreConflict: false,
-        sourceType: "GENERATED",
+              sourceType: "GENERATED",
               unit: "stk",
             },
           ],
@@ -300,9 +308,11 @@ describe("family store mode route", () => {
       },
       request: new Request("http://localhost/families/family-1/store-mode", {
         headers: {
-          Cookie: serializeSinkFinishedSectionsCookie(null, "family-1", true).split(
-            ";",
-          )[0],
+          Cookie: serializeSinkFinishedSectionsCookie(
+            null,
+            "family-1",
+            true,
+          ).split(";")[0],
         },
       }),
     } as never);
@@ -473,7 +483,6 @@ describe("family store mode route", () => {
     expect(listStoreOfferBriefingsForStoreMode).toHaveBeenCalledWith({
       familyId: "family-1",
       focusedDates: ["2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18"],
-      userId: "user-1",
     });
     expect(result.storeOfferBriefing).toEqual({
       briefing: {

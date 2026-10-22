@@ -130,12 +130,10 @@ export async function getStoreOfferBriefing({
 export async function listStoreOfferBriefingsForStoreMode({
   familyId,
   focusedDates,
-  userId,
-}: BriefingActor & {
+}: {
+  familyId: string;
   focusedDates: string[];
 }) {
-  await requireFamilyMembership({ familyId, userId });
-
   const today = dateOnlyToUtcDate(getTodayDateOnly());
   const nextWeek = getNextCalendarWeekBounds();
   const focusedSpan = getFocusedSpan(focusedDates);

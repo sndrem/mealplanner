@@ -20,6 +20,10 @@ function setDocumentVisible(visible: boolean) {
 }
 
 describe("useVisibleIntervalRevalidate", () => {
+  it("polls every 15 seconds", () => {
+    expect(STORE_MODE_LIVE_REVALIDATE_INTERVAL_MS).toBe(15_000);
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
     setDocumentVisible(true);

@@ -42,19 +42,31 @@ type ToggleFetcherData = {
 
 type ToggleFetcherState = "idle" | "submitting" | "loading";
 
+type HarnessLoaderItem = {
+  checked: boolean;
+  collaborationVersion: string;
+  mealPlanId: string;
+  sourceKey: string;
+  sourceType: (typeof loaderItem)["sourceType"];
+};
+
 function useToggleSyncTestHarness({
   initialFetcherState = "idle" as ToggleFetcherState,
+  initialLoaderItems = [loaderItem],
 } = {}) {
   const [fetcherState, setFetcherState] =
     useState<ToggleFetcherState>(initialFetcherState);
   const [fetcherData, setFetcherData] = useState<ToggleFetcherData | undefined>(
     undefined,
   );
+  const [loaderItems, setLoaderItems] =
+    useState<HarnessLoaderItem[]>(initialLoaderItems);
   const [submit] = useState(() =>
     vi.fn(async () => {
       setFetcherState("submitting");
     }),
   );
+  const [revalidate] = useState(() => vi.fn());
 
   const toggleFetcher = useMemo(
     () =>
@@ -68,11 +80,9 @@ function useToggleSyncTestHarness({
     [fetcherData, fetcherState, submit],
   );
 
-  const revalidate = vi.fn();
-
   const sync = useStoreModeToggleSync({
     ...syncContext,
-    loaderItems: [loaderItem],
+    loaderItems,
     revalidate,
     toggleFetcher,
   });
@@ -82,6 +92,7 @@ function useToggleSyncTestHarness({
     revalidate,
     setFetcherData,
     setFetcherState,
+    setLoaderItems,
     submit,
   };
 }
@@ -151,6 +162,45 @@ describe("useStoreModeToggleSync", () => {
       expect(result.current.queue).toEqual([]);
       expect(result.current.isSyncing).toBe(false);
     });
+  });
+
+  it("keeps the optimistic check until the loader catches up", async () => {
+    writeStoreModeToggleQueue(storageKey, [queueOp]);
+
+    const { result } = renderHook(() => useToggleSyncTestHarness());
+
+    await waitFor(() => {
+      expect(result.current.submit).toHaveBeenCalledTimes(1);
+    });
+
+    act(() => {
+      result.current.setFetcherData({ ok: true });
+      result.current.setFetcherState("idle");
+    });
+
+    await waitFor(() => {
+      expect(result.current.revalidate).toHaveBeenCalledTimes(1);
+    });
+
+    expect(result.current.queue).toEqual([]);
+    expect(result.current.isSyncing).toBe(false);
+    expect(result.current.displayItems[0]?.checked).toBe(true);
+    expect(result.current.submit).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      result.current.setLoaderItems([
+        {
+          ...loaderItem,
+          checked: true,
+          collaborationVersion: "2026-05-01T12:00:01.000Z",
+        },
+      ]);
+    });
+
+    await waitFor(() => {
+      expect(result.current.displayItems[0]?.checked).toBe(true);
+    });
+    expect(result.current.submit).toHaveBeenCalledTimes(1);
   });
 
   it("ignores loading to idle when no toggle submission is in flight", async () => {

@@ -1,9 +1,11 @@
+import { useEffect, useRef } from "react";
 import {
   redirect,
   useFetcher,
   useNavigation,
   useRevalidator,
   type MetaFunction,
+  type ShouldRevalidateFunctionArgs,
 } from "react-router";
 
 import { FamilyUnexpectedError } from "../components/family-page";
@@ -24,7 +26,10 @@ import { requireFamilyId } from "../lib/require-family-id";
 import { listShoppingCheckHistoryForStoreMode } from "../lib/shopping-check-history.server";
 import { serializeProjectedShoppingItem } from "../lib/shopping-serialize";
 import { getFamilyStoreModeData } from "../lib/shopping.server";
-import { getStoreModeTripFocusScanLabel, readSinkFinishedSectionsCookie } from "../lib/shopping-store-mode-client";
+import {
+  getStoreModeTripFocusScanLabel,
+  readSinkFinishedSectionsCookie,
+} from "../lib/shopping-store-mode-client";
 import type { StoreModeActionData } from "../lib/store-mode-action-data";
 import { runStoreModeAction } from "../lib/store-mode-action.server";
 import {
@@ -40,6 +45,11 @@ import {
 } from "../lib/store-mode-route-state";
 import { selectStoreOfferBriefing } from "../lib/store-offer-briefing";
 import { listStoreOfferBriefingsForStoreMode } from "../lib/store-offer-briefing.server";
+import {
+  shouldReloadStoreModeTrip,
+  shouldRevalidateStoreModeAfterAction,
+} from "../lib/store-mode-revalidation";
+import { getStoreModeTripRevision } from "../lib/store-mode-trip-revision.server";
 import {
   storeModePageClass,
   storeModeSurfaceCardClass,
@@ -85,7 +95,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw redirect(`/families/${familyId}/meal-plans`);
   }
 
-  const [shoppingHistory, storeOfferBriefings] = await Promise.all([
+  const [shoppingHistory, storeOfferBriefings, revision] = await Promise.all([
     listShoppingCheckHistoryForStoreMode({
       familyId,
       mealPlanIds: result.includedMealPlans.map((plan) => plan.id),
@@ -93,8 +103,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     listStoreOfferBriefingsForStoreMode({
       familyId,
       focusedDates: result.visibleDates,
-      userId: user.id,
     }),
+    getStoreModeTripRevision(familyId),
   ]);
 
   return {
@@ -123,6 +133,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       updatedAt: result.mealPlan.updatedAt.toISOString(),
     },
     notice: getStoreModeNotice(request),
+    revision,
     selectedStore: result.selectedStore,
     shoppingHistory,
     sinkFinishedSections: readSinkFinishedSectionsCookie(
@@ -147,6 +158,20 @@ export async function action({ params, request }: Route.ActionArgs) {
   return runStoreModeAction({ params, request });
 }
 
+export function shouldRevalidate({
+  currentUrl,
+  defaultShouldRevalidate,
+  formMethod,
+  nextUrl,
+}: ShouldRevalidateFunctionArgs) {
+  return shouldRevalidateStoreModeAfterAction({
+    currentPathname: currentUrl.pathname,
+    defaultShouldRevalidate,
+    formMethod,
+    nextPathname: nextUrl.pathname,
+  });
+}
+
 export default function FamilyMealPlanStoreModeRoute({
   actionData,
   loaderData,
@@ -158,6 +183,7 @@ export default function FamilyMealPlanStoreModeRoute({
   const quantityFetcher = useFetcher<StoreModeActionData>();
   const categoryFetcher = useFetcher<StoreModeActionData>();
   const categoryHeadingsFetcher = useFetcher<StoreModeActionData>();
+  const revisionFetcher = useFetcher<{ revision: string }>();
   const pending = resolveStoreModePendingNavigation(navigation);
   const dueList = useStoreModeDueList({
     categories: loaderData.categories,
@@ -193,6 +219,8 @@ export default function FamilyMealPlanStoreModeRoute({
     handleToggle,
   });
 
+  const reloadRequestedForRef = useRef<string | null>(null);
+
   useVisibleIntervalRevalidate({
     paused: isStoreModeRevalidatePaused({
       categoryFetcher,
@@ -200,10 +228,45 @@ export default function FamilyMealPlanStoreModeRoute({
       navigation,
       quantityFetcher,
       revalidator,
+      revisionFetcher,
       toggleFetcher,
     }),
-    revalidate: revalidator.revalidate,
+    revalidate: () => {
+      void revisionFetcher.load(
+        `/families/${loaderData.family.id}/store-mode/revision`,
+      );
+    },
   });
+
+  useEffect(() => {
+    const nextRevision = revisionFetcher.data?.revision;
+
+    if (revalidator.state !== "idle" || revisionFetcher.state !== "idle") {
+      return;
+    }
+
+    if (
+      !shouldReloadStoreModeTrip({
+        currentRevision: loaderData.revision,
+        nextRevision,
+      })
+    ) {
+      reloadRequestedForRef.current = null;
+      return;
+    }
+
+    if (!nextRevision || reloadRequestedForRef.current === nextRevision) {
+      return;
+    }
+
+    reloadRequestedForRef.current = nextRevision;
+    revalidator.revalidate();
+  }, [
+    loaderData.revision,
+    revisionFetcher.data?.revision,
+    revisionFetcher.state,
+    revalidator,
+  ]);
 
   const scan = resolveStoreModeScanState({
     actionData,
@@ -243,7 +306,9 @@ export default function FamilyMealPlanStoreModeRoute({
             isSavingStore={pending.isSavingStore}
             isSavingTripFocus={pending.isSavingTripFocus}
             mealPlanTitle={loaderData.mealPlan.title}
-            onDeprioritizeBoughtChange={preferences.handleDeprioritizeBoughtChange}
+            onDeprioritizeBoughtChange={
+              preferences.handleDeprioritizeBoughtChange
+            }
             onRecipeUrgencyChange={preferences.handleRecipeUrgencyChange}
             onShoppingViewChange={preferences.handleShoppingViewChange}
             onSinkFinishedSectionsChange={
@@ -276,7 +341,9 @@ export default function FamilyMealPlanStoreModeRoute({
           canMarkAsStock={loaderData.userRole === "ADMIN"}
           categories={loaderData.categories}
           categoryFetcherError={formFeedback.categoryFetcherError}
-          categoryInteractionSourceKey={formFeedback.categoryInteractionSourceKey}
+          categoryInteractionSourceKey={
+            formFeedback.categoryInteractionSourceKey
+          }
           deprioritizeBought={preferences.deprioritizeBought}
           displaySectionCount={shoppingView.sectionCount}
           hasUncheckedDueItems={shoppingView.hasUncheckedDueItems}

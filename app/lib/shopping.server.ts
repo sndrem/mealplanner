@@ -6,9 +6,9 @@ import { normalizeIngredientCanonicalName } from "./ingredient-normalize";
 import {
   findMealPlanCoveringDate,
   resolveEffectiveStoreModeTripFocus,
-  resolveStoreModeAnchorMealPlan,
   resolveStoreModeNextMealPlan,
   selectMealPlansForTripFocus,
+  type MealPlanForDateSummary,
 } from "./meal-plan-for-date.server";
 import {
   getMealPlanDateRange,
@@ -20,6 +20,7 @@ import {
   getFamilyShoppingListMode,
   getShoppingGroceryGrouping,
   getShowCategoryHeadings,
+  getStoreModeShoppingDisplayPreferences,
 } from "./shopping-preference.server";
 import {
   getFamilyStockMatchSet,
@@ -790,15 +791,28 @@ export async function getFamilyStoreModeData({
   familyId: string;
   userId: string;
 }) {
-  const anchorMealPlan = await resolveStoreModeAnchorMealPlan({
+  const coveringMealPlan = await findMealPlanCoveringDate({
     familyId,
   });
+  const anchorMealPlan = coveringMealPlan
+    ? { id: coveringMealPlan.id }
+    : await db.mealPlan.findFirst({
+        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+        select: {
+          id: true,
+        },
+        where: {
+          familyId,
+          status: LIVE_MEAL_PLAN_STATUS_FILTER,
+        },
+      });
 
   if (!anchorMealPlan) {
     return null;
   }
 
   return getMealPlanStoreModeData({
+    coveringMealPlan,
     familyId,
     mealPlanId: anchorMealPlan.id,
     userId,
@@ -806,10 +820,12 @@ export async function getFamilyStoreModeData({
 }
 
 export async function getMealPlanStoreModeData({
+  coveringMealPlan: coveringMealPlanInput,
   familyId,
   mealPlanId,
   userId,
 }: {
+  coveringMealPlan?: MealPlanForDateSummary | null;
   familyId: string;
   mealPlanId: string;
   userId: string;
@@ -822,23 +838,14 @@ export async function getMealPlanStoreModeData({
   const todayAtUtcMidnight = getUtcToday();
 
   const [
-    anchorMealPlan,
     includedMealPlans,
     stores,
     selectedStorePreference,
     stockMatchSet,
     coveringMealPlan,
     nextMealPlan,
-    groceryGrouping,
-    showCategoryHeadings,
+    displayPreferences,
   ] = await Promise.all([
-    db.mealPlan.findFirst({
-      select: shoppingMealPlanSelect,
-      where: {
-        familyId,
-        id: mealPlanId,
-      },
-    }),
     db.mealPlan.findMany({
       orderBy: [{ startDate: "asc" }, { id: "asc" }],
       select: shoppingMealPlanSelect,
@@ -870,23 +877,30 @@ export async function getMealPlanStoreModeData({
       },
     }),
     getFamilyStockMatchSet(familyId),
-    findMealPlanCoveringDate({
-      familyId,
-      referenceDate: todayAtUtcMidnight,
-    }),
+    coveringMealPlanInput === undefined
+      ? findMealPlanCoveringDate({
+          familyId,
+          referenceDate: todayAtUtcMidnight,
+        })
+      : Promise.resolve(coveringMealPlanInput),
     resolveStoreModeNextMealPlan({
       familyId,
       referenceDate: todayAtUtcMidnight,
     }),
-    getShoppingGroceryGrouping({
-      familyId,
-      userId,
-    }),
-    getShowCategoryHeadings({
+    getStoreModeShoppingDisplayPreferences({
       familyId,
       userId,
     }),
   ]);
+  const anchorMealPlan =
+    includedMealPlans.find((plan) => plan.id === mealPlanId) ??
+    (await db.mealPlan.findFirst({
+      select: shoppingMealPlanSelect,
+      where: {
+        familyId,
+        id: mealPlanId,
+      },
+    }));
 
   if (!anchorMealPlan) {
     throw new Response("Fant ikke ukeplanen.", {
@@ -959,7 +973,7 @@ export async function getMealPlanStoreModeData({
         storeSectionsByStoreId,
       ),
     ),
-    groceryGrouping,
+    displayPreferences.groceryGrouping,
   );
   const focusedDateRanges = mealPlansForStoreMode.map((plan) => ({
     endDate: plan.endDate,
@@ -1007,8 +1021,8 @@ export async function getMealPlanStoreModeData({
       status: plan.status,
       title: plan.title,
     })),
-    groceryGrouping,
-    showCategoryHeadings,
+    groceryGrouping: displayPreferences.groceryGrouping,
+    showCategoryHeadings: displayPreferences.showCategoryHeadings,
     mealPlan: shoppingDateOwnerPlan,
     selectedStore,
     stockIngredientsForStoreMode,
