@@ -294,6 +294,7 @@ export default function FamilyMealPlanStoreModeRoute({
           checkedCount={shoppingView.progress.checkedCount}
           focusLabel={getStoreModeTripFocusScanLabel(scan.scanTripFocus)}
           isCelebrating={shoppingView.isCelebrating}
+          simpleView={preferences.simpleView}
           storeName={scan.scanStoreName}
           totalCount={shoppingView.progress.totalCount}
         >
@@ -317,12 +318,14 @@ export default function FamilyMealPlanStoreModeRoute({
             onShowCategoryHeadingsChange={
               shoppingView.handleShowCategoryHeadingsChange
             }
+            onSimpleViewChange={preferences.handleSimpleViewChange}
             scanTripFocus={scan.scanTripFocus}
             selectedStoreFieldError={scan.selectedStoreFieldError}
             selectedStoreValue={scan.selectedStoreValue}
             shoppingView={preferences.shoppingView}
             showCategoryHeadings={shoppingView.showCategoryHeadings}
             showRecipeUrgency={preferences.showRecipeUrgency}
+            simpleView={preferences.simpleView}
             showViewControls={shoppingView.sectionCount > 0}
             sinkFinishedSections={preferences.sinkFinishedSections}
             stores={loaderData.stores}
@@ -367,6 +370,7 @@ export default function FamilyMealPlanStoreModeRoute({
           selectedStoreId={loaderData.selectedStore?.id}
           showCategoryHeadings={shoppingView.showCategoryHeadings}
           showRecipeUrgency={preferences.showRecipeUrgency}
+          simpleView={preferences.simpleView}
           stockIngredients={loaderData.stockIngredientsForStoreMode}
           stockReminderDismissed={preferences.stockReminderDismissed}
         />

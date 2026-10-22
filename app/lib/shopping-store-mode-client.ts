@@ -51,6 +51,8 @@ const STORE_MODE_DEPRIORITIZE_BOUGHT_KEY_PREFIX =
   "mealplanner:store-mode-deprioritize-bought:v1";
 const STORE_MODE_RECIPE_URGENCY_KEY_PREFIX =
   "mealplanner:store-mode-recipe-urgency:v1";
+const STORE_MODE_SIMPLE_VIEW_KEY_PREFIX =
+  "mealplanner:store-mode-simple-view:v1";
 const STORE_MODE_SINK_FINISHED_SECTIONS_KEY_PREFIX =
   "mealplanner:store-mode-sink-finished-sections:v1";
 const STORE_MODE_STOCK_REMINDER_DISMISSED_KEY_PREFIX =
@@ -162,6 +164,22 @@ export function buildStoreModeRecipeUrgencyStorageKey({
   familyId: string;
 }) {
   return `${STORE_MODE_RECIPE_URGENCY_KEY_PREFIX}:${familyId}`;
+}
+
+export function buildStoreModeSimpleViewStorageKey({
+  familyId,
+}: {
+  familyId: string;
+}) {
+  return `${STORE_MODE_SIMPLE_VIEW_KEY_PREFIX}:${familyId}`;
+}
+
+export function readStoreModeSimpleView(storageKey: string): boolean {
+  return readStoredFlag(storageKey, false);
+}
+
+export function writeStoreModeSimpleView(storageKey: string, enabled: boolean) {
+  writeStoredFlag(storageKey, enabled);
 }
 
 export function readStoreModeRecipeUrgency(storageKey: string): boolean {

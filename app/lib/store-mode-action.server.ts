@@ -294,6 +294,7 @@ async function updateCategoryHeadings({
   return {
     intent,
     ok: true,
+    showCategoryHeadings,
   };
 }
 

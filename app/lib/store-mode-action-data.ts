@@ -38,6 +38,7 @@ export interface StoreModeActionData {
     selectedStoreId?: string;
   };
   selectedStoreValue?: string;
+  showCategoryHeadings?: boolean;
   tripFocusFieldErrors?: {
     tripFocus?: string;
   };

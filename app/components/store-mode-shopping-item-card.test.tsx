@@ -577,4 +577,36 @@ describe("StoreModeShoppingItemCard", () => {
     );
     expect(cardBySourceKey(item.sourceKey)).not.toHaveClass("border-l-4");
   });
+
+  it("shows a tile face in enkel visning and keeps the urgency edge without the day label", () => {
+    const today = formatDateOnly(new Date());
+    const item = {
+      ...generatedItem(shiftDateOnly(today, 6), "Melk"),
+      firstDate: shiftDateOnly(today, 1),
+      quantityLabel: "2 l",
+    };
+
+    renderWithRouter(
+      <StoreModeShoppingItemCard
+        item={item}
+        layout="grid"
+        onToggle={vi.fn()}
+        selectedStoreId="store-1"
+        showRecipeUrgency
+        simpleView
+      />,
+    );
+
+    expect(screen.getByText("Melk")).toHaveClass("text-base");
+    expect(screen.getByRole("button", { name: "2 l" })).toBeInTheDocument();
+    expect(screen.queryByText("i morgen")).not.toBeInTheDocument();
+    expect(document.querySelector("[data-shopping-item-icon]")).not.toBeInTheDocument();
+    expect(cardBySourceKey(item.sourceKey)).toHaveClass(
+      ...storeModeRecipeUrgencySoonEdgeClass.split(" "),
+    );
+
+    fireEvent.click(screen.getByLabelText("Vis informasjon om Melk"));
+
+    expect(screen.getByText(/Fra Taco/)).toBeInTheDocument();
+  });
 });
