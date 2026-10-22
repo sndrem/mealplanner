@@ -5,7 +5,7 @@ The app exposes a [Model Context Protocol](https://modelcontextprotocol.io) serv
 Most tools are read-only. Three tools write family data:
 
 - `create_meal_plan_proposal` stores a **proposal** for a week; it never approves a live meal plan.
-- `upsert_recipe` creates or updates a **family** recipe. It cannot create or change global recipes, and it cannot upload a cover image (use the website for photos).
+- `upsert_recipe` creates or updates a **family** recipe. It cannot create or change global recipes. An optional `imageUrl` copies an https cover into storage. `removeCoverImage` clears the cover on update.
 - `publish_store_offer_briefing` stores a weekly store-offer briefing (`title`, `subtitle`, `content`). Republishing the same week replaces it. It does not change shopping items or the selected store.
 
 ## Mint a token
@@ -60,7 +60,7 @@ Authenticated clients can call:
 
 The tool returns `proposalUrl`. Put that in email as **Se forslaget i Mealplanner her**. Opening the link (after login) shows the proposal UI, where a family member can adjust dinners and approve. Approval turns the proposal into a live meal plan. MCP cannot approve or reopen plans.
 
-`upsert_recipe` without `recipeId` creates a family recipe (title and at least one ingredient required). With `recipeId`, it patches that family recipe: omitted fields stay unchanged. `tags`, `ingredients`, and `reminderSuggestions` **replace** the stored list when sent. Identify ingredient categories with `categoryKey` (preferred), `categoryId`, or category display name. If `defaultServings` or `prepMinutes` are omitted on create, the web-form defaults apply (2 servings, 45 minutes). Cover images stay in the web UI.
+`upsert_recipe` without `recipeId` creates a family recipe (title and at least one ingredient required). With `recipeId`, it patches that family recipe: omitted fields stay unchanged. `tags`, `ingredients`, and `reminderSuggestions` **replace** the stored list when sent. Identify ingredient categories with `categoryKey` (preferred), `categoryId`, or category display name. If `defaultServings` or `prepMinutes` are omitted on create, the web-form defaults apply (2 servings, 45 minutes). Optional `imageUrl` is an https URL of a JPEG, PNG, or WebP image up to 2 MB. The server downloads it and stores it the same way as a cover uploaded on the website. Omit `imageUrl` to leave the current cover unchanged. `removeCoverImage: true` on update clears the cover. Do not send `imageUrl` and `removeCoverImage` together.
 
 `publish_store_offer_briefing` defaults to **next** Europe/Oslo week (Monday–Sunday) when `weekStart` / `weekEnd` are omitted. Send exactly three texts:
 

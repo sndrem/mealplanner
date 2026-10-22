@@ -1,6 +1,7 @@
 import { MealType } from "@prisma/client";
 
 import { db } from "./db.server";
+import { fetchRecipeCover } from "./fetch-recipe-cover.server";
 import { listFamilyFreezerItems } from "./freezer.server";
 import { findMealPlanCoveringDate } from "./meal-plan-for-date.server";
 import { formatDateOnly } from "./meal-plan-dates";
@@ -24,10 +25,12 @@ import {
 import {
   createFamilyRecipe,
   updateFamilyRecipe,
+  type FamilyRecipeCoverInput,
   type FamilyRecipeFieldErrors,
   type FamilyRecipeIngredientValues,
   type FamilyRecipeValues,
 } from "./recipe-write.server";
+import type { RecipeCoverContentType } from "./r2.server";
 import {
   getFamilyShoppingData,
   getFamilyStoreModeData,
@@ -679,12 +682,21 @@ export async function upsertRecipeForMcp({
   }
 
   if (!input.recipeId) {
+    const coverResult = await resolveUpsertCover(input);
+    if (!coverResult.ok) {
+      return {
+        formError: coverResult.formError,
+        status: "VALIDATION_ERROR" as const,
+      };
+    }
+
     const values = overlayUpsertOnFamilyValues({
       base: EMPTY_FAMILY_RECIPE_VALUES,
       input,
       resolvedIngredients,
     });
     const result = await createFamilyRecipe({
+      ...(coverResult.cover ? { cover: coverResult.cover } : {}),
       familyId,
       userId,
       values,
@@ -724,6 +736,14 @@ export async function upsertRecipeForMcp({
     };
   }
 
+  const coverResult = await resolveUpsertCover(input);
+  if (!coverResult.ok) {
+    return {
+      formError: coverResult.formError,
+      status: "VALIDATION_ERROR" as const,
+    };
+  }
+
   const values = overlayUpsertOnFamilyValues({
     base: storedRecipeToFamilyValues({
       ...existing.recipe,
@@ -733,6 +753,7 @@ export async function upsertRecipeForMcp({
     resolvedIngredients,
   });
   const result = await updateFamilyRecipe({
+    ...(coverResult.cover ? { cover: coverResult.cover } : {}),
     familyId,
     recipeId: input.recipeId,
     userId,
@@ -760,6 +781,61 @@ export async function upsertRecipeForMcp({
     recipeId: input.recipeId,
     title: values.title,
     userId,
+  });
+}
+
+async function resolveUpsertCover(
+  input: UpsertRecipeInput,
+): Promise<
+  | { cover?: FamilyRecipeCoverInput; ok: true }
+  | { formError: string; ok: false }
+> {
+  if (input.imageUrl && input.removeCoverImage) {
+    return {
+      formError: "Oppgi enten bilde-URL eller fjerning av cover, ikke begge.",
+      ok: false,
+    };
+  }
+
+  if (input.removeCoverImage) {
+    if (!input.recipeId) {
+      return {
+        formError: "Coverbildet kan bare fjernes når oppskriften oppdateres.",
+        ok: false,
+      };
+    }
+
+    return { cover: { file: null, remove: true }, ok: true };
+  }
+
+  if (!input.imageUrl) {
+    return { ok: true };
+  }
+
+  const fetched = await fetchRecipeCover(input.imageUrl);
+  if (!fetched.ok) {
+    return { formError: fetched.error, ok: false };
+  }
+
+  return {
+    cover: {
+      file: recipeCoverFile(fetched.bytes, fetched.contentType),
+      remove: false,
+    },
+    ok: true,
+  };
+}
+
+function recipeCoverFile(bytes: Uint8Array, contentType: RecipeCoverContentType) {
+  const extension =
+    contentType === "image/png"
+      ? "png"
+      : contentType === "image/webp"
+        ? "webp"
+        : "jpg";
+
+  return new File([new Uint8Array(bytes)], `cover.${extension}`, {
+    type: contentType,
   });
 }
 

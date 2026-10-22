@@ -15,6 +15,7 @@ const {
   listMealPlansForFamilyMock,
   createFamilyRecipeMock,
   createOrReplaceMealPlanProposalMock,
+  fetchRecipeCoverMock,
   updateFamilyRecipeMock,
   getStoreOfferBriefingMock,
   publishStoreOfferBriefingMock,
@@ -22,6 +23,7 @@ const {
 } = vi.hoisted(() => ({
   createFamilyRecipeMock: vi.fn(),
   createOrReplaceMealPlanProposalMock: vi.fn(),
+  fetchRecipeCoverMock: vi.fn(),
   dbMock: {
     recipe: {
       findMany: vi.fn(),
@@ -90,6 +92,10 @@ vi.mock("./store-offer-briefing.server", () => ({
 vi.mock("./recipe-write.server", () => ({
   createFamilyRecipe: createFamilyRecipeMock,
   updateFamilyRecipe: updateFamilyRecipeMock,
+}));
+
+vi.mock("./fetch-recipe-cover.server", () => ({
+  fetchRecipeCover: fetchRecipeCoverMock,
 }));
 
 import {
@@ -847,6 +853,7 @@ describe("mcp-tools.server", () => {
       status: "UPDATED",
       title: "Kyllingwok",
     });
+    expect(updateFamilyRecipeMock.mock.calls[0]?.[0].cover).toBeUndefined();
     expect(updateFamilyRecipeMock).toHaveBeenCalledWith({
       familyId: "family-1",
       recipeId: "recipe-1",
@@ -1066,6 +1073,227 @@ describe("mcp-tools.server", () => {
         title: "Wok",
       },
     });
+  });
+
+  it("stores a downloaded cover when creating a recipe", async () => {
+    const jpegBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+    listIngredientCategoriesMock.mockResolvedValue([
+      {
+        displayName: "Kjøtt og fisk",
+        familyId: null,
+        id: "cat-meat",
+        key: "meat-fish",
+      },
+    ]);
+    fetchRecipeCoverMock.mockResolvedValue({
+      bytes: jpegBytes,
+      contentType: "image/jpeg",
+      ok: true,
+    });
+    createFamilyRecipeMock.mockResolvedValue({
+      recipe: { id: "recipe-1", title: "Kyllingwok" },
+      status: "CREATED",
+    });
+    getAccessibleRecipeDetailMock.mockResolvedValue({
+      recipe: {
+        ...familyRecipeDetail,
+        imageUrl:
+          "https://images.example.com/families/family-1/recipes/recipe-1/cover.jpg",
+      },
+      status: "FOUND",
+    });
+
+    await expect(
+      upsertRecipeForMcp({
+        ...actor,
+        imageUrl: "https://cdn.example.com/cover.jpg",
+        ingredients: [
+          {
+            categoryKey: "meat-fish",
+            displayName: "Kyllingfilet",
+          },
+        ],
+        origin: "https://mealplanner.example",
+        title: "Kyllingwok",
+      }),
+    ).resolves.toMatchObject({
+      recipe: {
+        imageUrl:
+          "https://images.example.com/families/family-1/recipes/recipe-1/cover.jpg",
+      },
+      status: "CREATED",
+    });
+
+    expect(fetchRecipeCoverMock).toHaveBeenCalledWith(
+      "https://cdn.example.com/cover.jpg",
+    );
+    const cover = createFamilyRecipeMock.mock.calls[0]?.[0].cover;
+    expect(cover.remove).toBe(false);
+    expect(cover.file).toBeInstanceOf(File);
+    expect(cover.file.type).toBe("image/jpeg");
+    expect(cover.file.name).toBe("cover.jpg");
+    expect(new Uint8Array(await cover.file.arrayBuffer())).toEqual(jpegBytes);
+    expect(
+      createFamilyRecipeMock.mock.calls[0]?.[0].values.imageUrl,
+    ).toBeUndefined();
+  });
+
+  it("stores a downloaded cover when updating a recipe", async () => {
+    const pngBytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    fetchRecipeCoverMock.mockResolvedValue({
+      bytes: pngBytes,
+      contentType: "image/png",
+      ok: true,
+    });
+    getAccessibleRecipeDetailMock
+      .mockResolvedValueOnce({
+        recipe: familyRecipeDetail,
+        status: "FOUND",
+      })
+      .mockResolvedValueOnce({
+        recipe: {
+          ...familyRecipeDetail,
+          imageUrl:
+            "https://images.example.com/families/family-1/recipes/recipe-1/cover.png",
+        },
+        status: "FOUND",
+      });
+    updateFamilyRecipeMock.mockResolvedValue({ status: "UPDATED" });
+
+    await expect(
+      upsertRecipeForMcp({
+        ...actor,
+        imageUrl: "https://cdn.example.com/cover.png",
+        origin: "https://mealplanner.example",
+        recipeId: "recipe-1",
+      }),
+    ).resolves.toMatchObject({
+      recipe: {
+        imageUrl:
+          "https://images.example.com/families/family-1/recipes/recipe-1/cover.png",
+      },
+      status: "UPDATED",
+    });
+
+    const cover = updateFamilyRecipeMock.mock.calls[0]?.[0].cover;
+    expect(cover.remove).toBe(false);
+    expect(cover.file).toBeInstanceOf(File);
+    expect(cover.file.type).toBe("image/png");
+    expect(cover.file.name).toBe("cover.png");
+    expect(new Uint8Array(await cover.file.arrayBuffer())).toEqual(pngBytes);
+    expect(createFamilyRecipeMock).not.toHaveBeenCalled();
+  });
+
+  it("clears the cover when removeCoverImage is set", async () => {
+    getAccessibleRecipeDetailMock
+      .mockResolvedValueOnce({
+        recipe: familyRecipeDetail,
+        status: "FOUND",
+      })
+      .mockResolvedValueOnce({
+        recipe: familyRecipeDetail,
+        status: "FOUND",
+      });
+    updateFamilyRecipeMock.mockResolvedValue({ status: "UPDATED" });
+
+    await expect(
+      upsertRecipeForMcp({
+        ...actor,
+        origin: "https://mealplanner.example",
+        recipeId: "recipe-1",
+        removeCoverImage: true,
+      }),
+    ).resolves.toMatchObject({
+      recipe: { imageUrl: null },
+      status: "UPDATED",
+    });
+    expect(fetchRecipeCoverMock).not.toHaveBeenCalled();
+    expect(updateFamilyRecipeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cover: { file: null, remove: true },
+        recipeId: "recipe-1",
+      }),
+    );
+  });
+
+  it("does not write when the cover download fails", async () => {
+    listIngredientCategoriesMock.mockResolvedValue([
+      {
+        displayName: "Kjøtt og fisk",
+        familyId: null,
+        id: "cat-meat",
+        key: "meat-fish",
+      },
+    ]);
+    fetchRecipeCoverMock.mockResolvedValue({
+      error: "Coverbildet kunne ikke lastes ned.",
+      ok: false,
+    });
+
+    await expect(
+      upsertRecipeForMcp({
+        ...actor,
+        imageUrl: "https://cdn.example.com/cover.jpg",
+        ingredients: [
+          {
+            categoryKey: "meat-fish",
+            displayName: "Kyllingfilet",
+          },
+        ],
+        origin: "https://mealplanner.example",
+        title: "Kyllingwok",
+      }),
+    ).resolves.toEqual({
+      formError: "Coverbildet kunne ikke lastes ned.",
+      status: "VALIDATION_ERROR",
+    });
+    expect(createFamilyRecipeMock).not.toHaveBeenCalled();
+
+    getAccessibleRecipeDetailMock.mockResolvedValue({
+      recipe: familyRecipeDetail,
+      status: "FOUND",
+    });
+
+    await expect(
+      upsertRecipeForMcp({
+        ...actor,
+        imageUrl: "https://cdn.example.com/cover.jpg",
+        origin: "https://mealplanner.example",
+        recipeId: "recipe-1",
+      }),
+    ).resolves.toEqual({
+      formError: "Coverbildet kunne ikke lastes ned.",
+      status: "VALIDATION_ERROR",
+    });
+    expect(updateFamilyRecipeMock).not.toHaveBeenCalled();
+  });
+
+  it("does not download a cover for a global recipe", async () => {
+    getAccessibleRecipeDetailMock.mockResolvedValue({
+      recipe: {
+        ...familyRecipeDetail,
+        familyId: null,
+        id: "global-recipe",
+        scope: "GLOBAL",
+      },
+      status: "FOUND",
+    });
+
+    await expect(
+      upsertRecipeForMcp({
+        ...actor,
+        imageUrl: "https://cdn.example.com/cover.jpg",
+        origin: "https://mealplanner.example",
+        recipeId: "global-recipe",
+      }),
+    ).resolves.toEqual({
+      formError: "Fant ikke oppskriften.",
+      status: "NOT_FOUND",
+    });
+    expect(fetchRecipeCoverMock).not.toHaveBeenCalled();
+    expect(updateFamilyRecipeMock).not.toHaveBeenCalled();
   });
 });
 
