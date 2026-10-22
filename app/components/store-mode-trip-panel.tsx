@@ -11,6 +11,7 @@ import { ShoppingGroceryGroupingToggle } from "./shopping-grocery-grouping-toggl
 import { StoreModeDeprioritizeBoughtToggle } from "./store-mode-deprioritize-bought-toggle";
 import { StoreModeRecipeUrgencyToggle } from "./store-mode-recipe-urgency-toggle";
 import { StoreModeShoppingViewToggle } from "./store-mode-shopping-view-toggle";
+import { StoreModeSimpleViewToggle } from "./store-mode-simple-view-toggle";
 import { StoreModeSinkFinishedSectionsToggle } from "./store-mode-sink-finished-sections-toggle";
 
 interface StoreModeTripPanelProps {
@@ -27,11 +28,13 @@ interface StoreModeTripPanelProps {
   onSinkFinishedSectionsChange: (enabled: boolean) => void;
   onShoppingViewChange: (view: StoreModeShoppingView) => void;
   onShowCategoryHeadingsChange: (showCategoryHeadings: boolean) => void;
+  onSimpleViewChange: (enabled: boolean) => void;
   scanTripFocus: StoreModeTripFocusScanValue;
   selectedStoreFieldError?: string;
   selectedStoreValue: string;
   shoppingView: StoreModeShoppingView;
   showCategoryHeadings: boolean;
+  simpleView: boolean;
   showRecipeUrgency: boolean;
   showViewControls: boolean;
   sinkFinishedSections: boolean;
@@ -54,11 +57,13 @@ export function StoreModeTripPanel({
   onSinkFinishedSectionsChange,
   onShoppingViewChange,
   onShowCategoryHeadingsChange,
+  onSimpleViewChange,
   scanTripFocus,
   selectedStoreFieldError,
   selectedStoreValue,
   shoppingView,
   showCategoryHeadings,
+  simpleView,
   showRecipeUrgency,
   showViewControls,
   sinkFinishedSections,
@@ -144,30 +149,38 @@ export function StoreModeTripPanel({
           </Link>
         </div>
       </div>
-      {showViewControls ? (
+      {showViewControls || simpleView ? (
         <div className="grid gap-3">
           <h2 className="text-base font-semibold text-store-ink">Visning</h2>
           <div className="flex flex-wrap items-center gap-2">
-            <ShoppingGroceryGroupingToggle grouping={groceryGrouping} />
-            <HideCategoryHeadingsToggle
-              hidden={!showCategoryHeadings}
-              onChange={onShowCategoryHeadingsChange}
-            />
-            <StoreModeDeprioritizeBoughtToggle
-              enabled={deprioritizeBought}
-              onChange={onDeprioritizeBoughtChange}
-            />
-            <StoreModeSinkFinishedSectionsToggle
-              enabled={sinkFinishedSections}
-              onChange={onSinkFinishedSectionsChange}
-            />
-            <StoreModeRecipeUrgencyToggle
-              enabled={showRecipeUrgency}
-              onChange={onRecipeUrgencyChange}
-            />
-            <StoreModeShoppingViewToggle
-              onChange={onShoppingViewChange}
-              view={shoppingView}
+            {showViewControls ? (
+              <>
+                <ShoppingGroceryGroupingToggle grouping={groceryGrouping} />
+                <HideCategoryHeadingsToggle
+                  hidden={!showCategoryHeadings}
+                  onChange={onShowCategoryHeadingsChange}
+                />
+                <StoreModeDeprioritizeBoughtToggle
+                  enabled={deprioritizeBought}
+                  onChange={onDeprioritizeBoughtChange}
+                />
+                <StoreModeSinkFinishedSectionsToggle
+                  enabled={sinkFinishedSections}
+                  onChange={onSinkFinishedSectionsChange}
+                />
+                <StoreModeRecipeUrgencyToggle
+                  enabled={showRecipeUrgency}
+                  onChange={onRecipeUrgencyChange}
+                />
+                <StoreModeShoppingViewToggle
+                  onChange={onShoppingViewChange}
+                  view={shoppingView}
+                />
+              </>
+            ) : null}
+            <StoreModeSimpleViewToggle
+              enabled={simpleView}
+              onChange={onSimpleViewChange}
             />
           </div>
         </div>

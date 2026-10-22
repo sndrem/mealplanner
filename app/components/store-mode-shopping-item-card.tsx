@@ -127,6 +127,7 @@ interface StoreModeShoppingItemCardProps {
   readOnly?: boolean;
   selectedStoreId: string | undefined;
   showRecipeUrgency?: boolean;
+  simpleView?: boolean;
   solidSurface?: boolean;
 }
 
@@ -149,10 +150,12 @@ export function StoreModeShoppingItemCard({
   readOnly = false,
   selectedStoreId,
   showRecipeUrgency = false,
+  simpleView = false,
   solidSurface = false,
 }: StoreModeShoppingItemCardProps) {
   const quantityBadge = formatGeneratedQuantityBadge(item);
-  const shouldAutoOpenDetails = shouldAutoOpenStoreModeDetails(item);
+  const shouldAutoOpenDetails =
+    !simpleView && shouldAutoOpenStoreModeDetails(item);
   const [isDetailsOpen, setIsDetailsOpen] = useState(shouldAutoOpenDetails);
   const [isQuantityModalOpen, setIsQuantityModalOpen] = useState(false);
   const [quantityDraft, setQuantityDraft] = useState(item.quantityLabel ?? "");
@@ -295,20 +298,26 @@ export function StoreModeShoppingItemCard({
         : "";
   const cardStateClass = isRecentlyAdded
     ? "border-notice-success-line bg-notice-success"
-    : item.checked
-      ? "border-red-200 bg-red-50"
-      : solidSurface
-        ? "border-store-line bg-store-surface"
-        : "border-store-line bg-store-bg";
-  const cardShellClass = `relative flex min-h-[44px] flex-col rounded-2xl border p-2.5 transition-colors duration-250 ${cardStateClass}${recipeUrgencyEdgeClass ? ` ${recipeUrgencyEdgeClass}` : ""}`;
+    : simpleView
+      ? "border-store-line bg-store-surface"
+      : item.checked
+        ? "border-red-200 bg-red-50"
+        : solidSurface
+          ? "border-store-line bg-store-surface"
+          : "border-store-line bg-store-bg";
+  const cardShellClass = `${
+    simpleView
+      ? "relative flex min-h-[108px] flex-col rounded-2xl border p-3"
+      : "relative flex min-h-[44px] flex-col rounded-2xl border p-2.5"
+  } transition-colors duration-250 ${cardStateClass}${recipeUrgencyEdgeClass ? ` ${recipeUrgencyEdgeClass}` : ""}`;
 
   const toggleOverlayClass = item.checked
     ? "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-red-100 active:bg-red-200"
     : "absolute inset-0 z-0 cursor-pointer touch-manipulation rounded-[inherit] transition hover:bg-store-bg active:bg-store-line";
 
   const nameClass = item.checked
-    ? "text-sm font-semibold leading-5 text-store-muted line-through decoration-line"
-    : "text-sm font-semibold leading-5 text-store-ink";
+    ? `${simpleView ? "text-base leading-snug" : "text-sm leading-5"} font-semibold text-store-muted line-through decoration-line`
+    : `${simpleView ? "text-base leading-snug" : "text-sm leading-5"} font-semibold text-store-ink`;
   const showQuantityEdit =
     !readOnly &&
     (item.sourceType === "FAMILY" || item.sourceType === "GENERATED") &&
@@ -342,6 +351,31 @@ export function StoreModeShoppingItemCard({
         type="button"
       />
 
+      {simpleView ? (
+        <StoreModeSimpleItemFace
+          canMarkAsStock={canMarkAsStock}
+          categories={categories}
+          categoryDraft={categoryDraft}
+          categoryError={categoryError}
+          handleCategoryChange={handleCategoryChange}
+          isDetailsOpen={isDetailsOpen}
+          isPendingMarkAsStock={isPendingMarkAsStock}
+          isSavingCategory={isSavingCategory}
+          item={item}
+          nameClass={nameClass}
+          noteDraft={noteDraft}
+          onQuickAddFromCard={onQuickAddFromCard}
+          quantityBadge={quantityBadge}
+          readOnly={readOnly}
+          setIsDetailsOpen={setIsDetailsOpen}
+          setIsQuantityModalOpen={setIsQuantityModalOpen}
+          setNoteDraft={setNoteDraft}
+          setQuantityDraft={setQuantityDraft}
+          showCategoryEdit={showCategoryEdit}
+          showGroupedMeasurements={showGroupedMeasurements}
+          showQuantityEdit={showQuantityEdit}
+        />
+      ) : (
       <div className="relative z-10 grid min-h-9 min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 pointer-events-none">
         <ShoppingItemIcon
           categoryKey={item.category.key}
@@ -453,99 +487,26 @@ export function StoreModeShoppingItemCard({
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
             >
-              {showGroupedMeasurements ? null : (
-                <p className="wrap-break-word text-xs leading-4 text-store-muted">
-                  {formatStoreModeItemSourceLine(item)}
-                </p>
-              )}
-              {showGroupedMeasurements ? (
-                <ul className="space-y-1 text-xs leading-4 text-store-muted">
-                  {item.occurrences.map((occurrence, index) => (
-                    <li
-                      key={`${occurrence.date}:${occurrence.recipeTitle}:${occurrence.quantityLabel ?? ""}:${index}`}
-                    >
-                      {formatOccurrenceSourceLine(occurrence)}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {!showCategoryEdit && item.note ? (
-                <p className="break-words text-xs leading-4 text-store-muted">
-                  Notat: {item.note}
-                </p>
-              ) : null}
-              {showCategoryEdit ? (
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-store-muted">
-                    Endre seksjon
-                    <select
-                      aria-busy={isSavingCategory}
-                      className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-base text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:opacity-70"
-                      disabled={isSavingCategory}
-                      onChange={(event) =>
-                        handleCategoryChange(event.currentTarget.value)
-                      }
-                      value={categoryDraft}
-                    >
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.displayName}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block text-xs font-medium text-store-muted">
-                    Notat
-                    <input
-                      aria-busy={isSavingCategory}
-                      className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-base text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
-                      onChange={(event) =>
-                        setNoteDraft(event.currentTarget.value)
-                      }
-                      placeholder="F.eks. Tine lettmelk"
-                      type="text"
-                      value={noteDraft}
-                    />
-                  </label>
-                  {categoryError ? (
-                    <p className="text-xs text-rose-600">{categoryError}</p>
-                  ) : null}
-                  {isSavingCategory ? (
-                    <p className="text-xs text-store-muted">Lagrer...</p>
-                  ) : null}
-                </div>
-              ) : null}
-              <button
-                className="inline-flex w-fit rounded-full border border-store-accent/40 bg-store-accent-light px-2.5 py-1 text-xs font-medium text-store-accent-text transition hover:border-store-accent hover:bg-store-accent-light/80"
-                onClick={() =>
-                  onQuickAddFromCard?.({
-                    name: item.name,
-                    quantityLabel: item.quantityLabel,
-                  })
-                }
-                type="button"
-              >
-                Hurtiglegg til
-              </button>
-              {(item.sourceType === "GENERATED" ||
-                item.sourceType === "FAMILY") &&
-              canMarkAsStock ? (
-                <MarkGeneratedItemAsStockForm
-                  displaySourceKey={item.sourceKey}
-                  isPending={isPendingMarkAsStock}
-                  item={item}
-                  variant="store"
-                />
-              ) : null}
-              {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
-                <p className="break-words text-xs leading-4 text-amber-800">
-                  Utsatt til {formatDateLabel(item.postponedUntilDate)}.
-                </p>
-              ) : null}
+              <StoreModeItemDetailFields
+                canMarkAsStock={canMarkAsStock}
+                categories={categories}
+                categoryDraft={categoryDraft}
+                categoryError={categoryError}
+                handleCategoryChange={handleCategoryChange}
+                isPendingMarkAsStock={isPendingMarkAsStock}
+                isSavingCategory={isSavingCategory}
+                item={item}
+                noteDraft={noteDraft}
+                onQuickAddFromCard={onQuickAddFromCard}
+                setNoteDraft={setNoteDraft}
+                showCategoryEdit={showCategoryEdit}
+                showGroupedMeasurements={showGroupedMeasurements}
+              />
             </div>
           </details>
         )}
       </div>
+      )}
 
       {isQuantityModalOpen &&
       (item.sourceType === "FAMILY" || item.sourceType === "GENERATED") ? (
@@ -579,6 +540,283 @@ export function StoreModeShoppingItemCard({
         />
       ) : null}
     </div>
+  );
+}
+
+function StoreModeSimpleItemFace({
+  canMarkAsStock,
+  categories,
+  categoryDraft,
+  categoryError,
+  handleCategoryChange,
+  isDetailsOpen,
+  isPendingMarkAsStock,
+  isSavingCategory,
+  item,
+  nameClass,
+  noteDraft,
+  onQuickAddFromCard,
+  quantityBadge,
+  readOnly,
+  setIsDetailsOpen,
+  setIsQuantityModalOpen,
+  setNoteDraft,
+  setQuantityDraft,
+  showCategoryEdit,
+  showGroupedMeasurements,
+  showQuantityEdit,
+}: {
+  canMarkAsStock: boolean;
+  categories: StoreCategory[];
+  categoryDraft: string;
+  categoryError: string | null;
+  handleCategoryChange: (nextCategoryId: string) => void;
+  isDetailsOpen: boolean;
+  isPendingMarkAsStock: boolean;
+  isSavingCategory: boolean;
+  item: StoreModeShoppingItemCardItem;
+  nameClass: string;
+  noteDraft: string;
+  onQuickAddFromCard?: (item: {
+    name: string;
+    quantityLabel: string | null;
+  }) => void;
+  quantityBadge: string | null;
+  readOnly: boolean;
+  setIsDetailsOpen: (open: boolean) => void;
+  setIsQuantityModalOpen: (open: boolean) => void;
+  setNoteDraft: (note: string) => void;
+  setQuantityDraft: (quantity: string) => void;
+  showCategoryEdit: boolean;
+  showGroupedMeasurements: boolean;
+  showQuantityEdit: boolean;
+}) {
+  const quantityClass = item.checked
+    ? "text-[13px] font-semibold text-store-muted"
+    : "text-[13px] font-semibold text-store-accent-text";
+
+  return (
+    <>
+      <div className="relative z-10 flex flex-1 flex-col justify-between gap-3 pointer-events-none">
+        <span className={nameClass}>{item.name}</span>
+        <div className="flex items-end justify-between gap-2">
+          <div className="min-w-0">
+            {showQuantityEdit ? (
+              <button
+                className={`pointer-events-auto text-left ${quantityClass}`}
+                onClick={() => {
+                  setQuantityDraft(item.quantity ?? item.quantityLabel ?? "");
+                  setIsQuantityModalOpen(true);
+                }}
+                type="button"
+              >
+                {quantityBadge ?? "Sett mengde"}
+              </button>
+            ) : quantityBadge ? (
+              <span className={quantityClass}>{quantityBadge}</span>
+            ) : null}
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {readOnly ? null : (
+              <details
+                className="group pointer-events-auto"
+                open={isDetailsOpen}
+              >
+                <summary
+                  aria-label={`Vis informasjon om ${item.name}`}
+                  className="flex size-[22px] cursor-pointer list-none items-center justify-center rounded-full border border-store-line bg-store-surface text-store-muted marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-store-accent group-open:border-store-accent group-open:bg-store-accent-light group-open:text-store-accent-text [&::-webkit-details-marker]:hidden"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setIsDetailsOpen(!isDetailsOpen);
+                  }}
+                >
+                  <StoreModeInfoIcon className="h-3.5 w-3.5" />
+                  <span className="sr-only">Vis informasjon</span>
+                </summary>
+              </details>
+            )}
+            <StoreModeSimpleCheck checked={item.checked} />
+          </div>
+        </div>
+      </div>
+      {!readOnly && isDetailsOpen ? (
+        <div
+          className="relative z-10 mt-3 space-y-1.5 border-t border-store-line pt-3 pointer-events-auto"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <StoreModeItemDetailFields
+            canMarkAsStock={canMarkAsStock}
+            categories={categories}
+            categoryDraft={categoryDraft}
+            categoryError={categoryError}
+            handleCategoryChange={handleCategoryChange}
+            isPendingMarkAsStock={isPendingMarkAsStock}
+            isSavingCategory={isSavingCategory}
+            item={item}
+            noteDraft={noteDraft}
+            onQuickAddFromCard={onQuickAddFromCard}
+            setNoteDraft={setNoteDraft}
+            showCategoryEdit={showCategoryEdit}
+            showGroupedMeasurements={showGroupedMeasurements}
+          />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function StoreModeSimpleCheck({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={
+        checked
+          ? "inline-flex size-[22px] items-center justify-center rounded-full bg-store-accent text-white"
+          : "inline-flex size-[22px] rounded-full border-2 border-store-accent-deep"
+      }
+    >
+      {checked ? (
+        <svg
+          aria-hidden="true"
+          className="size-3"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M5 12.5 10 17l9-10"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2.5"
+          />
+        </svg>
+      ) : null}
+    </span>
+  );
+}
+
+function StoreModeItemDetailFields({
+  canMarkAsStock,
+  categories,
+  categoryDraft,
+  categoryError,
+  handleCategoryChange,
+  isPendingMarkAsStock,
+  isSavingCategory,
+  item,
+  noteDraft,
+  onQuickAddFromCard,
+  setNoteDraft,
+  showCategoryEdit,
+  showGroupedMeasurements,
+}: {
+  canMarkAsStock: boolean;
+  categories: StoreCategory[];
+  categoryDraft: string;
+  categoryError: string | null;
+  handleCategoryChange: (nextCategoryId: string) => void;
+  isPendingMarkAsStock: boolean;
+  isSavingCategory: boolean;
+  item: StoreModeShoppingItemCardItem;
+  noteDraft: string;
+  onQuickAddFromCard?: (item: {
+    name: string;
+    quantityLabel: string | null;
+  }) => void;
+  setNoteDraft: (note: string) => void;
+  showCategoryEdit: boolean;
+  showGroupedMeasurements: boolean;
+}) {
+  return (
+    <>
+      {showGroupedMeasurements ? null : (
+        <p className="wrap-break-word text-xs leading-4 text-store-muted">
+          {formatStoreModeItemSourceLine(item)}
+        </p>
+      )}
+      {showGroupedMeasurements && item.sourceType === "GENERATED" ? (
+        <ul className="space-y-1 text-xs leading-4 text-store-muted">
+          {item.occurrences.map((occurrence, index) => (
+            <li
+              key={`${occurrence.date}:${occurrence.recipeTitle}:${occurrence.quantityLabel ?? ""}:${index}`}
+            >
+              {formatOccurrenceSourceLine(occurrence)}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {!showCategoryEdit && item.note ? (
+        <p className="break-words text-xs leading-4 text-store-muted">
+          Notat: {item.note}
+        </p>
+      ) : null}
+      {showCategoryEdit ? (
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-store-muted">
+            Endre seksjon
+            <select
+              aria-busy={isSavingCategory}
+              className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-base text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60 disabled:cursor-wait disabled:opacity-70"
+              disabled={isSavingCategory}
+              onChange={(event) =>
+                handleCategoryChange(event.currentTarget.value)
+              }
+              value={categoryDraft}
+            >
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs font-medium text-store-muted">
+            Notat
+            <input
+              aria-busy={isSavingCategory}
+              className="mt-1 box-border w-full max-w-full min-w-0 rounded-xl border border-store-line bg-surface px-3 py-2 text-base text-store-ink outline-none transition focus:border-store-accent focus:ring-4 focus:ring-store-accent-light/60"
+              onChange={(event) => setNoteDraft(event.currentTarget.value)}
+              placeholder="F.eks. Tine lettmelk"
+              type="text"
+              value={noteDraft}
+            />
+          </label>
+          {categoryError ? (
+            <p className="text-xs text-rose-600">{categoryError}</p>
+          ) : null}
+          {isSavingCategory ? (
+            <p className="text-xs text-store-muted">Lagrer...</p>
+          ) : null}
+        </div>
+      ) : null}
+      <button
+        className="inline-flex w-fit rounded-full border border-store-accent/40 bg-store-accent-light px-2.5 py-1 text-xs font-medium text-store-accent-text transition hover:border-store-accent hover:bg-store-accent-light/80"
+        onClick={() =>
+          onQuickAddFromCard?.({
+            name: item.name,
+            quantityLabel: item.quantityLabel,
+          })
+        }
+        type="button"
+      >
+        Hurtiglegg til
+      </button>
+      {(item.sourceType === "GENERATED" || item.sourceType === "FAMILY") &&
+      canMarkAsStock ? (
+        <MarkGeneratedItemAsStockForm
+          displaySourceKey={item.sourceKey}
+          isPending={isPendingMarkAsStock}
+          item={item}
+          variant="store"
+        />
+      ) : null}
+      {item.sourceType === "GENERATED" && item.postponedUntilDate ? (
+        <p className="break-words text-xs leading-4 text-amber-800">
+          Utsatt til {formatDateLabel(item.postponedUntilDate)}.
+        </p>
+      ) : null}
+    </>
   );
 }
 

@@ -1,7 +1,11 @@
 import { useMemo, type ComponentProps } from "react";
 
 import { sortStoreModeItemsByName, type StoreModeShoppingView } from "../lib/shopping-store-mode-client";
-import { storeModeItemGridClass } from "../lib/store-mode-theme";
+import {
+  storeModeItemGridClass,
+  storeModeSimpleItemGridClass,
+  storeModeSimpleItemListClass,
+} from "../lib/store-mode-theme";
 import {
   StoreModeShoppingItemCard,
   type StoreModeCategoryUpdateRequest,
@@ -26,6 +30,7 @@ export function StoreModeItemGrid<
   recentlyAddedSourceKey,
   selectedStoreId,
   showRecipeUrgency = false,
+  simpleView = false,
 }: {
   canMarkAsStock?: boolean;
   categories: ComponentProps<typeof StoreModeShoppingItemCard>["categories"];
@@ -52,6 +57,7 @@ export function StoreModeItemGrid<
   recentlyAddedSourceKey: string | null;
   selectedStoreId?: string;
   showRecipeUrgency?: boolean;
+  simpleView?: boolean;
 }) {
   const sortedItems = useMemo(
     () => (preserveOrder ? items : sortStoreModeItemsByName(items)),
@@ -61,7 +67,13 @@ export function StoreModeItemGrid<
   return (
     <div
       className={
-        layout === "grid" ? storeModeItemGridClass : "mt-4 flex flex-col gap-2"
+        simpleView
+          ? layout === "grid"
+            ? storeModeSimpleItemGridClass
+            : storeModeSimpleItemListClass
+          : layout === "grid"
+            ? storeModeItemGridClass
+            : "mt-4 flex flex-col gap-2"
       }
     >
       {sortedItems.map((item) => (
@@ -85,6 +97,7 @@ export function StoreModeItemGrid<
           onToggle={() => onToggleItem(item)}
           selectedStoreId={selectedStoreId}
           showRecipeUrgency={showRecipeUrgency}
+          simpleView={simpleView}
           solidSurface={preserveOrder}
         />
       ))}

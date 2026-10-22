@@ -31,6 +31,11 @@ export const storeModeSectionCardClass = `${storeModeSurfaceCardClass} p-5`;
 export const storeModeItemGridClass =
   "mt-4 grid grid-cols-1 gap-2 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 [&>*]:min-w-0";
 
+export const storeModeSimpleItemGridClass =
+  "grid grid-cols-2 gap-2 [&>*]:min-w-0";
+
+export const storeModeSimpleItemListClass = "flex flex-col gap-2";
+
 export const storeModeMutedPanelClass = `${storeModeSurfaceCardClass} bg-store-bg/80 p-5`;
 
 export const storeModeAccentBarClass =

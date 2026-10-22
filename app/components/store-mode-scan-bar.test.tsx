@@ -76,6 +76,24 @@ describe("StoreModeScanBar", () => {
     );
   });
 
+  it("hides the progress summary in enkel visning and keeps Tilpass", () => {
+    renderScanBar({ simpleView: true });
+
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.queryByText("6 igjen")).not.toBeInTheDocument();
+    expect(screen.queryByText(/15\/21 krysset av/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Coop Obs - Vestk/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Alle åpne/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Tilpass" }));
+
+    expect(screen.getByText("Rutenett")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tilpass" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
   it("shows an empty bar when nothing is on the list", () => {
     renderScanBar({ checkedCount: 0, totalCount: 0 });
 

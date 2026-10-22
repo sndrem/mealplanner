@@ -3,18 +3,21 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "reac
 import {
   buildStoreModeDeprioritizeBoughtStorageKey,
   buildStoreModeRecipeUrgencyStorageKey,
+  buildStoreModeSimpleViewStorageKey,
   buildStoreModeSinkFinishedSectionsStorageKey,
   buildStoreModeStockReminderDismissedStorageKey,
   buildStoreModeViewStorageKey,
   readStoreModeDeprioritizeBought,
   readStoreModeRecipeUrgency,
   readStoreModeShoppingView,
+  readStoreModeSimpleView,
   readStoreModeSinkFinishedSections,
   readStoreModeStockReminderDismissed,
   writeSinkFinishedSectionsCookie,
   writeStoreModeDeprioritizeBought,
   writeStoreModeRecipeUrgency,
   writeStoreModeShoppingView,
+  writeStoreModeSimpleView,
   writeStoreModeSinkFinishedSections,
   writeStoreModeStockReminderDismissed,
   type StoreModeShoppingView,
@@ -41,6 +44,10 @@ export function useStoreModePreferences({
     () => buildStoreModeRecipeUrgencyStorageKey({ familyId }),
     [familyId],
   );
+  const simpleViewStorageKey = useMemo(
+    () => buildStoreModeSimpleViewStorageKey({ familyId }),
+    [familyId],
+  );
   const sinkFinishedSectionsStorageKey = useMemo(
     () => buildStoreModeSinkFinishedSectionsStorageKey({ familyId }),
     [familyId],
@@ -65,6 +72,11 @@ export function useStoreModePreferences({
     recipeUrgencyStorageKey,
     readStoreModeRecipeUrgency,
     writeStoreModeRecipeUrgency,
+  );
+  const [simpleView, setSimpleView] = useStoredFlag(
+    simpleViewStorageKey,
+    readStoreModeSimpleView,
+    writeStoreModeSimpleView,
   );
   const [sinkFinishedSections, setSinkFinishedSections] = useState(
     initialSinkFinishedSections,
@@ -114,9 +126,11 @@ export function useStoreModePreferences({
     handleRecipeUrgencyChange: setShowRecipeUrgency,
     handleRestoreStockReminder,
     handleShoppingViewChange,
+    handleSimpleViewChange: setSimpleView,
     handleSinkFinishedSectionsChange,
     shoppingView,
     showRecipeUrgency,
+    simpleView,
     sinkFinishedSections,
     stockReminderDismissed,
   };

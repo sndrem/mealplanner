@@ -229,6 +229,15 @@ export function resolveShowCategoryHeadings({
     return pendingCategoryHeadings.get("showCategoryHeadings") !== "false";
   }
 
+  const savedCategoryHeadings = categoryHeadingsFetcher.data;
+  if (
+    savedCategoryHeadings?.ok &&
+    savedCategoryHeadings.intent === "update-show-category-headings" &&
+    typeof savedCategoryHeadings.showCategoryHeadings === "boolean"
+  ) {
+    return savedCategoryHeadings.showCategoryHeadings;
+  }
+
   return showCategoryHeadings;
 }
 

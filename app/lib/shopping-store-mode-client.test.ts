@@ -9,6 +9,7 @@ import {
   buildStoreModeDeprioritizeBoughtStorageKey,
   buildStoreModeQueueStorageKey,
   buildStoreModeRecipeUrgencyStorageKey,
+  buildStoreModeSimpleViewStorageKey,
   buildStoreModeSinkFinishedSectionsStorageKey,
   buildStoreModeStockReminderDismissedStorageKey,
   buildStoreOfferBriefingDismissedStorageKey,
@@ -24,6 +25,7 @@ import {
   readStoreModeRecipeUrgency,
   readStoreModeSinkFinishedSections,
   readStoreModeShoppingView,
+  readStoreModeSimpleView,
   readStoreModeStockReminderDismissed,
   readStoreModeToggleQueue,
   reconcileToggleQueue,
@@ -35,6 +37,7 @@ import {
   writeStoreModeRecipeUrgency,
   writeStoreModeSinkFinishedSections,
   writeStoreModeShoppingView,
+  writeStoreModeSimpleView,
   writeStoreModeStockReminderDismissed,
   writeStoreModeToggleQueue,
 } from "./shopping-store-mode-client";
@@ -507,6 +510,22 @@ describe("shopping-store-mode-client", () => {
 
     writeStoreModeRecipeUrgency(storageKey, false);
     expect(readStoreModeRecipeUrgency(storageKey)).toBe(false);
+  });
+
+  it("defaults enkel visning to off and stores it per family", () => {
+    const familyOneKey = buildStoreModeSimpleViewStorageKey({
+      familyId: "family-1",
+    });
+    const familyTwoKey = buildStoreModeSimpleViewStorageKey({
+      familyId: "family-2",
+    });
+
+    expect(familyOneKey).not.toBe(familyTwoKey);
+    expect(readStoreModeSimpleView(familyOneKey)).toBe(false);
+
+    writeStoreModeSimpleView(familyOneKey, true);
+    expect(readStoreModeSimpleView(familyOneKey)).toBe(true);
+    expect(readStoreModeSimpleView(familyTwoKey)).toBe(false);
   });
 
   it("builds isolated sink-finished-sections storage keys per family", () => {

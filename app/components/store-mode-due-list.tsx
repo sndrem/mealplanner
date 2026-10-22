@@ -49,6 +49,7 @@ interface StoreModeItemActions<TItem> {
   recentlyAddedSourceKey: string | null;
   selectedStoreId?: string;
   showRecipeUrgency: boolean;
+  simpleView: boolean;
 }
 
 interface StoreModeDueListProps<TItem extends StoreModeDueItem>
@@ -87,19 +88,22 @@ export function StoreModeDueList<TItem extends StoreModeDueItem>({
   onRestoreStockReminder,
   optingInStockSourceKey,
   showCategoryHeadings,
+  simpleView,
   stockIngredients,
   stockReminderDismissed,
   ...itemActions
 }: StoreModeDueListProps<TItem>) {
+  const showStockReminder = hasUnusedStockIngredients && !simpleView;
+  const itemGridActions = { ...itemActions, simpleView };
   const showShoppingSection =
     displaySectionCount > 0 ||
-    (hasUnusedStockIngredients && !stockReminderDismissed);
+    (showStockReminder && !stockReminderDismissed);
 
   return (
     <>
       {showShoppingSection ? (
         <section className="grid gap-4">
-          {hasUnusedStockIngredients && !stockReminderDismissed ? (
+          {showStockReminder && !stockReminderDismissed ? (
             <StoreModeStockIngredientsReminder
               ingredients={stockIngredients}
               isSubmittingAll={isOptingInAllStockItems}
@@ -112,7 +116,7 @@ export function StoreModeDueList<TItem extends StoreModeDueItem>({
             activeSections={activeSections}
             deprioritizeBought={deprioritizeBought}
             hiddenHeadingLists={hiddenHeadingLists}
-            itemActions={itemActions}
+            itemActions={itemGridActions}
             showCategoryHeadings={showCategoryHeadings}
           />
           <StoreModeAllCheckedMessage
@@ -127,7 +131,7 @@ export function StoreModeDueList<TItem extends StoreModeDueItem>({
       ) : (
         <StoreModePageEmptyState />
       )}
-      {hasUnusedStockIngredients && stockReminderDismissed ? (
+      {showStockReminder && stockReminderDismissed ? (
         <StoreModeStockIngredientsReminder
           dismissed
           ingredients={stockIngredients}
@@ -195,10 +199,38 @@ function StoreModeCategorySection<TItem extends StoreModeDueItem>({
   itemActions: StoreModeItemActions<TItem>;
   section: StoreModeDueSection<TItem>;
 }) {
-  const boughtFoldClass =
-    section.items.length > 0
+  const boughtFoldClass = itemActions.simpleView
+    ? storeModeHandletFoldClass
+    : section.items.length > 0
       ? `${storeModeHandletFoldClass} mt-4`
       : `${storeModeHandletFoldClass} mt-3`;
+
+  if (itemActions.simpleView) {
+    return (
+      <section className="grid gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-store-ink">
+            {section.displayName}
+          </h2>
+          <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-store-line" />
+        </div>
+        {section.items.length > 0 ? (
+          <StoreModeItemGrid items={section.items} {...itemActions} />
+        ) : null}
+        {deprioritizeBought && section.boughtItems.length > 0 ? (
+          <details className={boughtFoldClass}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
+              <span className="text-sm font-semibold text-store-muted">Handlet</span>
+              <span className={storeModeCountChipClass}>
+                {section.boughtItems.length} varer
+              </span>
+            </summary>
+            <StoreModeItemGrid items={section.boughtItems} {...itemActions} />
+          </details>
+        ) : null}
+      </section>
+    );
+  }
 
   return (
     <details className={storeModeSectionCardClass} open>

@@ -1352,6 +1352,7 @@ describe("family store mode route", () => {
     expect(result).toEqual({
       intent: "update-show-category-headings",
       ok: true,
+      showCategoryHeadings: false,
     });
   });
 

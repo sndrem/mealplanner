@@ -4,6 +4,10 @@ A family plans meals, turns them into a shopping list, and walks a chosen store.
 
 ## Language
 
+**Basisvare**:
+An ingredient the family usually has at home, so it is held off the shopping list until someone puts it back on the trip.
+_Avoid_: stock ingredient, pantry item, staple
+
 **Ingredient category**:
 The classification of a shopping item, such as dairy or dry goods. It is the same no matter which store the family is shopping in.
 _Avoid_: section, aisle
