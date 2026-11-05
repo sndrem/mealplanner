@@ -39,6 +39,7 @@ export default [
       "routes/family-store-mode-share.tsx",
     ),
     route("families/:familyId/shopping", "routes/family-shopping.tsx"),
+    route("families/:familyId/shopping/paste", "routes/family-shopping-paste.tsx"),
     route(
       "families/:familyId/shopping/ingredient-search",
       "routes/family-shopping-ingredient-search.ts",

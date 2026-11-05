@@ -7,7 +7,8 @@ export type StoreModeNotice =
   | "shopping-item-check-state-updated"
   | "stock-shopping-items-opted-in"
   | "store-mode-trip-focus-updated"
-  | "shopping-grocery-grouping-updated";
+  | "shopping-grocery-grouping-updated"
+  | "shopping-note-items-added";
 
 export type StoreModeIntent =
   | "quick-add-family-shopping-item"
