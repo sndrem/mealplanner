@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import {
+  Link,
   redirect,
   useFetcher,
   useNavigation,
@@ -333,6 +334,12 @@ export default function FamilyMealPlanStoreModeRoute({
             tripFocusValue={scan.tripFocusValue}
           />
         </StoreModeScanBar>
+        <Link
+          className="self-start text-sm font-medium text-store-muted underline-offset-4 hover:text-store-ink hover:underline"
+          to={`/families/${loaderData.family.id}/shopping/paste`}
+        >
+          Lim inn notat
+        </Link>
         <StoreModeStatusBanners
           familyId={loaderData.family.id}
           formError={formFeedback.generalFormError}

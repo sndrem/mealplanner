@@ -10,7 +10,8 @@ export function getStoreModeNotice(request: Request): StoreModeNotice | null {
     notice === "shopping-item-check-state-updated" ||
     notice === "stock-shopping-items-opted-in" ||
     notice === "store-mode-trip-focus-updated" ||
-    notice === "shopping-grocery-grouping-updated"
+    notice === "shopping-grocery-grouping-updated" ||
+    notice === "shopping-note-items-added"
   ) {
     return notice;
   }
@@ -58,6 +59,11 @@ export function getStoreModeNoticeContent(notice: StoreModeNotice) {
         description:
           "Varen holdes utenfor handlelisten fremover. Du kan legge den til for denne turen, eller fjerne den fra Basisvarer.",
         title: "Basisvare lagt til",
+      };
+    case "shopping-note-items-added":
+      return {
+        description: "Varene fra notatet er lagt til på handlelisten.",
+        title: "Varer lagt til",
       };
     case "stock-shopping-items-opted-in":
       return {
